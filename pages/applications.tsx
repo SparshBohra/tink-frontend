@@ -1,4 +1,5 @@
 import Navigation from '../components/Navigation';
+import Link from 'next/link';
 import { mockApplications, mockProperties, mockRooms } from '../lib/mockData';
 
 export default function Applications() {
@@ -31,11 +32,71 @@ export default function Applications() {
   const pendingApplications = mockApplications.filter(app => app.status === 'pending');
   const reviewedApplications = mockApplications.filter(app => app.status !== 'pending');
 
+  const downloadApplicationsReport = () => {
+    const csvData = [
+      ['Applicant Name', 'Email', 'Phone', 'Property', 'Status', 'Applied Date', 'Days Pending', 'Available Rooms', 'Priority'],
+      ...mockApplications.map(app => {
+        const availableRooms = getVacantRoomsForProperty(app.propertyId);
+        const daysPending = Math.floor((new Date().getTime() - new Date(app.appliedDate).getTime()) / (1000 * 60 * 60 * 24));
+        const priority = app.status === 'pending' && availableRooms.length > 0 ? 'HIGH' : 
+                        app.status === 'pending' ? 'MEDIUM' : 'LOW';
+        return [
+          app.applicantName,
+          app.email,
+          app.phone,
+          getPropertyName(app.propertyId),
+          app.status.toUpperCase(),
+          app.appliedDate,
+          daysPending.toString(),
+          availableRooms.length.toString(),
+          priority
+        ];
+      })
+    ];
+    const csvContent = csvData.map(row => row.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `tink-applications-report-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+  };
+
+  const downloadPendingAppsReport = () => {
+    const csvData = [
+      ['Applicant', 'Contact', 'Property', 'Days Waiting', 'Available Rooms', 'Recommended Action'],
+      ...pendingApplications.map(app => {
+        const availableRooms = getVacantRoomsForProperty(app.propertyId);
+        const daysPending = Math.floor((new Date().getTime() - new Date(app.appliedDate).getTime()) / (1000 * 60 * 60 * 24));
+        const action = availableRooms.length > 0 ? 'APPROVE & ASSIGN' : 'WAITLIST';
+        return [
+          app.applicantName,
+          `${app.email} / ${app.phone}`,
+          getPropertyName(app.propertyId),
+          daysPending.toString(),
+          availableRooms.length.toString(),
+          action
+        ];
+      })
+    ];
+    const csvContent = csvData.map(row => row.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `tink-pending-applications-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+  };
+
   return (
     <div>
       <Navigation />
       <h1>Applications Review</h1>
       <p>Review and decide on rental applications. Approved tenants must be assigned to rooms and moved in.</p>
+      
+      <div style={{backgroundColor: '#e8f5e8', padding: '15px', borderRadius: '5px', marginBottom: '20px'}}>
+        <strong>💡 Quick Tip:</strong> Green rows mean you can approve and assign rooms immediately. Each approval adds ~$1,200/month revenue.
+      </div>
 
       <section>
         <h2>⏰ Pending Applications ({pendingApplications.length})</h2>
@@ -126,7 +187,12 @@ export default function Applications() {
       </section>
 
       <section>
-        <h2>📊 Decision Summary</h2>
+        <h2>📊 Quick Summary</h2>
+        <div style={{display: 'flex', gap: '10px', marginBottom: '10px'}}>
+          <button onClick={downloadApplicationsReport} style={{backgroundColor: '#28a745', color: 'white', padding: '8px 12px', border: 'none', borderRadius: '3px'}}>
+            📥 Download Report
+          </button>
+        </div>
         <table border={1}>
           <tr>
             <td><strong>Pending Applications</strong></td>

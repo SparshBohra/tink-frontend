@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import Navigation from '../components/Navigation';
 import Link from 'next/link';
-import { mockProperties, mockApplications, mockLeases, mockInventory } from '../lib/mockData';
+import { mockProperties, mockApplications, mockLeases, mockInventory, mockRooms } from '../lib/mockData';
 
 export default function Dashboard() {
   const [userRole, setUserRole] = useState<string>('');
@@ -20,150 +20,222 @@ export default function Dashboard() {
   const expiringLeases = mockLeases.filter(lease => lease.status === 'expiring_soon').length;
   const maintenanceIssues = mockInventory.filter(item => item.condition === 'poor' || item.reportedIssues > 0).length;
   const monthlyRevenue = mockLeases.filter(l => l.status === 'active').reduce((sum, l) => sum + l.rent, 0);
+  const potentialMonthlyRevenue = mockRooms.reduce((sum, room) => sum + room.rent, 0);
+  const lostRevenue = potentialMonthlyRevenue - monthlyRevenue;
+
+  const downloadReport = () => {
+    const csvData = [
+      ['Metric', 'Value'],
+      ['Total Properties', mockProperties.length.toString()],
+      ['Monthly Revenue', `$${monthlyRevenue}`],
+      ['Potential Revenue', `$${potentialMonthlyRevenue}`],
+      ['Lost Revenue', `$${lostRevenue}`],
+      ['Occupancy Rate', `${occupancyRate}%`],
+      ['Pending Applications', pendingApps.toString()],
+      ['Expiring Leases', expiringLeases.toString()],
+      ['Maintenance Issues', maintenanceIssues.toString()]
+    ];
+    const csvContent = csvData.map(row => row.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `tink-dashboard-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+  };
 
   if (userRole === 'landlord') {
     return (
       <div>
         <Navigation />
-        <h1>Landlord Dashboard</h1>
-        <p>Welcome back! Here&apos;s how your properties are performing.</p>
+        
+        <h1>💰 Revenue Dashboard</h1>
+        <p>Track your property portfolio performance and revenue opportunities.</p>
 
-        <section>
-          <h2>🏠 Portfolio Performance</h2>
-          <table border={1}>
-            <tr>
-              <td><strong>Total Properties</strong></td>
-              <td>{mockProperties.length}</td>
-            </tr>
-            <tr>
-              <td><strong>Occupancy Rate</strong></td>
-              <td>{occupancyRate}% ({occupiedRooms}/{totalRooms} rooms)</td>
-            </tr>
-            <tr>
-              <td><strong>Monthly Revenue</strong></td>
-              <td>${monthlyRevenue.toLocaleString()}</td>
-            </tr>
-            <tr>
-              <td><strong>Vacant Rooms</strong></td>
-              <td>{totalRooms - occupiedRooms} (potential: ${(totalRooms - occupiedRooms) * 1100}/month)</td>
-            </tr>
-          </table>
-        </section>
+        {/* Key Metrics - Simple Cards */}
+        <div style={{display: 'flex', gap: '15px', marginBottom: '30px', flexWrap: 'wrap'}}>
+          <div style={{border: '1px solid #ddd', padding: '15px', borderRadius: '5px', minWidth: '200px'}}>
+            <h3 style={{margin: '0 0 10px 0', color: '#27ae60'}}>Monthly Revenue</h3>
+            <div style={{fontSize: '24px', fontWeight: 'bold'}}>${monthlyRevenue.toLocaleString()}</div>
+            <small style={{color: '#666'}}>of ${potentialMonthlyRevenue.toLocaleString()} potential</small>
+          </div>
+          
+          <div style={{border: '1px solid #ddd', padding: '15px', borderRadius: '5px', minWidth: '200px'}}>
+            <h3 style={{margin: '0 0 10px 0', color: '#e74c3c'}}>Lost Revenue</h3>
+            <div style={{fontSize: '24px', fontWeight: 'bold', color: '#e74c3c'}}>-${lostRevenue.toLocaleString()}</div>
+            <small style={{color: '#666'}}>per month from vacant rooms</small>
+          </div>
+          
+          <div style={{border: '1px solid #ddd', padding: '15px', borderRadius: '5px', minWidth: '200px'}}>
+            <h3 style={{margin: '0 0 10px 0', color: '#3498db'}}>Occupancy Rate</h3>
+            <div style={{fontSize: '24px', fontWeight: 'bold'}}>{occupancyRate}%</div>
+            <small style={{color: '#666'}}>{occupiedRooms} of {totalRooms} rooms filled</small>
+          </div>
+        </div>
 
-        <section>
-          <h2>🚨 Needs Attention</h2>
-          <ul>
-            <li><strong>{expiringLeases} leases expiring soon</strong> - Revenue at risk!</li>
-            <li><strong>{pendingApps} applications pending</strong> - Fill vacant rooms faster</li>
-            <li><strong>{maintenanceIssues} maintenance issues</strong> - May affect tenant satisfaction</li>
+        {/* Action Items */}
+        <div style={{backgroundColor: '#fff3cd', padding: '15px', borderRadius: '5px', marginBottom: '20px'}}>
+          <h3 style={{margin: '0 0 10px 0'}}>🚨 Immediate Actions Needed</h3>
+          <ul style={{margin: '0', paddingLeft: '20px'}}>
+            <li><strong>{pendingApps} applications pending</strong> - <Link href="/applications">Review now</Link> to fill vacant rooms</li>
+            <li><strong>{expiringLeases} leases expiring soon</strong> - <Link href="/leases">Contact tenants</Link> about renewal</li>
+            <li><strong>{maintenanceIssues} maintenance issues</strong> - <Link href="/inventory">Fix immediately</Link> to keep tenants happy</li>
           </ul>
-        </section>
+        </div>
 
-        <section>
-          <h2>🎯 Quick Actions (Landlord)</h2>
-          <ul>
-            <li><Link href="/properties"><button>Manage Properties</button></Link> - View all your assets</li>
-            <li><Link href="/tenants"><button>View Tenants</button></Link> - See who&apos;s living where</li>
-            <li><Link href="/leases"><button>Review Leases</button></Link> - Check expiring agreements</li>
-            <li><button onClick={() => console.log('Add new property')}>+ Add New Property</button></li>
-          </ul>
-        </section>
-
-        <section>
-          <h2>📊 Property Breakdown</h2>
-          <table border={1}>
-            <thead>
-              <tr>
-                <th>Property</th>
-                <th>Occupancy</th>
-                <th>Monthly Revenue</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {mockProperties.map(property => (
-                <tr key={property.id}>
-                  <td>{property.name}</td>
-                  <td>{property.occupiedRooms}/{property.totalRooms}</td>
-                  <td>${property.occupiedRooms * 1100}</td>
-                  <td>{property.occupiedRooms === property.totalRooms ? '✅ Full' : '⚠️ Has Vacancies'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
-      </div>
-    );
-  }
-
-  // Manager Dashboard
-  return (
-    <div>
-      <Navigation />
-      <h1>Manager Dashboard</h1>
-      <p>Your daily operations hub. Here&apos;s what needs your attention today.</p>
-
-      <section>
-        <h2>🔥 Today&apos;s Priorities</h2>
-        <ul>
-          <li><strong>{pendingApps} applications waiting</strong> - Review and approve to fill rooms</li>
-          <li><strong>{expiringLeases} leases expiring</strong> - Contact tenants about renewal</li>
-          <li><strong>{maintenanceIssues} maintenance items</strong> - Schedule repairs</li>
-          <li><strong>Rent reminders</strong> - Due in 3 days (send WhatsApp reminders)</li>
-        </ul>
-      </section>
-
-      <section>
-        <h2>📋 Quick Actions (Manager)</h2>
-        <ul>
-          <li><Link href="/applications"><button>Review Applications ({pendingApps})</button></Link></li>
-          <li><Link href="/tenants"><button>Assign Tenants to Rooms</button></Link></li>
-          <li><Link href="/inventory"><button>Manage Inventory ({maintenanceIssues} issues)</button></Link></li>
-          <li><Link href="/reminders"><button>Send Reminders</button></Link></li>
-        </ul>
-      </section>
-
-      <section>
-        <h2>🏠 Property Status</h2>
-        <table border={1}>
+        {/* Property Performance */}
+        <h2>🏠 Property Performance</h2>
+        <table border={1} style={{width: '100%', borderCollapse: 'collapse'}}>
           <thead>
-            <tr>
-              <th>Property</th>
-              <th>Vacant Rooms</th>
-              <th>Pending Apps</th>
-              <th>Issues</th>
-              <th>Action Needed</th>
+            <tr style={{backgroundColor: '#f8f9fa'}}>
+              <th style={{padding: '10px', textAlign: 'left'}}>Property</th>
+              <th style={{padding: '10px', textAlign: 'center'}}>Occupancy</th>
+              <th style={{padding: '10px', textAlign: 'center'}}>Monthly Revenue</th>
+              <th style={{padding: '10px', textAlign: 'center'}}>Status</th>
             </tr>
           </thead>
           <tbody>
             {mockProperties.map(property => {
-              const vacantRooms = property.totalRooms - property.occupiedRooms;
-              const propertyApps = mockApplications.filter(app => app.propertyId === property.id && app.status === 'pending').length;
-              const propertyIssues = mockInventory.filter(item => item.propertyId === property.id && (item.condition === 'poor' || item.reportedIssues > 0)).length;
-              
+              const occupancyPercent = Math.round((property.occupiedRooms / property.totalRooms) * 100);
+              const propertyRevenue = property.occupiedRooms * 1100; // approximate
               return (
                 <tr key={property.id}>
-                  <td>{property.name}</td>
-                  <td>{vacantRooms}</td>
-                  <td>{propertyApps}</td>
-                  <td>{propertyIssues}</td>
-                  <td>
-                    {vacantRooms > 0 && propertyApps > 0 && 'Match apps to rooms'}
-                    {vacantRooms > 0 && propertyApps === 0 && 'Need more applications'}
-                    {propertyIssues > 0 && 'Fix maintenance issues'}
-                    {vacantRooms === 0 && propertyIssues === 0 && '✅ All good'}
+                  <td style={{padding: '10px'}}>
+                    <strong>{property.name}</strong><br/>
+                    <small>{property.address}</small>
+                  </td>
+                  <td style={{padding: '10px', textAlign: 'center'}}>
+                    {occupancyPercent}%<br/>
+                    <small>({property.occupiedRooms}/{property.totalRooms})</small>
+                  </td>
+                  <td style={{padding: '10px', textAlign: 'center'}}>
+                    ${propertyRevenue.toLocaleString()}
+                  </td>
+                  <td style={{padding: '10px', textAlign: 'center'}}>
+                    {occupancyPercent === 100 ? 
+                      <span style={{color: '#27ae60'}}>✅ Full</span> : 
+                      <span style={{color: '#e74c3c'}}>⚠️ Has Vacancies</span>
+                    }
                   </td>
                 </tr>
               );
             })}
           </tbody>
         </table>
-      </section>
 
-      <section>
-        <h2>💡 Pro Tip</h2>
-        <p><em>Focus on filling vacant rooms first - each empty room costs ${1100}/month in lost revenue!</em></p>
-      </section>
+        {/* Quick Actions */}
+        <div style={{marginTop: '30px'}}>
+          <h3>⚡ Quick Actions</h3>
+          <div style={{display: 'flex', gap: '10px', flexWrap: 'wrap'}}>
+            <Link href="/properties">
+              <button style={{backgroundColor: '#27ae60', color: 'white', padding: '10px 15px', border: 'none', borderRadius: '5px'}}>
+                📊 View Properties
+              </button>
+            </Link>
+            <Link href="/applications">
+              <button style={{backgroundColor: '#e74c3c', color: 'white', padding: '10px 15px', border: 'none', borderRadius: '5px'}}>
+                📋 Review Applications
+              </button>
+            </Link>
+            <button onClick={downloadReport} style={{backgroundColor: '#3498db', color: 'white', padding: '10px 15px', border: 'none', borderRadius: '5px'}}>
+              📥 Download Report
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Manager Dashboard - Simplified
+  return (
+    <div>
+      <Navigation />
+      
+      <h1>⚙️ Operations Dashboard</h1>
+      <p>Your daily task center. Focus on the most important items first.</p>
+
+      {/* Priority Tasks */}
+      <div style={{backgroundColor: '#ffebee', padding: '15px', borderRadius: '5px', marginBottom: '20px'}}>
+        <h3 style={{margin: '0 0 10px 0', color: '#e74c3c'}}>🔥 Priority Tasks</h3>
+        <ul style={{margin: '0', paddingLeft: '20px'}}>
+          <li><strong>{pendingApps} applications waiting</strong> - <Link href="/applications">Review & approve</Link></li>
+          <li><strong>{expiringLeases} leases expiring</strong> - <Link href="/leases">Send renewal notices</Link></li>
+          <li><strong>{maintenanceIssues} maintenance items</strong> - <Link href="/inventory">Schedule repairs</Link></li>
+        </ul>
+      </div>
+
+      {/* Quick Stats */}
+      <div style={{display: 'flex', gap: '15px', marginBottom: '20px', flexWrap: 'wrap'}}>
+        <div style={{border: '1px solid #ddd', padding: '15px', borderRadius: '5px', minWidth: '150px'}}>
+          <h4 style={{margin: '0 0 5px 0'}}>Occupancy</h4>
+          <div style={{fontSize: '20px', fontWeight: 'bold'}}>{occupancyRate}%</div>
+        </div>
+        <div style={{border: '1px solid #ddd', padding: '15px', borderRadius: '5px', minWidth: '150px'}}>
+          <h4 style={{margin: '0 0 5px 0'}}>Revenue</h4>
+          <div style={{fontSize: '20px', fontWeight: 'bold'}}>${monthlyRevenue.toLocaleString()}</div>
+        </div>
+        <div style={{border: '1px solid #ddd', padding: '15px', borderRadius: '5px', minWidth: '150px'}}>
+          <h4 style={{margin: '0 0 5px 0'}}>Vacant Rooms</h4>
+          <div style={{fontSize: '20px', fontWeight: 'bold'}}>{totalRooms - occupiedRooms}</div>
+        </div>
+      </div>
+
+      {/* Property Status */}
+      <h2>🏠 Property Status</h2>
+      <table border={1} style={{width: '100%', borderCollapse: 'collapse'}}>
+        <thead>
+          <tr style={{backgroundColor: '#f8f9fa'}}>
+            <th style={{padding: '10px', textAlign: 'left'}}>Property</th>
+            <th style={{padding: '10px', textAlign: 'center'}}>Vacant Rooms</th>
+            <th style={{padding: '10px', textAlign: 'center'}}>Pending Apps</th>
+            <th style={{padding: '10px', textAlign: 'center'}}>Action Needed</th>
+          </tr>
+        </thead>
+        <tbody>
+          {mockProperties.map(property => {
+            const vacantRooms = property.totalRooms - property.occupiedRooms;
+            const propertyApps = mockApplications.filter(app => app.propertyId === property.id && app.status === 'pending').length;
+            
+            return (
+              <tr key={property.id}>
+                <td style={{padding: '10px'}}>{property.name}</td>
+                <td style={{padding: '10px', textAlign: 'center'}}>{vacantRooms}</td>
+                <td style={{padding: '10px', textAlign: 'center'}}>{propertyApps}</td>
+                <td style={{padding: '10px', textAlign: 'center'}}>
+                  {vacantRooms > 0 && propertyApps > 0 && <span style={{color: '#27ae60'}}>✅ Can fill rooms</span>}
+                  {vacantRooms > 0 && propertyApps === 0 && <span style={{color: '#e74c3c'}}>📢 Need applications</span>}
+                  {vacantRooms === 0 && <span style={{color: '#27ae60'}}>✅ Full</span>}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+
+      {/* Quick Actions */}
+      <div style={{marginTop: '30px'}}>
+        <h3>⚡ Quick Actions</h3>
+        <div style={{display: 'flex', gap: '10px', flexWrap: 'wrap'}}>
+          <Link href="/applications">
+            <button style={{backgroundColor: '#e74c3c', color: 'white', padding: '10px 15px', border: 'none', borderRadius: '5px'}}>
+              📋 Review Applications
+            </button>
+          </Link>
+          <Link href="/reminders">
+            <button style={{backgroundColor: '#9b59b6', color: 'white', padding: '10px 15px', border: 'none', borderRadius: '5px'}}>
+              📱 Send Reminders
+            </button>
+          </Link>
+          <Link href="/inventory">
+            <button style={{backgroundColor: '#17a2b8', color: 'white', padding: '10px 15px', border: 'none', borderRadius: '5px'}}>
+              🔧 Fix Issues
+            </button>
+          </Link>
+          <button onClick={downloadReport} style={{backgroundColor: '#3498db', color: 'white', padding: '10px 15px', border: 'none', borderRadius: '5px'}}>
+            📥 Download Report
+          </button>
+        </div>
+      </div>
     </div>
   );
 } 

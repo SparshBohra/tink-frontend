@@ -20,12 +20,73 @@ export default function Tenants() {
     console.log(`Send WhatsApp reminder to tenant ${tenantId}`);
   };
 
+  const downloadTenantsReport = () => {
+    const csvData = [
+      ['Tenant Name', 'Email', 'Phone', 'Property', 'Room', 'Monthly Rent', 'Move-in Date', 'Status', 'Contact Preference'],
+      ...mockTenants.map(tenant => {
+        const room = mockRooms.find(r => r.id === tenant.roomId);
+        const property = room ? mockProperties.find(p => p.id === room.propertyId) : null;
+        return [
+          tenant.name,
+          tenant.email,
+          tenant.phone,
+          property?.name || 'Unknown',
+          room?.name || 'Unknown',
+          `$${room?.rent || 0}`,
+          '2024-12-01', // Mock move-in date
+          'Active',
+          'WhatsApp' // Mock preference
+        ];
+      })
+    ];
+    const csvContent = csvData.map(row => row.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `tink-tenants-report-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+  };
+
+  const downloadContactList = () => {
+    const csvData = [
+      ['Name', 'WhatsApp', 'Email', 'Property', 'Room', 'Emergency Contact'],
+      ...mockTenants.map(tenant => {
+        const room = mockRooms.find(r => r.id === tenant.roomId);
+        const property = room ? mockProperties.find(p => p.id === room.propertyId) : null;
+        return [
+          tenant.name,
+          tenant.phone,
+          tenant.email,
+          property?.name || 'Unknown',
+          room?.name || 'Unknown',
+          '(555) 000-0000' // Mock emergency contact
+        ];
+      })
+    ];
+    const csvContent = csvData.map(row => row.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `tink-tenant-contacts-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+  };
+
   return (
     <div>
       <Navigation />
       <h1>Tenants</h1>
       
       <h2>All Tenants</h2>
+      <div style={{margin: '10px 0'}}>
+        <button onClick={downloadTenantsReport} style={{backgroundColor: '#28a745', color: 'white', margin: '5px'}}>
+          📊 Download Tenants Report (CSV)
+        </button>
+        <button onClick={downloadContactList} style={{backgroundColor: '#17a2b8', color: 'white', margin: '5px'}}>
+          📞 Download Contact List (CSV)
+        </button>
+      </div>
       <table border={1}>
         <thead>
           <tr>
