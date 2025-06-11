@@ -139,7 +139,7 @@ export default function WorkflowGuide() {
             <h3>🌆 Evening Routine (10 minutes)</h3>
             <ol>
               <li><Link href="/tenants">👥 Update Tenant Info</Link> - Log any conversations</li>
-              <li><Link href="/reminders">📱 Schedule Tomorrow's Communications</Link></li>
+              <li><Link href="/reminders">📱 Schedule Tomorrow&apos;s Communications</Link></li>
               <li><Link href="/properties">📊 Download Daily Reports</Link> - For landlord updates</li>
               <li><Link href="/leases">📄 Check Upcoming Expirations</Link></li>
             </ol>
@@ -204,7 +204,7 @@ export default function WorkflowGuide() {
               <h4>1. Identify Need</h4>
               <ul>
                 <li><Link href="/inventory">📦 Check Inventory Status</Link></li>
-                <li>Items marked "poor condition"</li>
+                <li>Items marked &quot;poor condition&quot;</li>
                 <li>Tenant maintenance requests</li>
                 <li>New room setup needs</li>
               </ul>
@@ -288,7 +288,7 @@ export default function WorkflowGuide() {
             <tr style={{backgroundColor: '#e8f5e8'}}>
               <td><strong>📶 Internet Down</strong></td>
               <td>1. Restart router<br/>2. Call ISP</td>
-              <td><Link href="/reminders">📱 WhatsApp: "Working on internet fix"</Link></td>
+              <td><Link href="/reminders">📱 WhatsApp: &quot;Working on internet fix&quot;</Link></td>
               <td><Link href="/inventory">📦 Order backup equipment if needed</Link></td>
             </tr>
           </tbody>

@@ -24,9 +24,7 @@ export default function Reminders() {
     console.log(`Sending ${type} reminder via ${channel} to ${recipients.length} recipients:`, message);
   };
 
-  const handleScheduleReminder = (type: string, channel: string, date: string) => {
-    console.log(`Scheduling ${type} reminder via ${channel} for ${date}`);
-  };
+
 
   const handleSendAnnouncement = (channel: string, property: string, message: string) => {
     console.log(`Sending announcement via ${channel} to ${property}:`, message);

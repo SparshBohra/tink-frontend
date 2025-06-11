@@ -68,7 +68,7 @@ export default function Inventory() {
     console.log('Add new inventory item');
   };
 
-  const handleOrderReplacement = (item: any) => {
+  const handleOrderReplacement = (item: { name: string; amazonLink: string }) => {
     console.log(`Opening Amazon to order replacement for ${item.name}`);
     window.open(item.amazonLink, '_blank');
   };
@@ -102,7 +102,8 @@ export default function Inventory() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `tink-inventory-report-${new Date().toISOString().split('T')[0]}.csv`;
+    const today = new Date().toISOString().split('T')[0];
+    a.download = `tink-inventory-report-${today}.csv`;
     a.click();
   };
 
@@ -128,7 +129,8 @@ export default function Inventory() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `tink-maintenance-report-${new Date().toISOString().split('T')[0]}.csv`;
+    const today = new Date().toISOString().split('T')[0];
+    a.download = `tink-maintenance-report-${today}.csv`;
     a.click();
   };
 

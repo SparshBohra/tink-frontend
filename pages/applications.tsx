@@ -1,5 +1,4 @@
 import Navigation from '../components/Navigation';
-import Link from 'next/link';
 import { mockApplications, mockProperties, mockRooms } from '../lib/mockData';
 
 export default function Applications() {
@@ -58,7 +57,8 @@ export default function Applications() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `tink-applications-report-${new Date().toISOString().split('T')[0]}.csv`;
+    const today = new Date().toISOString().split('T')[0];
+    a.download = `tink-applications-report-${today}.csv`;
     a.click();
   };
 
@@ -84,7 +84,8 @@ export default function Applications() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `tink-pending-applications-${new Date().toISOString().split('T')[0]}.csv`;
+    const today = new Date().toISOString().split('T')[0];
+    a.download = `tink-pending-applications-${today}.csv`;
     a.click();
   };
 
@@ -190,7 +191,10 @@ export default function Applications() {
         <h2>📊 Quick Summary</h2>
         <div style={{display: 'flex', gap: '10px', marginBottom: '10px'}}>
           <button onClick={downloadApplicationsReport} style={{backgroundColor: '#28a745', color: 'white', padding: '8px 12px', border: 'none', borderRadius: '3px'}}>
-            📥 Download Report
+            📥 Download All Applications Report
+          </button>
+          <button onClick={downloadPendingAppsReport} style={{backgroundColor: '#17a2b8', color: 'white', padding: '8px 12px', border: 'none', borderRadius: '3px'}}>
+            📥 Download Pending Apps Report
           </button>
         </div>
         <table border={1}>
