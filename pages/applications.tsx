@@ -1,6 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
+import Head from 'next/head';
 import Navigation from '../components/Navigation';
+import DashboardLayout from '../components/DashboardLayout';
+import SectionCard from '../components/SectionCard';
+import DataTable from '../components/DataTable';
+import MetricCard from '../components/MetricCard';
+import StatusBadge from '../components/StatusBadge';
+import EmptyState from '../components/EmptyState';
 import Link from 'next/link';
 import { withAuth } from '../lib/auth-context';
 import { apiClient } from '../lib/api';
@@ -154,8 +161,6 @@ function Applications() {
 
   const pendingApplications = filteredApplications.filter(app => app.status === 'pending');
   const reviewedApplications = filteredApplications.filter(app => app.status !== 'pending');
-  
-
 
   const downloadApplicationsReport = () => {
     const csvData = [
@@ -181,62 +186,106 @@ function Applications() {
 
   if (loading) {
     return (
-      <div>
+      <>
         <Navigation />
-        <h1>Loading Applications...</h1>
-        <p>Fetching application data from the server...</p>
+        <DashboardLayout
+          title="Applications Review"
+          subtitle="Loading applications data..."
+        >
+          <div className="loading-indicator">
+            <div className="loading-spinner"></div>
+            <p>Fetching application data...</p>
       </div>
+        </DashboardLayout>
+        
+        <style jsx>{`
+          .loading-indicator {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: var(--spacing-xl);
+  }
+          
+          .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--gray-200);
+            border-top-color: var(--primary-blue);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: var(--spacing-md);
+          }
+          
+          @keyframes spin {
+            to {
+              transform: rotate(360deg);
+            }
+          }
+        `}</style>
+      </>
     );
   }
 
-  if (error) {
-    return (
-      <div>
-        <Navigation />
-        <h1>Applications Error</h1>
-        <div style={{ 
-          color: 'red', 
-          border: '1px solid red', 
-          padding: '15px', 
-          marginBottom: '20px',
-          backgroundColor: '#ffebee'
-        }}>
-          <strong>Error:</strong> {error}
-        </div>
-        <button 
-          onClick={fetchData}
-          style={{
-            padding: '10px 20px',
-            backgroundColor: '#007bff',
-            color: 'white',
-            border: 'none',
-            cursor: 'pointer'
-          }}
-        >
-          Retry
-        </button>
-      </div>
-    );
-  }
+  // Calculate metrics
+  const metrics = {
+    total: filteredApplications.length,
+    pending: pendingApplications.length,
+    approved: filteredApplications.filter(app => app.status === 'approved').length,
+    rejected: filteredApplications.filter(app => app.status === 'rejected').length,
+  };
 
   return (
-    <div>
+    <>
+      <Head>
+        <title>Applications Review - Tink Property Management</title>
+      </Head>
       <Navigation />
-      <h1>📋 Applications Review</h1>
-      <p>Review and decide on rental applications. Approved tenants must be assigned to rooms and moved in.</p>
       
-      {/* Property Filter */}
-      <div style={{marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px'}}>
-        <label style={{fontWeight: 'bold'}}>Filter by Property:</label>
+      <DashboardLayout
+        title="Applications Review"
+        subtitle="Review and decide on rental applications. Approved tenants must be assigned to rooms and moved in."
+      >
+        {error && <div className="alert alert-error">{error}</div>}
+        
+        {/* Metrics */}
+        <div className="metrics-grid">
+          <MetricCard 
+            title="Total Applications" 
+            value={metrics.total}
+            color="blue"
+          />
+          
+          <MetricCard 
+            title="Pending Review" 
+            value={metrics.pending}
+            subtitle="Waiting for decision"
+            color={metrics.pending > 0 ? "amber" : "gray"}
+          />
+          
+          <MetricCard 
+            title="Approved" 
+            value={metrics.approved}
+            color="green"
+          />
+          
+          <MetricCard 
+            title="Rejected" 
+            value={metrics.rejected}
+            color="gray"
+          />
+        </div>
+        
+        {/* Filters & Actions */}
+        <SectionCard>
+          <div className="filters-container">
+            <div className="filter-group">
+              <label htmlFor="property-filter" className="filter-label">Filter by Property:</label>
         <select 
+                id="property-filter"
           value={selectedProperty || ''}
           onChange={handlePropertyFilterChange}
-          style={{
-            padding: '8px 12px',
-            borderRadius: '4px',
-            border: '1px solid #ddd',
-            minWidth: '250px'
-          }}
+                className="form-select"
         >
           <option value="">All Properties</option>
           {properties.map(property => (
@@ -245,290 +294,240 @@ function Applications() {
             </option>
           ))}
         </select>
-        
-        {selectedProperty && (
-          <button
-            onClick={() => {
-              setSelectedProperty(null);
-              router.push('/applications', undefined, { shallow: true });
-            }}
-            style={{
-              backgroundColor: '#6c757d',
-              color: 'white',
-              border: 'none',
-              padding: '8px 12px',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}
-          >
-            Clear Filter
-          </button>
-        )}
-      </div>
-      
-      {selectedProperty && (
-        <div style={{backgroundColor: '#e8f5e8', padding: '15px', borderRadius: '5px', marginBottom: '20px'}}>
-          <strong>🔍 Filtered:</strong> Showing applications for <strong>{getPropertyName(selectedProperty)}</strong>
-          {getPropertyDetails(selectedProperty).vacantRooms > 0 ? (
-            <span> ({getPropertyDetails(selectedProperty).vacantRooms} vacant rooms available)</span>
-          ) : (
-            <span style={{color: '#dc3545'}}> (No vacant rooms available)</span>
-          )}
-        </div>
-      )}
-      
-      {pendingApplications.length > 0 && (
-        <div style={{backgroundColor: '#e8f5e8', padding: '15px', borderRadius: '5px', marginBottom: '20px'}}>
-          <strong>💡 Quick Tip:</strong> Green rows mean you can approve and assign rooms immediately. Each approval adds revenue.
-        </div>
-      )}
-
-      <section>
-        <h2>⏰ Pending Applications ({pendingApplications.length})</h2>
-        <p><em>These applications are waiting for your decision. Quick decisions help fill vacant rooms faster.</em></p>
-        
-        {pendingApplications.length > 0 ? (
-          <table border={1} style={{width: '100%', borderCollapse: 'collapse'}}>
-          <thead>
-              <tr style={{backgroundColor: '#f8f9fa'}}>
-                <th style={{padding: '10px', textAlign: 'left'}}>Applicant</th>
-                <th style={{padding: '10px', textAlign: 'left'}}>Property Applied</th>
-                <th style={{padding: '10px', textAlign: 'center'}}>Vacant Rooms</th>
-                <th style={{padding: '10px', textAlign: 'center'}}>Applied Date</th>
-                <th style={{padding: '10px', textAlign: 'center'}}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {pendingApplications.map(application => {
-                const propertyDetails = getPropertyDetails(application.property_ref);
-                const canQuickApprove = propertyDetails.vacantRooms > 0;
+            </div>
+            
+            <div className="actions-group">
+              <button 
+                onClick={fetchData}
+                className="btn btn-secondary"
+              >
+                Refresh Data
+              </button>
               
-              return (
-                <tr key={application.id} style={{backgroundColor: canQuickApprove ? '#e8f5e8' : '#fff3cd'}}>
-                    <td style={{padding: '10px'}}>
-                      <Link href={{ pathname: '/tenants/[id]', query: { id: application.tenant } }}>
-                        <strong style={{ color: '#007bff', cursor: 'pointer' }}>
-                          {application.tenant_name || `Tenant ID: ${application.tenant}`}
-                        </strong>
-                      </Link>
-                      <br />
-                      <small>{application.tenant_email || 'N/A'}</small>
-                      <br />
-                      <small>Budget: ${application.rent_budget || 'Not specified'}</small>
-                      <br />
-                      <small style={{color: '#666'}}>Days pending: {application.days_pending || 0}</small>
-                      {application.message && (
-                        <>
-                    <br />
-                          <small style={{color: '#888', fontStyle: 'italic'}}>"{application.message}"</small>
-                        </>
-                      )}
+          <button
+                onClick={downloadApplicationsReport}
+                className="btn btn-secondary"
+              >
+                Download Report
+          </button>
+            </div>
+      </div>
+        </SectionCard>
+        
+        {/* Pending Applications */}
+        <SectionCard
+          title={`Pending Applications (${pendingApplications.length})`}
+          subtitle="These applications are waiting for your decision. Quick decisions help fill vacant rooms faster."
+        >
+          {pendingApplications.length === 0 ? (
+            <EmptyState
+              title="No pending applications"
+              description="All caught up! There are no applications waiting for review."
+            />
+          ) : (
+            <DataTable
+              columns={[
+                { key: 'tenant', header: 'Applicant', width: '20%' },
+                { key: 'property', header: 'Property', width: '20%' },
+                { key: 'details', header: 'Details', width: '30%' },
+                { key: 'status', header: 'Status', width: '10%' },
+                { key: 'actions', header: 'Actions', width: '20%' }
+              ]}
+              data={pendingApplications}
+              renderRow={(app) => (
+                <tr key={app.id}>
+                  <td>
+                    <div className="applicant-name">{app.tenant_name}</div>
+                    <div className="applicant-email">{app.tenant_email}</div>
                   </td>
-                    <td style={{padding: '10px'}}>
-                      <strong>{propertyDetails.property?.name || 'Unknown Property'}</strong>
-                    <br />
-                      <small>{propertyDetails.property?.full_address || ''}</small>
-                    <br />
-                      <small style={{color: '#666'}}>
-                        {propertyDetails.totalRooms} total rooms, {propertyDetails.occupiedRooms} occupied
-                      </small>
+                  
+                  <td>
+                    <div className="property-name">{getPropertyName(app.property_ref)}</div>
+                    <div className="property-vacancy">
+                      {getPropertyDetails(app.property_ref).vacantRooms} vacant rooms
+        </div>
                   </td>
-                    <td style={{padding: '10px', textAlign: 'center'}}>
-                    {canQuickApprove ? (
-                        <div>
-                          <span style={{color: 'green', fontWeight: 'bold'}}>
-                            ✅ {propertyDetails.vacantRooms} available
-                          </span>
-                        <br />
-                          <small style={{color: '#666'}}>
-                            {propertyDetails.vacantRoomsList.slice(0, 2).map(room => room.name).join(', ')}
-                            {propertyDetails.vacantRooms > 2 && ` +${propertyDetails.vacantRooms - 2} more`}
-                        </small>
-                        </div>
-                      ) : (
-                        <div>
-                          <span style={{color: 'red', fontWeight: 'bold'}}>❌ None available</span>
-                          <br />
-                          <small style={{color: '#666'}}>
-                            {propertyDetails.totalRooms === 0 ? 
-                              'No rooms in property' : 
-                              `All ${propertyDetails.totalRooms} rooms occupied`
-                            }
-                          </small>
-                          <br />
-                          <small style={{color: '#e74c3c'}}>
-                            Consider other properties or wait for vacancy
-                          </small>
+                  
+                  <td>
+                    <div className="app-details">
+                      <div>Applied: {app.created_at.split('T')[0]}</div>
+                      <div>Budget: ${app.rent_budget || 'Not specified'}/mo</div>
+                      <div>Move-in: {app.desired_move_in_date || 'Flexible'}</div>
+                    </div>
+                  </td>
+                  
+                  <td>
+                    <StatusBadge status={app.status} />
+                    {app.days_pending > 5 && (
+                      <div className="pending-days">
+                        {app.days_pending} days
                         </div>
                     )}
                   </td>
-                    <td style={{padding: '10px', textAlign: 'center'}}>
-                      {application.created_at.split('T')[0]}
-                    </td>
-                    <td style={{padding: '10px', textAlign: 'center'}}>
-                      <div style={{display: 'flex', flexDirection: 'column', gap: '5px', alignItems: 'center'}}>
-                    {canQuickApprove ? (
-                      <>
+                  
+                  <td>
+                    <div className="action-buttons">
                         <button 
-                              onClick={() => handleQuickApprove(application.id, application.property_ref)}
-                              style={{
-                                backgroundColor: '#28a745', 
-                                color: 'white',
-                                border: 'none',
-                                padding: '8px 12px',
-                                cursor: 'pointer',
-                                fontSize: '12px',
-                                borderRadius: '4px',
-                                fontWeight: 'bold'
-                              }}
+                        onClick={() => handleQuickApprove(app.id, app.property_ref)}
+                        className="btn btn-success"
+                        disabled={getPropertyDetails(app.property_ref).vacantRooms === 0}
                             >
-                              ✅ Approve & Assign
+                        Quick Approve
                             </button>
-                            <Link href={`/properties/${application.property_ref}/rooms`}>
-                              <button style={{
-                                backgroundColor: '#007bff', 
-                                color: 'white',
-                                border: 'none',
-                                padding: '6px 10px',
-                                cursor: 'pointer',
-                                fontSize: '11px',
-                                borderRadius: '4px'
-                              }}>
-                                🏠 View Rooms
-                        </button>
-                            </Link>
-                      </>
-                    ) : (
-                          <>
-                            <Link href="/properties">
-                              <button style={{
-                                backgroundColor: '#f39c12', 
-                                color: 'white',
-                                border: 'none',
-                                padding: '6px 10px',
-                                cursor: 'pointer',
-                                fontSize: '11px',
-                                borderRadius: '4px'
-                              }}>
-                                🔍 Find Alternative
-                              </button>
-                            </Link>
-                            <small style={{color: '#e74c3c', fontWeight: 'bold', textAlign: 'center'}}>
-                              ⚠️ No rooms available
-                            </small>
-                          </>
-                        )}
+                      
                     <button 
-                      onClick={() => handleReject(application.id)}
-                          style={{
-                            backgroundColor: '#dc3545', 
-                            color: 'white',
-                            border: 'none',
-                            padding: '6px 10px',
-                            cursor: 'pointer',
-                            fontSize: '11px',
-                            borderRadius: '4px'
-                          }}
+                        onClick={() => handleReject(app.id)}
+                        className="btn btn-error"
                     >
-                      ❌ Reject
+                        Reject
                     </button>
                       </div>
                   </td>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
-        ) : (
-          <p><em>🎉 No pending applications! All caught up.</em></p>
-        )}
-      </section>
-
-      {reviewedApplications.length > 0 && (
-        <section style={{marginTop: '30px'}}>
-          <h2>📊 Reviewed Applications ({reviewedApplications.length})</h2>
-          <table border={1} style={{width: '100%', borderCollapse: 'collapse'}}>
-          <thead>
-              <tr style={{backgroundColor: '#f8f9fa'}}>
-                <th style={{padding: '10px', textAlign: 'left'}}>Applicant</th>
-                <th style={{padding: '10px', textAlign: 'left'}}>Property</th>
-                <th style={{padding: '10px', textAlign: 'center'}}>Status</th>
-                <th style={{padding: '10px', textAlign: 'center'}}>Date</th>
-            </tr>
-          </thead>
-          <tbody>
-            {reviewedApplications.map(application => (
-              <tr key={application.id}>
-                  <td style={{padding: '10px'}}>
-                    <Link href={{ pathname: '/tenants/[id]', query: { id: application.tenant } }}>
-                      {application.tenant_name || `Tenant ID: ${application.tenant}`}
-                    </Link>
+              )}
+            />
+          )}
+        </SectionCard>
+        
+        {/* Previously Reviewed Applications */}
+        <SectionCard
+          title={`Processed Applications (${reviewedApplications.length})`}
+          subtitle="Applications that have already been reviewed and processed"
+        >
+          {reviewedApplications.length === 0 ? (
+            <EmptyState
+              title="No processed applications"
+              description="There are no previously reviewed applications in the system."
+            />
+          ) : (
+            <DataTable
+              columns={[
+                { key: 'tenant', header: 'Applicant', width: '20%' },
+                { key: 'property', header: 'Property', width: '20%' },
+                { key: 'details', header: 'Details', width: '30%' },
+                { key: 'status', header: 'Status', width: '15%' },
+                { key: 'actions', header: 'Actions', width: '15%' }
+              ]}
+              data={reviewedApplications}
+              renderRow={(app) => (
+                <tr key={app.id}>
+                  <td>
+                    <div className="applicant-name">{app.tenant_name}</div>
+                    <div className="applicant-email">{app.tenant_email}</div>
                   </td>
-                  <td style={{padding: '10px'}}>
-                    {getPropertyName(application.property_ref)}
+                  
+                  <td>
+                    <div className="property-name">{getPropertyName(app.property_ref)}</div>
                   </td>
-                  <td style={{padding: '10px', textAlign: 'center'}}>
-                    <span style={{
-                      padding: '3px 8px',
-                      borderRadius: '3px',
-                      fontSize: '12px',
-                      backgroundColor: application.status === 'approved' ? '#d4edda' : '#f8d7da',
-                      color: application.status === 'approved' ? '#155724' : '#721c24'
-                    }}>
-                      {application.status.toUpperCase()}
-                  </span>
+                  
+                  <td>
+                    <div className="app-details">
+                      <div>Applied: {app.created_at.split('T')[0]}</div>
+                      <div>Decided: {app.decision_date?.split('T')[0] || 'N/A'}</div>
+                      <div className="decision-notes">{app.decision_notes || 'No notes'}</div>
+                    </div>
+                  </td>
+                  
+                  <td>
+                    <StatusBadge status={app.status} />
                 </td>
-                  <td style={{padding: '10px', textAlign: 'center'}}>
-                    {application.created_at.split('T')[0]}
+                  
+                  <td>
+                    <Link href={`/tenants`} className="btn btn-secondary">
+                      View Tenant
+                    </Link>
                 </td>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
-      )}
-
-      <section style={{marginTop: '30px'}}>
-        <h2>📊 Quick Actions</h2>
-        <div style={{display: 'flex', gap: '10px', marginBottom: '10px'}}>
-          <button 
-            onClick={downloadApplicationsReport} 
-            style={{
-              backgroundColor: '#28a745', 
-              color: 'white', 
-              padding: '8px 12px', 
-              border: 'none', 
-              borderRadius: '3px',
-              cursor: 'pointer'
-            }}
-          >
-            📥 Download Applications Report
-          </button>
-          <button 
-            onClick={fetchData}
-            style={{
-              backgroundColor: '#6c757d', 
-              color: 'white', 
-              padding: '8px 12px', 
-              border: 'none', 
-              borderRadius: '3px',
-              cursor: 'pointer'
-            }}
-          >
-            🔄 Refresh Data
-          </button>
-        </div>
+              )}
+            />
+          )}
+        </SectionCard>
+      </DashboardLayout>
+      
+      <style jsx>{`
+        .metrics-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+          gap: var(--spacing-lg);
+          margin-bottom: var(--spacing-xl);
+        }
         
-        <div style={{marginTop: '20px', padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '5px'}}>
-          <h4>📈 Summary</h4>
-          <p><strong>Total Applications:</strong> {applications.length}</p>
-          <p><strong>Pending Review:</strong> {pendingApplications.length}</p>
-          <p><strong>Approved:</strong> {applications.filter(app => app.status === 'approved').length}</p>
-          <p><strong>Rejected:</strong> {applications.filter(app => app.status === 'rejected').length}</p>
-        </div>
-      </section>
-    </div>
+        .filters-container {
+          display: flex;
+          justify-content: space-between;
+          flex-wrap: wrap;
+          gap: var(--spacing-md);
+        }
+        
+        .filter-group {
+          display: flex;
+          align-items: center;
+          gap: var(--spacing-md);
+        }
+        
+        .filter-label {
+          font-weight: 500;
+          color: var(--gray-700);
+        }
+        
+        .form-select {
+          padding: var(--spacing-sm) var(--spacing-md);
+          border: 1px solid var(--gray-200);
+          border-radius: var(--radius-sm);
+          min-width: 250px;
+          font-size: var(--text-body);
+        }
+        
+        .actions-group {
+          display: flex;
+          gap: var(--spacing-md);
+        }
+        
+        .applicant-name {
+          font-weight: 500;
+          color: var(--gray-900);
+        }
+        
+        .applicant-email,
+        .property-vacancy {
+          font-size: var(--text-small);
+          color: var(--gray-600);
+        }
+        
+        .app-details {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+          font-size: var(--text-small);
+        }
+        
+        .decision-notes {
+          font-style: italic;
+          color: var(--gray-600);
+          margin-top: 4px;
+        }
+        
+        .pending-days {
+          font-size: var(--text-small);
+          color: var(--warning-amber);
+          font-weight: 500;
+          margin-top: var(--spacing-xs);
+        }
+        
+        .action-buttons {
+          display: flex;
+          gap: var(--spacing-xs);
+          flex-direction: column;
+        }
+        
+        @media (min-width: 768px) {
+          .action-buttons {
+            flex-direction: row;
+          }
+        }
+      `}</style>
+    </>
   );
 } 
 
-export default withAuth(Applications, ['admin', 'owner', 'manager']);
+export default withAuth(Applications);

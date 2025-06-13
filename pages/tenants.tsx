@@ -1,6 +1,13 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Head from 'next/head';
 import Navigation from '../components/Navigation';
+import DashboardLayout from '../components/DashboardLayout';
+import SectionCard from '../components/SectionCard';
+import EmptyState from '../components/EmptyState';
+import DataTable from '../components/DataTable';
+import MetricCard from '../components/MetricCard';
+import StatusBadge from '../components/StatusBadge';
 import { withAuth } from '../lib/auth-context';
 import { apiClient } from '../lib/api';
 import { Tenant, TenantFormData, Application, Lease } from '../lib/types';
@@ -217,404 +224,452 @@ function Tenants() {
     a.click();
   };
 
+  // Count tenants by status
+  const getTenantMetrics = () => {
+    const activeCount = tenants.filter(t => t.current_lease_status === 'active').length;
+    const pendingCount = tenants.filter(t => t.current_application_status === 'pending').length;
+    const totalCount = tenants.length;
+    
+    return { activeCount, pendingCount, totalCount };
+  };
+  
+  const metrics = getTenantMetrics();
+
   if (loading) {
     return (
-      <div>
+      <>
         <Navigation />
-        <h1>Loading Tenants...</h1>
-        <p>Fetching tenant data from the server...</p>
+        <DashboardLayout
+          title="Tenant Management"
+          subtitle="Loading tenant data..."
+        >
+          <div className="loading-indicator">
+            <div className="loading-spinner"></div>
+            <p>Fetching tenant data...</p>
       </div>
+        </DashboardLayout>
+        
+        <style jsx>{`
+          .loading-indicator {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: var(--spacing-xl);
+          }
+          
+          .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--gray-200);
+            border-top-color: var(--primary-blue);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: var(--spacing-md);
+          }
+          
+          @keyframes spin {
+            to {
+              transform: rotate(360deg);
+            }
+          }
+        `}</style>
+      </>
     );
   }
 
   return (
-    <div>
+    <>
+      <Head>
+        <title>Tenant Management - Tink Property Management</title>
+      </Head>
       <Navigation />
-      <h1>👥 Tenant Management</h1>
       
-      {error && (
-        <div style={{ 
-          color: 'red', 
-          border: '1px solid red', 
-          padding: '10px', 
-          marginBottom: '20px',
-          backgroundColor: '#ffebee'
-        }}>
-          <strong>Error:</strong> {error}
+      <DashboardLayout
+        title="Tenant Management"
+        subtitle="Manage active tenants across all properties"
+      >
+        {/* Alerts */}
+        {error && <div className="alert alert-error">{error}</div>}
+        {success && <div className="alert alert-success">{success}</div>}
+        
+        {/* Metrics */}
+        <div className="metrics-grid">
+          <MetricCard 
+            title="Total Tenants" 
+            value={metrics.totalCount}
+            color="blue"
+          />
+          
+          <MetricCard 
+            title="Active Tenants" 
+            value={metrics.activeCount}
+            subtitle="With current leases"
+            color="green"
+          />
+          
+          <MetricCard 
+            title="Pending Applications" 
+            value={metrics.pendingCount}
+            color="amber"
+          />
         </div>
-      )}
 
-      {success && (
-        <div style={{ 
-          color: 'green', 
-          border: '1px solid green', 
-          padding: '10px', 
-          marginBottom: '20px',
-          backgroundColor: '#e8f5e8'
-        }}>
-          <strong>Success:</strong> {success}
-        </div>
-      )}
-
-      {/* Action Buttons */}
-      <div style={{marginBottom: '20px'}}>
-        <Link href="/tenants/add">
-          <button style={{
-            backgroundColor: '#28a745',
-            color: 'white',
-            padding: '10px 15px',
-            border: 'none',
-            marginRight: '10px',
-            cursor: 'pointer'
-          }}>
-            ➕ Register New Tenant
-          </button>
-        </Link>
+        {/* Actions */}
+        <SectionCard>
+          <div className="actions-container">
         <button 
-          onClick={fetchTenants}
-          disabled={loading}
-          style={{
-            backgroundColor: '#6c757d',
-            color: 'white',
-            padding: '10px 15px',
-            border: 'none',
-            marginRight: '10px',
-            cursor: loading ? 'not-allowed' : 'pointer'
-          }}
+              className="btn btn-primary"
+              onClick={() => {
+                setEditingTenant(null);
+                setFormData({
+                  full_name: '',
+                  email: '',
+                  phone: '',
+                  date_of_birth: '',
+                  emergency_contact_name: '',
+                  emergency_contact_phone: ''
+                });
+                setShowForm(true);
+              }}
+            >
+              Register New Tenant
+            </button>
+            
+            <button 
+              className="btn btn-secondary"
+              onClick={() => fetchTenants()}
         >
-          🔄 Refresh
+              Refresh
         </button>
+            
         <button 
+              className="btn btn-secondary"
           onClick={downloadTenantsReport}
-          style={{
-            backgroundColor: '#007bff',
-            color: 'white',
-            padding: '10px 15px',
-            border: 'none',
-            marginRight: '10px',
-            cursor: 'pointer'
-          }}
-        >
-          📊 Download Report
+            >
+              Download Report
         </button>
+            
         <button 
+              className="btn btn-secondary"
           onClick={downloadContactList}
-          style={{
-            backgroundColor: '#17a2b8',
-            color: 'white',
-            padding: '10px 15px',
-            border: 'none',
-            cursor: 'pointer'
-          }}
-        >
-          📞 Download Contacts
+            >
+              Download Contacts
         </button>
       </div>
+        </SectionCard>
 
-      {/* Add/Edit Form */}
+        {/* Tenant Form */}
       {showForm && (
-        <div style={{
-          border: '1px solid #ddd',
-          padding: '20px',
-          marginBottom: '20px',
-          backgroundColor: '#f8f9fa'
-        }}>
-          <h2>{editingTenant ? 'Edit Tenant' : 'Add New Tenant'}</h2>
-          <form onSubmit={handleSubmit}>
-            <div style={{marginBottom: '15px'}}>
-              <label>Full Name:</label>
-              <br />
+          <SectionCard 
+            title={editingTenant ? "Edit Tenant" : "Register New Tenant"}
+            subtitle={editingTenant ? `Updating information for ${editingTenant.full_name}` : "Add a new tenant to the system"}
+          >
+            <form onSubmit={handleSubmit} className="tenant-form">
+              <div className="form-grid">
+                <div className="form-group">
+                  <label htmlFor="full_name" className="form-label">
+                    Full Name *
+                  </label>
               <input
+                    id="full_name"
+                    name="full_name"
                 type="text"
                 value={formData.full_name}
                 onChange={(e) => setFormData({...formData, full_name: e.target.value})}
                 required
-                style={{width: '100%', padding: '8px'}}
+                    className="form-input"
+                    placeholder="John Doe"
               />
             </div>
             
-            <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px'}}>
-              <div>
-                <label>Email:</label>
-                <br />
+                <div className="form-group">
+                  <label htmlFor="email" className="form-label">
+                    Email Address *
+                  </label>
                 <input
+                    id="email"
+                    name="email"
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({...formData, email: e.target.value})}
                   required
-                  style={{width: '100%', padding: '8px'}}
+                    className="form-input"
+                    placeholder="john.doe@example.com"
                 />
               </div>
-              <div>
-                <label>Phone:</label>
-                <br />
+                
+                <div className="form-group">
+                  <label htmlFor="phone" className="form-label">
+                    Phone Number *
+                  </label>
                 <input
+                    id="phone"
+                    name="phone"
                   type="tel"
                   value={formData.phone}
                   onChange={(e) => setFormData({...formData, phone: e.target.value})}
                   required
-                  style={{width: '100%', padding: '8px'}}
+                    className="form-input"
+                    placeholder="+1 (555) 123-4567"
                 />
-              </div>
             </div>
 
-            <div style={{marginBottom: '15px'}}>
-              <label>Date of Birth:</label>
-              <br />
+                <div className="form-group">
+                  <label htmlFor="date_of_birth" className="form-label">
+                    Date of Birth
+                  </label>
               <input
+                    id="date_of_birth"
+                    name="date_of_birth"
                 type="date"
                 value={formData.date_of_birth}
                 onChange={(e) => setFormData({...formData, date_of_birth: e.target.value})}
-                required
-                style={{padding: '8px'}}
+                    className="form-input"
               />
             </div>
 
-            <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px'}}>
-              <div>
-                <label>Emergency Contact Name:</label>
-                <br />
+                <div className="form-group">
+                  <label htmlFor="emergency_contact_name" className="form-label">
+                    Emergency Contact Name
+                  </label>
                 <input
+                    id="emergency_contact_name"
+                    name="emergency_contact_name"
                   type="text"
                   value={formData.emergency_contact_name}
                   onChange={(e) => setFormData({...formData, emergency_contact_name: e.target.value})}
-                  required
-                  style={{width: '100%', padding: '8px'}}
+                    className="form-input"
+                    placeholder="Jane Doe"
                 />
               </div>
-              <div>
-                <label>Emergency Contact Phone:</label>
-                <br />
+                
+                <div className="form-group">
+                  <label htmlFor="emergency_contact_phone" className="form-label">
+                    Emergency Contact Phone
+                  </label>
                 <input
+                    id="emergency_contact_phone"
+                    name="emergency_contact_phone"
                   type="tel"
                   value={formData.emergency_contact_phone}
                   onChange={(e) => setFormData({...formData, emergency_contact_phone: e.target.value})}
-                  required
-                  style={{width: '100%', padding: '8px'}}
+                    className="form-input"
+                    placeholder="+1 (555) 987-6543"
                 />
               </div>
             </div>
 
-            <div>
+              <div className="form-actions">
               <button 
                 type="submit"
-                style={{
-                  backgroundColor: '#007bff',
-                  color: 'white',
-                  padding: '10px 20px',
-                  border: 'none',
-                  marginRight: '10px',
-                  cursor: 'pointer'
-                }}
+                  className="btn btn-primary"
               >
-                {editingTenant ? 'Update Tenant' : 'Create Tenant'}
+                  {editingTenant ? 'Update Tenant' : 'Save Tenant'}
               </button>
+                
               <button 
                 type="button"
-                onClick={() => {
-                  setShowForm(false);
-                  setEditingTenant(null);
-                  setFormData({
-                    full_name: '',
-                    email: '',
-                    phone: '',
-                    date_of_birth: '',
-                    emergency_contact_name: '',
-                    emergency_contact_phone: ''
-                  });
-                }}
-                style={{
-                  backgroundColor: '#6c757d',
-                  color: 'white',
-                  padding: '10px 20px',
-                  border: 'none',
-                  cursor: 'pointer'
-                }}
+                  className="btn btn-secondary"
+                  onClick={() => setShowForm(false)}
               >
                 Cancel
               </button>
             </div>
           </form>
-        </div>
+          </SectionCard>
       )}
 
-      {/* Tenants Table */}
-      <h2>All Tenants ({tenants?.length || 0})</h2>
-      {tenants && tenants.length > 0 ? (
-        <table border={1} style={{width: '100%', borderCollapse: 'collapse'}}>
-        <thead>
-            <tr style={{backgroundColor: '#f8f9fa'}}>
-              <th style={{padding: '10px', textAlign: 'left'}}>Name</th>
-              <th style={{padding: '10px', textAlign: 'left'}}>Email</th>
-              <th style={{padding: '10px', textAlign: 'left'}}>Phone</th>
-              <th style={{padding: '10px', textAlign: 'left'}}>Current Property</th>
-              <th style={{padding: '10px', textAlign: 'left'}}>Current Room</th>
-              <th style={{padding: '10px', textAlign: 'center'}}>Application Status</th>
-              <th style={{padding: '10px', textAlign: 'center'}}>Lease Status</th>
-              <th style={{padding: '10px', textAlign: 'center'}}>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-            {tenants.map(tenant => (
+        {/* Tenant List */}
+        <SectionCard
+          title="All Tenants"
+          subtitle={`${tenants.length} ${tenants.length === 1 ? 'tenant' : 'tenants'} registered in the system`}
+        >
+          {tenants.length === 0 ? (
+            <EmptyState
+              title="No tenants found"
+              description="There are no tenants registered in the system yet."
+              action={
+                <button 
+                  className="btn btn-primary"
+                  onClick={() => {
+                    setEditingTenant(null);
+                    setShowForm(true);
+                  }}
+                >
+                  Register First Tenant
+                </button>
+              }
+            />
+          ) : (
+            <DataTable
+              columns={[
+                { key: 'name', header: 'Tenant', width: '25%' },
+                { key: 'contact', header: 'Contact Information', width: '20%' },
+                { key: 'property', header: 'Current Property', width: '20%' },
+                { key: 'status', header: 'Status', width: '15%' },
+                { key: 'actions', header: 'Actions', width: '20%' }
+              ]}
+              data={tenants}
+              renderRow={(tenant, index) => (
             <tr key={tenant.id}>
-                <td style={{padding: '10px'}}>
-                  <strong>{tenant.full_name}</strong>
-                  <br />
-                  <small>ID: {tenant.id}</small>
+                  <td className="tenant-name-cell">
+                    <div className="tenant-name">{tenant.full_name}</div>
+                    <div className="tenant-id">ID: {tenant.id}</div>
                 </td>
-                <td style={{padding: '10px'}}>{tenant.email}</td>
-                <td style={{padding: '10px'}}>{tenant.phone}</td>
-                <td style={{padding: '10px'}}>
-                  {tenant.current_property_name || <em>Not assigned</em>}
+                  
+                  <td>
+                    <div className="tenant-contact">
+                      <div>{tenant.phone}</div>
+                      <div className="tenant-email">{tenant.email}</div>
+                    </div>
                 </td>
-                <td style={{padding: '10px'}}>
-                  {tenant.current_room_name || <em>Not assigned</em>}
-                </td>
-                <td style={{padding: '10px', textAlign: 'center'}}>
-                  {tenant.current_application_status ? (
-                    <span style={{
-                      padding: '3px 8px',
-                      borderRadius: '3px',
-                      fontSize: '12px',
-                      backgroundColor: tenant.current_application_status === 'approved' ? '#d4edda' : 
-                                     tenant.current_application_status === 'pending' ? '#fff3cd' : '#f8d7da',
-                      color: tenant.current_application_status === 'approved' ? '#155724' : 
-                             tenant.current_application_status === 'pending' ? '#856404' : '#721c24'
-                    }}>
-                      {tenant.current_application_status.toUpperCase()}
-                    </span>
-                  ) : (
-                    <em>No application</em>
+                  
+                  <td>
+                    {tenant.current_property_name ? (
+                      <div>
+                        <div>{tenant.current_property_name}</div>
+                        <div className="tenant-room">{tenant.current_room_name || 'Room not assigned'}</div>
+                      </div>
+                    ) : (
+                      <span className="text-muted">Not assigned</span>
                   )}
                 </td>
-                <td style={{padding: '10px', textAlign: 'center'}}>
-                  {tenant.current_lease_status ? (
-                    <span style={{
-                      padding: '3px 8px',
-                      borderRadius: '3px',
-                      fontSize: '12px',
-                      backgroundColor: tenant.current_lease_status === 'active' ? '#d4edda' : '#f8d7da',
-                      color: tenant.current_lease_status === 'active' ? '#155724' : '#721c24'
-                    }}>
-                      {tenant.current_lease_status.toUpperCase()}
-                    </span>
-                  ) : (
-                    <em>No lease</em>
+                  
+                  <td>
+                    <div className="tenant-statuses">
+                      {tenant.current_lease_status && (
+                        <StatusBadge status={tenant.current_lease_status} />
+                      )}
+                      
+                      {tenant.current_application_status && (
+                        <StatusBadge status={tenant.current_application_status} />
+                      )}
+                      
+                      {!tenant.current_lease_status && !tenant.current_application_status && (
+                        <StatusBadge status="neutral" text="No active status" />
                   )}
+                    </div>
                 </td>
-                <td style={{padding: '10px', textAlign: 'center'}}>
-                  <div style={{display: 'flex', flexDirection: 'column', gap: '5px', alignItems: 'center'}}>
-                    <Link href={{ pathname: '/tenants/[id]', query: { id: tenant.id } }}>
-                      <button style={{
-                        backgroundColor: '#007bff',
-                        color: 'white',
-                        border: 'none',
-                        padding: '6px 12px',
-                        cursor: 'pointer',
-                        fontSize: '12px',
-                        borderRadius: '4px',
-                        minWidth: '80px'
-                      }}>
-                        👤 View Details
+                  
+                  <td>
+                    <div className="action-buttons">
+                      <button 
+                        onClick={() => handleEdit(tenant)} 
+                        className="btn btn-secondary"
+                      >
+                        Edit
                       </button>
-                    </Link>
+                      
                     <button 
-                      onClick={() => handleEdit(tenant)}
-                      style={{
-                        backgroundColor: '#ffc107',
-                        color: 'black',
-                        border: 'none',
-                        padding: '6px 12px',
-                        cursor: 'pointer',
-                        fontSize: '12px',
-                        borderRadius: '4px',
-                        minWidth: '80px'
-                      }}
+                        onClick={() => handleViewApplications(tenant.id)}
+                        className="btn btn-secondary"
                     >
-                      ✏️ Edit
+                        Applications
                     </button>
                     
-                    {tenant.current_lease_status === 'active' ? (
-                      <Link href="/leases">
-                        <button style={{
-                          backgroundColor: '#28a745',
-                          color: 'white',
-                          border: 'none',
-                          padding: '6px 12px',
-                          cursor: 'pointer',
-                          fontSize: '12px',
-                          borderRadius: '4px',
-                          minWidth: '80px'
-                        }}>
-                          📜 View Lease
-                        </button>
-                      </Link>
-                    ) : tenant.current_application_status === 'pending' ? (
-                      <Link href="/applications">
-                        <button style={{
-                          backgroundColor: '#17a2b8',
-                          color: 'white',
-                          border: 'none',
-                          padding: '6px 12px',
-                          cursor: 'pointer',
-                          fontSize: '12px',
-                          borderRadius: '4px',
-                          minWidth: '80px'
-                        }}>
-                          📋 View App
+                      <button
+                        onClick={() => handleViewCurrentLease(tenant.id)}
+                        className="btn btn-secondary"
+                      >
+                        Lease
                 </button>
-                      </Link>
-                    ) : (
-                      <Link href="/applications">
-                        <button style={{
-                          backgroundColor: '#007bff',
-                          color: 'white',
-                          border: 'none',
-                          padding: '6px 12px',
-                          cursor: 'pointer',
-                          fontSize: '12px',
-                          borderRadius: '4px',
-                          minWidth: '80px'
-                        }}>
-                          ➕ New App
-                </button>
-                      </Link>
-                    )}
                     
                     <button 
                       onClick={() => handleDelete(tenant.id)}
-                      style={{
-                        backgroundColor: '#dc3545',
-                        color: 'white',
-                        border: 'none',
-                        padding: '6px 12px',
-                        cursor: 'pointer',
-                        fontSize: '12px',
-                        borderRadius: '4px',
-                        minWidth: '80px'
-                      }}
+                        className="btn btn-error"
                     >
-                      🗑️ Delete
+                        Delete
                 </button>
                   </div>
               </td>
             </tr>
-          ))}
-        </tbody>
-      </table>
-      ) : (
-        <p>No tenants found. Add your first tenant using the button above.</p>
-      )}
-
-      {/* API Status */}
-      <div style={{marginTop: '30px', padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '5px'}}>
-        <h4>🔌 API Status</h4>
-        <p><strong>Backend:</strong> http://54.224.252.101/api/tenants/</p>
-        <p><strong>Total Tenants:</strong> {tenants?.length || 0}</p>
-        <p><em>Real-time data from your Django backend</em></p>
-      </div>
-    </div>
+              )}
+            />
+          )}
+        </SectionCard>
+      </DashboardLayout>
+      
+      <style jsx>{`
+        .metrics-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+          gap: var(--spacing-lg);
+          margin-bottom: var(--spacing-xl);
+        }
+        
+        .actions-container {
+          display: flex;
+          gap: var(--spacing-md);
+          flex-wrap: wrap;
+        }
+        
+        .tenant-form {
+          width: 100%;
+        }
+        
+        .form-grid {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: var(--spacing-lg);
+          margin-bottom: var(--spacing-xl);
+        }
+        
+        .form-actions {
+          display: flex;
+          gap: var(--spacing-md);
+          justify-content: flex-end;
+        }
+        
+        .tenant-name {
+          font-weight: 500;
+          color: var(--gray-900);
+        }
+        
+        .tenant-id {
+          font-size: var(--text-small);
+          color: var(--gray-400);
+        }
+        
+        .tenant-email {
+          font-size: var(--text-small);
+          color: var(--gray-600);
+        }
+        
+        .tenant-room {
+          font-size: var(--text-small);
+          color: var(--gray-600);
+        }
+        
+        .tenant-statuses {
+          display: flex;
+          flex-direction: column;
+          gap: var(--spacing-xs);
+        }
+        
+        .action-buttons {
+          display: flex;
+          gap: var(--spacing-xs);
+          flex-wrap: wrap;
+        }
+        
+        .action-buttons .btn {
+          padding: 6px 12px;
+          font-size: var(--text-small);
+        }
+        
+        @media (max-width: 768px) {
+          .form-grid {
+            grid-template-columns: 1fr;
+          }
+          
+          .action-buttons {
+            flex-direction: column;
+          }
+        }
+      `}</style>
+    </>
   );
 }
 
-export default withAuth(Tenants, ['admin', 'owner', 'manager']); 
+export default withAuth(Tenants); 

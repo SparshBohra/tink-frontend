@@ -1,5 +1,12 @@
 import { useState, useEffect } from 'react';
+import Head from 'next/head';
 import Navigation from '../components/Navigation';
+import DashboardLayout from '../components/DashboardLayout';
+import MetricCard from '../components/MetricCard';
+import SectionCard from '../components/SectionCard';
+import DataTable from '../components/DataTable';
+import StatusBadge from '../components/StatusBadge';
+import EmptyState from '../components/EmptyState';
 import Link from 'next/link';
 import { withAuth } from '../lib/auth-context';
 import { apiClient } from '../lib/api';
@@ -74,366 +81,294 @@ function Properties() {
     a.click();
   };
 
-  if (loading) {
-    return (
-      <div>
-        <Navigation />
-        <h1>Loading Properties...</h1>
-        <p>Fetching property data from the server...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div>
-        <Navigation />
-        <h1>Properties Error</h1>
-        <div style={{ 
-          color: 'red', 
-          border: '1px solid red', 
-          padding: '15px', 
-          marginBottom: '20px',
-          backgroundColor: '#ffebee'
-        }}>
-          <strong>Error:</strong> {error}
-        </div>
-        <button 
-          onClick={fetchData}
-          style={{
-            padding: '10px 20px',
-            backgroundColor: '#007bff',
-            color: 'white',
-            border: 'none',
-            cursor: 'pointer'
-          }}
-        >
-          Retry
-        </button>
-      </div>
-    );
-  }
-
   // Calculate portfolio summary
   const totalRooms = rooms.length;
   const occupiedRooms = rooms.filter(room => !room.is_vacant).length;
   const vacantRooms = rooms.filter(room => room.is_vacant).length;
   const overallOccupancyRate = totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0;
 
-  return (
-    <div>
-      <Navigation />
-      <h1>🏠 Properties Portfolio</h1>
-      <p>Manage your properties and track occupancy across your portfolio.</p>
-      
-      {/* Portfolio Summary Cards */}
-      <div style={{
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-        gap: '15px', 
-        marginBottom: '30px'
-      }}>
-        <div style={{
-          border: '1px solid #ddd', 
-          padding: '20px', 
-          borderRadius: '8px', 
-          backgroundColor: '#f8f9fa',
-          textAlign: 'center'
-        }}>
-          <h3 style={{margin: '0 0 10px 0', color: '#27ae60'}}>Total Properties</h3>
-          <div style={{fontSize: '32px', fontWeight: 'bold', color: '#27ae60'}}>{properties.length}</div>
-        </div>
-        
-        <div style={{
-          border: '1px solid #ddd', 
-          padding: '20px', 
-          borderRadius: '8px', 
-          backgroundColor: '#f8f9fa',
-          textAlign: 'center'
-        }}>
-          <h3 style={{margin: '0 0 10px 0', color: '#3498db'}}>Total Rooms</h3>
-          <div style={{fontSize: '32px', fontWeight: 'bold', color: '#3498db'}}>{totalRooms}</div>
-        </div>
-        
-        <div style={{
-          border: '1px solid #ddd', 
-          padding: '20px', 
-          borderRadius: '8px', 
-          backgroundColor: '#f8f9fa',
-          textAlign: 'center'
-        }}>
-          <h3 style={{margin: '0 0 10px 0', color: '#e74c3c'}}>Vacant Rooms</h3>
-          <div style={{fontSize: '32px', fontWeight: 'bold', color: '#e74c3c'}}>{vacantRooms}</div>
-        </div>
-        
-        <div style={{
-          border: '1px solid #ddd', 
-          padding: '20px', 
-          borderRadius: '8px', 
-          backgroundColor: '#f8f9fa',
-          textAlign: 'center'
-        }}>
-          <h3 style={{margin: '0 0 10px 0', color: '#f39c12'}}>Occupancy Rate</h3>
-          <div style={{fontSize: '32px', fontWeight: 'bold', color: '#f39c12'}}>{overallOccupancyRate}%</div>
-        </div>
-      </div>
-
-      {/* Action Buttons */}
-      <div style={{marginBottom: '20px'}}>
-        <Link href="/properties/add">
-          <button style={{
-            backgroundColor: '#28a745', 
-            color: 'white', 
-            padding: '10px 15px', 
-            border: 'none', 
-            borderRadius: '5px',
-            marginRight: '10px',
-            cursor: 'pointer'
-          }}
+  if (loading) {
+    return (
+      <>
+        <Navigation />
+        <DashboardLayout
+          title="Properties Portfolio"
+          subtitle="Loading property data..."
         >
-          ➕ Register New Property
-        </button>
+          <div className="loading-indicator">
+            <div className="loading-spinner"></div>
+            <p>Fetching property data...</p>
+          </div>
+        </DashboardLayout>
+        
+        <style jsx>{`
+          .loading-indicator {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: var(--spacing-xl);
+          }
+          
+          .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--gray-200);
+            border-top-color: var(--primary-blue);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: var(--spacing-md);
+          }
+          
+          @keyframes spin {
+            to {
+              transform: rotate(360deg);
+            }
+          }
+        `}</style>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <Head>
+        <title>Properties Portfolio - Tink Property Management</title>
+      </Head>
+      <Navigation />
+      
+      <DashboardLayout
+        title="Properties Portfolio"
+        subtitle="Manage your properties and track occupancy across your portfolio."
+      >
+        {error && <div className="alert alert-error">{error}</div>}
+        
+        {/* Metrics */}
+        <div className="metrics-grid">
+          <MetricCard 
+            title="Total Properties" 
+            value={properties.length}
+            color="green"
+          />
+          
+          <MetricCard 
+            title="Total Rooms" 
+            value={totalRooms}
+            color="blue"
+          />
+        
+          <MetricCard 
+            title="Vacant Rooms" 
+            value={vacantRooms}
+            color="amber"
+          />
+          
+          <MetricCard 
+            title="Occupancy Rate" 
+            value={`${overallOccupancyRate}%`}
+            color="purple"
+          />
+        </div>
+        
+        {/* Actions */}
+        <SectionCard>
+          <div className="actions-container">
+            <Link href="/properties/add" className="btn btn-primary">
+              Register New Property
         </Link>
+            
         <button 
           onClick={downloadPropertiesReport}
-          style={{
-            backgroundColor: '#28a745', 
-            color: 'white', 
-            padding: '10px 15px', 
-            border: 'none', 
-            borderRadius: '5px',
-            marginRight: '10px',
-            cursor: 'pointer'
-          }}
+              className="btn btn-secondary"
         >
-          📊 Download Report
+              Download Report
           </button>
+            
         <button 
           onClick={fetchData}
-          style={{
-            backgroundColor: '#6c757d', 
-            color: 'white', 
-            padding: '10px 15px', 
-            border: 'none', 
-            borderRadius: '5px',
-            cursor: 'pointer'
-          }}
+              className="btn btn-secondary"
         >
-          🔄 Refresh
+              Refresh
           </button>
         </div>
+        </SectionCard>
 
-      {/* Properties Table */}
-      <div style={{marginBottom: '30px'}}>
-        <h2>📋 Properties Overview</h2>
-        {properties.length > 0 ? (
-          <table border={1} style={{width: '100%', borderCollapse: 'collapse'}}>
-            <thead>
-              <tr style={{backgroundColor: '#f8f9fa'}}>
-                <th style={{padding: '12px', textAlign: 'left'}}>Property</th>
-                <th style={{padding: '12px', textAlign: 'center'}}>Rooms</th>
-                <th style={{padding: '12px', textAlign: 'center'}}>Occupancy</th>
-                <th style={{padding: '12px', textAlign: 'center'}}>Status</th>
-                <th style={{padding: '12px', textAlign: 'center'}}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {properties.map(property => {
+        {/* Properties Overview */}
+        <SectionCard
+          title="Properties Overview"
+          subtitle="Summary of your managed properties"
+        >
+          {properties.length === 0 ? (
+            <EmptyState
+              title="No Properties Found"
+              description="Add your first property to get started with property management."
+              action={
+                <Link href="/properties/add" className="btn btn-primary">
+                  Add Property
+                </Link>
+              }
+            />
+          ) : (
+            <DataTable
+              columns={[
+                { key: 'property', header: 'Property', width: '30%' },
+                { key: 'rooms', header: 'Rooms', width: '15%' },
+                { key: 'occupancy', header: 'Occupancy', width: '25%' },
+                { key: 'status', header: 'Status', width: '15%' },
+                { key: 'actions', header: 'Actions', width: '15%' }
+              ]}
+              data={properties}
+              renderRow={(property) => {
                 const stats = getPropertyStats(property.id);
-                const needsAttention = stats.occupancyRate < 80;
+                const occupancyWarning = stats.occupancyRate < 80;
                 
               return (
-                  <tr key={property.id} style={{
-                    backgroundColor: needsAttention ? '#fff3cd' : 'white'
-                  }}>
-                    <td style={{padding: '12px'}}>
-                      <div>
-                        <strong style={{fontSize: '16px'}}>{property.name}</strong>
-                        <br />
-                        <small style={{color: '#666'}}>{property.full_address}</small>
-                        {property.landlord_name && (
-                          <>
-                    <br />
-                            <small style={{color: '#888'}}>Landlord: {property.landlord_name}</small>
-                          </>
-                        )}
+                  <tr key={property.id}>
+                    <td>
+                      <div className="property-name">{property.name}</div>
+                      <div className="property-address">{property.full_address}</div>
+                    </td>
+                    
+                    <td>
+                      <div className="rooms-stats">
+                        <div>{stats.totalRooms} total</div>
+                        <div className="room-detail">
+                          {stats.occupiedRooms} occupied, {stats.vacantRooms} vacant
+                        </div>
                       </div>
                   </td>
-                    <td style={{padding: '12px', textAlign: 'center'}}>
-                      <div style={{fontSize: '18px', fontWeight: 'bold'}}>{stats.totalRooms}</div>
-                      <small style={{color: '#666'}}>
-                        {stats.occupiedRooms} occupied, {stats.vacantRooms} vacant
-                      </small>
-                  </td>
-                    <td style={{padding: '12px', textAlign: 'center'}}>
-                      <div style={{
-                        fontSize: '18px', 
-                        fontWeight: 'bold',
-                        color: stats.occupancyRate >= 90 ? '#27ae60' : 
-                               stats.occupancyRate >= 70 ? '#f39c12' : '#e74c3c'
-                      }}>
-                        {stats.occupancyRate}%
+                    
+                    <td>
+                      <div className="occupancy-container">
+                        <div className="occupancy-bar">
+                          <div 
+                            className="occupancy-progress" 
+                            style={{ width: `${stats.occupancyRate}%` }}
+                          ></div>
                       </div>
-                      <div style={{
-                        width: '100px',
-                        height: '8px',
-                        backgroundColor: '#e0e0e0',
-                        borderRadius: '4px',
-                        margin: '5px auto',
-                        overflow: 'hidden'
-                      }}>
-                        <div style={{
-                          width: `${stats.occupancyRate}%`,
-                          height: '100%',
-                          backgroundColor: stats.occupancyRate >= 90 ? '#27ae60' : 
-                                         stats.occupancyRate >= 70 ? '#f39c12' : '#e74c3c',
-                          transition: 'width 0.3s ease'
-                        }} />
+                        <div className="occupancy-text">{stats.occupancyRate}%</div>
                       </div>
                     </td>
-                    <td style={{padding: '12px', textAlign: 'center'}}>
-                      {stats.vacantRooms > 0 ? (
-                        <span style={{
-                          padding: '4px 8px',
-                          borderRadius: '12px',
-                          fontSize: '12px',
-                          backgroundColor: '#fff3cd',
-                          color: '#856404'
-                        }}>
-                          {stats.vacantRooms} vacant
-                        </span>
+                    
+                    <td>
+                      {stats.occupancyRate < 70 ? (
+                        <StatusBadge status="warning" text="Low Occupancy" />
+                      ) : stats.occupancyRate < 90 ? (
+                        <StatusBadge status="info" text="Good" />
                       ) : (
-                        <span style={{
-                          padding: '4px 8px',
-                          borderRadius: '12px',
-                          fontSize: '12px',
-                          backgroundColor: '#d4edda',
-                          color: '#155724'
-                        }}>
-                          Fully occupied
-                        </span>
+                        <StatusBadge status="success" text="Excellent" />
                     )}
                   </td>
-                    <td style={{padding: '12px', textAlign: 'center'}}>
-                      <div style={{display: 'flex', gap: '5px', justifyContent: 'center', flexWrap: 'wrap'}}>
-                    <Link href={`/properties/${property.id}/rooms`}>
-                          <button style={{
-                            backgroundColor: '#007bff',
-                            color: 'white',
-                            border: 'none',
-                            padding: '6px 12px',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontSize: '12px'
-                          }}>
-                            🏠 View Rooms
-                          </button>
+                    
+                    <td>
+                      <div className="action-buttons">
+                        <Link href={`/properties/${property.id}`} className="btn btn-secondary btn-sm">
+                          Details
                         </Link>
-                        {stats.vacantRooms > 0 && (
-                          <Link href="/applications">
-                            <button style={{
-                              backgroundColor: '#28a745',
-                              color: 'white',
-                              border: 'none',
-                              padding: '6px 12px',
-                              borderRadius: '4px',
-                              cursor: 'pointer',
-                              fontSize: '12px'
-                            }}>
-                              📋 Fill Rooms
-                            </button>
-                    </Link>
-                        )}
                       </div>
                   </td>
                 </tr>
               );
-            })}
-          </tbody>
-        </table>
-        ) : (
-          <div style={{
-            textAlign: 'center', 
-            padding: '40px', 
-            backgroundColor: '#f8f9fa', 
-            borderRadius: '8px'
-          }}>
-            <h3>No Properties Found</h3>
-            <p>Add your first property to get started with property management.</p>
-            <button style={{
-              backgroundColor: '#28a745',
-              color: 'white',
-              padding: '10px 20px',
-              border: 'none',
-              borderRadius: '5px',
-              cursor: 'pointer'
-            }}>
-              + Add Property
-            </button>
-          </div>
+              }}
+            />
         )}
-      </div>
+        </SectionCard>
 
       {/* Quick Actions */}
-      <div style={{marginTop: '30px'}}>
-        <h2>⚡ Quick Actions</h2>
-        <div style={{display: 'flex', gap: '10px', flexWrap: 'wrap'}}>
-          <Link href="/applications">
-            <button style={{
-              backgroundColor: '#e74c3c', 
-              color: 'white', 
-              padding: '12px 20px', 
-              border: 'none', 
-              borderRadius: '5px',
-              cursor: 'pointer',
-              fontSize: '14px'
-            }}>
-              📋 Review Applications
-            </button>
+        <SectionCard 
+          title="Quick Actions"
+          subtitle="Common property management tasks"
+        >
+          <div className="quick-actions">
+            <Link href="/tenants" className="btn btn-secondary">
+              Manage Tenants
           </Link>
-          <Link href="/tenants">
-            <button style={{
-              backgroundColor: '#3498db', 
-              color: 'white', 
-              padding: '12px 20px', 
-              border: 'none', 
-              borderRadius: '5px',
-              cursor: 'pointer',
-              fontSize: '14px'
-            }}>
-              👥 Manage Tenants
-            </button>
+            
+            <Link href="/leases" className="btn btn-secondary">
+              View Leases
           </Link>
-          <Link href="/leases">
-            <button style={{
-              backgroundColor: '#f39c12', 
-              color: 'white', 
-              padding: '12px 20px', 
-              border: 'none', 
-              borderRadius: '5px',
-              cursor: 'pointer',
-              fontSize: '14px'
-            }}>
-              📜 View Leases
-            </button>
+            
+            <Link href="/applications" className="btn btn-secondary">
+              Review Applications
           </Link>
-          <Link href="/inventory">
-            <button style={{
-              backgroundColor: '#9b59b6', 
-              color: 'white', 
-              padding: '12px 20px', 
-              border: 'none', 
-              borderRadius: '5px',
-              cursor: 'pointer',
-              fontSize: '14px'
-            }}>
-              📦 Check Inventory
-            </button>
+            
+            <Link href="#" className="btn btn-secondary">
+              Check Inventory
           </Link>
         </div>
-      </div>
-    </div>
-  );
+        </SectionCard>
+      </DashboardLayout>
+      
+      <style jsx>{`
+        .metrics-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+          gap: var(--spacing-lg);
+          margin-bottom: var(--spacing-xl);
 } 
 
-export default withAuth(Properties, ['admin', 'owner', 'manager']);
+        .actions-container {
+          display: flex;
+          gap: var(--spacing-md);
+          flex-wrap: wrap;
+        }
+        
+        .property-name {
+          font-weight: 500;
+          color: var(--gray-900);
+        }
+        
+        .property-address {
+          font-size: var(--text-small);
+          color: var(--gray-600);
+        }
+        
+        .rooms-stats {
+          font-size: var(--text-small);
+        }
+        
+        .room-detail {
+          color: var(--gray-600);
+          margin-top: 4px;
+        }
+        
+        .occupancy-container {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+        
+        .occupancy-bar {
+          height: 8px;
+          background-color: var(--gray-200);
+          border-radius: 4px;
+          overflow: hidden;
+        }
+        
+        .occupancy-progress {
+          height: 100%;
+          background-color: var(--primary-blue);
+          border-radius: 4px;
+        }
+        
+        .occupancy-text {
+          font-size: var(--text-small);
+          font-weight: 500;
+        }
+        
+        .action-buttons {
+          display: flex;
+          gap: var(--spacing-xs);
+        }
+        
+        .quick-actions {
+          display: flex;
+          gap: var(--spacing-md);
+          flex-wrap: wrap;
+        }
+      `}</style>
+    </>
+  );
+}
+
+export default withAuth(Properties);

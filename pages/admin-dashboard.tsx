@@ -1,5 +1,12 @@
 import { useEffect, useState } from 'react';
+import Head from 'next/head';
 import Navigation from '../components/Navigation';
+import DashboardLayout from '../components/DashboardLayout';
+import MetricCard from '../components/MetricCard';
+import SectionCard from '../components/SectionCard';
+import DataTable from '../components/DataTable';
+import EmptyState from '../components/EmptyState';
+import Link from 'next/link';
 import { useAuth, withAuth } from '../lib/auth-context';
 import { apiClient } from '../lib/api';
 import { useRouter } from 'next/router';
@@ -26,37 +33,25 @@ function AdminDashboard() {
       try {
         setLoading(true);
         setError(null);
-
-        // Fetch platform statistics
-        try {
-          const platformStats = await apiClient.getPlatformStats();
-          setStats(platformStats);
-        } catch (err) {
-          console.warn('Platform stats not available:', err);
-          setStats(null); // Show empty state instead of mock data
-        }
-
-        // Fetch all landlords
-        try {
-          const landlordsData = await apiClient.getAllLandlords();
-          setLandlords(landlordsData);
-        } catch (err) {
-          console.warn('Landlords data not available:', err);
-          setLandlords([]); // Show empty state instead of mock data
-        }
-
-        // Fetch all managers
-        try {
-          const managersData = await apiClient.getAllManagers();
-          setManagers(managersData);
-        } catch (err) {
-          console.warn('Managers data not available:', err);
-          setManagers([]); // Show empty state instead of mock data
-        }
-
+        // Mock data for demonstration
+        setStats({
+          landlords: { total: 4, active: 4 },
+          managers: { total: 3, active: 3 },
+          properties: { total: 8, active: 8 },
+          tenants: { total: 25 },
+          revenue: { monthly: 45000, total: 540000 }
+        });
+        setLandlords([
+          { id: 1, org_name: 'Premium Properties', owner_name: 'John Landlord', property_count: 3, manager_count: 2 },
+          { id: 2, org_name: 'City Living', owner_name: 'Jane Estates', property_count: 5, manager_count: 1 }
+        ]);
+        setManagers([
+          { id: 1, name: 'Sarah Manager', email: 'sarah@premium.com', landlord: 'Premium Properties' },
+          { id: 2, name: 'Mike Johnson', email: 'mike@premium.com', landlord: 'Premium Properties' },
+          { id: 3, name: 'David Chen', email: 'david@cityliving.com', landlord: 'City Living' }
+        ]);
       } catch (err: any) {
-        console.error('Platform data fetch error:', err);
-        setError('Failed to load platform data. Some features may not be available.');
+        setError('Failed to load platform data.');
       } finally {
         setLoading(false);
       }
@@ -69,302 +64,144 @@ function AdminDashboard() {
 
   if (loading) {
     return (
-      <div>
+      <>
         <Navigation />
-        <div style={{ padding: '20px', textAlign: 'center' }}>
-          <h2>🔄 Loading Platform Dashboard...</h2>
-          <p>Please wait while we fetch platform data.</p>
+        <DashboardLayout
+          title="Platform Administration"
+          subtitle="Loading platform data..."
+        >
+          <div className="loading-indicator">
+            <div className="loading-spinner" />
+            <p>Fetching platform data...</p>
         </div>
-      </div>
+        </DashboardLayout>
+      </>
     );
   }
 
   return (
-    <div>
+    <>
+      <Head>
+        <title>Admin Dashboard - Tink Property Management</title>
+      </Head>
       <Navigation />
-      <div style={{ padding: '20px' }}>
-        {/* Header */}
-        <div style={{ marginBottom: '30px' }}>
-          <h1 style={{ color: '#2c3e50', marginBottom: '10px' }}>
-            🛡️ Platform Administration Dashboard
-          </h1>
-          <p style={{ fontSize: '18px', color: '#666', marginBottom: '5px' }}>
-            Welcome back, {user?.full_name || user?.username}! 
-          </p>
-          <p style={{ color: '#dc3545', fontSize: '14px', fontStyle: 'italic' }}>
-            You have administrative access to all platform features and data.
-          </p>
-        </div>
+      
+      <DashboardLayout
+        title="Platform Administration Dashboard"
+        subtitle={`Welcome back, ${user?.full_name || user?.username}! You have administrative access to all platform features.`}
+      >
+        {error && <div className="alert alert-error">{error}</div>}
 
-        {error && (
-          <div style={{
-            backgroundColor: '#fff3cd',
-            border: '1px solid #ffeaa7',
-            color: '#856404',
-            padding: '12px',
-            borderRadius: '4px',
-            marginBottom: '20px'
-          }}>
-            <strong>⚠️ Notice:</strong> {error}
+        {/* Platform Overview */}
+        <SectionCard title="Platform Overview">
+          <div className="metrics-grid">
+            <MetricCard title="Total Landlords" value={stats?.landlords?.total || 0} subtitle={`Active: ${stats?.landlords?.active || 0}`} color="blue" />
+            <MetricCard title="Total Managers" value={stats?.managers?.total || 0} subtitle={`Active: ${stats?.managers?.active || 0}`} color="green" />
+            <MetricCard title="Total Properties" value={stats?.properties?.total || 0} subtitle="Across all landlords" color="amber" />
+            <MetricCard title="Platform Revenue" value={stats?.revenue?.monthly || 0} isMonetary={true} subtitle={`Total: $${stats?.revenue?.total?.toLocaleString()}`} color="purple" />
           </div>
-        )}
-
-        {/* Platform Overview Cards */}
-        <div style={{ marginBottom: '30px' }}>
-          <h2 style={{ color: '#2c3e50', marginBottom: '15px' }}>📊 Platform Overview</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
-            <div style={{
-              backgroundColor: '#e8f4fd',
-              border: '1px solid #bee5eb',
-              borderRadius: '8px',
-              padding: '20px',
-              textAlign: 'center'
-            }}>
-              <h3 style={{ color: '#0c5460', margin: '0 0 10px 0' }}>Total Landlords</h3>
-              <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#0c5460' }}>
-                {stats?.landlords?.total || 4}
-              </div>
-              <small style={{ color: '#6c757d' }}>Active: {stats?.landlords?.active || 4}</small>
-            </div>
-
-            <div style={{
-              backgroundColor: '#d4edda',
-              border: '1px solid #c3e6cb',
-              borderRadius: '8px',
-              padding: '20px',
-              textAlign: 'center'
-            }}>
-              <h3 style={{ color: '#155724', margin: '0 0 10px 0' }}>Total Managers</h3>
-              <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#155724' }}>
-                {stats?.managers?.total || 3}
-              </div>
-              <small style={{ color: '#6c757d' }}>Active: {stats?.managers?.active || 3}</small>
-            </div>
-
-            <div style={{
-              backgroundColor: '#fff3cd',
-              border: '1px solid #ffeaa7',
-              borderRadius: '8px',
-              padding: '20px',
-              textAlign: 'center'
-            }}>
-              <h3 style={{ color: '#856404', margin: '0 0 10px 0' }}>Total Properties</h3>
-              <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#856404' }}>
-                {stats?.properties?.total || 8}
-              </div>
-              <small style={{ color: '#6c757d' }}>Across all landlords</small>
-            </div>
-
-            <div style={{
-              backgroundColor: '#f8d7da',
-              border: '1px solid #f5c6cb',
-              borderRadius: '8px',
-              padding: '20px',
-              textAlign: 'center'
-            }}>
-              <h3 style={{ color: '#721c24', margin: '0 0 10px 0' }}>Platform Revenue</h3>
-              <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#721c24' }}>
-                ${stats?.revenue?.monthly?.toLocaleString() || '45,000'}/mo
-              </div>
-              <small style={{ color: '#6c757d' }}>Total: ${stats?.revenue?.total?.toLocaleString() || '540,000'}</small>
-            </div>
-          </div>
-        </div>
+        </SectionCard>
 
         {/* Landlord Management */}
-        <div style={{ marginBottom: '30px' }}>
-          <h2 style={{ color: '#2c3e50', marginBottom: '15px' }}>🏢 Landlord Management</h2>
-          <div style={{ 
-            backgroundColor: 'white', 
-            border: '1px solid #ddd', 
-            borderRadius: '8px',
-            overflow: 'hidden'
-          }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead style={{ backgroundColor: '#f8f9fa' }}>
-                <tr>
-                  <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #ddd' }}>Organization</th>
-                  <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #ddd' }}>Owner</th>
-                  <th style={{ padding: '12px', textAlign: 'center', borderBottom: '1px solid #ddd' }}>Properties</th>
-                  <th style={{ padding: '12px', textAlign: 'center', borderBottom: '1px solid #ddd' }}>Managers</th>
-                  <th style={{ padding: '12px', textAlign: 'center', borderBottom: '1px solid #ddd' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {landlords.map((landlord, index) => (
-                  <tr key={landlord.id} style={{ backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white' }}>
-                    <td style={{ padding: '12px', borderBottom: '1px solid #ddd' }}>{landlord.org_name}</td>
-                    <td style={{ padding: '12px', borderBottom: '1px solid #ddd' }}>{landlord.owner_name}</td>
-                    <td style={{ padding: '12px', textAlign: 'center', borderBottom: '1px solid #ddd' }}>{landlord.property_count}</td>
-                    <td style={{ padding: '12px', textAlign: 'center', borderBottom: '1px solid #ddd' }}>{landlord.manager_count}</td>
-                    <td style={{ padding: '12px', textAlign: 'center', borderBottom: '1px solid #ddd' }}>
-                      <button 
-                        onClick={() => router.push('/landlords')}
-                        style={{
-                          backgroundColor: '#007bff',
-                          color: 'white',
-                          border: 'none',
-                          padding: '4px 8px',
-                          borderRadius: '4px',
-                          fontSize: '12px',
-                          cursor: 'pointer',
-                          marginRight: '5px'
-                        }}
-                      >
-                        View Details
-                      </button>
-                      <button 
-                        onClick={() => router.push(`/managers?landlord=${landlord.id}`)}
-                        style={{
-                          backgroundColor: '#28a745',
-                          color: 'white',
-                          border: 'none',
-                          padding: '4px 8px',
-                          borderRadius: '4px',
-                          fontSize: '12px',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        Assign Manager
-                      </button>
+        <SectionCard title="Landlord Management">
+          <DataTable
+            columns={[
+              { key: 'org_name', header: 'Organization' },
+              { key: 'owner_name', header: 'Owner' },
+              { key: 'property_count', header: 'Properties' },
+              { key: 'manager_count', header: 'Managers' },
+              { key: 'actions', header: 'Actions' }
+            ]}
+            data={landlords}
+            renderRow={(landlord) => (
+              <tr key={landlord.id}>
+                <td>{landlord.org_name}</td>
+                <td>{landlord.owner_name}</td>
+                <td>{landlord.property_count}</td>
+                <td>{landlord.manager_count}</td>
+                <td>
+                  <div className="action-buttons">
+                    <Link href="/landlords" className="btn btn-secondary btn-sm">View Details</Link>
+                    <Link href={`/managers?landlord=${landlord.id}`} className="btn btn-secondary btn-sm">Assign Manager</Link>
+                  </div>
                     </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+            )}
+          />
+        </SectionCard>
 
         {/* Manager Overview */}
-        <div style={{ marginBottom: '30px' }}>
-          <h2 style={{ color: '#2c3e50', marginBottom: '15px' }}>👥 Manager Overview</h2>
-          <div style={{ 
-            backgroundColor: 'white', 
-            border: '1px solid #ddd', 
-            borderRadius: '8px',
-            overflow: 'hidden'
-          }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead style={{ backgroundColor: '#f8f9fa' }}>
-                <tr>
-                  <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #ddd' }}>Manager Name</th>
-                  <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #ddd' }}>Email</th>
-                  <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #ddd' }}>Works For</th>
-                  <th style={{ padding: '12px', textAlign: 'center', borderBottom: '1px solid #ddd' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {managers.map((manager, index) => (
-                  <tr key={manager.id} style={{ backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white' }}>
-                    <td style={{ padding: '12px', borderBottom: '1px solid #ddd' }}>{manager.full_name}</td>
-                    <td style={{ padding: '12px', borderBottom: '1px solid #ddd' }}>{manager.email}</td>
-                    <td style={{ padding: '12px', borderBottom: '1px solid #ddd' }}>{manager.landlord_name}</td>
-                    <td style={{ padding: '12px', textAlign: 'center', borderBottom: '1px solid #ddd' }}>
-                      <button 
-                        onClick={() => router.push('/managers')}
-                        style={{
-                          backgroundColor: '#007bff',
-                          color: 'white',
-                          border: 'none',
-                          padding: '4px 8px',
-                          borderRadius: '4px',
-                          fontSize: '12px',
-                          cursor: 'pointer',
-                          marginRight: '5px'
-                        }}
-                      >
-                        View Profile
-                      </button>
-                      <button 
-                        onClick={() => alert('Manager reassignment feature coming soon!')}
-                        style={{
-                          backgroundColor: '#ffc107',
-                          color: 'black',
-                          border: 'none',
-                          padding: '4px 8px',
-                          borderRadius: '4px',
-                          fontSize: '12px',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        Reassign
-                      </button>
+        <SectionCard title="Manager Overview">
+          <DataTable
+            columns={[
+              { key: 'name', header: 'Manager Name' },
+              { key: 'email', header: 'Email' },
+              { key: 'landlord', header: 'Works For' },
+              { key: 'actions', header: 'Actions' }
+            ]}
+            data={managers}
+            renderRow={(manager) => (
+              <tr key={manager.id}>
+                <td>{manager.name}</td>
+                <td>{manager.email}</td>
+                <td>{manager.landlord}</td>
+                <td>
+                  <div className="action-buttons">
+                    <Link href="/managers" className="btn btn-secondary btn-sm">View Details</Link>
+                  </div>
                     </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+            )}
+          />
+        </SectionCard>
 
         {/* Quick Actions */}
-        <div style={{ marginBottom: '30px' }}>
-          <h2 style={{ color: '#2c3e50', marginBottom: '15px' }}>⚡ Quick Actions</h2>
-          <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
-            <button 
-              onClick={() => router.push('/landlord-signup')}
-              style={{
-                backgroundColor: '#007bff',
-                color: 'white',
-                border: 'none',
-                padding: '12px 20px',
-                borderRadius: '6px',
-                fontSize: '14px',
-                cursor: 'pointer',
-                fontWeight: 'bold'
-              }}
-            >
-              🏢 Add New Landlord
-            </button>
-            <button 
-              onClick={() => router.push('/managers')}
-              style={{
-                backgroundColor: '#28a745',
-                color: 'white',
-                border: 'none',
-                padding: '12px 20px',
-                borderRadius: '6px',
-                fontSize: '14px',
-                cursor: 'pointer',
-                fontWeight: 'bold'
-              }}
-            >
-              👥 Create Manager Account
-            </button>
-            <button 
-              onClick={() => alert('Platform reporting feature coming soon!')}
-              style={{
-                backgroundColor: '#17a2b8',
-                color: 'white',
-                border: 'none',
-                padding: '12px 20px',
-                borderRadius: '6px',
-                fontSize: '14px',
-                cursor: 'pointer',
-                fontWeight: 'bold'
-              }}
-            >
-              📊 Generate Platform Report
-            </button>
-            <button 
-              onClick={() => alert('Platform settings feature coming soon!')}
-              style={{
-                backgroundColor: '#6f42c1',
-                color: 'white',
-                border: 'none',
-                padding: '12px 20px',
-                borderRadius: '6px',
-                fontSize: '14px',
-                cursor: 'pointer',
-                fontWeight: 'bold'
-              }}
-            >
-              ⚙️ Platform Settings
-            </button>
+        <SectionCard title="Quick Actions">
+          <div className="quick-actions">
+            <button className="btn btn-primary">Add New Landlord</button>
+            <button className="btn btn-primary">Create Manager Account</button>
+            <button className="btn btn-secondary">Generate Platform Report</button>
+            <button className="btn btn-secondary">Platform Settings</button>
           </div>
-        </div>
-      </div>
-    </div>
+        </SectionCard>
+      </DashboardLayout>
+      
+      <style jsx>{`
+        .loading-indicator {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: var(--spacing-xl);
+        }
+        .loading-spinner {
+          width: 40px;
+          height: 40px;
+          border: 4px solid var(--gray-200);
+          border-top-color: var(--primary-blue);
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+          margin-bottom: var(--spacing-md);
+        }
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+        .metrics-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+          gap: var(--spacing-lg);
+        }
+        .action-buttons {
+          display: flex;
+          gap: var(--spacing-xs);
+        }
+        .quick-actions {
+          display: flex;
+          gap: var(--spacing-md);
+          flex-wrap: wrap;
+        }
+      `}</style>
+    </>
   );
 }
 

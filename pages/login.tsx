@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../lib/auth-context';
 import Link from 'next/link';
+import AuthLayout from '../components/AuthLayout';
+import SectionCard from '../components/SectionCard';
 
 export default function Login() {
   const { login, isAuthenticated, loading, error, clearError } = useAuth();
@@ -79,218 +81,123 @@ export default function Login() {
 
   if (isAuthenticated) {
     return (
-      <div style={{ padding: '40px', textAlign: 'center' }}>
-        <h2>✅ Already Logged In</h2>
-        <p>Redirecting to dashboard...</p>
+      <div className="page-wrapper">
+        <div className="card" style={{ maxWidth: '400px' }}>
+          <div className="card-body text-center">
+            <h2 className="text-h2 text-success mb-md">Already Logged In</h2>
+            <p className="text-body text-secondary">Redirecting to dashboard...</p>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div style={{ 
-      maxWidth: '500px', 
-      margin: '50px auto', 
-      padding: '40px', 
-      border: '1px solid #ddd', 
-      borderRadius: '8px',
-      backgroundColor: '#fff'
-    }}>
-      <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-        <h1 style={{ color: '#2c3e50', marginBottom: '10px' }}>
-          🏠 Tink Property Management
-        </h1>
-        <p style={{ color: '#666', fontSize: '16px' }}>
-          Sign in to manage your co-living properties
-        </p>
-      </div>
+    <AuthLayout title="Sign In">
+      <div className="auth-card">
+        <div className="card-body">
+          <h2 className="text-h2 mb-lg text-center">Welcome Back!</h2>
+          {/* Error Alert */}
+          {error && (
+            <div className="alert alert-error mb-md">
+              <strong>Login Failed:</strong> {error}
+            </div>
+          )}
+
+          {/* Success Alert */}
+          {success && (
+            <div className="alert alert-success mb-md">
+              <strong>Success:</strong> {success}
+            </div>
+          )}
+
+          {/* Login Form */}
+          <form onSubmit={handleSubmit}>
+            <div className="form-group">
+              <label htmlFor="username" className="form-label">
+                Username or Email
+              </label>
+              <input
+                id="username"
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Enter your username or email"
+                required
+                disabled={isLoading || loading}
+                className="form-input"
+              />
+            </div>
+            
+            <div className="form-group">
+              <label htmlFor="password" className="form-label">
+                Password
+              </label>
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your password"
+                required
+                disabled={isLoading || loading}
+                className="form-input"
+              />
+            </div>
+
+            <button 
+              type="submit" 
+              disabled={isLoading || loading}
+              className="btn btn-primary btn-full-width"
+            >
+              {isLoading || loading ? 'Signing in...' : 'Sign In'}
+            </button>
+          </form>
+          <div className="text-center mt-lg">
+            <p className="text-small text-secondary mb-sm">
+              Don't have an account yet?
+            </p>
+            <Link href="/landlord-signup" legacyBehavior>
+              <a className="text-link">Register as a Landlord →</a>
+            </Link>
+          </div>
+        </div>
+
+        <div className="card-footer">
+          <div className="text-center mb-lg">
+            <h3 className="text-h3 mb-sm">Quick Demo Access</h3>
+            <p className="text-small text-secondary mb-lg">
+              Try the application with pre-configured demo accounts
+            </p>
+          </div>
       
-      {error && (
-        <div style={{ 
-          color: '#721c24', 
-          backgroundColor: '#f8d7da',
-          border: '1px solid #f5c6cb', 
-          padding: '12px', 
-          marginBottom: '20px',
-          borderRadius: '4px'
-        }}>
-          <strong>⚠️ Login Failed:</strong> {error}
-        </div>
-      )}
-
-      {success && (
-        <div style={{ 
-          color: '#155724', 
-          backgroundColor: '#d4edda',
-          border: '1px solid #c3e6cb', 
-          padding: '12px', 
-          marginBottom: '20px',
-          borderRadius: '4px'
-        }}>
-          <strong>✅ Success:</strong> {success}
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: '20px' }}>
-          <label htmlFor="username" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-            Username/Email:
-          </label>
-          <input
-            id="username"
-            type="text"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder="Enter your username or email"
-            required
-            disabled={isLoading || loading}
-            style={{ 
-              width: '100%', 
-              padding: '12px', 
-              fontSize: '14px',
-              border: '1px solid #ddd',
-              borderRadius: '4px',
-              backgroundColor: isLoading || loading ? '#f8f9fa' : 'white'
-            }}
-          />
-        </div>
-        
-        <div style={{ marginBottom: '25px' }}>
-          <label htmlFor="password" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-            Password:
-          </label>
-          <input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Enter your password"
-            required
-            disabled={isLoading || loading}
-            style={{ 
-              width: '100%', 
-              padding: '12px', 
-              fontSize: '14px',
-              border: '1px solid #ddd',
-              borderRadius: '4px',
-              backgroundColor: isLoading || loading ? '#f8f9fa' : 'white'
-            }}
-          />
-        </div>
-
-        <button 
-          type="submit" 
-          disabled={isLoading || loading}
-          style={{ 
-            width: '100%',
-            padding: '12px 20px', 
-            fontSize: '16px',
-            fontWeight: 'bold',
-            backgroundColor: isLoading || loading ? '#6c757d' : '#007bff',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: isLoading || loading ? 'not-allowed' : 'pointer',
-            marginBottom: '20px'
-          }}
-        >
-          {isLoading || loading ? '🔄 Signing in...' : '🔐 Sign In'}
-        </button>
-      </form>
-
-      <hr style={{ margin: '30px 0', borderColor: '#eee' }} />
-      
-      <div>
-        <h3 style={{ textAlign: 'center', marginBottom: '15px', color: '#495057' }}>
-          🚀 Quick Demo Access
-        </h3>
-        <p style={{ textAlign: 'center', marginBottom: '20px', color: '#666', fontSize: '14px' }}>
-          Try the application with pre-configured demo accounts:
-        </p>
-        
-        <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-          <button 
-            onClick={() => handleDemoLogin('admin')}
-            disabled={isLoading || loading}
-            style={{ 
-              flex: 1,
-              padding: '10px 16px', 
-              backgroundColor: isLoading || loading ? '#6c757d' : '#dc3545',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: isLoading || loading ? 'not-allowed' : 'pointer',
-              fontWeight: 'bold'
-            }}
-          >
-            🛡️ Admin (SaaS Owner)
-          </button>
-          <button 
-            onClick={() => handleDemoLogin('owner')}
-            disabled={isLoading || loading}
-            style={{ 
-              flex: 1,
-              padding: '10px 16px', 
-              backgroundColor: isLoading || loading ? '#6c757d' : '#f39c12',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: isLoading || loading ? 'not-allowed' : 'pointer',
-              fontWeight: 'bold'
-            }}
-          >
-            💰 Landlord Demo
-      </button>
-          <button 
-            onClick={() => handleDemoLogin('manager')}
-            disabled={isLoading || loading}
-            style={{ 
-              flex: 1,
-              padding: '10px 16px', 
-              backgroundColor: isLoading || loading ? '#6c757d' : '#28a745',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: isLoading || loading ? 'not-allowed' : 'pointer',
-              fontWeight: 'bold'
-            }}
-          >
-            ⚙️ Manager Demo
-      </button>
-        </div>
-        
-        <div style={{ 
-          fontSize: '12px', 
-          color: '#6c757d', 
-          backgroundColor: '#f8f9fa',
-          padding: '10px',
-          borderRadius: '4px',
-          border: '1px solid #e9ecef'
-        }}>
-          <p style={{ margin: '0 0 5px 0' }}>
-            <strong>🛡️ Platform Admin:</strong> admin / TinkAdmin2024! <em>(SaaS owner - oversees all landlords)</em>
-          </p>
-          <p style={{ margin: '0 0 5px 0' }}>
-            <strong>💰 Landlord:</strong> premium_owner / demo123 <em>(Property owner - manages properties & team)</em>
-          </p>
-          <p style={{ margin: '0' }}>
-            <strong>⚙️ Manager:</strong> sarah_manager / demo123 <em>(Works for landlord - daily operations)</em>
-          </p>
+          <div className="grid grid-cols-1 grid-gap">
+            <button 
+              onClick={() => handleDemoLogin('admin')}
+              disabled={isLoading || loading}
+              className="btn btn-error"
+            >
+              Platform Admin Demo
+            </button>
+            
+            <button 
+              onClick={() => handleDemoLogin('owner')}
+              disabled={isLoading || loading}
+              className="btn btn-warning"
+            >
+              Landlord Demo
+            </button>
+            
+            <button 
+              onClick={() => handleDemoLogin('manager')}
+              disabled={isLoading || loading}
+              className="btn btn-success"
+            >
+              Property Manager Demo
+            </button>
+          </div>
         </div>
       </div>
-
-      <hr style={{ margin: '30px 0', borderColor: '#eee' }} />
-      
-      <div style={{ textAlign: 'center' }}>
-        <p style={{ color: '#666', fontSize: '14px' }}>
-          New landlord?{' '}
-          <Link href="/landlord-signup" style={{ color: '#007bff', textDecoration: 'none' }}>
-            Register your business here
-          </Link>
-        </p>
-        <p style={{ color: '#999', fontSize: '12px', marginTop: '10px' }}>
-          <em>Managers are assigned by landlords or platform admins</em>
-        </p>
-      </div>
-    </div>
+    </AuthLayout>
   );
 } 
