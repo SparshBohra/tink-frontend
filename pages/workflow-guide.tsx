@@ -1,7 +1,8 @@
 import Navigation from '../components/Navigation';
 import Link from 'next/link';
+import { withAuth } from '../lib/auth-context';
 
-export default function WorkflowGuide() {
+function WorkflowGuide() {
   return (
     <div>
       <Navigation />
@@ -357,4 +358,6 @@ export default function WorkflowGuide() {
       </section>
     </div>
   );
-} 
+}
+
+export default withAuth(WorkflowGuide, ['admin', 'owner', 'manager']); 

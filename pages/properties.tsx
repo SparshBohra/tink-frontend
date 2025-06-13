@@ -1,328 +1,439 @@
+import { useState, useEffect } from 'react';
 import Navigation from '../components/Navigation';
 import Link from 'next/link';
-import { mockProperties, mockRooms, mockLeases, mockApplications, mockInventory } from '../lib/mockData';
+import { withAuth } from '../lib/auth-context';
+import { apiClient } from '../lib/api';
+import { Property, Room } from '../lib/types';
 
-export default function Properties() {
-  // Calculate enhanced property analytics
-  const propertiesWithAnalytics = mockProperties.map(property => {
-    const propertyRooms = mockRooms.filter(r => r.propertyId === property.id);
-    const occupiedRooms = propertyRooms.filter(r => r.occupied);
-    const vacantRooms = propertyRooms.filter(r => !r.occupied);
-    const monthlyRevenue = occupiedRooms.reduce((sum, r) => sum + r.rent, 0);
-    const potentialRevenue = propertyRooms.reduce((sum, r) => sum + r.rent, 0);
-    const lostRevenue = potentialRevenue - monthlyRevenue;
-    const occupancyRate = propertyRooms.length > 0 ? Math.round((occupiedRooms.length / propertyRooms.length) * 100) : 0;
-    const averageRent = propertyRooms.length > 0 ? Math.round(potentialRevenue / propertyRooms.length) : 0;
-    const pendingApps = mockApplications.filter(app => app.propertyId === property.id && app.status === 'pending').length;
-    const maintenanceIssues = mockInventory.filter(item => item.propertyId === property.id && (item.condition === 'poor' || item.reportedIssues > 0)).length;
-         const expiringLeases = mockLeases.filter(lease => {
-       const room = mockRooms.find(r => r.id === lease.roomId);
-       return room?.propertyId === property.id && lease.status === 'expiring_soon';
-     }).length;
+function Properties() {
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const [propertiesResponse, roomsResponse] = await Promise.all([
+        apiClient.getProperties(),
+        apiClient.getRooms()
+      ]);
+
+      setProperties(propertiesResponse.results || []);
+      setRooms(roomsResponse.results || []);
+    } catch (error: any) {
+      console.error('Failed to fetch properties data:', error);
+      setError(error?.message || 'Failed to load properties data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getPropertyStats = (propertyId: number) => {
+    const propertyRooms = rooms.filter(room => room.property_ref === propertyId);
+    const occupiedRooms = propertyRooms.filter(room => !room.is_vacant);
+    const vacantRooms = propertyRooms.filter(room => room.is_vacant);
+    const occupancyRate = propertyRooms.length > 0 ? 
+      Math.round((occupiedRooms.length / propertyRooms.length) * 100) : 0;
     
     return {
-      ...property,
-      propertyRooms,
+      totalRooms: propertyRooms.length,
       occupiedRooms: occupiedRooms.length,
       vacantRooms: vacantRooms.length,
-      monthlyRevenue,
-      potentialRevenue,
-      lostRevenue,
-      occupancyRate,
-      averageRent,
-      annualRevenue: monthlyRevenue * 12,
-      potentialAnnualRevenue: potentialRevenue * 12,
-      pendingApps,
-      maintenanceIssues,
-      expiringLeases,
-      revenueEfficiency: potentialRevenue > 0 ? Math.round((monthlyRevenue / potentialRevenue) * 100) : 0
+      occupancyRate
     };
-  });
+  };
 
   const downloadPropertiesReport = () => {
     const csvData = [
-      [
-        'Property Name', 'Address', 'Total Rooms', 'Occupied Rooms', 'Vacant Rooms', 
-        'Occupancy Rate', 'Monthly Revenue', 'Potential Revenue', 'Lost Revenue', 
-        'Annual Revenue', 'Average Rent', 'Revenue Efficiency', 'Pending Applications',
-        'Maintenance Issues', 'Expiring Leases'
-      ],
-      ...propertiesWithAnalytics.map(p => [
-        p.name,
-        p.address,
-        p.totalRooms.toString(),
-        p.occupiedRooms.toString(),
-        p.vacantRooms.toString(),
-        `${p.occupancyRate}%`,
-        `$${p.monthlyRevenue}`,
-        `$${p.potentialRevenue}`,
-        `$${p.lostRevenue}`,
-        `$${p.annualRevenue}`,
-        `$${p.averageRent}`,
-        `${p.revenueEfficiency}%`,
-        p.pendingApps.toString(),
-        p.maintenanceIssues.toString(),
-        p.expiringLeases.toString()
-      ])
+      ['Property Name', 'Address', 'Total Rooms', 'Occupied', 'Vacant', 'Occupancy Rate'],
+      ...properties.map(property => {
+        const stats = getPropertyStats(property.id);
+        return [
+          property.name,
+          property.full_address,
+          stats.totalRooms.toString(),
+          stats.occupiedRooms.toString(),
+          stats.vacantRooms.toString(),
+          `${stats.occupancyRate}%`
+        ];
+      })
     ];
     const csvContent = csvData.map(row => row.join(',')).join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `tink-properties-analytics-${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `tink-properties-report-${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
   };
 
-  const downloadVacancyReport = () => {
-    const vacantProperties = propertiesWithAnalytics.filter(p => p.vacantRooms > 0);
-    const csvData = [
-      ['Property', 'Vacant Rooms', 'Lost Monthly Revenue', 'Lost Annual Revenue', 'Pending Applications', 'Days to Fill (Est)', 'Revenue Recovery Priority'],
-      ...vacantProperties.map(p => [
-        p.name,
-        p.vacantRooms.toString(),
-        `$${p.lostRevenue}`,
-        `$${p.lostRevenue * 12}`,
-        p.pendingApps.toString(),
-        p.pendingApps >= p.vacantRooms ? '7-14' : '30-45',
-        p.lostRevenue > 2000 ? 'HIGH' : p.lostRevenue > 1000 ? 'MEDIUM' : 'LOW'
-      ])
-    ];
-    const csvContent = csvData.map(row => row.join(',')).join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `tink-vacancy-report-${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-  };
+  if (loading) {
+    return (
+      <div>
+        <Navigation />
+        <h1>Loading Properties...</h1>
+        <p>Fetching property data from the server...</p>
+      </div>
+    );
+  }
 
-  const totalMonthlyRevenue = propertiesWithAnalytics.reduce((sum, p) => sum + p.monthlyRevenue, 0);
-  const totalPotentialRevenue = propertiesWithAnalytics.reduce((sum, p) => sum + p.potentialRevenue, 0);
-  const totalLostRevenue = totalPotentialRevenue - totalMonthlyRevenue;
-  const overallOccupancyRate = Math.round((totalMonthlyRevenue / totalPotentialRevenue) * 100);
-  const totalVacantRooms = propertiesWithAnalytics.reduce((sum, p) => sum + p.vacantRooms, 0);
-  const topPerformingProperty = propertiesWithAnalytics.reduce((prev, current) => 
-    current.revenueEfficiency > prev.revenueEfficiency ? current : prev
-  );
-  const underperformingProperties = propertiesWithAnalytics.filter(p => p.occupancyRate < 90);
+  if (error) {
+    return (
+      <div>
+        <Navigation />
+        <h1>Properties Error</h1>
+        <div style={{ 
+          color: 'red', 
+          border: '1px solid red', 
+          padding: '15px', 
+          marginBottom: '20px',
+          backgroundColor: '#ffebee'
+        }}>
+          <strong>Error:</strong> {error}
+        </div>
+        <button 
+          onClick={fetchData}
+          style={{
+            padding: '10px 20px',
+            backgroundColor: '#007bff',
+            color: 'white',
+            border: 'none',
+            cursor: 'pointer'
+          }}
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  // Calculate portfolio summary
+  const totalRooms = rooms.length;
+  const occupiedRooms = rooms.filter(room => !room.is_vacant).length;
+  const vacantRooms = rooms.filter(room => room.is_vacant).length;
+  const overallOccupancyRate = totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0;
 
   return (
     <div>
       <Navigation />
-      <h1>Properties Portfolio</h1>
-      <p>Revenue analytics, occupancy tracking, and performance optimization for your property portfolio.</p>
+      <h1>🏠 Properties Portfolio</h1>
+      <p>Manage your properties and track occupancy across your portfolio.</p>
       
-      <div style={{backgroundColor: '#f0f8ff', padding: '15px', borderRadius: '5px', marginBottom: '20px'}}>
-        <strong>💡 Quick Tip:</strong> Focus on properties with vacant rooms first - each empty room costs ~$40/day in lost revenue.
-        <Link href="/applications" style={{marginLeft: '10px', color: '#3498db'}}>Review Applications →</Link>
+      {/* Portfolio Summary Cards */}
+      <div style={{
+        display: 'grid', 
+        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+        gap: '15px', 
+        marginBottom: '30px'
+      }}>
+        <div style={{
+          border: '1px solid #ddd', 
+          padding: '20px', 
+          borderRadius: '8px', 
+          backgroundColor: '#f8f9fa',
+          textAlign: 'center'
+        }}>
+          <h3 style={{margin: '0 0 10px 0', color: '#27ae60'}}>Total Properties</h3>
+          <div style={{fontSize: '32px', fontWeight: 'bold', color: '#27ae60'}}>{properties.length}</div>
+        </div>
+        
+        <div style={{
+          border: '1px solid #ddd', 
+          padding: '20px', 
+          borderRadius: '8px', 
+          backgroundColor: '#f8f9fa',
+          textAlign: 'center'
+        }}>
+          <h3 style={{margin: '0 0 10px 0', color: '#3498db'}}>Total Rooms</h3>
+          <div style={{fontSize: '32px', fontWeight: 'bold', color: '#3498db'}}>{totalRooms}</div>
+        </div>
+        
+        <div style={{
+          border: '1px solid #ddd', 
+          padding: '20px', 
+          borderRadius: '8px', 
+          backgroundColor: '#f8f9fa',
+          textAlign: 'center'
+        }}>
+          <h3 style={{margin: '0 0 10px 0', color: '#e74c3c'}}>Vacant Rooms</h3>
+          <div style={{fontSize: '32px', fontWeight: 'bold', color: '#e74c3c'}}>{vacantRooms}</div>
+        </div>
+        
+        <div style={{
+          border: '1px solid #ddd', 
+          padding: '20px', 
+          borderRadius: '8px', 
+          backgroundColor: '#f8f9fa',
+          textAlign: 'center'
+        }}>
+          <h3 style={{margin: '0 0 10px 0', color: '#f39c12'}}>Occupancy Rate</h3>
+          <div style={{fontSize: '32px', fontWeight: 'bold', color: '#f39c12'}}>{overallOccupancyRate}%</div>
+        </div>
       </div>
 
-      <section>
-        <h2>💰 Portfolio Financial Summary</h2>
-        <table border={1}>
-          <tr>
-            <td><strong>Total Properties</strong></td>
-            <td>{propertiesWithAnalytics.length}</td>
-          </tr>
-          <tr>
-            <td><strong>Monthly Revenue</strong></td>
-            <td style={{color: 'green'}}>${totalMonthlyRevenue.toLocaleString()}</td>
-          </tr>
-          <tr>
-            <td><strong>Annual Revenue (Current)</strong></td>
-            <td style={{color: 'green'}}>${(totalMonthlyRevenue * 12).toLocaleString()}</td>
-          </tr>
-          <tr style={{backgroundColor: '#fff3cd'}}>
-            <td><strong>Potential Annual Revenue</strong></td>
-            <td>${(totalPotentialRevenue * 12).toLocaleString()}</td>
-          </tr>
-          <tr style={{backgroundColor: '#ffebee'}}>
-            <td><strong>Lost Revenue (Annual)</strong></td>
-            <td style={{color: 'red'}}>-${(totalLostRevenue * 12).toLocaleString()}</td>
-          </tr>
-          <tr>
-            <td><strong>Overall Occupancy Rate</strong></td>
-            <td style={{color: overallOccupancyRate >= 90 ? 'green' : overallOccupancyRate >= 80 ? 'orange' : 'red'}}>
-              {overallOccupancyRate}%
-            </td>
-          </tr>
-          <tr>
-            <td><strong>Vacant Rooms</strong></td>
-            <td style={{color: 'red'}}>{totalVacantRooms} rooms = ${totalLostRevenue.toLocaleString()}/month lost</td>
-          </tr>
-          <tr>
-            <td><strong>Top Performing Property</strong></td>
-            <td style={{color: 'green'}}>{topPerformingProperty.name} ({topPerformingProperty.revenueEfficiency}% efficiency)</td>
-          </tr>
-        </table>
-
-        <div style={{margin: '10px 0'}}>
-          <button onClick={downloadPropertiesReport} style={{backgroundColor: '#28a745', color: 'white', margin: '5px'}}>
-            📊 Download Properties Analytics (CSV)
+      {/* Action Buttons */}
+      <div style={{marginBottom: '20px'}}>
+        <Link href="/properties/add">
+          <button style={{
+            backgroundColor: '#28a745', 
+            color: 'white', 
+            padding: '10px 15px', 
+            border: 'none', 
+            borderRadius: '5px',
+            marginRight: '10px',
+            cursor: 'pointer'
+          }}
+        >
+          ➕ Register New Property
+        </button>
+        </Link>
+        <button 
+          onClick={downloadPropertiesReport}
+          style={{
+            backgroundColor: '#28a745', 
+            color: 'white', 
+            padding: '10px 15px', 
+            border: 'none', 
+            borderRadius: '5px',
+            marginRight: '10px',
+            cursor: 'pointer'
+          }}
+        >
+          📊 Download Report
           </button>
-          <button onClick={downloadVacancyReport} style={{backgroundColor: '#dc3545', color: 'white', margin: '5px'}}>
-            🏠 Download Vacancy Report (CSV)
+        <button 
+          onClick={fetchData}
+          style={{
+            backgroundColor: '#6c757d', 
+            color: 'white', 
+            padding: '10px 15px', 
+            border: 'none', 
+            borderRadius: '5px',
+            cursor: 'pointer'
+          }}
+        >
+          🔄 Refresh
           </button>
         </div>
-      </section>
 
-      {underperformingProperties.length > 0 && (
-        <section>
-          <h2>🚨 Properties Needing Attention ({underperformingProperties.length})</h2>
-          <p><em>Properties with less than 90% occupancy - focus here for revenue recovery</em></p>
-          <table border={1}>
+      {/* Properties Table */}
+      <div style={{marginBottom: '30px'}}>
+        <h2>📋 Properties Overview</h2>
+        {properties.length > 0 ? (
+          <table border={1} style={{width: '100%', borderCollapse: 'collapse'}}>
             <thead>
-              <tr>
-                <th>Property</th>
-                <th>Occupancy</th>
-                <th>Lost Revenue/Month</th>
-                <th>Pending Apps</th>
-                <th>Priority Action</th>
+              <tr style={{backgroundColor: '#f8f9fa'}}>
+                <th style={{padding: '12px', textAlign: 'left'}}>Property</th>
+                <th style={{padding: '12px', textAlign: 'center'}}>Rooms</th>
+                <th style={{padding: '12px', textAlign: 'center'}}>Occupancy</th>
+                <th style={{padding: '12px', textAlign: 'center'}}>Status</th>
+                <th style={{padding: '12px', textAlign: 'center'}}>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {underperformingProperties.map(property => (
-                <tr key={property.id} style={{backgroundColor: '#fff3cd'}}>
-                  <td><strong>{property.name}</strong></td>
-                  <td style={{color: 'red'}}>{property.occupancyRate}%</td>
-                  <td style={{color: 'red'}}>-${property.lostRevenue.toLocaleString()}</td>
-                  <td>{property.pendingApps}</td>
-                  <td>
-                    {property.pendingApps >= property.vacantRooms ? 
-                      '✅ Review & approve applications' : 
-                      '📢 Need more marketing/applications'
-                    }
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
-      )}
-
-      <section>
-        <h2>🏠 Properties Overview</h2>
-        <table border={1}>
-          <thead>
-            <tr>
-              <th>Property</th>
-              <th>Location</th>
-              <th>Occupancy</th>
-              <th>Monthly Revenue</th>
-              <th>Revenue Efficiency</th>
-              <th>Issues</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {propertiesWithAnalytics.map(property => {
-              const hasIssues = property.vacantRooms > 0 || property.maintenanceIssues > 0 || property.expiringLeases > 0;
+              {properties.map(property => {
+                const stats = getPropertyStats(property.id);
+                const needsAttention = stats.occupancyRate < 80;
+                
               return (
-                <tr key={property.id} style={{backgroundColor: hasIssues ? '#fff3cd' : '#f8f9fa'}}>
-                  <td>
-                    <strong>{property.name}</strong>
+                  <tr key={property.id} style={{
+                    backgroundColor: needsAttention ? '#fff3cd' : 'white'
+                  }}>
+                    <td style={{padding: '12px'}}>
+                      <div>
+                        <strong style={{fontSize: '16px'}}>{property.name}</strong>
+                        <br />
+                        <small style={{color: '#666'}}>{property.full_address}</small>
+                        {property.landlord_name && (
+                          <>
                     <br />
-                    <small>{property.totalRooms} total rooms</small>
-                  </td>
-                  <td>{property.address}</td>
-                  <td style={{color: property.occupancyRate >= 90 ? 'green' : property.occupancyRate >= 80 ? 'orange' : 'red'}}>
-                    {property.occupancyRate}%
-                    <br />
-                    <small>({property.occupiedRooms}/{property.totalRooms} occupied)</small>
-                  </td>
-                  <td>
-                    <strong style={{color: 'green'}}>${property.monthlyRevenue.toLocaleString()}</strong>
-                    <br />
-                    <small>Potential: ${property.potentialRevenue.toLocaleString()}</small>
-                    {property.lostRevenue > 0 && (
-                      <div style={{color: 'red', fontSize: '12px'}}>
-                        Lost: ${property.lostRevenue.toLocaleString()}/mo
+                            <small style={{color: '#888'}}>Landlord: {property.landlord_name}</small>
+                          </>
+                        )}
                       </div>
+                  </td>
+                    <td style={{padding: '12px', textAlign: 'center'}}>
+                      <div style={{fontSize: '18px', fontWeight: 'bold'}}>{stats.totalRooms}</div>
+                      <small style={{color: '#666'}}>
+                        {stats.occupiedRooms} occupied, {stats.vacantRooms} vacant
+                      </small>
+                  </td>
+                    <td style={{padding: '12px', textAlign: 'center'}}>
+                      <div style={{
+                        fontSize: '18px', 
+                        fontWeight: 'bold',
+                        color: stats.occupancyRate >= 90 ? '#27ae60' : 
+                               stats.occupancyRate >= 70 ? '#f39c12' : '#e74c3c'
+                      }}>
+                        {stats.occupancyRate}%
+                      </div>
+                      <div style={{
+                        width: '100px',
+                        height: '8px',
+                        backgroundColor: '#e0e0e0',
+                        borderRadius: '4px',
+                        margin: '5px auto',
+                        overflow: 'hidden'
+                      }}>
+                        <div style={{
+                          width: `${stats.occupancyRate}%`,
+                          height: '100%',
+                          backgroundColor: stats.occupancyRate >= 90 ? '#27ae60' : 
+                                         stats.occupancyRate >= 70 ? '#f39c12' : '#e74c3c',
+                          transition: 'width 0.3s ease'
+                        }} />
+                      </div>
+                    </td>
+                    <td style={{padding: '12px', textAlign: 'center'}}>
+                      {stats.vacantRooms > 0 ? (
+                        <span style={{
+                          padding: '4px 8px',
+                          borderRadius: '12px',
+                          fontSize: '12px',
+                          backgroundColor: '#fff3cd',
+                          color: '#856404'
+                        }}>
+                          {stats.vacantRooms} vacant
+                        </span>
+                      ) : (
+                        <span style={{
+                          padding: '4px 8px',
+                          borderRadius: '12px',
+                          fontSize: '12px',
+                          backgroundColor: '#d4edda',
+                          color: '#155724'
+                        }}>
+                          Fully occupied
+                        </span>
                     )}
                   </td>
-                  <td style={{color: property.revenueEfficiency >= 95 ? 'green' : property.revenueEfficiency >= 85 ? 'orange' : 'red'}}>
-                    {property.revenueEfficiency}%
-                  </td>
-                  <td>
-                    {property.vacantRooms > 0 && <div>🏠 {property.vacantRooms} vacant</div>}
-                    {property.pendingApps > 0 && <div>📋 {property.pendingApps} pending apps</div>}
-                    {property.maintenanceIssues > 0 && <div>🔧 {property.maintenanceIssues} maintenance</div>}
-                    {property.expiringLeases > 0 && <div>📄 {property.expiringLeases} expiring leases</div>}
-                    {!hasIssues && <div style={{color: 'green'}}>✅ All good</div>}
-                  </td>
-                  <td>
+                    <td style={{padding: '12px', textAlign: 'center'}}>
+                      <div style={{display: 'flex', gap: '5px', justifyContent: 'center', flexWrap: 'wrap'}}>
                     <Link href={`/properties/${property.id}/rooms`}>
-                      <button>Manage Rooms</button>
+                          <button style={{
+                            backgroundColor: '#007bff',
+                            color: 'white',
+                            border: 'none',
+                            padding: '6px 12px',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '12px'
+                          }}>
+                            🏠 View Rooms
+                          </button>
+                        </Link>
+                        {stats.vacantRooms > 0 && (
+                          <Link href="/applications">
+                            <button style={{
+                              backgroundColor: '#28a745',
+                              color: 'white',
+                              border: 'none',
+                              padding: '6px 12px',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '12px'
+                            }}>
+                              📋 Fill Rooms
+                            </button>
                     </Link>
+                        )}
+                      </div>
                   </td>
                 </tr>
               );
             })}
           </tbody>
         </table>
-      </section>
+        ) : (
+          <div style={{
+            textAlign: 'center', 
+            padding: '40px', 
+            backgroundColor: '#f8f9fa', 
+            borderRadius: '8px'
+          }}>
+            <h3>No Properties Found</h3>
+            <p>Add your first property to get started with property management.</p>
+            <button style={{
+              backgroundColor: '#28a745',
+              color: 'white',
+              padding: '10px 20px',
+              border: 'none',
+              borderRadius: '5px',
+              cursor: 'pointer'
+            }}>
+              + Add Property
+            </button>
+          </div>
+        )}
+      </div>
 
-      <section>
-        <h2>📈 Revenue Performance Analysis</h2>
-        <table border={1}>
-          <thead>
-            <tr>
-              <th>Property</th>
-              <th>Monthly Revenue</th>
-              <th>Annual Projection</th>
-              <th>Avg Rent/Room</th>
-              <th>Revenue Lost</th>
-              <th>Recovery Potential</th>
-            </tr>
-          </thead>
-          <tbody>
-            {propertiesWithAnalytics.map(property => (
-              <tr key={property.id}>
-                <td><strong>{property.name}</strong></td>
-                <td style={{color: 'green'}}>${property.monthlyRevenue.toLocaleString()}</td>
-                <td style={{color: 'green'}}>${property.annualRevenue.toLocaleString()}</td>
-                <td>${property.averageRent}</td>
-                <td style={{color: property.lostRevenue > 0 ? 'red' : 'green'}}>
-                  {property.lostRevenue > 0 ? `-$${property.lostRevenue.toLocaleString()}` : '$0'}
-                </td>
-                <td>
-                  {property.vacantRooms > 0 ? (
-                    <span style={{color: 'orange'}}>
-                      +${(property.lostRevenue * 12).toLocaleString()}/year
-                    </span>
-                  ) : (
-                    <span style={{color: 'green'}}>Optimized ✅</span>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
-
-      <section>
-        <h2>💡 Revenue Optimization Recommendations</h2>
-        <ul>
-          <li><strong>Fill {totalVacantRooms} vacant rooms</strong> - Could add ${(totalLostRevenue * 12).toLocaleString()}/year to revenue</li>
-          <li><strong>Focus on underperforming properties</strong> - {underperformingProperties.length} properties below 90% occupancy</li>
-          <li><strong>Process pending applications faster</strong> - Each day of vacancy costs ${Math.round(totalLostRevenue / 30)}</li>
-          <li><strong>Address maintenance issues</strong> - Happy tenants = better retention and referrals</li>
-          <li><strong>Market rate analysis</strong> - Review rent prices quarterly to maximize revenue</li>
-          <li><strong>Lease renewal strategy</strong> - Start conversations 60 days before expiry</li>
-        </ul>
-      </section>
-
-      <section>
-        <h2>⚙️ Property Management Actions</h2>
-        <ul>
-          <li><button onClick={() => console.log('Add new property')}>+ Add New Property</button></li>
-          <li><button onClick={() => console.log('Bulk update rents')}>📈 Update Market Rents</button></li>
-          <li><button onClick={() => console.log('Schedule inspections')}>🔍 Schedule Property Inspections</button></li>
-          <li><button onClick={() => console.log('Marketing campaign')}>📢 Launch Marketing Campaign</button></li>
-          <li><button onClick={() => console.log('Financial analysis')}>💰 Deep Financial Analysis</button></li>
-        </ul>
-      </section>
+      {/* Quick Actions */}
+      <div style={{marginTop: '30px'}}>
+        <h2>⚡ Quick Actions</h2>
+        <div style={{display: 'flex', gap: '10px', flexWrap: 'wrap'}}>
+          <Link href="/applications">
+            <button style={{
+              backgroundColor: '#e74c3c', 
+              color: 'white', 
+              padding: '12px 20px', 
+              border: 'none', 
+              borderRadius: '5px',
+              cursor: 'pointer',
+              fontSize: '14px'
+            }}>
+              📋 Review Applications
+            </button>
+          </Link>
+          <Link href="/tenants">
+            <button style={{
+              backgroundColor: '#3498db', 
+              color: 'white', 
+              padding: '12px 20px', 
+              border: 'none', 
+              borderRadius: '5px',
+              cursor: 'pointer',
+              fontSize: '14px'
+            }}>
+              👥 Manage Tenants
+            </button>
+          </Link>
+          <Link href="/leases">
+            <button style={{
+              backgroundColor: '#f39c12', 
+              color: 'white', 
+              padding: '12px 20px', 
+              border: 'none', 
+              borderRadius: '5px',
+              cursor: 'pointer',
+              fontSize: '14px'
+            }}>
+              📜 View Leases
+            </button>
+          </Link>
+          <Link href="/inventory">
+            <button style={{
+              backgroundColor: '#9b59b6', 
+              color: 'white', 
+              padding: '12px 20px', 
+              border: 'none', 
+              borderRadius: '5px',
+              cursor: 'pointer',
+              fontSize: '14px'
+            }}>
+              📦 Check Inventory
+            </button>
+          </Link>
+        </div>
+      </div>
     </div>
   );
 } 
+
+export default withAuth(Properties, ['admin', 'owner', 'manager']);
