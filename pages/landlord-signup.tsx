@@ -58,7 +58,7 @@ export default function LandlordSignup() {
           {error && <div className="alert alert-error mb-md">{error}</div>}
           {success && <div className="alert alert-success mb-md">{success}</div>}
 
-          <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit}>
             <div className="form-section mb-lg">
               <h3 className="text-h3 mb-md">Organization Information</h3>
               <div className="form-group">
