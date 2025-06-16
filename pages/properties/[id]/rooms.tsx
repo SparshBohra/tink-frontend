@@ -1,9 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
+import Head from 'next/head';
 import Link from 'next/link';
 import { apiClient } from '../../../lib/api';
 import { Property, Room, Tenant, Lease } from '../../../lib/types';
 import Navigation from '../../../components/Navigation';
+import DashboardLayout from '../../../components/DashboardLayout';
+import MetricCard from '../../../components/MetricCard';
+import SectionCard from '../../../components/SectionCard';
+import DataTable from '../../../components/DataTable';
+import StatusBadge from '../../../components/StatusBadge';
+import EmptyState from '../../../components/EmptyState';
 import { formatCurrency } from '../../../lib/utils';
 
 export default function PropertyRooms() {
@@ -25,7 +32,7 @@ export default function PropertyRooms() {
   const fetchPropertyData = async () => {
     try {
       setLoading(true);
-  const propertyId = parseInt(id as string);
+      const propertyId = parseInt(id as string);
 
       // Fetch property details
       const propertyData = await apiClient.getProperty(propertyId);
@@ -79,382 +86,310 @@ export default function PropertyRooms() {
 
   if (loading) {
     return (
-      <div>
+      <>
         <Navigation />
-        <h1>Loading Property Details...</h1>
-        <p>Fetching property and room information...</p>
-      </div>
+        <DashboardLayout
+          title="Property Rooms"
+          subtitle="Loading property details..."
+        >
+          <div className="loading-indicator">
+            <div className="loading-spinner"></div>
+            <p>Fetching property and room information...</p>
+          </div>
+        </DashboardLayout>
+        
+        <style jsx>{`
+          .loading-indicator {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: var(--spacing-xl);
+          }
+          
+          .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--gray-200);
+            border-top-color: var(--primary-blue);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: var(--spacing-md);
+          }
+          
+          @keyframes spin {
+            to {
+              transform: rotate(360deg);
+            }
+          }
+        `}</style>
+      </>
     );
   }
 
   if (error || !property) {
     return (
-      <div>
+      <>
         <Navigation />
-        <h1>Property Not Found</h1>
-        <div style={{ 
-          color: 'red', 
-          border: '1px solid red', 
-          padding: '15px', 
-          marginBottom: '20px',
-          backgroundColor: '#ffebee'
-        }}>
-          <strong>Error:</strong> {error || 'Property not found'}
-        </div>
-        <Link href="/properties">
-          <button style={{
-            padding: '10px 20px',
-            backgroundColor: '#007bff',
-            color: 'white',
-            border: 'none',
-            cursor: 'pointer'
-          }}>
-            ← Back to Properties
-          </button>
-        </Link>
-      </div>
+        <DashboardLayout
+          title="Property Not Found"
+          subtitle="Unable to load property details"
+        >
+          <div className="alert alert-error">
+            <strong>Error:</strong> {error || 'Property not found'}
+          </div>
+          <div className="actions-container">
+            <Link href="/properties" className="btn btn-secondary">
+              Back to Properties
+            </Link>
+          </div>
+        </DashboardLayout>
+      </>
     );
   }
 
   const stats = getOccupancyStats();
   const totalRevenue = getTotalRevenue();
 
+  const roomsTableData = rooms.map(room => {
+    const lease = getRoomOccupancy(room.id);
+    const isOccupied = !!lease;
+    
+    return {
+      id: room.id,
+      room: (
+        <div>
+          <strong>{room.name}</strong>
+          {room.floor && (
+            <>
+              <br />
+              <small style={{ color: 'var(--gray-600)' }}>Floor {room.floor}</small>
+            </>
+          )}
+        </div>
+      ),
+      status: (
+        <StatusBadge 
+          status={isOccupied ? 'active' : 'pending'} 
+          text={isOccupied ? 'Occupied' : 'Vacant'}
+        />
+      ),
+      tenant: lease ? (
+        <div>
+          <Link href={{ pathname: '/tenants/[id]', query: { id: lease.tenant } }}>
+            <strong style={{ color: 'var(--primary-blue)', cursor: 'pointer' }}>
+              {getTenantName(lease.tenant)}
+            </strong>
+          </Link>
+          <br />
+          <small style={{ color: 'var(--gray-600)' }}>
+            Lease: {lease.start_date} to {lease.end_date}
+          </small>
+        </div>
+      ) : (
+        <em style={{ color: 'var(--gray-600)' }}>Available for rent</em>
+      ),
+      rent: lease ? (
+        <strong>{formatCurrency(lease.monthly_rent)}</strong>
+      ) : (
+        <span style={{ color: 'var(--gray-600)' }}>-</span>
+      ),
+      type: 'Standard Room',
+      actions: (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-xs)', alignItems: 'center' }}>
+          {lease ? (
+            <>
+              <Link href={{ pathname: '/tenants/[id]', query: { id: lease.tenant } }}>
+                <button className="btn btn-primary btn-sm">
+                  View Tenant
+                </button>
+              </Link>
+              <Link href={`/inventory?room=${room.id}`}>
+                <button className="btn btn-secondary btn-sm">
+                  Inventory
+                </button>
+              </Link>
+            </>
+          ) : (
+            <>
+              <Link href="/applications">
+                <button className="btn btn-success btn-sm">
+                  Find Tenant
+                </button>
+              </Link>
+              <button 
+                onClick={() => alert('Room editing feature coming soon!')}
+                className="btn btn-warning btn-sm"
+              >
+                Edit Room
+              </button>
+            </>
+          )}
+        </div>
+      )
+    };
+  });
+
+  const roomsTableColumns = [
+    { key: 'room', label: 'Room', align: 'left' as const },
+    { key: 'status', label: 'Status', align: 'center' as const },
+    { key: 'tenant', label: 'Current Tenant', align: 'left' as const },
+    { key: 'rent', label: 'Monthly Rent', align: 'center' as const },
+    { key: 'type', label: 'Room Type', align: 'center' as const },
+    { key: 'actions', label: 'Actions', align: 'center' as const }
+  ];
+
   return (
-    <div>
+    <>
+      <Head>
+        <title>{property.name} - Rooms - Tink Property Management</title>
+      </Head>
       <Navigation />
       
-      {/* Header */}
-      <div style={{ marginBottom: '20px' }}>
-        <button style={{
-          padding: '8px 16px',
-          backgroundColor: '#6c757d',
-          color: 'white',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: 'pointer',
-          marginBottom: '15px'
-        }}
-        onClick={() => router.back()}
+      <DashboardLayout
+        title={property.name}
+        subtitle={property.full_address}
+      >
+        {error && <div className="alert alert-error">{error}</div>}
+        
+        {/* Back Button */}
+        <div className="actions-container" style={{ marginBottom: 'var(--spacing-lg)' }}>
+          <button 
+            onClick={() => router.back()}
+            className="btn btn-secondary"
+          >
+            Back
+          </button>
+        </div>
+
+        {/* Property Stats */}
+        <div className="metrics-grid">
+          <MetricCard 
+            title="Total Rooms" 
+            value={stats.totalRooms}
+            color="blue"
+          />
+          
+          <MetricCard 
+            title="Occupied" 
+            value={stats.occupiedRooms}
+            color="green"
+          />
+          
+          <MetricCard 
+            title="Vacant" 
+            value={stats.vacantRooms}
+            color="red"
+          />
+          
+          <MetricCard 
+            title="Occupancy Rate" 
+            value={`${stats.occupancyRate}%`}
+            color="purple"
+          />
+          
+          <MetricCard 
+            title="Monthly Revenue" 
+            value={formatCurrency(totalRevenue)}
+            color="amber"
+          />
+        </div>
+
+        {/* Property Information */}
+        <SectionCard
+          title="Property Information"
+          subtitle="Basic property details and overview"
         >
-          ← Back
-        </button>
-        <h1>🏠 {property.name}</h1>
-        <p style={{ color: '#666', fontSize: '16px' }}>{property.full_address}</p>
-      </div>
-
-      {/* Property Stats */}
-      <div style={{
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-        gap: '15px', 
-        marginBottom: '30px'
-      }}>
-        <div style={{
-          border: '1px solid #ddd', 
-          padding: '20px', 
-          borderRadius: '8px', 
-          backgroundColor: '#f8f9fa',
-          textAlign: 'center'
-        }}>
-          <h3 style={{margin: '0 0 10px 0', color: '#007bff'}}>Total Rooms</h3>
-          <div style={{fontSize: '32px', fontWeight: 'bold', color: '#007bff'}}>{stats.totalRooms}</div>
-        </div>
-        
-        <div style={{
-          border: '1px solid #ddd', 
-          padding: '20px', 
-          borderRadius: '8px', 
-          backgroundColor: '#f8f9fa',
-          textAlign: 'center'
-        }}>
-          <h3 style={{margin: '0 0 10px 0', color: '#28a745'}}>Occupied</h3>
-          <div style={{fontSize: '32px', fontWeight: 'bold', color: '#28a745'}}>{stats.occupiedRooms}</div>
-        </div>
-        
-        <div style={{
-          border: '1px solid #ddd', 
-          padding: '20px', 
-          borderRadius: '8px', 
-          backgroundColor: '#f8f9fa',
-          textAlign: 'center'
-        }}>
-          <h3 style={{margin: '0 0 10px 0', color: '#dc3545'}}>Vacant</h3>
-          <div style={{fontSize: '32px', fontWeight: 'bold', color: '#dc3545'}}>{stats.vacantRooms}</div>
-        </div>
-        
-        <div style={{
-          border: '1px solid #ddd', 
-          padding: '20px', 
-          borderRadius: '8px', 
-          backgroundColor: '#f8f9fa',
-          textAlign: 'center'
-        }}>
-          <h3 style={{margin: '0 0 10px 0', color: '#6f42c1'}}>Occupancy Rate</h3>
-          <div style={{fontSize: '32px', fontWeight: 'bold', color: '#6f42c1'}}>{stats.occupancyRate}%</div>
-        </div>
-        
-        <div style={{
-          border: '1px solid #ddd', 
-          padding: '20px', 
-          borderRadius: '8px', 
-          backgroundColor: '#f8f9fa',
-          textAlign: 'center'
-        }}>
-          <h3 style={{margin: '0 0 10px 0', color: '#fd7e14'}}>Monthly Revenue</h3>
-          <div style={{fontSize: '32px', fontWeight: 'bold', color: '#fd7e14'}}>{formatCurrency(totalRevenue)}</div>
-        </div>
-      </div>
-
-      {/* Property Details */}
-      <div style={{
-        border: '1px solid #ddd',
-        borderRadius: '8px',
-        padding: '20px',
-        marginBottom: '20px',
-        backgroundColor: '#f8f9fa'
-      }}>
-        <h2>🏢 Property Information</h2>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '15px' }}>
-          <div>
-            <strong>Address:</strong><br />
-            {property.full_address}
+          <div className="property-info-grid">
+            <div className="info-item">
+              <strong>Address:</strong><br />
+              {property.full_address}
+            </div>
+            <div className="info-item">
+              <strong>Property Type:</strong><br />
+              {property.property_type || 'Not specified'}
+            </div>
+            <div className="info-item">
+              <strong>Total Rooms:</strong><br />
+              {stats.totalRooms} rooms
+            </div>
+            <div className="info-item">
+              <strong>Landlord:</strong><br />
+              {property.landlord_name || 'Not specified'}
+            </div>
           </div>
-          <div>
-            <strong>Property Type:</strong><br />
-            {property.property_type || 'Not specified'}
-          </div>
-          <div>
-            <strong>Total Rooms:</strong><br />
-            {stats.totalRooms} rooms
-          </div>
-          <div>
-            <strong>Landlord:</strong><br />
-            {property.landlord_name || 'Not specified'}
-          </div>
-        </div>
-      </div>
+        </SectionCard>
 
-      {/* Rooms List */}
-      <div style={{
-        border: '1px solid #ddd',
-        borderRadius: '8px',
-        padding: '20px',
-        marginBottom: '20px'
-      }}>
-        <h2>🚪 Room Details</h2>
-        {rooms.length > 0 ? (
-          <table border={1} style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ backgroundColor: '#f8f9fa' }}>
-                <th style={{ padding: '12px', textAlign: 'left' }}>Room</th>
-                <th style={{ padding: '12px', textAlign: 'center' }}>Status</th>
-                <th style={{ padding: '12px', textAlign: 'left' }}>Current Tenant</th>
-                <th style={{ padding: '12px', textAlign: 'center' }}>Monthly Rent</th>
-                <th style={{ padding: '12px', textAlign: 'center' }}>Room Type</th>
-                <th style={{ padding: '12px', textAlign: 'center' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rooms.map(room => {
-                const lease = getRoomOccupancy(room.id);
-                const isOccupied = !!lease;
-              
-              return (
-                  <tr key={room.id} style={{ backgroundColor: isOccupied ? '#d4edda' : '#fff3cd' }}>
-                    <td style={{ padding: '12px' }}>
-                      <div>
-                        <strong>{room.name}</strong>
-                        {room.floor && (
-                          <>
-                        <br />
-                            <small style={{ color: '#666' }}>Floor {room.floor}</small>
-                          </>
-                        )}
-                      </div>
-                    </td>
-                    <td style={{ padding: '12px', textAlign: 'center' }}>
-                      <span style={{
-                        padding: '4px 8px',
-                        borderRadius: '12px',
-                        backgroundColor: isOccupied ? '#28a745' : '#ffc107',
-                        color: 'white',
-                        fontSize: '12px',
-                        fontWeight: 'bold'
-                      }}>
-                        {isOccupied ? '✅ Occupied' : '🟡 Vacant'}
-                      </span>
-                    </td>
-                    <td style={{ padding: '12px' }}>
-                      {lease ? (
-                        <div>
-                          <Link href={{ pathname: '/tenants/[id]', query: { id: lease.tenant } }}>
-                            <strong style={{ color: '#007bff', cursor: 'pointer' }}>
-                              {getTenantName(lease.tenant)}
-                            </strong>
-                          </Link>
-                          <br />
-                          <small style={{ color: '#666' }}>
-                            Lease: {lease.start_date} to {lease.end_date}
-                          </small>
-                      </div>
-                    ) : (
-                        <em style={{ color: '#666' }}>Available for rent</em>
-                    )}
-                  </td>
-                    <td style={{ padding: '12px', textAlign: 'center' }}>
-                      {lease ? (
-                        <strong>{formatCurrency(lease.monthly_rent)}</strong>
-                      ) : (
-                        <span style={{ color: '#666' }}>-</span>
-                      )}
-                    </td>
-                                         <td style={{ padding: '12px', textAlign: 'center' }}>
-                       Standard Room
-                     </td>
-                    <td style={{ padding: '12px', textAlign: 'center' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', alignItems: 'center' }}>
-                        {lease ? (
-                          <>
-                            <Link href={{ pathname: '/tenants/[id]', query: { id: lease.tenant } }}>
-                              <button style={{
-                                backgroundColor: '#007bff',
-                                color: 'white',
-                                border: 'none',
-                                padding: '6px 12px',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                                fontSize: '12px'
-                              }}>
-                                👤 View Tenant
-                              </button>
-                            </Link>
-                            <Link href={`/inventory?room=${room.id}`}>
-                              <button style={{
-                                backgroundColor: '#9b59b6',
-                                color: 'white',
-                                border: 'none',
-                                padding: '6px 12px',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                                fontSize: '12px'
-                              }}>
-                                📦 Inventory
-                        </button>
-                            </Link>
-                          </>
-                        ) : (
-                          <>
-                            <Link href="/applications">
-                              <button style={{
-                                backgroundColor: '#28a745',
-                                color: 'white',
-                                border: 'none',
-                                padding: '6px 12px',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                                fontSize: '12px'
-                              }}>
-                                📋 Find Tenant
-                              </button>
-                            </Link>
-                            <button 
-                              onClick={() => alert('Room editing feature coming soon!')}
-                              style={{
-                                backgroundColor: '#6c757d',
-                                color: 'white',
-                                border: 'none',
-                                padding: '6px 12px',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                                fontSize: '12px'
-                              }}
-                            >
-                              ✏️ Edit Room
-                            </button>
-                          </>
-                        )}
-                      </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-        ) : (
-          <p style={{ color: '#666', fontStyle: 'italic' }}>No rooms found for this property.</p>
-        )}
-      </div>
+        {/* Rooms List */}
+        <SectionCard
+          title="Room Details"
+          subtitle="Overview of all rooms in this property"
+        >
+          {rooms.length > 0 ? (
+            <DataTable 
+              columns={roomsTableColumns}
+              data={roomsTableData}
+            />
+          ) : (
+            <EmptyState 
+              title="No Rooms Found"
+              description="No rooms have been added to this property yet."
+              actionText="Add New Room"
+              actionHref={`/properties/${id}/add-room`}
+            />
+          )}
+        </SectionCard>
 
-      {/* Quick Actions */}
-      <div style={{
-        border: '1px solid #ddd',
-        borderRadius: '8px',
-        padding: '20px'
-      }}>
-        <h2>⚡ Quick Actions</h2>
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-          <Link href={`/properties/${id}/add-room`}>
-            <button style={{
-              backgroundColor: '#28a745',
-              color: 'white',
-              border: 'none',
-              padding: '10px 16px',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}>
-              🚪 Add New Room
-            </button>
-          </Link>
-          <Link href={`/applications?property=${id}`}>
-            <button style={{
-              backgroundColor: '#e74c3c',
-              color: 'white',
-              border: 'none',
-              padding: '10px 16px',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}>
-              📋 Review Applications for This Property
-            </button>
-          </Link>
-          <Link href="/inventory">
-            <button style={{
-              backgroundColor: '#9b59b6',
-              color: 'white',
-              border: 'none',
-              padding: '10px 16px',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}>
-              📦 Manage Inventory
-            </button>
-          </Link>
-          <Link href="/leases">
-            <button style={{
-              backgroundColor: '#007bff',
-              color: 'white',
-              border: 'none',
-              padding: '10px 16px',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}>
-              📜 View Leases
-            </button>
-          </Link>
-          <Link href="/properties">
-            <button style={{
-              backgroundColor: '#6c757d',
-              color: 'white',
-              border: 'none',
-              padding: '10px 16px',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}>
-              🏢 All Properties
-            </button>
-          </Link>
-        </div>
-      </div>
-    </div>
+        {/* Quick Actions */}
+        <SectionCard
+          title="Quick Actions"
+          subtitle="Common property management tasks"
+        >
+          <div className="actions-grid">
+            <Link href={`/properties/${id}/add-room`} className="btn btn-success">
+              Add New Room
+            </Link>
+            <Link href={`/applications?property=${id}`} className="btn btn-primary">
+              Review Applications for This Property
+            </Link>
+            <Link href="/inventory" className="btn btn-secondary">
+              Manage Inventory
+            </Link>
+            <Link href="/leases" className="btn btn-primary">
+              View Leases
+            </Link>
+            <Link href="/properties" className="btn btn-secondary">
+              All Properties
+            </Link>
+          </div>
+        </SectionCard>
+      </DashboardLayout>
+
+      <style jsx>{`
+        .property-info-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+          gap: var(--spacing-lg);
+        }
+        
+        .info-item {
+          padding: var(--spacing-md);
+          background: var(--gray-50);
+          border-radius: var(--border-radius);
+          border: 1px solid var(--gray-200);
+        }
+        
+        .actions-grid {
+          display: flex;
+          gap: var(--spacing-md);
+          flex-wrap: wrap;
+        }
+        
+        .btn-sm {
+          padding: var(--spacing-xs) var(--spacing-sm);
+          font-size: var(--font-size-sm);
+        }
+      `}</style>
+    </>
   );
 } 

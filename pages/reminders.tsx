@@ -114,11 +114,11 @@ function Reminders() {
               data={pendingTasks}
               renderRow={(task) => (
                 <tr key={task.id}>
-                  <td>{task.title}</td>
-                  <td><StatusBadge status="info" text={task.type} /></td>
-                  <td><StatusBadge status={getPriorityStatus(task.priority)} text={task.priority} /></td>
-                  <td>{task.dueDate}</td>
-                  <td>
+                  <td style={{ textAlign: 'center' }}>{task.title}</td>
+                  <td style={{ textAlign: 'center' }}><StatusBadge status="info" text={task.type} /></td>
+                  <td style={{ textAlign: 'center' }}><StatusBadge status={getPriorityStatus(task.priority)} text={task.priority} /></td>
+                  <td style={{ textAlign: 'center' }}>{task.dueDate}</td>
+                  <td style={{ textAlign: 'center' }}>
                     <div className="action-buttons">
                       <button onClick={() => toggleTask(task.id)} className="btn btn-success btn-sm">Complete</button>
                       <button onClick={() => deleteTask(task.id)} className="btn btn-error btn-sm">Delete</button>
@@ -143,10 +143,10 @@ function Reminders() {
               data={completedTasks}
               renderRow={(task) => (
                 <tr key={task.id} className="completed-task">
-                  <td>{task.title}</td>
-                  <td><StatusBadge status="info" text={task.type} /></td>
-                  <td>
-                    <button onClick={() => toggleTask(task.id)} className="btn btn-secondary btn-sm">Mark as Pending</button>
+                  <td style={{ textAlign: 'center' }}>{task.title}</td>
+                  <td style={{ textAlign: 'center' }}><StatusBadge status="info" text={task.type} /></td>
+                  <td style={{ textAlign: 'center' }}>
+                    <button onClick={() => toggleTask(task.id)} className="btn btn-warning btn-sm">Mark as Pending</button>
                   </td>
                 </tr>
               )}
@@ -158,7 +158,12 @@ function Reminders() {
       </DashboardLayout>
       <style jsx>{`
         .add-task-form { display: flex; gap: var(--spacing-md); }
-        .action-buttons { display: flex; gap: var(--spacing-xs); }
+        .action-buttons { display: flex; gap: var(--spacing-xs); justify-content: center; }
+        
+        /* Center align table headers */
+        :global(.data-table .table-header) {
+          text-align: center;
+        }
         .completed-task td { text-decoration: line-through; color: var(--gray-400); }
         .communication-actions {
           display: grid;

@@ -118,12 +118,12 @@ function ManagerDashboard() {
               data={pendingTasks}
               renderRow={(task) => (
                 <tr key={task.id}>
-                  <td>{task.title}</td>
-                  <td>{task.property}</td>
-                  <td><span className={`status-badge status-${task.priority}`}>{task.priority}</span></td>
-                  <td>{task.due_date}</td>
-                  <td>
-                    <button className="btn btn-secondary btn-sm">Complete</button>
+                  <td style={{ textAlign: 'center' }}>{task.title}</td>
+                  <td style={{ textAlign: 'center' }}>{task.property}</td>
+                  <td style={{ textAlign: 'center' }}><span className={`status-badge status-${task.priority}`}>{task.priority}</span></td>
+                  <td style={{ textAlign: 'center' }}>{task.due_date}</td>
+                  <td style={{ textAlign: 'center' }}>
+                    <button className="btn btn-success btn-sm">Complete</button>
                   </td>
                 </tr>
               )}
@@ -146,11 +146,11 @@ function ManagerDashboard() {
               data={recentApplications}
               renderRow={(app) => (
                 <tr key={app.id}>
-                  <td>{app.tenant_name}</td>
-                  <td>{app.property_name}</td>
-                  <td><span className="status-badge status-pending">{app.status}</span></td>
-                  <td>
-                    <Link href="/applications" className="btn btn-secondary btn-sm">Review</Link>
+                  <td style={{ textAlign: 'center' }}>{app.tenant_name}</td>
+                  <td style={{ textAlign: 'center' }}>{app.property_name}</td>
+                  <td style={{ textAlign: 'center' }}><span className="status-badge status-pending">{app.status}</span></td>
+                  <td style={{ textAlign: 'center' }}>
+                    <Link href="/applications" className="btn btn-primary btn-sm">Review</Link>
                       </td>
                     </tr>
               )}
@@ -164,9 +164,9 @@ function ManagerDashboard() {
         <SectionCard title="Quick Actions">
           <div className="quick-actions">
             <Link href="/applications" className="btn btn-primary">Review Applications</Link>
-            <Link href="/leases" className="btn btn-secondary">Manage Leases</Link>
-            <Link href="/tenants" className="btn btn-secondary">Contact Tenants</Link>
-            <Link href="/inventory" className="btn btn-secondary">Check Inventory</Link>
+            <Link href="/leases" className="btn btn-primary">Manage Leases</Link>
+            <Link href="/tenants" className="btn btn-primary">Contact Tenants</Link>
+            <Link href="/inventory" className="btn btn-primary">Check Inventory</Link>
           </div>
         </SectionCard>
       </DashboardLayout>
@@ -183,6 +183,11 @@ function ManagerDashboard() {
         .status-medium { background-color: var(--warning-amber-light); color: var(--warning-amber-dark); }
         .status-low { background-color: var(--success-green-light); color: var(--success-green-dark); }
         .status-pending { background-color: var(--info-purple-light); color: var(--info-purple-dark); }
+        
+        /* Center align table headers */
+        :global(.data-table .table-header) {
+          text-align: center;
+        }
       `}</style>
     </>
   );

@@ -14,9 +14,9 @@
   --font-size-base: 14px;
 
   /* Global Design Tokens */
-  --primary-blue: #0ea5e9;
-  --primary-blue-dark: #0284c7;
-  --primary-blue-light: #7dd3fc;
+  --primary-blue: #2563eb;
+  --primary-blue-dark: #1d4ed8;
+  --primary-blue-light: #dbeafe;
   
   --success-green: #10b981;
   --success-green-dark: #059669;

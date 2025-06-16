@@ -117,7 +117,7 @@ function LandlordDashboard() {
                   <span>Vacant: {p.vacant_rooms}</span>
                 </div>
                 <div className="action-buttons">
-                  <Link href={`/properties/${p.id}`} className="btn btn-secondary btn-sm">Manage</Link>
+                  <Link href={`/properties/${p.id}`} className="btn btn-primary btn-sm">Manage</Link>
                 </div>
               </div>
             ))}
@@ -140,11 +140,11 @@ function LandlordDashboard() {
               data={recentApplications}
               renderRow={(app) => (
                 <tr key={app.id}>
-                  <td>{app.tenant_name}</td>
-                  <td>{app.property_name}</td>
-                  <td><span className="status-badge status-pending">{app.status}</span></td>
-                  <td>
-                    <Link href="/applications" className="btn btn-secondary btn-sm">Review</Link>
+                  <td style={{ textAlign: 'center' }}>{app.tenant_name}</td>
+                  <td style={{ textAlign: 'center' }}>{app.property_name}</td>
+                  <td style={{ textAlign: 'center' }}><span className="status-badge status-pending">{app.status}</span></td>
+                  <td style={{ textAlign: 'center' }}>
+                    <Link href="/applications" className="btn btn-primary btn-sm">Review</Link>
                       </td>
                     </tr>
               )}
@@ -158,9 +158,9 @@ function LandlordDashboard() {
         <SectionCard title="Quick Actions">
           <div className="quick-actions">
             <Link href="/properties/add" className="btn btn-primary">Add New Property</Link>
-            <Link href="/applications" className="btn btn-secondary">Review Applications</Link>
-            <Link href="/tenants" className="btn btn-secondary">Manage Tenants</Link>
-            <Link href="/managers" className="btn btn-secondary">Manage Team</Link>
+            <Link href="/applications" className="btn btn-primary">Review Applications</Link>
+            <Link href="/tenants" className="btn btn-primary">Manage Tenants</Link>
+            <Link href="/managers" className="btn btn-primary">Manage Team</Link>
           </div>
         </SectionCard>
       </DashboardLayout>
@@ -178,6 +178,11 @@ function LandlordDashboard() {
         .quick-actions { display: flex; gap: var(--spacing-md); flex-wrap: wrap; }
         .status-badge { padding: 4px 8px; border-radius: 12px; font-size: 12px; }
         .status-pending { background-color: var(--warning-amber-light); color: var(--warning-amber-dark); }
+        
+        /* Center align table headers */
+        :global(.data-table .table-header) {
+          text-align: center;
+        }
       `}</style>
     </>
   );

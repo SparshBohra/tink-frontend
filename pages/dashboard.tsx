@@ -90,19 +90,19 @@ function Dashboard() {
             data={demoTasks}
             renderRow={(task) => (
               <tr key={task.id}>
-                <td className="task-title">{task.title}</td>
-                <td>{task.property}</td>
-                <td>
+                <td className="task-title" style={{ textAlign: 'center' }}>{task.title}</td>
+                <td style={{ textAlign: 'center' }}>{task.property}</td>
+                <td style={{ textAlign: 'center' }}>
                   <StatusBadge 
                     status={task.priority} 
                     text={task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
                   />
                 </td>
-                <td>{task.due}</td>
-                <td>
+                <td style={{ textAlign: 'center' }}>{task.due}</td>
+                <td style={{ textAlign: 'center' }}>
                   <div className="action-buttons">
                     <button className="btn btn-success">Complete</button>
-                    <button className="btn btn-secondary">Details</button>
+                    <button className="btn btn-primary">Details</button>
                   </div>
                 </td>
               </tr>
@@ -136,8 +136,8 @@ function Dashboard() {
                 </div>
               </div>
               <div className="property-footer">
-                <button className="btn btn-secondary">Manage Property</button>
-                <button className="btn btn-secondary">View Tasks</button>
+                <button className="btn btn-primary">Manage Property</button>
+                <button className="btn btn-primary">View Tasks</button>
               </div>
             </div>
             
@@ -161,8 +161,8 @@ function Dashboard() {
                 </div>
               </div>
               <div className="property-footer">
-                <button className="btn btn-secondary">Manage Property</button>
-                <button className="btn btn-secondary">View Tasks</button>
+                <button className="btn btn-primary">Manage Property</button>
+                <button className="btn btn-primary">View Tasks</button>
               </div>
             </div>
           </div>
@@ -185,6 +185,12 @@ function Dashboard() {
         .action-buttons {
           display: flex;
           gap: var(--spacing-xs);
+          justify-content: center;
+        }
+        
+        /* Center align table headers */
+        :global(.data-table .table-header) {
+          text-align: center;
         }
         
         .property-cards {

@@ -110,15 +110,15 @@ function ManagersPage() {
             data={managers}
             renderRow={(manager) => (
               <tr key={manager.id}>
-                <td>{manager.full_name}</td>
-                <td>{manager.email}</td>
-                <td>
+                <td style={{ textAlign: 'center' }}>{manager.full_name}</td>
+                <td style={{ textAlign: 'center' }}>{manager.email}</td>
+                <td style={{ textAlign: 'center' }}>
                   <StatusBadge status={manager.is_active ? 'success' : 'error'} text={manager.is_active ? 'Active' : 'Inactive'} />
                 </td>
-                <td>{manager.date_joined}</td>
-                <td>
+                <td style={{ textAlign: 'center' }}>{manager.date_joined}</td>
+                <td style={{ textAlign: 'center' }}>
                   <div className="action-buttons">
-                    <button className="btn btn-secondary btn-sm">Edit</button>
+                    <button className="btn btn-warning btn-sm">Edit</button>
                     <button className="btn btn-error btn-sm" onClick={() => handleDeleteManager(manager.id, manager.full_name)}>Delete</button>
                   </div>
                       </td>
@@ -131,7 +131,12 @@ function ManagersPage() {
         .actions-container { display: flex; gap: var(--spacing-md); }
         .manager-form { /* Add form styling here */ }
         .form-actions { display: flex; gap: var(--spacing-md); margin-top: var(--spacing-lg); }
-        .action-buttons { display: flex; gap: var(--spacing-xs); }
+        .action-buttons { display: flex; gap: var(--spacing-xs); justify-content: center; }
+        
+        /* Center align table headers */
+        :global(.data-table .table-header) {
+          text-align: center;
+        }
       `}</style>
     </>
   );

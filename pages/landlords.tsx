@@ -1,8 +1,13 @@
 import { useState, useEffect } from 'react';
+import Head from 'next/head';
 import { useAuth } from '../lib/auth-context';
 import { apiClient } from '../lib/api';
 import { withAuth } from '../lib/auth-context';
 import Navigation from '../components/Navigation';
+import DashboardLayout from '../components/DashboardLayout';
+import SectionCard from '../components/SectionCard';
+import DataTable from '../components/DataTable';
+import EmptyState from '../components/EmptyState';
 import Link from 'next/link';
 
 interface Landlord {
@@ -57,153 +62,162 @@ function LandlordsPage() {
   if (loading) {
     return (
       <>
+        <Head>
+          <title>Landlords - Tink Property Management</title>
+        </Head>
         <Navigation />
-        <div style={{ padding: '20px' }}>
-          <div style={{ textAlign: 'center', padding: '40px' }}>
-            <div style={{ fontSize: '18px', color: '#666' }}>Loading landlords...</div>
+        <DashboardLayout
+          title="All Landlords"
+          subtitle="Loading landlords..."
+        >
+          <div className="loading-indicator">
+            <div className="loading-spinner" />
+            <p>Fetching landlords data...</p>
           </div>
-        </div>
+        </DashboardLayout>
       </>
     );
   }
 
   return (
     <>
+      <Head>
+        <title>Landlords - Tink Property Management</title>
+      </Head>
       <Navigation />
-      <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center', 
-          marginBottom: '30px',
-          borderBottom: '2px solid #e9ecef',
-          paddingBottom: '15px'
-        }}>
-          <div>
-            <h1 style={{ margin: '0', color: '#2c3e50', fontSize: '28px' }}>
-              💰 All Landlords
-            </h1>
-            <p style={{ margin: '5px 0 0 0', color: '#666', fontSize: '16px' }}>
-              Manage all property owners on the platform
-            </p>
-          </div>
-        </div>
+      
+      <DashboardLayout
+        title="All Landlords"
+        subtitle="Manage all property owners on the platform"
+      >
+        {error && <div className="alert alert-error">{error}</div>}
 
-        {error && (
-          <div style={{
-            backgroundColor: '#f8d7da',
-            color: '#721c24',
-            padding: '12px',
-            borderRadius: '8px',
-            marginBottom: '20px',
-            border: '1px solid #f5c6cb'
-          }}>
-            {error}
-          </div>
-        )}
-
-        <div style={{
-          backgroundColor: 'white',
-          borderRadius: '12px',
-          boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-          overflow: 'hidden'
-        }}>
-          {landlords.length === 0 ? (
-            <div style={{ padding: '40px', textAlign: 'center', color: '#666' }}>
-              <div style={{ fontSize: '48px', marginBottom: '20px' }}>💰</div>
-              <h3>No Landlords Found</h3>
-              <p>No property owners have registered yet.</p>
-            </div>
-          ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ backgroundColor: '#f8f9fa' }}>
-                    <th style={{ padding: '15px', textAlign: 'left', borderBottom: '2px solid #dee2e6' }}>
-                      Landlord
-                    </th>
-                    <th style={{ padding: '15px', textAlign: 'left', borderBottom: '2px solid #dee2e6' }}>
-                      Organization
-                    </th>
-                    <th style={{ padding: '15px', textAlign: 'left', borderBottom: '2px solid #dee2e6' }}>
-                      Contact
-                    </th>
-                    <th style={{ padding: '15px', textAlign: 'left', borderBottom: '2px solid #dee2e6' }}>
-                      Status
-                    </th>
-                    <th style={{ padding: '15px', textAlign: 'center', borderBottom: '2px solid #dee2e6' }}>
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {landlords.map((landlord) => (
-                    <tr key={landlord.id} style={{ borderBottom: '1px solid #dee2e6' }}>
-                      <td style={{ padding: '15px' }}>
-                        <div>
-                          <div style={{ fontWeight: 'bold', color: '#2c3e50' }}>
-                            {landlord.full_name}
-                          </div>
-                          <div style={{ fontSize: '14px', color: '#666' }}>
-                            @{landlord.username}
-                          </div>
-                        </div>
-                      </td>
-                      <td style={{ padding: '15px' }}>
-                        <div style={{ fontWeight: 'bold', color: '#f39c12' }}>
-                          {landlord.org_name}
-                        </div>
-                        <div style={{ fontSize: '12px', color: '#666' }}>
-                          {landlord.address}
-                        </div>
-                      </td>
-                      <td style={{ padding: '15px' }}>
-                        <div style={{ color: '#666' }}>
-                          📧 {landlord.contact_email}
-                        </div>
-                        {landlord.contact_phone && (
-                          <div style={{ color: '#666', fontSize: '14px' }}>
-                            📞 {landlord.contact_phone}
-                          </div>
-                        )}
-                      </td>
-                      <td style={{ padding: '15px' }}>
-                        <span style={{
-                          backgroundColor: landlord.is_active ? '#d4edda' : '#f8d7da',
-                          color: landlord.is_active ? '#155724' : '#721c24',
-                          padding: '4px 12px',
-                          borderRadius: '12px',
-                          fontSize: '12px',
-                          fontWeight: 'bold'
-                        }}>
-                          {landlord.is_active ? '✅ Active' : '❌ Inactive'}
-                        </span>
-                      </td>
-                      <td style={{ padding: '15px', textAlign: 'center' }}>
-                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-                          <Link href={`/managers?landlord=${landlord.id}`}>
-                            <button style={{
-                              backgroundColor: '#28a745',
-                              color: 'white',
-                              border: 'none',
-                              padding: '6px 12px',
-                              borderRadius: '6px',
-                              cursor: 'pointer',
-                              fontSize: '12px'
-                            }}>
-                              👥 Managers
-                            </button>
-                          </Link>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      </div>
+        <SectionCard title="Platform Landlords" subtitle={`${landlords.length} landlord${landlords.length !== 1 ? 's' : ''} registered`}>
+          <DataTable
+            columns={[
+              { key: 'landlord', header: 'Landlord' },
+              { key: 'organization', header: 'Organization' },
+              { key: 'contact', header: 'Contact Information' },
+              { key: 'status', header: 'Status' },
+              { key: 'actions', header: 'Actions' }
+            ]}
+            data={landlords}
+            isLoading={loading}
+            emptyState={
+              <EmptyState
+                title="No Landlords Found"
+                description="No property owners have registered yet."
+              />
+            }
+            renderRow={(landlord) => (
+              <tr key={landlord.id}>
+                <td style={{ padding: 'var(--spacing-md) var(--spacing-lg)', textAlign: 'center' }}>
+                  <div>
+                    <div className="text-body" style={{ fontWeight: 'var(--font-weight-medium)', color: 'var(--gray-900)', marginBottom: 'var(--spacing-xs)' }}>
+                      {landlord.full_name}
+                    </div>
+                    <div className="text-small text-secondary">
+                      @{landlord.username}
+                    </div>
+                  </div>
+                </td>
+                <td style={{ padding: 'var(--spacing-md) var(--spacing-lg)', textAlign: 'center' }}>
+                  <div>
+                    <div className="text-body" style={{ fontWeight: 'var(--font-weight-medium)', color: 'var(--gray-900)', marginBottom: 'var(--spacing-xs)' }}>
+                      {landlord.org_name}
+                    </div>
+                    {landlord.address && (
+                      <div className="text-small text-secondary">
+                        {landlord.address}
+                      </div>
+                    )}
+                  </div>
+                </td>
+                <td style={{ padding: 'var(--spacing-md) var(--spacing-lg)', textAlign: 'center' }}>
+                  <div>
+                    <div className="text-small text-secondary" style={{ marginBottom: 'var(--spacing-xs)' }}>
+                      {landlord.contact_email}
+                    </div>
+                    {landlord.contact_phone && (
+                      <div className="text-small text-secondary">
+                        {landlord.contact_phone}
+                      </div>
+                    )}
+                  </div>
+                </td>
+                <td style={{ padding: 'var(--spacing-md) var(--spacing-lg)', textAlign: 'center' }}>
+                  <span className={`status-badge ${landlord.is_active ? 'status-active' : 'status-inactive'}`}>
+                    {landlord.is_active ? 'Active' : 'Inactive'}
+                  </span>
+                </td>
+                <td style={{ padding: 'var(--spacing-md) var(--spacing-lg)', textAlign: 'center' }}>
+                  <div className="action-buttons">
+                    <Link href={`/managers?landlord=${landlord.id}`} className="btn btn-primary btn-sm">
+                      View Details
+                    </Link>
+                    <Link href={`/managers?landlord=${landlord.id}`} className="btn btn-warning btn-sm">
+                      Assign Manager
+                    </Link>
+                  </div>
+                </td>
+              </tr>
+            )}
+          />
+        </SectionCard>
+      </DashboardLayout>
+      
+      <style jsx>{`
+        .loading-indicator {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: var(--spacing-xl);
+        }
+        
+        .loading-spinner {
+          width: 40px;
+          height: 40px;
+          border: 4px solid var(--gray-200);
+          border-top-color: var(--primary-blue);
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+          margin-bottom: var(--spacing-md);
+        }
+        
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+        
+        .status-badge {
+          padding: var(--spacing-xs) var(--spacing-sm);
+          border-radius: var(--radius-sm);
+          font-size: var(--text-small);
+          font-weight: var(--font-weight-medium);
+          text-transform: uppercase;
+        }
+        
+        .status-active {
+          background-color: var(--gray-100);
+          color: var(--gray-700);
+        }
+        
+        .status-inactive {
+          background-color: var(--gray-100);
+          color: var(--gray-500);
+        }
+        
+        .action-buttons {
+          display: flex;
+          gap: var(--spacing-xs);
+          justify-content: center;
+        }
+        
+        /* Center align table headers */
+        :global(.data-table .table-header) {
+          text-align: center;
+        }
+      `}</style>
     </>
   );
 }

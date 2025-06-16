@@ -224,12 +224,12 @@ function Properties() {
                 
               return (
                   <tr key={property.id}>
-                    <td>
+                    <td style={{ textAlign: 'center' }}>
                       <div className="property-name">{property.name}</div>
                       <div className="property-address">{property.full_address}</div>
                     </td>
                     
-                    <td>
+                    <td style={{ textAlign: 'center' }}>
                       <div className="rooms-stats">
                         <div>{stats.totalRooms} total</div>
                         <div className="room-detail">
@@ -238,7 +238,7 @@ function Properties() {
                       </div>
                   </td>
                     
-                    <td>
+                    <td style={{ textAlign: 'center' }}>
                       <div className="occupancy-container">
                         <div className="occupancy-bar">
                           <div 
@@ -250,7 +250,7 @@ function Properties() {
                       </div>
                     </td>
                     
-                    <td>
+                    <td style={{ textAlign: 'center' }}>
                       {stats.occupancyRate < 70 ? (
                         <StatusBadge status="warning" text="Low Occupancy" />
                       ) : stats.occupancyRate < 90 ? (
@@ -260,9 +260,9 @@ function Properties() {
                     )}
                   </td>
                     
-                    <td>
+                    <td style={{ textAlign: 'center' }}>
                       <div className="action-buttons">
-                        <Link href={`/properties/${property.id}`} className="btn btn-secondary btn-sm">
+                        <Link href={`/properties/${property.id}`} className="btn btn-primary btn-sm">
                           Details
                         </Link>
                       </div>
@@ -280,19 +280,19 @@ function Properties() {
           subtitle="Common property management tasks"
         >
           <div className="quick-actions">
-            <Link href="/tenants" className="btn btn-secondary">
+            <Link href="/tenants" className="btn btn-primary">
               Manage Tenants
           </Link>
             
-            <Link href="/leases" className="btn btn-secondary">
+            <Link href="/leases" className="btn btn-primary">
               View Leases
           </Link>
             
-            <Link href="/applications" className="btn btn-secondary">
+            <Link href="/applications" className="btn btn-primary">
               Review Applications
           </Link>
             
-            <Link href="#" className="btn btn-secondary">
+            <Link href="#" className="btn btn-primary">
               Check Inventory
           </Link>
         </div>
@@ -359,6 +359,12 @@ function Properties() {
         .action-buttons {
           display: flex;
           gap: var(--spacing-xs);
+          justify-content: center;
+        }
+        
+        /* Center align table headers */
+        :global(.data-table .table-header) {
+          text-align: center;
         }
         
         .quick-actions {

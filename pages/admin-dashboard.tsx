@@ -115,14 +115,14 @@ function AdminDashboard() {
             data={landlords}
             renderRow={(landlord) => (
               <tr key={landlord.id}>
-                <td>{landlord.org_name}</td>
-                <td>{landlord.owner_name}</td>
-                <td>{landlord.property_count}</td>
-                <td>{landlord.manager_count}</td>
-                <td>
+                <td style={{ textAlign: 'center' }}>{landlord.org_name}</td>
+                <td style={{ textAlign: 'center' }}>{landlord.owner_name}</td>
+                <td style={{ textAlign: 'center' }}>{landlord.property_count}</td>
+                <td style={{ textAlign: 'center' }}>{landlord.manager_count}</td>
+                <td style={{ textAlign: 'center' }}>
                   <div className="action-buttons">
-                    <Link href="/landlords" className="btn btn-secondary btn-sm">View Details</Link>
-                    <Link href={`/managers?landlord=${landlord.id}`} className="btn btn-secondary btn-sm">Assign Manager</Link>
+                    <Link href="/landlords" className="btn btn-primary btn-sm">View Details</Link>
+                    <Link href={`/managers?landlord=${landlord.id}`} className="btn btn-warning btn-sm">Assign Manager</Link>
                   </div>
                     </td>
                   </tr>
@@ -142,12 +142,12 @@ function AdminDashboard() {
             data={managers}
             renderRow={(manager) => (
               <tr key={manager.id}>
-                <td>{manager.name}</td>
-                <td>{manager.email}</td>
-                <td>{manager.landlord}</td>
-                <td>
+                <td style={{ textAlign: 'center' }}>{manager.name}</td>
+                <td style={{ textAlign: 'center' }}>{manager.email}</td>
+                <td style={{ textAlign: 'center' }}>{manager.landlord}</td>
+                <td style={{ textAlign: 'center' }}>
                   <div className="action-buttons">
-                    <Link href="/managers" className="btn btn-secondary btn-sm">View Details</Link>
+                    <Link href="/managers" className="btn btn-primary btn-sm">View Details</Link>
                   </div>
                     </td>
                   </tr>
@@ -160,8 +160,8 @@ function AdminDashboard() {
           <div className="quick-actions">
             <button className="btn btn-primary">Add New Landlord</button>
             <button className="btn btn-primary">Create Manager Account</button>
-            <button className="btn btn-secondary">Generate Platform Report</button>
-            <button className="btn btn-secondary">Platform Settings</button>
+            <button className="btn btn-primary">Generate Platform Report</button>
+            <button className="btn btn-warning">Platform Settings</button>
           </div>
         </SectionCard>
       </DashboardLayout>
@@ -194,6 +194,12 @@ function AdminDashboard() {
         .action-buttons {
           display: flex;
           gap: var(--spacing-xs);
+          justify-content: center;
+        }
+        
+        /* Center align table headers */
+        :global(.data-table .table-header) {
+          text-align: center;
         }
         .quick-actions {
           display: flex;

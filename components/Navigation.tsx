@@ -239,7 +239,7 @@ export default function Navigation() {
           
           <button 
             onClick={() => logout()} 
-            className="logout-button"
+            className="btn btn-error btn-sm logout-button"
           >
             Logout
           </button>
@@ -387,20 +387,7 @@ export default function Navigation() {
         }
         
         .logout-button {
-          background-color: transparent;
-          color: var(--error-red);
-          border: 1px solid var(--error-red);
-          padding: var(--spacing-xs) var(--spacing-md);
-          border-radius: var(--radius-sm);
-          font-weight: 500;
-          font-size: var(--text-small);
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-        
-        .logout-button:hover {
-          background-color: var(--error-red);
-          color: white;
+          /* Override any custom styling - let btn-error handle the styling */
         }
         
         @media (max-width: 768px) {
