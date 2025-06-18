@@ -24,7 +24,24 @@ import {
   User
 } from './types';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://tink.global/api';
+// Smart environment-based API URL configuration
+const getApiBaseUrl = () => {
+  // If explicitly set via environment variable, use that
+  if (process.env.NEXT_PUBLIC_API_BASE_URL) {
+    return process.env.NEXT_PUBLIC_API_BASE_URL;
+  }
+  
+  // Smart defaults based on environment
+  if (process.env.NODE_ENV === 'development') {
+    // Default to localhost for development, but can be overridden
+    return 'http://localhost:8000/api';
+  }
+  
+  // Production default
+  return 'https://tink.global/api';
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 class ApiClient {
   private api: AxiosInstance;
