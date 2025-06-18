@@ -265,7 +265,7 @@ tink-frontend/
 
 ### Environment Variables
 ```env
-REACT_APP_API_URL=http://54.224.252.101/api
+REACT_APP_API_URL=https://tink.global/api
 ```
 
 ### Role Mapping

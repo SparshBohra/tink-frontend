@@ -24,7 +24,7 @@ import {
   User
 } from './types';
 
-const API_BASE_URL = 'http://54.224.252.101/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://tink.global/api';
 
 class ApiClient {
   private api: AxiosInstance;
