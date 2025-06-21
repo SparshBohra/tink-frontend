@@ -231,13 +231,24 @@ export default function PropertyRooms() {
   });
 
   const roomsTableColumns = [
-    { key: 'room', label: 'Room', align: 'left' as const },
-    { key: 'status', label: 'Status', align: 'center' as const },
-    { key: 'tenant', label: 'Current Tenant', align: 'left' as const },
-    { key: 'rent', label: 'Monthly Rent', align: 'center' as const },
-    { key: 'type', label: 'Room Type', align: 'center' as const },
-    { key: 'actions', label: 'Actions', align: 'center' as const }
+    { key: 'room', header: 'Room' },
+    { key: 'status', header: 'Status' },
+    { key: 'tenant', header: 'Current Tenant' },
+    { key: 'rent', header: 'Monthly Rent' },
+    { key: 'type', header: 'Room Type' },
+    { key: 'actions', header: 'Actions' }
   ];
+
+  const renderRoomRow = (rowData: any, index: number) => (
+    <tr key={rowData.id}>
+      <td>{rowData.room}</td>
+      <td style={{ textAlign: 'center' }}>{rowData.status}</td>
+      <td>{rowData.tenant}</td>
+      <td style={{ textAlign: 'center' }}>{rowData.rent}</td>
+      <td style={{ textAlign: 'center' }}>{rowData.type}</td>
+      <td style={{ textAlign: 'center' }}>{rowData.actions}</td>
+    </tr>
+  );
 
   return (
     <>
@@ -279,7 +290,7 @@ export default function PropertyRooms() {
           <MetricCard 
             title="Vacant" 
             value={stats.vacantRooms}
-            color="red"
+            color="amber"
           />
           
           <MetricCard 
@@ -329,13 +340,17 @@ export default function PropertyRooms() {
             <DataTable 
               columns={roomsTableColumns}
               data={roomsTableData}
+              renderRow={renderRoomRow}
             />
           ) : (
             <EmptyState 
               title="No Rooms Found"
               description="No rooms have been added to this property yet."
-              actionText="Add New Room"
-              actionHref={`/properties/${id}/add-room`}
+              action={
+                <Link href={`/properties/${id}/add-room`} className="btn btn-primary">
+                  Add New Room
+                </Link>
+              }
             />
           )}
         </SectionCard>

@@ -43,9 +43,11 @@ export interface Property {
   id: number;
   name: string;
   address: string;
+  full_address: string;
   property_type: string;
   description?: string;
   total_rooms: number;
+  landlord_name?: string;
   created_at: string;
   updated_at: string;
 }
@@ -53,11 +55,14 @@ export interface Property {
 export interface Room {
   id: number;
   property: number;
+  name: string;
   room_number: string;
   room_type: string;
+  floor?: string;
   monthly_rent: number;
   security_deposit: number;
   is_occupied: boolean;
+  is_vacant?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -78,11 +83,13 @@ export interface Lease {
   id: number;
   tenant: number;
   room: number;
+  property_ref?: number;
   start_date: string;
   end_date: string;
   monthly_rent: number;
   security_deposit: number;
   status: string;
+  is_active?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -198,7 +205,6 @@ export interface LandlordSignupData {
   full_name: string;
   email: string;
   phone: string;
-  company_name?: string;
   username: string;
   password: string;
   confirm_password: string;
