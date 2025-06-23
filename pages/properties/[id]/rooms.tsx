@@ -381,6 +381,13 @@ export default function PropertyRooms() {
       </DashboardLayout>
 
       <style jsx>{`
+        .metrics-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: var(--spacing-lg);
+          margin-bottom: var(--spacing-xl);
+        }
+        
         .property-info-grid {
           display: grid;
           grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -390,8 +397,9 @@ export default function PropertyRooms() {
         .info-item {
           padding: var(--spacing-md);
           background: var(--gray-50);
-          border-radius: var(--border-radius);
+          border-radius: var(--radius-md);
           border: 1px solid var(--gray-200);
+          box-shadow: var(--shadow-sm);
         }
         
         .actions-grid {
@@ -400,9 +408,13 @@ export default function PropertyRooms() {
           flex-wrap: wrap;
         }
         
+        .actions-container {
+          margin-bottom: var(--spacing-lg);
+        }
+        
         .btn-sm {
           padding: var(--spacing-xs) var(--spacing-sm);
-          font-size: var(--font-size-sm);
+          font-size: var(--text-small);
         }
       `}</style>
     </>

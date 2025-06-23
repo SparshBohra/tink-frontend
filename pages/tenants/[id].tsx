@@ -1,9 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
+import Head from 'next/head';
 import Link from 'next/link';
 import { apiClient } from '../../lib/api';
 import { Tenant, Lease, Application } from '../../lib/types';
 import Navigation from '../../components/Navigation';
+import DashboardLayout from '../../components/DashboardLayout';
+import SectionCard from '../../components/SectionCard';
+import MetricCard from '../../components/MetricCard';
+import StatusBadge from '../../components/StatusBadge';
+import DataTable from '../../components/DataTable';
+import EmptyState from '../../components/EmptyState';
+import { formatCurrency } from '../../lib/utils';
 
 export default function TenantDetails() {
   const router = useRouter();
@@ -56,448 +64,330 @@ export default function TenantDetails() {
 
   if (loading) {
     return (
-      <div>
+      <>
+        <Head>
+          <title>Loading Tenant - Tink Property Management</title>
+        </Head>
         <Navigation />
-        <h1>Loading Tenant Data...</h1>
-        <p>Fetching tenant information from the server...</p>
-      </div>
+        <DashboardLayout
+          title="Tenant Details"
+          subtitle="Loading tenant information..."
+        >
+          <div className="loading-indicator">
+            <div className="loading-spinner" />
+            <p>Fetching tenant information...</p>
+          </div>
+        </DashboardLayout>
+      </>
     );
   }
 
   if (error || !tenant) {
     return (
-      <div>
+      <>
+        <Head>
+          <title>Tenant Not Found - Tink Property Management</title>
+        </Head>
         <Navigation />
-        <div style={{ marginBottom: '20px' }}>
-          <Link href="/tenants">
-            <button style={{
-              padding: '8px 16px',
-              backgroundColor: '#6c757d',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              marginBottom: '15px'
-            }}
-            onClick={() => router.back()}
-            >
+        <DashboardLayout
+          title="Tenant Not Found"
+          subtitle="Unable to load tenant details"
+        >
+          <div className="alert alert-error">
+            <strong>Error:</strong> {error || 'Tenant not found'}
+          </div>
+          <div className="actions-container">
+            <button onClick={() => router.back()} className="btn btn-secondary">
               ← Back
             </button>
-          </Link>
-        </div>
-        <h1>Error Loading Tenant</h1>
-        <div style={{ 
-          color: 'red', 
-          border: '1px solid red', 
-          padding: '15px', 
-          marginBottom: '20px',
-          backgroundColor: '#ffebee'
-        }}>
-          <strong>Error:</strong> {error || 'Tenant not found'}
-        </div>
-      </div>
+            <Link href="/tenants" className="btn btn-primary">
+              All Tenants
+            </Link>
+          </div>
+        </DashboardLayout>
+      </>
     );
   }
 
+  const applicationsTableData = applications.map(app => ({
+    id: app.id,
+    property: app.room ? `Property ${app.room}` : 'Unknown Property',
+    room: app.room ? `Room ${app.room}` : 'Not specified',
+    status: (
+      <StatusBadge 
+        status={app.status === 'approved' ? 'active' : app.status === 'pending' ? 'pending' : 'inactive'} 
+        text={app.status.toUpperCase()}
+      />
+    ),
+    date: app.created_at ? new Date(app.created_at).toLocaleDateString() : 'Unknown',
+    actions: (
+      <Link href={`/applications?tenant=${tenant.id}`} className="btn btn-primary btn-sm">
+        View Details
+      </Link>
+    )
+  }));
+
+  const applicationsTableColumns = [
+    { key: 'property', header: 'Property' },
+    { key: 'room', header: 'Room' },
+    { key: 'status', header: 'Status' },
+    { key: 'date', header: 'Application Date' },
+    { key: 'actions', header: 'Actions' }
+  ];
+
+  const renderApplicationRow = (rowData: any, index: number) => (
+    <tr key={rowData.id}>
+      <td style={{ textAlign: 'center' }}>{rowData.property}</td>
+      <td style={{ textAlign: 'center' }}>{rowData.room}</td>
+      <td style={{ textAlign: 'center' }}>{rowData.status}</td>
+      <td style={{ textAlign: 'center' }}>{rowData.date}</td>
+      <td style={{ textAlign: 'center' }}>{rowData.actions}</td>
+    </tr>
+  );
+
   return (
-    <div>
+    <>
+      <Head>
+        <title>{tenant.full_name} - Tenant Details - Tink Property Management</title>
+      </Head>
       <Navigation />
       
-      {/* Header & Navigation */}
-      <div style={{ marginBottom: '20px' }}>
-        <Link href="/tenants">
-          <button style={{
-            padding: '8px 16px',
-            backgroundColor: '#6c757d',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            marginBottom: '15px'
-          }}
-          onClick={() => router.back()}
-          >
+      <DashboardLayout
+        title={`👤 ${tenant.full_name}`}
+        subtitle={`Tenant ID: ${tenant.id} • Member since ${tenant.created_at ? new Date(tenant.created_at).toLocaleDateString() : 'Unknown'}`}
+      >
+        <div className="actions-container">
+          <button onClick={() => router.back()} className="btn btn-secondary">
             ← Back
           </button>
-        </Link>
-        <h1>👤 {tenant.full_name}</h1>
-        <p style={{ color: '#666' }}>Tenant ID: {tenant.id}</p>
-      </div>
-      
-      {/* Tenant Overview */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))',
-        gap: '20px',
-        marginBottom: '30px'
-      }}>
-        {/* Tenant Info Card */}
-        <div style={{
-          border: '1px solid #ddd',
-          borderRadius: '8px',
-          padding: '20px',
-          backgroundColor: '#f8f9fa'
-        }}>
-          <h2>👤 Tenant Information</h2>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <tbody>
-              <tr>
-                <td style={{ padding: '8px 0', fontWeight: 'bold' }}>Name:</td>
-                <td style={{ padding: '8px 0' }}>{tenant.full_name}</td>
-              </tr>
-              <tr>
-                <td style={{ padding: '8px 0', fontWeight: 'bold' }}>Email:</td>
-                <td style={{ padding: '8px 0' }}>
-                  <a href={`mailto:${tenant.email}`} style={{ color: '#007bff', textDecoration: 'none' }}>
-                    {tenant.email}
-                  </a>
-                </td>
-              </tr>
-              <tr>
-                <td style={{ padding: '8px 0', fontWeight: 'bold' }}>Phone:</td>
-                <td style={{ padding: '8px 0' }}>
-                  <a href={`tel:${tenant.phone}`} style={{ color: '#007bff', textDecoration: 'none' }}>
-                    {tenant.phone}
-                  </a>
-                </td>
-              </tr>
-              {tenant.date_of_birth && (
-                <tr>
-                  <td style={{ padding: '8px 0', fontWeight: 'bold' }}>Date of Birth:</td>
-                  <td style={{ padding: '8px 0' }}>{tenant.date_of_birth}</td>
-                </tr>
+          <Link href="/tenants" className="btn btn-secondary">
+            All Tenants
+          </Link>
+        </div>
+
+        {/* Tenant Overview Metrics */}
+        <div className="metrics-grid">
+          <MetricCard 
+            title="Lease Status" 
+            value={currentLease ? 'Active' : 'No Lease'}
+            color={currentLease ? 'green' : 'amber'}
+          />
+          <MetricCard 
+            title="Monthly Rent" 
+            value={currentLease ? formatCurrency(currentLease.monthly_rent) : 'N/A'}
+            color="blue"
+            isMonetary={false}
+          />
+          <MetricCard 
+            title="Applications" 
+            value={applications.length}
+            color="purple"
+          />
+          <MetricCard 
+            title="Account Status" 
+            value="Active"
+            color="green"
+          />
+        </div>
+
+        {/* Tenant Information */}
+        <SectionCard title="Tenant Information" subtitle="Contact details and personal information">
+          <div className="tenant-info-grid">
+            <div className="info-item">
+              <strong>Full Name:</strong><br />
+              {tenant.full_name}
+            </div>
+            <div className="info-item">
+              <strong>Email:</strong><br />
+              <a href={`mailto:${tenant.email}`}>{tenant.email}</a>
+            </div>
+            <div className="info-item">
+              <strong>Phone:</strong><br />
+              <a href={`tel:${tenant.phone}`}>{tenant.phone}</a>
+            </div>
+            <div className="info-item">
+              <strong>Emergency Contact:</strong><br />
+              {tenant.emergency_contact_name ? (
+                <>
+                  {tenant.emergency_contact_name}
+                  {tenant.emergency_contact_phone && (
+                    <><br /><a href={`tel:${tenant.emergency_contact_phone}`}>{tenant.emergency_contact_phone}</a></>
+                  )}
+                </>
+              ) : (
+                'Not provided'
               )}
-              {tenant.emergency_contact_name && (
-                <tr>
-                  <td style={{ padding: '8px 0', fontWeight: 'bold' }}>Emergency Contact:</td>
-                  <td style={{ padding: '8px 0' }}>
-                    {tenant.emergency_contact_name}
-                    {tenant.emergency_contact_phone && (
-                      <> (<a href={`tel:${tenant.emergency_contact_phone}`} style={{ color: '#007bff', textDecoration: 'none' }}>
-                        {tenant.emergency_contact_phone}
-                      </a>)</>
-                    )}
-                  </td>
-                </tr>
-              )}
-              <tr>
-                <td style={{ padding: '8px 0', fontWeight: 'bold' }}>Created:</td>
-                <td style={{ padding: '8px 0' }}>
-                  {tenant.created_at ? new Date(tenant.created_at).toLocaleDateString() : 'Unknown'}
-                </td>
-              </tr>
-              {tenant.notes && (
-                <tr>
-                  <td style={{ padding: '8px 0', fontWeight: 'bold' }}>Notes:</td>
-                  <td style={{ padding: '8px 0' }}>{tenant.notes}</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-          <div style={{ marginTop: '20px', display: 'flex', gap: '10px' }}>
+            </div>
+            <div className="info-item">
+              <strong>Current Address:</strong><br />
+              {tenant.current_address || 'Not provided'}
+            </div>
+            <div className="info-item">
+              <strong>Member Since:</strong><br />
+              {tenant.created_at ? new Date(tenant.created_at).toLocaleDateString() : 'Unknown'}
+            </div>
+          </div>
+          <div className="actions-grid" style={{ marginTop: 'var(--spacing-lg)' }}>
             <button
               onClick={() => alert('Edit feature coming soon')}
-              style={{
-                backgroundColor: '#17a2b8',
-                color: 'white',
-                border: 'none',
-                padding: '8px 16px',
-                borderRadius: '4px',
-                cursor: 'pointer'
-              }}
+              className="btn btn-primary"
             >
               ✏️ Edit Details
             </button>
-            <a href={`mailto:${tenant.email}`}>
-              <button style={{
-                backgroundColor: '#007bff',
-                color: 'white',
-                border: 'none',
-                padding: '8px 16px',
-                borderRadius: '4px',
-                cursor: 'pointer'
-              }}>
-                ✉️ Send Email
-              </button>
+            <a href={`mailto:${tenant.email}`} className="btn btn-secondary">
+              ✉️ Send Email
             </a>
           </div>
-        </div>
-        
-        {/* Current Housing Card */}
-        <div style={{
-          border: '1px solid #ddd',
-          borderRadius: '8px',
-          padding: '20px',
-          backgroundColor: '#f8f9fa'
-        }}>
-          <h2>🏠 Current Housing</h2>
+        </SectionCard>
+
+        {/* Current Housing */}
+        <SectionCard title="Current Housing" subtitle="Active lease and property information">
           {currentLease ? (
-            <div>
-              <div style={{
-                padding: '10px',
-                backgroundColor: '#e8f5e8',
-                borderRadius: '4px',
-                marginBottom: '15px'
-              }}>
-                <strong>Lease Status:</strong> 
-                <span style={{ 
-                  color: '#28a745', 
-                  fontWeight: 'bold',
-                  marginLeft: '5px'
-                }}>
-                  Active
-                </span>
+            <div className="lease-info-grid">
+              <div className="info-item">
+                <strong>Property:</strong><br />
+                Property ID: {currentLease.property_ref || 'Unknown'}
+                {currentLease.property_ref && (
+                  <><br /><Link href={`/properties/${currentLease.property_ref}/rooms`}>View Property</Link></>
+                )}
               </div>
-              
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <tbody>
-                  <tr>
-                    <td style={{ padding: '8px 0', fontWeight: 'bold' }}>Property:</td>
-                    <td style={{ padding: '8px 0' }}>
-                      {currentLease.property_name || 'Unknown Property'}
-                      {currentLease.property_ref && (
-                        <span> (<Link href={`/properties/${currentLease.property_ref}/rooms`}>
-                          View Property
-                        </Link>)</span>
-                      )}
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style={{ padding: '8px 0', fontWeight: 'bold' }}>Room:</td>
-                    <td style={{ padding: '8px 0' }}>{currentLease.room_name || 'Unknown Room'}</td>
-                  </tr>
-                  <tr>
-                    <td style={{ padding: '8px 0', fontWeight: 'bold' }}>Monthly Rent:</td>
-                    <td style={{ padding: '8px 0' }}>${currentLease.monthly_rent}</td>
-                  </tr>
-                  <tr>
-                    <td style={{ padding: '8px 0', fontWeight: 'bold' }}>Security Deposit:</td>
-                    <td style={{ padding: '8px 0' }}>${currentLease.security_deposit}</td>
-                  </tr>
-                  <tr>
-                    <td style={{ padding: '8px 0', fontWeight: 'bold' }}>Start Date:</td>
-                    <td style={{ padding: '8px 0' }}>{currentLease.start_date}</td>
-                  </tr>
-                  <tr>
-                    <td style={{ padding: '8px 0', fontWeight: 'bold' }}>End Date:</td>
-                    <td style={{ padding: '8px 0' }}>{currentLease.end_date}</td>
-                  </tr>
-                </tbody>
-              </table>
-              
-              <div style={{ marginTop: '20px', display: 'flex', gap: '10px' }}>
-                <button
-                  onClick={() => alert('Edit lease feature coming soon')}
-                  style={{
-                    backgroundColor: '#17a2b8',
-                    color: 'white',
-                    border: 'none',
-                    padding: '8px 16px',
-                    borderRadius: '4px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  ✏️ Edit Lease
-                </button>
+              <div className="info-item">
+                <strong>Room:</strong><br />
+                Room ID: {currentLease.room}
+              </div>
+              <div className="info-item">
+                <strong>Monthly Rent:</strong><br />
+                {formatCurrency(currentLease.monthly_rent)}
+              </div>
+              <div className="info-item">
+                <strong>Security Deposit:</strong><br />
+                {formatCurrency(currentLease.security_deposit)}
+              </div>
+              <div className="info-item">
+                <strong>Lease Period:</strong><br />
+                {currentLease.start_date} to {currentLease.end_date}
+              </div>
+              <div className="info-item">
+                <strong>Status:</strong><br />
+                <StatusBadge status="active" text="Active Lease" />
               </div>
             </div>
           ) : (
-            <div>
-              <div style={{
-                padding: '15px',
-                backgroundColor: '#f8d7da',
-                borderRadius: '4px',
-                marginBottom: '15px',
-                color: '#721c24'
-              }}>
-                <strong>No active lease found.</strong> This tenant is not currently assigned to any property.
-              </div>
-              
-              <div style={{ marginTop: '20px', display: 'flex', gap: '10px' }}>
+            <EmptyState 
+              title="No Active Lease"
+              description="This tenant is not currently assigned to any property."
+              action={
                 <button
                   onClick={() => alert('Create lease feature coming soon')}
-                  style={{
-                    backgroundColor: '#28a745',
-                    color: 'white',
-                    border: 'none',
-                    padding: '8px 16px',
-                    borderRadius: '4px',
-                    cursor: 'pointer'
-                  }}
+                  className="btn btn-primary"
                 >
                   ➕ Create New Lease
                 </button>
-                
-                {applications.length > 0 && (
-                  <Link href={`/applications?tenant=${tenant.id}`}>
-                    <button style={{
-                      backgroundColor: '#007bff',
-                      color: 'white',
-                      border: 'none',
-                      padding: '8px 16px',
-                      borderRadius: '4px',
-                      cursor: 'pointer'
-                    }}>
-                      📋 View Applications
-                    </button>
-                  </Link>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-      
-      {/* Applications History */}
-      <div style={{
-        border: '1px solid #ddd',
-        borderRadius: '8px',
-        padding: '20px',
-        marginBottom: '30px',
-        backgroundColor: '#f8f9fa'
-      }}>
-        <h2>📋 Application History</h2>
-        {applications.length > 0 ? (
-          <table border={1} style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ backgroundColor: '#e9ecef' }}>
-                <th style={{ padding: '10px', textAlign: 'left' }}>Property</th>
-                <th style={{ padding: '10px', textAlign: 'left' }}>Room</th>
-                <th style={{ padding: '10px', textAlign: 'center' }}>Status</th>
-                <th style={{ padding: '10px', textAlign: 'center' }}>Date</th>
-                <th style={{ padding: '10px', textAlign: 'center' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {applications.map(app => (
-                <tr key={app.id}>
-                  <td style={{ padding: '10px' }}>{app.property_name || 'Unknown Property'}</td>
-                  <td style={{ padding: '10px' }}>{app.room_name || 'Not specified'}</td>
-                  <td style={{ padding: '10px', textAlign: 'center' }}>
-                    <span style={{
-                      backgroundColor: 
-                        app.status === 'approved' ? '#d4edda' :
-                        app.status === 'pending' ? '#fff3cd' :
-                        app.status === 'rejected' ? '#f8d7da' : '#e9ecef',
-                      color: 
-                        app.status === 'approved' ? '#155724' :
-                        app.status === 'pending' ? '#856404' :
-                        app.status === 'rejected' ? '#721c24' : '#6c757d',
-                      padding: '4px 8px',
-                      borderRadius: '4px',
-                      fontSize: '0.85rem',
-                      fontWeight: 'bold'
-                    }}>
-                      {app.status.toUpperCase()}
-                    </span>
-                  </td>
-                  <td style={{ padding: '10px', textAlign: 'center' }}>
-                    {app.created_at ? new Date(app.created_at).toLocaleDateString() : 'Unknown'}
-                  </td>
-                  <td style={{ padding: '10px', textAlign: 'center' }}>
-                    <Link href={`/applications/${app.id}`}>
-                      <button style={{
-                        backgroundColor: '#17a2b8',
-                        color: 'white',
-                        border: 'none',
-                        padding: '6px 12px',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '0.85rem'
-                      }}>
-                        View Details
-                      </button>
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        ) : (
-          <div style={{
-            padding: '15px',
-            backgroundColor: '#e9ecef',
-            borderRadius: '4px'
-          }}>
-            <p style={{ margin: '0' }}>No application history found for this tenant.</p>
-          </div>
-        )}
-        
-        <div style={{ marginTop: '15px' }}>
-          <button
-            onClick={() => alert('Create application feature coming soon')}
-            style={{
-              backgroundColor: '#007bff',
-              color: 'white',
-              border: 'none',
-              padding: '8px 16px',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}
-          >
-            ➕ Create New Application
-          </button>
-        </div>
-      </div>
-      
-      {/* Quick Actions */}
-      <div style={{
-        border: '1px solid #ddd',
-        borderRadius: '8px',
-        padding: '20px',
-        backgroundColor: '#f0f7ff'
-      }}>
-        <h2>⚡ Quick Actions</h2>
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-          <a href={`tel:${tenant.phone}`}>
-            <button style={{
-              backgroundColor: '#28a745',
-              color: 'white',
-              border: 'none',
-              padding: '10px 16px',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}>
-              📞 Call Tenant
-            </button>
-          </a>
-          <a href={`sms:${tenant.phone}`}>
-            <button style={{
-              backgroundColor: '#17a2b8',
-              color: 'white',
-              border: 'none',
-              padding: '10px 16px',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}>
-              ✉️ Text Tenant
-            </button>
-          </a>
-          <button 
-            onClick={() => {
-              const confirmed = window.confirm('Are you sure you want to delete this tenant? This action cannot be undone.');
-              if (confirmed) {
-                alert('Delete functionality coming soon!');
               }
-            }}
-            style={{
-              backgroundColor: '#dc3545',
-              color: 'white',
-              border: 'none',
-              padding: '10px 16px',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}
-          >
-            🗑️ Delete Tenant
-          </button>
-        </div>
-      </div>
-    </div>
+            />
+          )}
+        </SectionCard>
+
+        {/* Applications History */}
+        <SectionCard title="Application History" subtitle={`${applications.length} application${applications.length !== 1 ? 's' : ''} on record`}>
+          {applications.length > 0 ? (
+            <DataTable 
+              columns={applicationsTableColumns}
+              data={applicationsTableData}
+              renderRow={renderApplicationRow}
+            />
+          ) : (
+            <EmptyState 
+              title="No Applications Found"
+              description="This tenant hasn't submitted any rental applications yet."
+            />
+          )}
+        </SectionCard>
+
+        {/* Quick Actions */}
+        <SectionCard title="Quick Actions" subtitle="Common tenant management tasks">
+          <div className="actions-grid">
+            <Link href={`/applications?tenant=${tenant.id}`} className="btn btn-primary">
+              View Applications
+            </Link>
+            <Link href="/leases" className="btn btn-secondary">
+              All Leases
+            </Link>
+            <Link href="/tenants" className="btn btn-secondary">
+              All Tenants
+            </Link>
+          </div>
+        </SectionCard>
+      </DashboardLayout>
+
+      <style jsx>{`
+        .metrics-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: var(--spacing-lg);
+          margin-bottom: var(--spacing-xl);
+        }
+        
+        .tenant-info-grid, .lease-info-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+          gap: var(--spacing-lg);
+        }
+        
+        .info-item {
+          padding: var(--spacing-md);
+          background: var(--gray-50);
+          border-radius: var(--radius-md);
+          border: 1px solid var(--gray-200);
+          box-shadow: var(--shadow-sm);
+        }
+        
+        .info-item a {
+          color: var(--primary-blue);
+          text-decoration: none;
+        }
+        
+        .info-item a:hover {
+          text-decoration: underline;
+        }
+        
+        .actions-grid {
+          display: flex;
+          gap: var(--spacing-md);
+          flex-wrap: wrap;
+        }
+        
+        .actions-container {
+          margin-bottom: var(--spacing-lg);
+        }
+        
+        .loading-indicator {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: var(--spacing-xl);
+        }
+        
+        .loading-spinner {
+          width: 40px;
+          height: 40px;
+          border: 4px solid var(--gray-200);
+          border-top-color: var(--primary-blue);
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+          margin-bottom: var(--spacing-md);
+        }
+        
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+        
+        .btn-sm {
+          padding: var(--spacing-xs) var(--spacing-sm);
+          font-size: var(--text-small);
+        }
+      `}</style>
+    </>
   );
-}
- 
- 
- 
- 
- 
+} 

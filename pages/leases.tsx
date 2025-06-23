@@ -194,7 +194,7 @@ function Leases() {
   });
   
   // Calculate total monthly revenue
-  const monthlyRevenue = activeLeases.reduce((sum, lease) => sum + lease.monthly_rent, 0);
+  const monthlyRevenue = activeLeases.reduce((sum, lease) => sum + (lease.monthly_rent || 0), 0);
 
   if (loading) {
     return (
@@ -276,8 +276,8 @@ function Leases() {
           
           <MetricCard 
             title="Monthly Revenue" 
-            value={monthlyRevenue}
-            isMonetary={true}
+            value={formatCurrency(monthlyRevenue)}
+            isMonetary={false}
             color="blue"
           />
         </div>

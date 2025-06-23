@@ -103,30 +103,32 @@ function Reminders() {
 
         <SectionCard title={`Pending Tasks (${pendingTasks.length})`}>
           {pendingTasks.length > 0 ? (
-            <DataTable
-              columns={[
-                { key: 'title', header: 'Task' },
-                { key: 'type', header: 'Type' },
-                { key: 'priority', header: 'Priority' },
-                { key: 'dueDate', header: 'Due Date' },
-                { key: 'actions', header: 'Actions' },
-              ]}
-              data={pendingTasks}
-              renderRow={(task) => (
-                <tr key={task.id}>
-                  <td style={{ textAlign: 'center' }}>{task.title}</td>
-                  <td style={{ textAlign: 'center' }}><StatusBadge status="info" text={task.type} /></td>
-                  <td style={{ textAlign: 'center' }}><StatusBadge status={getPriorityStatus(task.priority)} text={task.priority} /></td>
-                  <td style={{ textAlign: 'center' }}>{task.dueDate}</td>
-                  <td style={{ textAlign: 'center' }}>
-                    <div className="action-buttons">
-                      <button onClick={() => toggleTask(task.id)} className="btn btn-success btn-sm">Complete</button>
-                      <button onClick={() => deleteTask(task.id)} className="btn btn-error btn-sm">Delete</button>
-                    </div>
-                  </td>
-                </tr>
-              )}
-            />
+            <div className="centered-table">
+              <DataTable
+                columns={[
+                  { key: 'title', header: 'Task' },
+                  { key: 'type', header: 'Type' },
+                  { key: 'priority', header: 'Priority' },
+                  { key: 'dueDate', header: 'Due Date' },
+                  { key: 'actions', header: 'Actions' },
+                ]}
+                data={pendingTasks}
+                renderRow={(task) => (
+                  <tr key={task.id}>
+                    <td className="center-cell">{task.title}</td>
+                    <td className="center-cell"><StatusBadge status="info" text={task.type} /></td>
+                    <td className="center-cell"><StatusBadge status={getPriorityStatus(task.priority)} text={task.priority} /></td>
+                    <td className="center-cell">{task.dueDate}</td>
+                    <td className="center-cell">
+                      <div className="action-buttons">
+                        <button onClick={() => toggleTask(task.id)} className="btn btn-success btn-sm">Complete</button>
+                        <button onClick={() => deleteTask(task.id)} className="btn btn-error btn-sm">Delete</button>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              />
+            </div>
           ) : (
             <EmptyState title="All caught up!" description="No pending tasks." />
           )}
@@ -134,48 +136,70 @@ function Reminders() {
         
         <SectionCard title={`Completed Tasks (${completedTasks.length})`}>
           {completedTasks.length > 0 ? (
-            <DataTable
-              columns={[
-                { key: 'title', header: 'Task' },
-                { key: 'type', header: 'Type' },
-                { key: 'actions', header: 'Actions' },
-              ]}
-              data={completedTasks}
-              renderRow={(task) => (
-                <tr key={task.id} className="completed-task">
-                  <td style={{ textAlign: 'center' }}>{task.title}</td>
-                  <td style={{ textAlign: 'center' }}><StatusBadge status="info" text={task.type} /></td>
-                  <td style={{ textAlign: 'center' }}>
-                    <button onClick={() => toggleTask(task.id)} className="btn btn-warning btn-sm">Mark as Pending</button>
-                  </td>
-                </tr>
-              )}
-            />
+            <div className="centered-table">
+              <DataTable
+                columns={[
+                  { key: 'title', header: 'Task' },
+                  { key: 'type', header: 'Type' },
+                  { key: 'actions', header: 'Actions' },
+                ]}
+                data={completedTasks}
+                renderRow={(task) => (
+                  <tr key={task.id} className="completed-task">
+                    <td className="center-cell">{task.title}</td>
+                    <td className="center-cell"><StatusBadge status="info" text={task.type} /></td>
+                    <td className="center-cell">
+                      <button onClick={() => toggleTask(task.id)} className="btn btn-warning btn-sm">Mark as Pending</button>
+                    </td>
+                  </tr>
+                )}
+              />
+            </div>
           ) : (
             <EmptyState title="No completed tasks" description="Complete a task to see it here." />
           )}
         </SectionCard>
       </DashboardLayout>
       <style jsx>{`
-        .add-task-form { display: flex; gap: var(--spacing-md); }
-        .action-buttons { display: flex; gap: var(--spacing-xs); justify-content: center; }
-        
-        /* Center align table headers */
-        :global(.data-table .table-header) {
-          text-align: center;
+        .add-task-form { 
+          display: flex; 
+          gap: var(--spacing-md); 
         }
-        .completed-task td { text-decoration: line-through; color: var(--gray-400); }
+        
+        .action-buttons { 
+          display: flex; 
+          gap: var(--spacing-xs); 
+          justify-content: center; 
+        }
+        
+        /* Center align table headers and cells */
+        .centered-table :global(.data-table .table-header) {
+          text-align: center !important;
+        }
+        
+        .center-cell {
+          text-align: center !important;
+          padding: var(--spacing-md) var(--spacing-lg);
+        }
+        
+        .completed-task .center-cell { 
+          text-decoration: line-through; 
+          color: var(--gray-400); 
+        }
+        
         .communication-actions {
           display: grid;
           grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
           gap: var(--spacing-lg);
         }
+        
         .action-card {
           background-color: var(--gray-50);
           padding: var(--spacing-lg);
           border-radius: var(--radius-md);
           border: 1px solid var(--gray-100);
         }
+        
         .action-card h3 {
           margin-top: 0;
         }

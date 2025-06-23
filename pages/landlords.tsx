@@ -152,7 +152,7 @@ function LandlordsPage() {
                 </td>
                 <td style={{ padding: 'var(--spacing-md) var(--spacing-lg)', textAlign: 'center' }}>
                   <div className="action-buttons">
-                    <Link href={`/managers?landlord=${landlord.id}`} className="btn btn-primary btn-sm">
+                    <Link href={`/landlords/${landlord.id}`} className="btn btn-primary btn-sm">
                       View Details
                     </Link>
                     <Link href={`/managers?landlord=${landlord.id}`} className="btn btn-warning btn-sm">
