@@ -795,8 +795,18 @@ class ApiClient {
     return response.data;
   }
 
+  async updateManager(managerId: number, data: Partial<Manager>): Promise<Manager> {
+    const response = await this.api.put(`/managers/${managerId}/`, data);
+    return response.data;
+  }
+
   async deleteManager(managerId: number): Promise<void> {
     await this.api.delete(`/managers/${managerId}/`);
+  }
+
+  async getManagers(): Promise<PaginatedResponse<Manager>> {
+    const response = await this.api.get('/managers/');
+    return response.data;
   }
 
   // Manager-Landlord Relationship methods

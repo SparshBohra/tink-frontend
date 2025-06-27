@@ -126,16 +126,20 @@ export interface Occupancy {
 
 export interface InventoryItem {
   id: number;
-  property: number;
+  property_ref: number;
   room?: number;
   name: string;
   description?: string;
   qty: number;
-  cost: number;
-  purchase_date: string;
+  cost?: number;
+  condition_status: string;
+  last_checked?: string;
+  purchase_date?: string;
   needs_maintenance: boolean;
+  property_name?: string;
+  room_name?: string;
+  location_display?: string;
   created_at: string;
-  updated_at: string;
 }
 
 export interface PaginatedResponse<T> {
@@ -162,9 +166,14 @@ export interface TenantFormData {
 
 export interface PropertyFormData {
   name: string;
-  address: string;
+  address_line1: string;
+  address_line2?: string;
+  city: string;
+  state: string;
+  postal_code: string;
+  country: string;
   property_type: string;
-  description?: string;
+  timezone: string;
 }
 
 export interface RoomFormData {
@@ -192,13 +201,41 @@ export interface LeaseFormData {
 }
 
 export interface DashboardStats {
-  total_properties: number;
-  total_rooms: number;
-  occupied_rooms: number;
-  total_tenants: number;
-  pending_applications: number;
-  active_leases: number;
-  monthly_revenue: number;
+  properties: {
+    total: number;
+    occupied: number;
+    vacant: number;
+  };
+  rooms: {
+    total: number;
+    occupied: number;
+    vacant: number;
+    occupancy_rate: number;
+  };
+  tenants: {
+    total: number;
+    active: number;
+  };
+  revenue: {
+    monthly: number;
+    projected_annual: number;
+  };
+  applications: {
+    total: number;
+    pending: number;
+    approved: number;
+    rejected: number;
+  };
+  leases: {
+    total: number;
+    active: number;
+    draft: number;
+    expired: number;
+  };
+  managers: {
+    total: number;
+    active: number;
+  };
 }
 
 export interface LandlordSignupData {

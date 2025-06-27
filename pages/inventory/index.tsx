@@ -1,9 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
+import Head from 'next/head';
 import Link from 'next/link';
 import { apiClient } from '../../lib/api';
 import { InventoryItem, Property, Room } from '../../lib/types';
 import Navigation from '../../components/Navigation';
+import DashboardLayout from '../../components/DashboardLayout';
+import SectionCard from '../../components/SectionCard';
+import MetricCard from '../../components/MetricCard';
 
 export default function Inventory() {
   const router = useRouter();
@@ -185,557 +189,201 @@ export default function Inventory() {
 
   if (loading) {
     return (
-      <div>
+      <>
+        <Head>
+          <title>Inventory Management - Tink</title>
+        </Head>
         <Navigation />
-        <h1>Loading Inventory...</h1>
-        <p>Fetching inventory data from the server...</p>
-      </div>
+        <DashboardLayout
+          title="Property Inventory Management"
+          subtitle="Loading inventory data..."
+        >
+          <div className="loading-indicator">
+            <div className="loading-spinner" />
+            <p>Fetching inventory data from the server...</p>
+          </div>
+        </DashboardLayout>
+      </>
     );
   }
 
   return (
-    <div>
+    <>
+      <Head>
+        <title>Inventory Management - Tink</title>
+      </Head>
       <Navigation />
       
-      {/* Header */}
-      <div style={{ marginBottom: '20px' }}>
-        <h1>📦 Property Inventory Management</h1>
-        <p>Track, maintain, and manage inventory across all properties.</p>
-      </div>
-      
-      {/* Error Messages */}
-      {error && (
-        <div style={{ 
-          color: 'red', 
-          border: '1px solid red', 
-          padding: '15px', 
-          marginBottom: '20px',
-          backgroundColor: '#ffebee'
-        }}>
-          <strong>Error:</strong> {error}
-        </div>
-      )}
-      
-      {/* Filters Section */}
-      <div style={{
-        border: '1px solid #ddd',
-        borderRadius: '8px',
-        padding: '20px',
-        marginBottom: '20px',
-        backgroundColor: '#f8f9fa'
-      }}>
-        <div style={{ marginBottom: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2 style={{ margin: 0 }}>🔍 Filter Inventory</h2>
-          <div>
-            <button
-              onClick={clearFilters}
-              style={{
-                backgroundColor: '#6c757d',
-                color: 'white',
-                border: 'none',
-                padding: '8px 16px',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                marginRight: '10px'
-              }}
-            >
-              Clear Filters
+      <DashboardLayout
+        title="📦 Property Inventory Management"
+        subtitle="Track, maintain, and manage inventory across all properties"
+      >
+        {error && <div className="alert alert-error"><strong>Error:</strong> {error}</div>}
+        
+        <SectionCard>
+          <div className="actions-container">
+            <Link href="/inventory/add" className="btn btn-primary">
+              ➕ Add Inventory
+            </Link>
+            <button className="btn btn-secondary" onClick={fetchData}>
+              👁️ View Inventory
             </button>
-            <button
-              onClick={fetchData}
-              style={{
-                backgroundColor: '#007bff',
-                color: 'white',
-                border: 'none',
-                padding: '8px 16px',
-                borderRadius: '4px',
-                cursor: 'pointer'
-              }}
-            >
-              🔄 Refresh
+            <button className="btn btn-secondary" onClick={() => alert('CSV download coming soon!')}>
+              📊 Download CSV
             </button>
           </div>
-        </div>
+        </SectionCard>
         
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '15px' }}>
-          <div>
-            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-              Property
-            </label>
-            <select
-              value={selectedProperty || ''}
-              onChange={(e) => setSelectedProperty(e.target.value ? parseInt(e.target.value) : null)}
-              style={{
-                width: '100%',
-                padding: '8px',
-                borderRadius: '4px',
-                border: '1px solid #ddd'
-              }}
-            >
-              <option value="">All Properties</option>
-              {properties.map(property => (
-                <option key={property.id} value={property.id}>
-                  {property.name}
-                </option>
-              ))}
-            </select>
+        <SectionCard title="🔍 Filter Inventory" subtitle="Search and filter inventory items">
+          <div className="actions-container">
+            <button className="btn btn-secondary" onClick={clearFilters}>Clear Filters</button>
+            <button className="btn btn-primary" onClick={fetchData}>🔄 Refresh</button>
           </div>
           
-          <div>
-            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-              Room
-            </label>
-            <select
-              value={selectedRoom || ''}
-              onChange={(e) => setSelectedRoom(e.target.value ? parseInt(e.target.value) : null)}
-              style={{
-                width: '100%',
-                padding: '8px',
-                borderRadius: '4px',
-                border: '1px solid #ddd'
-              }}
-            >
-              <option value="">All Rooms</option>
-              {(selectedProperty ? rooms.filter(r => r.property_ref === selectedProperty) : rooms).map(room => (
-                <option key={room.id} value={room.id}>{room.name}</option>
-              ))}
-            </select>
+          <div className="form-grid">
+            <div className="form-group">
+              <label className="form-label">Property</label>
+              <select
+                value={selectedProperty || ''}
+                onChange={(e) => setSelectedProperty(e.target.value ? parseInt(e.target.value) : null)}
+                className="form-input"
+              >
+                <option value="">All Properties</option>
+                {properties.map(property => (
+                  <option key={property.id} value={property.id}>
+                    {property.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            <div className="form-group">
+              <label className="form-label">Room</label>
+              <select
+                value={selectedRoom || ''}
+                onChange={(e) => setSelectedRoom(e.target.value ? parseInt(e.target.value) : null)}
+                className="form-input"
+              >
+                <option value="">All Rooms</option>
+                {(selectedProperty ? rooms.filter(r => r.property === selectedProperty) : rooms).map(room => (
+                  <option key={room.id} value={room.id}>{room.name}</option>
+                ))}
+              </select>
+            </div>
+            
+            <div className="form-group">
+              <label className="form-label">Condition</label>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="form-input"
+              >
+                <option value="all">All Conditions</option>
+                <option value="new">New</option>
+                <option value="good">Good</option>
+                <option value="used">Used</option>
+                <option value="broken">Broken</option>
+              </select>
+            </div>
+            
+            <div className="form-group">
+              <label className="form-label">Search</label>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search by name, property, etc."
+                className="form-input"
+              />
+            </div>
           </div>
-          
-          <div>
-            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-              Condition
-            </label>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '8px',
-                borderRadius: '4px',
-                border: '1px solid #ddd'
-              }}
-            >
-              <option value="all">All Conditions</option>
-              <option value="new">New</option>
-              <option value="good">Good</option>
-              <option value="used">Used</option>
-              <option value="broken">Broken</option>
-            </select>
-          </div>
-          
-          <div>
-            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-              Maintenance Status
-            </label>
-            <select
-              value={maintenanceFilter === null ? 'all' : maintenanceFilter ? 'needs' : 'not_needed'}
-              onChange={(e) => {
-                const value = e.target.value;
-                setMaintenanceFilter(
-                  value === 'all' ? null : value === 'needs'
-                );
-              }}
-              style={{
-                width: '100%',
-                padding: '8px',
-                borderRadius: '4px',
-                border: '1px solid #ddd'
-              }}
-            >
-              <option value="all">All Items</option>
-              <option value="needs">Needs Maintenance</option>
-              <option value="not_needed">No Maintenance Required</option>
-            </select>
-          </div>
-          
-          <div>
-            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-              Search
-            </label>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by name, property, etc."
-              style={{
-                width: '100%',
-                padding: '8px',
-                borderRadius: '4px',
-                border: '1px solid #ddd'
-              }}
-            />
-          </div>
-        </div>
-      </div>
-      
-      {/* Action Buttons */}
-      <div style={{ marginBottom: '20px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-        <button
-          onClick={downloadInventoryCSV}
-          style={{
-            backgroundColor: '#28a745',
-            color: 'white',
-            border: 'none',
-            padding: '10px 16px',
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }}
-        >
-          📊 Download Full Inventory (CSV)
-        </button>
-        <button
-          onClick={downloadMaintenanceCSV}
-          style={{
-            backgroundColor: '#dc3545',
-            color: 'white',
-            border: 'none',
-            padding: '10px 16px',
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }}
-        >
-          🔧 Download Maintenance Report (CSV)
-        </button>
-        <Link href="/inventory/add">
-          <button
-            style={{
-              backgroundColor: '#007bff',
-              color: 'white',
-              border: 'none',
-              padding: '10px 16px',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}
-          >
-            ➕ Add New Inventory Item
-          </button>
-        </Link>
-      </div>
-      
-      {/* Filter Summary */}
-      {(selectedProperty || selectedRoom || statusFilter !== 'all' || maintenanceFilter !== null || searchQuery) && (
-        <div style={{
-          backgroundColor: '#e8f5e8',
-          padding: '15px',
-          borderRadius: '5px',
-          marginBottom: '20px'
-        }}>
-          <strong>🔍 Active Filters:</strong> Showing {filteredItems.length} of {inventoryItems.length} items
-          {selectedProperty && (
-            <span> | Property: <strong>{getPropertyName(selectedProperty)}</strong></span>
+        </SectionCard>
+
+        <SectionCard title={`📦 Complete Inventory (${filteredItems.length} items)`}>
+          {filteredItems.length === 0 ? (
+            <div className="empty-state">
+              <p>No inventory items found matching your filters. Try changing your filter criteria or add new items.</p>
+            </div>
+          ) : (
+            <div className="table-container">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Item</th>
+                    <th>Property & Room</th>
+                    <th>Condition</th>
+                    <th>Quantity</th>
+                    <th>Cost</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredItems.map(item => (
+                    <tr key={item.id}>
+                      <td>
+                        <strong>{item.name}</strong>
+                      </td>
+                      <td>
+                        <strong>{item.property_name || `Property ${item.property_ref}`}</strong>
+                        <br />
+                        <small>{item.room_name || 'Not assigned to a room'}</small>
+                      </td>
+                      <td>
+                        <span className={`status-badge ${item.condition_status}`}>
+                          {item.condition_status.toUpperCase()}
+                        </span>
+                      </td>
+                      <td>{item.qty}</td>
+                      <td>${item.cost || '0'}</td>
+                      <td>
+                        <button className="btn btn-sm btn-secondary">Edit</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
-          {selectedRoom && (
-            <span> | Room: <strong>#{selectedRoom}</strong></span>
-          )}
-          {statusFilter !== 'all' && (
-            <span> | Condition: <strong style={{ color: getStatusColor(statusFilter) }}>{statusFilter.toUpperCase()}</strong></span>
-          )}
-          {maintenanceFilter !== null && (
-            <span> | Maintenance: <strong>{maintenanceFilter ? 'NEEDED' : 'NOT NEEDED'}</strong></span>
-          )}
-          {searchQuery && (
-            <span> | Search: <strong>"{searchQuery}"</strong></span>
-          )}
-        </div>
-      )}
-      
-      {/* Maintenance Needed Items */}
-      {maintenanceFilter !== false && getMaintenanceItems().length > 0 && (
-        <div style={{ marginBottom: '30px' }}>
-          <h2>🛠️ Items Needing Attention ({getMaintenanceItems().length})</h2>
-          <p><em>Items in poor condition or with reported issues. Click Amazon links to order replacements.</em></p>
-          
-          <table border={1} style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ backgroundColor: '#f8f9fa' }}>
-                <th style={{ padding: '10px', textAlign: 'left' }}>Item</th>
-                <th style={{ padding: '10px', textAlign: 'left' }}>Property & Room</th>
-                <th style={{ padding: '10px', textAlign: 'center' }}>Condition</th>
-                <th style={{ padding: '10px', textAlign: 'center' }}>Issues</th>
-                <th style={{ padding: '10px', textAlign: 'center' }}>Cost</th>
-                <th style={{ padding: '10px', textAlign: 'center' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {getMaintenanceItems().map(item => (
-                <tr key={item.id}>
-                  <td style={{ padding: '10px' }}>
-                    <strong>{item.name}</strong>
-                    <br />
-                    <small>Qty: {item.qty}</small>
-                  </td>
-                  <td style={{ padding: '10px' }}>
-                    <strong>{item.property_name || `Property ${item.property_ref}`}</strong>
-                    <br />
-                    <small>{item.room_name || 'Not assigned to a room'}</small>
-                  </td>
-                  <td style={{ padding: '10px', textAlign: 'center' }}>
-                    <span style={{
-                      padding: '4px 8px',
-                      borderRadius: '12px',
-                      fontSize: '12px',
-                      backgroundColor: item.condition_status === 'broken' ? '#ffebee' : '#fff3cd',
-                      color: item.condition_status === 'broken' ? '#b71c1c' : '#856404',
-                      fontWeight: 'bold'
-                    }}>
-                      {item.condition_status.toUpperCase()}
-                    </span>
-                  </td>
-                  <td style={{ padding: '10px', textAlign: 'center' }}>
-                    {item.needs_maintenance ? <strong>1 issue reported</strong> : 'No issues'}
-                  </td>
-                  <td style={{ padding: '10px', textAlign: 'center' }}>
-                    ${item.cost || '0'}
-                  </td>
-                  <td style={{ padding: '10px', textAlign: 'center' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', alignItems: 'center' }}>
-                      <a 
-                        href={`https://www.amazon.com/s?k=${encodeURIComponent(item.name)}`} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        style={{
-                          backgroundColor: '#ff9900',
-                          color: 'white',
-                          border: 'none',
-                          padding: '6px 12px',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                          fontSize: '12px',
-                          textDecoration: 'none',
-                          display: 'inline-block',
-                          textAlign: 'center'
-                        }}
-                      >
-                        🛒 Order on Amazon
-                      </a>
-                      <button
-                        onClick={() => alert('Mark fixed feature coming soon!')}
-                        style={{
-                          backgroundColor: '#28a745',
-                          color: 'white',
-                          border: 'none',
-                          padding: '6px 12px',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                          fontSize: '12px'
-                        }}
-                      >
-                        ✅ Mark Fixed
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-      
-      {/* Complete Inventory */}
-      <div>
-        <h2>📋 Complete Inventory ({filteredItems.length} items)</h2>
-        
-        {filteredItems.length > 0 ? (
-          <table border={1} style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ backgroundColor: '#f8f9fa' }}>
-                <th style={{ padding: '10px', textAlign: 'left' }}>Item</th>
-                <th style={{ padding: '10px', textAlign: 'left' }}>Property</th>
-                <th style={{ padding: '10px', textAlign: 'left' }}>Room</th>
-                <th style={{ padding: '10px', textAlign: 'center' }}>Condition</th>
-                <th style={{ padding: '10px', textAlign: 'center' }}>Issues</th>
-                <th style={{ padding: '10px', textAlign: 'center' }}>Purchase Date</th>
-                <th style={{ padding: '10px', textAlign: 'center' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredItems.map(item => (
-                <tr key={item.id} style={{ 
-                  backgroundColor: item.needs_maintenance ? '#fff3cd' : 'transparent'
-                }}>
-                  <td style={{ padding: '10px' }}>
-                    <strong>{item.name}</strong>
-                    <br />
-                    <small>Qty: {item.qty}</small>
-                  </td>
-                  <td style={{ padding: '10px' }}>
-                    {item.property_name || `Property ${item.property_ref}`}
-                  </td>
-                  <td style={{ padding: '10px' }}>
-                    {item.room_name || 'Not assigned to a room'}
-                  </td>
-                  <td style={{ padding: '10px', textAlign: 'center' }}>
-                    <span style={{
-                      padding: '4px 8px',
-                      borderRadius: '12px',
-                      fontSize: '12px',
-                      backgroundColor: getStatusColor(item.condition_status),
-                      color: 'white',
-                      fontWeight: 'bold'
-                    }}>
-                      {item.condition_status.toUpperCase()}
-                    </span>
-                  </td>
-                  <td style={{ padding: '10px', textAlign: 'center' }}>
-                    {item.needs_maintenance ? (
-                      <span style={{ color: '#dc3545' }}>⚠️ Needs attention</span>
-                    ) : (
-                      <span style={{ color: '#28a745' }}>✓ No issues</span>
-                    )}
-                  </td>
-                  <td style={{ padding: '10px', textAlign: 'center' }}>
-                    {item.purchase_date || 'Not recorded'}
-                  </td>
-                  <td style={{ padding: '10px', textAlign: 'center' }}>
-                    <div style={{ display: 'flex', gap: '5px', justifyContent: 'center' }}>
-                      <button
-                        onClick={() => alert('Edit item feature coming soon!')}
-                        style={{
-                          backgroundColor: '#17a2b8',
-                          color: 'white',
-                          border: 'none',
-                          padding: '6px 12px',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                          fontSize: '12px'
-                        }}
-                      >
-                        ✏️ Edit
-                      </button>
-                      {item.needs_maintenance && (
-                        <a 
-                          href={`https://www.amazon.com/s?k=${encodeURIComponent(item.name)}`} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          style={{
-                            backgroundColor: '#ff9900',
-                            color: 'white',
-                            border: 'none',
-                            padding: '6px 12px',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontSize: '12px',
-                            textDecoration: 'none',
-                            display: 'inline-block'
-                          }}
-                        >
-                          🛒 Replace
-                        </a>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        ) : (
-          <p style={{ textAlign: 'center', padding: '20px', backgroundColor: '#f8f9fa', borderRadius: '5px' }}>
-            No inventory items found matching your filters. Try changing your filter criteria or add new items.
-          </p>
+        </SectionCard>
+
+        {getMaintenanceItems().length > 0 && (
+          <SectionCard title={`🛠️ Bulk Purchase Planning`} subtitle={`Items commonly needed for co-living setups`}>
+            <div className="table-container">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Category</th>
+                    <th>Common Items</th>
+                    <th>Estimated Cost</th>
+                    <th>Quick Buy</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Bedroom Essentials</td>
+                    <td>Bed frame, mattress, desk, chair</td>
+                    <td>$800-1,200</td>
+                    <td><button className="btn btn-sm btn-primary">🛒 Browse Sets</button></td>
+                  </tr>
+                  <tr>
+                    <td>Kitchen Basics</td>
+                    <td>Table, chairs, appliances</td>
+                    <td>$400-800</td>
+                    <td><button className="btn btn-sm btn-primary">🛒 Browse Kitchen</button></td>
+                  </tr>
+                  <tr>
+                    <td>Storage Solutions</td>
+                    <td>Wardrobes, shelving, storage bins</td>
+                    <td>$200-500</td>
+                    <td><button className="btn btn-sm btn-primary">🛒 Browse Storage</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </SectionCard>
         )}
-      </div>
-      
-      {/* Bulk Purchase Planning */}
-      <div style={{
-        marginTop: '30px',
-        border: '1px solid #ddd',
-        borderRadius: '8px',
-        padding: '20px',
-        backgroundColor: '#f0f7ff'
-      }}>
-        <h2>🛒 Bulk Purchase Planning</h2>
-        <p>Items commonly needed for co-living setups:</p>
-        
-        <table border={1} style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ backgroundColor: '#f8f9fa' }}>
-              <th style={{ padding: '10px', textAlign: 'left' }}>Category</th>
-              <th style={{ padding: '10px', textAlign: 'left' }}>Common Items</th>
-              <th style={{ padding: '10px', textAlign: 'center' }}>Estimated Cost</th>
-              <th style={{ padding: '10px', textAlign: 'center' }}>Quick Buy</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td style={{ padding: '10px' }}>Bedroom Essentials</td>
-              <td style={{ padding: '10px' }}>Bed frame, mattress, desk, chair</td>
-              <td style={{ padding: '10px', textAlign: 'center' }}>$800-1,200</td>
-              <td style={{ padding: '10px', textAlign: 'center' }}>
-                <a 
-                  href="https://www.amazon.com/s?k=bedroom+furniture+set" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  style={{
-                    backgroundColor: '#007bff',
-                    color: 'white',
-                    border: 'none',
-                    padding: '6px 12px',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    fontSize: '12px',
-                    textDecoration: 'none',
-                    display: 'inline-block'
-                  }}
-                >
-                  🔍 Browse Sets
-                </a>
-              </td>
-            </tr>
-            <tr>
-              <td style={{ padding: '10px' }}>Kitchen Basics</td>
-              <td style={{ padding: '10px' }}>Table, chairs, appliances</td>
-              <td style={{ padding: '10px', textAlign: 'center' }}>$400-800</td>
-              <td style={{ padding: '10px', textAlign: 'center' }}>
-                <a 
-                  href="https://www.amazon.com/s?k=kitchen+furniture+essentials" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  style={{
-                    backgroundColor: '#007bff',
-                    color: 'white',
-                    border: 'none',
-                    padding: '6px 12px',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    fontSize: '12px',
-                    textDecoration: 'none',
-                    display: 'inline-block'
-                  }}
-                >
-                  🔍 Browse Kitchen
-                </a>
-              </td>
-            </tr>
-            <tr>
-              <td style={{ padding: '10px' }}>Storage Solutions</td>
-              <td style={{ padding: '10px' }}>Wardrobes, shelving, storage bins</td>
-              <td style={{ padding: '10px', textAlign: 'center' }}>$200-500</td>
-              <td style={{ padding: '10px', textAlign: 'center' }}>
-                <a 
-                  href="https://www.amazon.com/s?k=storage+furniture" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  style={{
-                    backgroundColor: '#007bff',
-                    color: 'white',
-                    border: 'none',
-                    padding: '6px 12px',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    fontSize: '12px',
-                    textDecoration: 'none',
-                    display: 'inline-block'
-                  }}
-                >
-                  🔍 Browse Storage
-                </a>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
+      </DashboardLayout>
+    </>
   );
 }
  

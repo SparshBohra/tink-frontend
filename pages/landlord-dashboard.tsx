@@ -11,18 +11,12 @@ import { useAuth, withAuth } from '../lib/auth-context';
 import { apiClient } from '../lib/api';
 import { useRouter } from 'next/router';
 
-interface BusinessStats {
-  properties: { total: number; occupied: number; vacant: number; };
-  rooms: { total: number; occupied: number; vacant: number; occupancy_rate: number; };
-  tenants: { total: number; active: number; };
-  revenue: { monthly: number; projected_annual: number; };
-  managers: { total: number; active: number; };
-}
+import { DashboardStats } from '../lib/types';
 
 function LandlordDashboard() {
   const { user } = useAuth();
   const router = useRouter();
-  const [stats, setStats] = useState<BusinessStats | null>(null);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
   const [properties, setProperties] = useState<any[]>([]);
   const [managers, setManagers] = useState<any[]>([]);
   const [recentApplications, setRecentApplications] = useState<any[]>([]);
@@ -34,23 +28,24 @@ function LandlordDashboard() {
       try {
         setLoading(true);
         setError(null);
-        // Mock data for demonstration
-          setStats({
-          properties: { total: 3, occupied: 2, vacant: 1 },
-          rooms: { total: 15, occupied: 12, vacant: 3, occupancy_rate: 80 },
-          tenants: { total: 12, active: 12 },
-          revenue: { monthly: 15000, projected_annual: 180000 },
-          managers: { total: 2, active: 2 }
-        });
-        setProperties([
-          { id: 1, name: 'Sunnyvale Apartments', full_address: '123 Main St, Sunnyvale', total_rooms: 5, vacant_rooms: 1 },
-          { id: 2, name: 'Downtown Lofts', full_address: '456 Market St, Cityville', total_rooms: 10, vacant_rooms: 2 }
-        ]);
-        setRecentApplications([
-          { id: 1, tenant_name: 'Alice Johnson', property_name: 'Sunnyvale Apartments', status: 'pending' },
-          { id: 2, tenant_name: 'Bob Williams', property_name: 'Downtown Lofts', status: 'pending' }
-        ]);
+        
+        // Fetch real dashboard statistics
+        const dashboardStats = await apiClient.getDashboardStats();
+        setStats(dashboardStats);
+        
+        // Fetch real properties data
+        const propertiesResponse = await apiClient.getProperties();
+        setProperties(propertiesResponse.results || []);
+        
+        // Fetch recent applications
+        const applicationsResponse = await apiClient.getApplications();
+        const recentApps = (applicationsResponse.results || [])
+          .filter(app => app.status === 'pending')
+          .slice(0, 5); // Show only recent 5 applications
+        setRecentApplications(recentApps);
+        
       } catch (err: any) {
+        console.error('Failed to fetch business data:', err);
         setError('Failed to load business data.');
       } finally {
         setLoading(false);
@@ -88,7 +83,7 @@ function LandlordDashboard() {
       
       <DashboardLayout
         title="Business Dashboard"
-        subtitle={`Managing properties for ${user?.org_name || 'your organization'}.`}
+        subtitle={`Managing properties for your organization.`}
       >
         {error && <div className="alert alert-error">{error}</div>}
 
@@ -132,16 +127,16 @@ function LandlordDashboard() {
             {recentApplications.length > 0 ? (
             <DataTable
               columns={[
-                { key: 'tenant_name', header: 'Applicant' },
-                { key: 'property_name', header: 'Property' },
+                { key: 'tenant', header: 'Applicant ID' },
+                { key: 'room', header: 'Room ID' },
                 { key: 'status', header: 'Status' },
                 { key: 'actions', header: 'Actions' },
               ]}
               data={recentApplications}
               renderRow={(app) => (
                 <tr key={app.id}>
-                  <td style={{ textAlign: 'center' }}>{app.tenant_name}</td>
-                  <td style={{ textAlign: 'center' }}>{app.property_name}</td>
+                  <td style={{ textAlign: 'center' }}>Tenant {app.tenant}</td>
+                  <td style={{ textAlign: 'center' }}>Room {app.room}</td>
                   <td style={{ textAlign: 'center' }}><span className="status-badge status-pending">{app.status}</span></td>
                   <td style={{ textAlign: 'center' }}>
                     <Link href="/applications" className="btn btn-primary btn-sm">Review</Link>
