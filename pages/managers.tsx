@@ -82,8 +82,15 @@ function ManagersPage() {
       } else if (isLandlord()) {
         // Landlords can see only their assigned managers
         try {
-          managersData = await apiClient.getManagersWithProperties();
-          console.log('Fetched managers for landlord:', managersData);
+          const allManagers = await apiClient.getManagersWithProperties();
+          console.log('Fetched all managers:', allManagers);
+          
+          // Filter to only show users with role="manager" for landlords
+          managersData = (allManagers || []).filter((manager: any) => 
+            manager.role === 'manager'
+          );
+          
+          console.log('Filtered managers for landlord (role=manager only):', managersData);
         } catch (err: any) {
           console.error('Failed to fetch managers with properties:', err);
           // Fallback: try to get managers by landlord ID if we have the profile
@@ -91,11 +98,13 @@ function ManagersPage() {
           if (profileToUse?.id) {
             try {
               const fallbackManagers = await apiClient.getManagersForLandlord(profileToUse.id);
-              managersData = (fallbackManagers || []).map((manager: any) => ({
-                ...manager,
-                assigned_properties: [],
-                access_level: 'limited'
-              }));
+              managersData = (fallbackManagers || [])
+                .filter((manager: any) => manager.role === 'manager')
+                .map((manager: any) => ({
+                  ...manager,
+                  assigned_properties: [],
+                  access_level: 'limited'
+                }));
             } catch (fallbackErr) {
               console.error('Fallback manager fetch also failed:', fallbackErr);
               managersData = [];
@@ -390,40 +399,63 @@ function ManagersPage() {
 
                   {/* Property Access Selection */}
                   <div className="form-group">
-                    <label>Property Access</label>
+                    <label className="access-main-label">
+                      <span className="label-icon">🏢</span>
+                      Property Access
+                    </label>
                     <div className="property-access-section">
-                      <div className="access-option">
-                        <label className="checkbox-label">
+                      <div className="access-option-card">
+                        <label className="access-toggle">
                           <input
                             type="checkbox"
                             checked={formData.access_all_properties}
                             onChange={handleSelectAllProperties}
                           />
-                          <span>Full Access (All Properties)</span>
+                          <div className="toggle-content">
+                            <div className="toggle-header">
+                              <span className="toggle-icon">🌟</span>
+                              <span className="toggle-title">Full Access</span>
+                            </div>
+                            <p className="toggle-description">Manager can access all properties in your portfolio</p>
+                          </div>
                         </label>
                       </div>
                       
                       {!formData.access_all_properties && (
                         <div className="property-selection">
-                          <h4>Select Specific Properties:</h4>
+                          <div className="selection-header">
+                            <span className="selection-icon">🎯</span>
+                            <h4>Select Specific Properties</h4>
+                            <p className="selection-subtitle">Choose which properties this manager can access</p>
+                          </div>
                           <div className="property-grid">
                             {properties.map(property => (
-                              <label key={property.id} className="checkbox-label property-item">
-                                <input
-                                  type="checkbox"
-                                  checked={formData.property_ids?.includes(property.id) || false}
-                                  onChange={() => handlePropertySelection(property.id)}
-                                />
-                                <span>
-                                  <strong>{property.name}</strong>
-                                  <br />
-                                  <small className="text-muted">{property.full_address || property.address}</small>
-                                </span>
-                              </label>
+                              <div key={property.id} className="property-card">
+                                <label className="property-checkbox">
+                                  <input
+                                    type="checkbox"
+                                    checked={formData.property_ids?.includes(property.id) || false}
+                                    onChange={() => handlePropertySelection(property.id)}
+                                  />
+                                  <div className="property-info">
+                                    <div className="property-name">{property.name}</div>
+                                    <div className="property-address">{property.full_address || property.address}</div>
+                                    <div className="property-stats">
+                                      <span className="room-count">{property.total_rooms} rooms</span>
+                                      {property.vacant_rooms > 0 && (
+                                        <span className="vacant-badge">{property.vacant_rooms} vacant</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </label>
+                              </div>
                             ))}
                           </div>
                           {properties.length === 0 && (
-                            <p className="text-muted">No properties available. Create properties first.</p>
+                            <div className="empty-properties">
+                              <span className="empty-icon">🏠</span>
+                              <p>No properties available. Create properties first to assign them to managers.</p>
+                            </div>
                           )}
                         </div>
                       )}
@@ -574,64 +606,213 @@ function ManagersPage() {
         }
 
         .property-access-section {
-          border: 1px solid #d1d5db;
-          border-radius: 0.5rem;
-          padding: 1rem;
-          background-color: #f9fafb;
+          background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+          border: 2px solid #e2e8f0;
+          border-radius: 12px;
+          padding: 1.5rem;
           margin-top: 0.5rem;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
         }
 
-        .access-option {
+        /* Professional Property Access Styling */
+        .access-main-label {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          font-size: 1.1rem;
+          font-weight: 600;
+          color: #1f2937;
           margin-bottom: 1rem;
         }
 
-        .checkbox-label {
+        .label-icon {
+          font-size: 1.2rem;
+        }
+
+        .access-option-card {
+          background: white;
+          border: 2px solid #e2e8f0;
+          border-radius: 10px;
+          padding: 1.25rem;
+          margin-bottom: 1.5rem;
+          transition: all 0.3s ease;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .access-option-card:hover {
+          border-color: #3b82f6;
+          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+          transform: translateY(-1px);
+        }
+
+        .access-toggle {
           display: flex;
           align-items: flex-start;
-          gap: 0.5rem;
+          gap: 0.75rem;
           cursor: pointer;
-          font-weight: normal;
+          width: 100%;
         }
 
-        .checkbox-label input[type="checkbox"] {
-          width: auto;
+        .access-toggle input[type="checkbox"] {
+          width: 18px;
+          height: 18px;
           margin-top: 2px;
+          cursor: pointer;
+          accent-color: #3b82f6;
         }
 
-        .property-selection h4 {
-          margin: 1rem 0 0.75rem 0;
-          color: #374151;
-          font-size: 1rem;
+        .toggle-content {
+          flex: 1;
+        }
+
+        .toggle-header {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          margin-bottom: 0.25rem;
+        }
+
+        .toggle-icon {
+          font-size: 1.1rem;
+        }
+
+        .toggle-title {
+          font-size: 1.1rem;
           font-weight: 600;
+          color: #1f2937;
+        }
+
+        .toggle-description {
+          color: #6b7280;
+          font-size: 0.9rem;
+          margin: 0;
+          line-height: 1.4;
+        }
+
+        .property-selection {
+          background: white;
+          border: 2px dashed #cbd5e1;
+          border-radius: 10px;
+          padding: 1.5rem;
+        }
+
+        .selection-header {
+          text-align: center;
+          margin-bottom: 1.5rem;
+        }
+
+        .selection-icon {
+          font-size: 2rem;
+          display: block;
+          margin-bottom: 0.5rem;
+        }
+
+        .selection-header h4 {
+          margin: 0 0 0.5rem 0;
+          color: #1f2937;
+          font-size: 1.1rem;
+          font-weight: 600;
+        }
+
+        .selection-subtitle {
+          color: #6b7280;
+          font-size: 0.9rem;
+          margin: 0;
         }
 
         .property-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-          gap: 0.75rem;
-          max-height: 200px;
+          grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+          gap: 1rem;
+          max-height: 300px;
           overflow-y: auto;
           padding: 0.5rem;
-          border: 1px solid #e5e7eb;
-          border-radius: 0.375rem;
-          background-color: white;
         }
 
-        .property-item {
-          padding: 0.75rem;
-          border: 1px solid #e5e7eb;
-          border-radius: 0.375rem;
-          background-color: white;
-          transition: all 0.2s;
+        .property-card {
+          background: white;
+          border: 2px solid #f1f5f9;
+          border-radius: 8px;
+          transition: all 0.3s ease;
+          overflow: hidden;
         }
 
-        .property-item:hover {
-          background-color: #f3f4f6;
+        .property-card:hover {
           border-color: #3b82f6;
+          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+          transform: translateY(-2px);
         }
 
-        .property-item input[type="checkbox"] {
-          margin-right: 0.5rem;
+        .property-checkbox {
+          display: flex;
+          align-items: flex-start;
+          gap: 0.75rem;
+          padding: 1rem;
+          cursor: pointer;
+          width: 100%;
+        }
+
+        .property-checkbox input[type="checkbox"] {
+          width: 16px;
+          height: 16px;
+          margin-top: 2px;
+          cursor: pointer;
+          accent-color: #3b82f6;
+        }
+
+        .property-info {
+          flex: 1;
+        }
+
+        .property-name {
+          font-weight: 600;
+          color: #1f2937;
+          font-size: 0.95rem;
+          margin-bottom: 0.25rem;
+        }
+
+        .property-address {
+          color: #6b7280;
+          font-size: 0.85rem;
+          line-height: 1.3;
+          margin-bottom: 0.5rem;
+        }
+
+        .property-stats {
+          display: flex;
+          gap: 0.5rem;
+          flex-wrap: wrap;
+        }
+
+        .room-count {
+          background: #f3f4f6;
+          color: #374151;
+          padding: 0.125rem 0.5rem;
+          border-radius: 12px;
+          font-size: 0.75rem;
+          font-weight: 500;
+        }
+
+        .vacant-badge {
+          background: #fef3c7;
+          color: #d97706;
+          padding: 0.125rem 0.5rem;
+          border-radius: 12px;
+          font-size: 0.75rem;
+          font-weight: 500;
+        }
+
+        .empty-properties {
+          text-align: center;
+          padding: 2rem;
+          color: #6b7280;
+        }
+
+        .empty-icon {
+          font-size: 3rem;
+          display: block;
+          margin-bottom: 0.5rem;
+          opacity: 0.7;
         }
 
         .text-muted {

@@ -16,6 +16,8 @@ export default function PropertyAssignmentModal({
   onSave 
 }: PropertyAssignmentModalProps) {
   const [properties, setProperties] = useState<Property[]>([]);
+  const [allProperties, setAllProperties] = useState<Property[]>([]);
+  const [landlordProfile, setLandlordProfile] = useState<any>(null);
   const [assignments, setAssignments] = useState<ManagerPropertyAssignment[]>([]);
   const [relationships, setRelationships] = useState<ManagerLandlordRelationship[]>([]);
   const [selectedPropertyIds, setSelectedPropertyIds] = useState<number[]>([]);
@@ -34,18 +36,73 @@ export default function PropertyAssignmentModal({
       setLoading(true);
       setError(null);
       
+      // Fetch landlord profile first
+      const profile = await apiClient.getLandlordProfile();
+      setLandlordProfile(profile);
+      console.log('Current landlord profile:', profile);
+      
       // Fetch all properties
       const propertiesResponse = await apiClient.getProperties();
-      setProperties(propertiesResponse.results || []);
+      const allProps = propertiesResponse.results || [];
+      setAllProperties(allProps);
+      
+      console.log('All properties details:', allProps.map(p => ({
+        id: p.id, 
+        name: p.name, 
+        landlord: p.landlord,
+        landlord_name: p.landlord_name
+      })));
+      
+      // Try multiple filtering approaches
+      let landlordProperties: Property[] = [];
+      
+      // Approach 1: Filter by landlord ID
+      if (profile?.id) {
+        landlordProperties = allProps.filter(property => 
+          property.landlord === profile.id
+        );
+        console.log(`Filtering by landlord ID ${profile.id}:`, landlordProperties.length, 'properties');
+      }
+      
+      // Approach 2: If no properties found, try filtering by user ID as fallback
+      if (landlordProperties.length === 0 && profile?.user_id) {
+        landlordProperties = allProps.filter(property => 
+          property.landlord === profile.user_id
+        );
+        console.log(`Fallback filtering by user ID ${profile.user_id}:`, landlordProperties.length, 'properties');
+      }
+      
+      // Approach 3: If still no properties, show all (for testing/debugging)
+      if (landlordProperties.length === 0) {
+        console.warn('No properties found for this landlord. Showing all properties for debugging.');
+        console.log('Profile structure:', profile);
+        console.log('Property landlord IDs:', allProps.map(p => p.landlord));
+        
+        // For now, show all properties but add a warning
+        landlordProperties = allProps;
+        setError('Debug mode: No properties matched your landlord ID. Showing all properties for debugging. Please check the landlord-property association.');
+      }
+      
+      setProperties(landlordProperties);
+      
+      console.log('Final filtered properties:', landlordProperties.length);
+      console.log('Properties for landlord:', landlordProperties.map(p => p.name));
       
       // Fetch manager-landlord relationships to get relationship ID
       const relationshipsResponse = await apiClient.getManagerLandlordRelationships();
       setRelationships(relationshipsResponse);
       
-      // Set currently assigned properties
-      setSelectedPropertyIds(manager.assigned_properties?.map(p => p.id) || []);
+      console.log('All manager-landlord relationships:', relationshipsResponse);
+      console.log('Looking for relationships for manager ID:', manager.id);
+      
+      // Set currently assigned properties (only include properties owned by this landlord)
+      const currentAssignments = manager.assigned_properties?.filter(p => 
+        landlordProperties.some(lp => lp.id === p.id)
+      ).map(p => p.id) || [];
+      setSelectedPropertyIds(currentAssignments);
       
     } catch (err: any) {
+      console.error('Error fetching data:', err);
       setError(err?.message || 'Failed to load data');
     } finally {
       setLoading(false);
@@ -80,23 +137,96 @@ export default function PropertyAssignmentModal({
       }
       
       // Find the manager's landlord relationship
-      const managerRelationship = relationships.find(rel => rel.manager === manager.id);
+      let managerRelationship = relationships.find(rel => rel.manager === manager.id);
+      
+      if (!managerRelationship) {
+        console.log('No relationship found for manager:', manager.id);
+        console.log('Available relationships:', relationships);
+        
+        // Try to create a relationship if it doesn't exist
+        try {
+          console.log('Attempting to create manager-landlord relationship...');
+          console.log('Manager ID:', manager.id);
+          console.log('Landlord Profile:', landlordProfile);
+          
+          // Use already-fetched landlord profile
+          if (landlordProfile?.id) {
+            console.log(`Creating relationship: manager=${manager.id}, landlord=${landlordProfile.id}`);
+            
+            const relationshipData = {
+              manager: manager.id,
+              landlord: landlordProfile.id,
+              is_primary: false
+            };
+            
+            console.log('Relationship data to create:', relationshipData);
+            
+            const newRelationship = await apiClient.createManagerLandlordRelationship(relationshipData);
+            
+            console.log('Created new relationship successfully:', newRelationship);
+            managerRelationship = newRelationship;
+            
+            // Refresh relationships list
+            const updatedRelationships = await apiClient.getManagerLandlordRelationships();
+            setRelationships(updatedRelationships);
+            console.log('Updated relationships list:', updatedRelationships);
+            
+          } else {
+            console.error('Landlord profile missing or invalid:', landlordProfile);
+            throw new Error(`Landlord profile not available. Profile: ${JSON.stringify(landlordProfile)}`);
+          }
+        } catch (createErr: any) {
+          console.error('Failed to create relationship - Full error:', createErr);
+          console.error('Error response:', createErr.response?.data);
+          console.error('Error status:', createErr.response?.status);
+          
+          let errorMessage = `Unable to manage property assignments for ${manager.full_name}. `;
+          
+          if (createErr.response?.status === 400) {
+            errorMessage += `Bad request: ${createErr.response?.data?.detail || createErr.response?.data?.message || 'Invalid data sent to server.'}`;
+          } else if (createErr.response?.status === 403) {
+            errorMessage += 'Permission denied. You may not have permission to create manager relationships.';
+          } else if (createErr.response?.status === 500) {
+            errorMessage += 'Server error occurred. Please try again later.';
+          } else {
+            errorMessage += `The manager-landlord relationship could not be created automatically. Error: ${createErr.message || 'Unknown error'}`;
+          }
+          
+          errorMessage += ' Please contact support or try recreating this manager.';
+          
+          setError(errorMessage);
+          return;
+        }
+      }
+      
       if (!managerRelationship) {
         setError(`No landlord relationship found for ${manager.full_name}. Please ensure this manager is properly linked to a landlord before assigning properties.`);
         return;
       }
       
-      const currentAssignments = manager.assigned_properties?.map(p => p.id) || [];
+      console.log('Using relationship ID:', managerRelationship.id);
+      
+      // Only consider properties owned by this landlord for assignments
+      const currentAssignments = manager.assigned_properties?.filter(p => 
+        properties.some(lp => lp.id === p.id)
+      ).map(p => p.id) || [];
+      
       const toAdd = selectedPropertyIds.filter(id => !currentAssignments.includes(id));
       const toRemove = currentAssignments.filter(id => !selectedPropertyIds.includes(id));
+      
+      console.log('Current assignments (landlord properties only):', currentAssignments);
+      console.log('Properties to add:', toAdd);
+      console.log('Properties to remove:', toRemove);
       
       // Add new assignments
       for (const propertyId of toAdd) {
         try {
+          console.log(`Creating assignment: manager=${manager.id}, property=${propertyId}, relationship=${managerRelationship.id}`);
           await apiClient.createManagerPropertyAssignment({
             manager: manager.id,
             property: propertyId,
-            landlord_relationship: managerRelationship.id
+            landlord_relationship: managerRelationship.id,
+            role_note: `Property Manager for ${manager.full_name}`
           });
         } catch (err: any) {
           console.error(`Failed to assign property ${propertyId}:`, err);
@@ -112,6 +242,8 @@ export default function PropertyAssignmentModal({
             assignment => assignment.manager === manager.id && toRemove.includes(assignment.property)
           );
           
+          console.log('Assignments to delete:', assignmentsToDelete);
+          
           for (const assignment of assignmentsToDelete) {
             await apiClient.deleteManagerPropertyAssignment(assignment.id);
           }
@@ -125,6 +257,7 @@ export default function PropertyAssignmentModal({
       onClose();
       
     } catch (err: any) {
+      console.error('Error saving assignments:', err);
       setError(err?.message || 'Failed to save assignments');
     } finally {
       setSaving(false);
