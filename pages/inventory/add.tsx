@@ -1,7 +1,11 @@
 import { useState, useEffect } from 'react';
+import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import Navigation from '../../components/Navigation';
+import DashboardLayout from '../../components/DashboardLayout';
+import SectionCard from '../../components/SectionCard';
+import MetricCard from '../../components/MetricCard';
 import { apiClient } from '../../lib/api';
 import { Property } from '../../lib/types';
 
@@ -10,6 +14,7 @@ export default function AddInventoryItem() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -47,6 +52,9 @@ export default function AddInventoryItem() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSaving(true);
+    setError(null);
+    
     try {
       const payload: any = {
         name: formData.name,
@@ -60,98 +68,200 @@ export default function AddInventoryItem() {
       payload.needs_maintenance = formData.needs_maintenance;
 
       await apiClient.createInventoryItem(payload);
-      alert('Inventory item added!');
       router.push('/inventory');
     } catch (e: any) {
-      alert('Failed to add item: ' + (e.message || 'Unknown error'));
+      setError(e.message || 'Failed to add inventory item');
+    } finally {
+      setSaving(false);
     }
   };
 
   if (loading) {
     return (
-      <div>
+      <>
+        <Head>
+          <title>Add Inventory Item - Tink</title>
+        </Head>
         <Navigation />
-        <h1>Loading...</h1>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div>
-        <Navigation />
-        <h1>Error</h1>
-        <p>{error}</p>
-      </div>
+        <DashboardLayout
+          title="Add Inventory Item"
+          subtitle="Loading properties..."
+        >
+          <div className="loading-indicator">
+            <div className="loading-spinner" />
+            <p>Loading form data...</p>
+          </div>
+        </DashboardLayout>
+      </>
     );
   }
 
   return (
-    <div>
+    <>
+      <Head>
+        <title>Add Inventory Item - Tink</title>
+      </Head>
       <Navigation />
-      <div style={{ marginBottom: '20px' }}>
-        <Link href="/inventory">
-          <button style={{ backgroundColor: '#6c757d', color: 'white' }}>← Back to Inventory</button>
-        </Link>
-        <h1 style={{ marginTop: '10px' }}>➕ Add Inventory Item</h1>
-      </div>
-
-      <form onSubmit={handleSubmit} style={{ maxWidth: '600px' }}>
-        <div style={{ marginBottom: '10px' }}>
-          <label><strong>Name</strong></label><br />
-          <input name="name" value={formData.name} onChange={handleChange} required style={{ width: '100%', padding: '8px' }} />
+      
+      <DashboardLayout
+        title="➕ Add Inventory Item"
+        subtitle="Add a new item to your property inventory"
+      >
+        <div className="actions-container">
+          <Link href="/inventory" className="btn btn-secondary">
+            ← Back to Inventory
+          </Link>
         </div>
 
-        <div style={{ marginBottom: '10px' }}>
-          <label><strong>Quantity</strong></label><br />
-          <input name="qty" type="number" min={1} value={formData.qty} onChange={handleChange} required style={{ width: '100%', padding: '8px' }} />
-        </div>
+        {error && <div className="alert alert-error"><strong>Error:</strong> {error}</div>}
 
-        <div style={{ marginBottom: '10px' }}>
-          <label><strong>Property</strong></label><br />
-          <select name="property_ref" value={formData.property_ref} onChange={handleChange} required style={{ width: '100%', padding: '8px' }}>
-            <option value="">Select Property</option>
-            {properties.map(p => (
-              <option key={p.id} value={p.id}>{p.name}</option>
-            ))}
-          </select>
-        </div>
+        <SectionCard title="Item Details" subtitle="Enter the basic information for your new inventory item">
+          <form onSubmit={handleSubmit}>
+            <div className="form-grid">
+              <div className="form-group full-width">
+                <label className="form-label">Item Name*</label>
+                <input
+                  name="name"
+                  type="text"
+                  value={formData.name}
+                  onChange={handleChange}
+                  required
+                  placeholder="e.g., Office Chair, Desk Lamp, Bed Frame"
+                  className="form-input"
+                />
+              </div>
 
-        <div style={{ marginBottom: '10px' }}>
-          <label><strong>Room (optional)</strong></label><br />
-          <input name="room" value={formData.room} onChange={handleChange} style={{ width: '100%', padding: '8px' }} />
-        </div>
+              <div className="form-group">
+                <label className="form-label">Quantity*</label>
+                <input
+                  name="qty"
+                  type="number"
+                  min={1}
+                  value={formData.qty}
+                  onChange={handleChange}
+                  required
+                  className="form-input"
+                />
+              </div>
 
-        <div style={{ marginBottom: '10px' }}>
-          <label><strong>Condition</strong></label><br />
-          <select name="condition_status" value={formData.condition_status} onChange={handleChange} style={{ width: '100%', padding: '8px' }}>
-            <option value="new">New</option>
-            <option value="good">Good</option>
-            <option value="used">Used</option>
-            <option value="broken">Broken</option>
-          </select>
-        </div>
+              <div className="form-group">
+                <label className="form-label">Property*</label>
+                <select
+                  name="property_ref"
+                  value={formData.property_ref}
+                  onChange={handleChange}
+                  required
+                  className="form-input"
+                >
+                  <option value="">Select Property</option>
+                  {properties.map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </div>
 
-        <div style={{ marginBottom: '10px' }}>
-          <label><strong>Cost (USD)</strong></label><br />
-          <input name="cost" type="number" value={formData.cost} onChange={handleChange} style={{ width: '100%', padding: '8px' }} />
-        </div>
+              <div className="form-group">
+                <label className="form-label">Room (Optional)</label>
+                <input
+                  name="room"
+                  type="text"
+                  value={formData.room}
+                  onChange={handleChange}
+                  placeholder="e.g., Room 101, Common Area"
+                  className="form-input"
+                />
+              </div>
 
-        <div style={{ marginBottom: '10px' }}>
-          <label><strong>Purchase Date</strong></label><br />
-          <input name="purchase_date" type="date" value={formData.purchase_date} onChange={handleChange} style={{ width: '100%', padding: '8px' }} />
-        </div>
+              <div className="form-group">
+                <label className="form-label">Condition*</label>
+                <select
+                  name="condition_status"
+                  value={formData.condition_status}
+                  onChange={handleChange}
+                  className="form-input"
+                >
+                  <option value="new">New</option>
+                  <option value="good">Good</option>
+                  <option value="used">Used</option>
+                  <option value="broken">Broken</option>
+                </select>
+              </div>
 
-        <div style={{ marginBottom: '20px' }}>
-          <label>
-            <input name="needs_maintenance" type="checkbox" checked={formData.needs_maintenance} onChange={handleChange} />{' '}
-            Needs Maintenance Immediately
-          </label>
-        </div>
+              <div className="form-group">
+                <label className="form-label">Cost (USD)</label>
+                <input
+                  name="cost"
+                  type="number"
+                  step="0.01"
+                  value={formData.cost}
+                  onChange={handleChange}
+                  placeholder="0.00"
+                  className="form-input"
+                />
+              </div>
 
-        <button type="submit" style={{ backgroundColor: '#28a745', color: 'white', padding: '10px 20px' }}>Save Item</button>
-      </form>
-    </div>
+              <div className="form-group">
+                <label className="form-label">Purchase Date</label>
+                <input
+                  name="purchase_date"
+                  type="date"
+                  value={formData.purchase_date}
+                  onChange={handleChange}
+                  className="form-input"
+                />
+              </div>
+
+              <div className="form-group full-width">
+                <label className="form-checkbox">
+                  <input
+                    name="needs_maintenance"
+                    type="checkbox"
+                    checked={formData.needs_maintenance}
+                    onChange={handleChange}
+                  />
+                  <span className="checkmark"></span>
+                  Needs Maintenance Immediately
+                </label>
+              </div>
+            </div>
+
+            <div className="form-actions">
+              <button
+                type="submit"
+                disabled={saving}
+                className="btn btn-primary"
+              >
+                {saving ? 'Saving...' : '💾 Save Item'}
+              </button>
+              <Link href="/inventory" className="btn btn-secondary">
+                Cancel
+              </Link>
+            </div>
+          </form>
+        </SectionCard>
+
+        <SectionCard title="Quick Tips" subtitle="Best practices for inventory management">
+          <div className="info-grid">
+            <div className="info-item">
+              <h4>📝 Item Names</h4>
+              <p>Use descriptive names that include brand/model when relevant (e.g., "IKEA Malm Bed Frame" vs "Bed")</p>
+            </div>
+            <div className="info-item">
+              <h4>🏠 Property Assignment</h4>
+              <p>Always assign items to properties. Room assignment is optional but helps with organization.</p>
+            </div>
+            <div className="info-item">
+              <h4>💰 Cost Tracking</h4>
+              <p>Recording purchase costs helps with budgeting and insurance claims.</p>
+            </div>
+            <div className="info-item">
+              <h4>🔧 Maintenance Flags</h4>
+              <p>Check "Needs Maintenance" for items requiring immediate attention or repair.</p>
+            </div>
+          </div>
+        </SectionCard>
+      </DashboardLayout>
+    </>
   );
 } 
  

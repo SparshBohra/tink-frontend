@@ -43,7 +43,7 @@ function Properties() {
   };
 
   const getPropertyStats = (propertyId: number) => {
-    const propertyRooms = rooms.filter(room => room.property_ref === propertyId);
+    const propertyRooms = rooms.filter(room => room.property === propertyId);
     const occupiedRooms = propertyRooms.filter(room => !room.is_vacant);
     const vacantRooms = propertyRooms.filter(room => room.is_vacant);
     const occupancyRate = propertyRooms.length > 0 ? 
@@ -292,7 +292,7 @@ function Properties() {
               Review Applications
           </Link>
             
-            <Link href="#" className="btn btn-primary">
+            <Link href="/inventory" className="btn btn-primary">
               Check Inventory
           </Link>
         </div>

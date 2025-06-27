@@ -12,7 +12,12 @@ export default function AddProperty() {
   const router = useRouter();
   const [formData, setFormData] = useState({
     name: '',
-    address: '',
+    address_line1: '',
+    address_line2: '',
+    city: '',
+    state: '',
+    postal_code: '',
+    country: 'United States',
     property_type: 'coliving',
     timezone: 'America/New_York'
   });
@@ -33,7 +38,12 @@ export default function AddProperty() {
       // Reset form
       setFormData({
         name: '',
-        address: '',
+        address_line1: '',
+        address_line2: '',
+        city: '',
+        state: '',
+        postal_code: '',
+        country: 'United States',
         property_type: 'coliving',
         timezone: 'America/New_York'
       });
@@ -128,17 +138,93 @@ export default function AddProperty() {
 
               <div className="form-group full-width">
                 <label className="form-label">
-                  Full Address*
+                  Address Line 1*
                 </label>
                 <input
                   type="text"
-                  name="address"
-                  value={formData.address}
+                  name="address_line1"
+                  value={formData.address_line1}
                   onChange={handleChange}
                   required
-                  placeholder="e.g., 123 Main Street, New York, NY 10001"
+                  placeholder="e.g., 123 Main Street"
                   className="form-input"
                 />
+              </div>
+
+              <div className="form-group full-width">
+                <label className="form-label">
+                  Address Line 2
+                </label>
+                <input
+                  type="text"
+                  name="address_line2"
+                  value={formData.address_line2}
+                  onChange={handleChange}
+                  placeholder="e.g., Apt 4B, Suite 200 (optional)"
+                  className="form-input"
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">
+                  City*
+                </label>
+                <input
+                  type="text"
+                  name="city"
+                  value={formData.city}
+                  onChange={handleChange}
+                  required
+                  placeholder="e.g., New York"
+                  className="form-input"
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">
+                  State*
+                </label>
+                <input
+                  type="text"
+                  name="state"
+                  value={formData.state}
+                  onChange={handleChange}
+                  required
+                  placeholder="e.g., NY"
+                  className="form-input"
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">
+                  Postal Code*
+                </label>
+                <input
+                  type="text"
+                  name="postal_code"
+                  value={formData.postal_code}
+                  onChange={handleChange}
+                  required
+                  placeholder="e.g., 10001"
+                  className="form-input"
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">
+                  Country
+                </label>
+                <select
+                  name="country"
+                  value={formData.country}
+                  onChange={handleChange}
+                  className="form-input"
+                >
+                  <option value="United States">United States</option>
+                  <option value="Canada">Canada</option>
+                  <option value="United Kingdom">United Kingdom</option>
+                  <option value="Australia">Australia</option>
+                </select>
               </div>
 
               <div className="form-group">
