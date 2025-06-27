@@ -25,6 +25,12 @@ export interface Manager {
   full_name: string;
   role: string;
   is_active: boolean;
+  phone_country_code?: string;
+  phone_number?: string;
+  phone_full?: string;
+  date_joined?: string;
+  assigned_properties?: AssignedProperty[];
+  access_level?: 'full' | 'limited';
 }
 
 export interface Tenant {
@@ -41,15 +47,29 @@ export interface Tenant {
 
 export interface Property {
   id: number;
+  landlord?: number;
   name: string;
   address: string;
   full_address: string;
   property_type: string;
   description?: string;
   total_rooms: number;
+  vacant_rooms: number;
   landlord_name?: string;
+  address_line1?: string;
+  address_line2?: string;
+  city?: string;
+  state?: string;
+  postal_code?: string;
+  country?: string;
+  unit_number?: string;
+  pin_code?: string;
+  timezone?: string;
+  timezone_display?: string;
+  lat?: number | null;
+  lon?: number | null;
   created_at: string;
-  updated_at: string;
+  updated_at?: string;
 }
 
 export interface Room {
@@ -236,6 +256,55 @@ export interface DashboardStats {
     total: number;
     active: number;
   };
+}
+
+export interface AssignedProperty {
+  id: number;
+  name: string;
+  address: string;
+  access_type: 'specific' | 'all';
+  role_note?: string;
+}
+
+export interface ManagerPropertyAssignment {
+  id: number;
+  manager: number;
+  property: number;
+  landlord_relationship: number;
+  assigned_by?: number;
+  role_note?: string;
+  created_at: string;
+  is_active: boolean;
+  manager_name?: string;
+  property_name?: string;
+  property_address?: string;
+  assigned_by_name?: string;
+}
+
+export interface ManagerWithProperties extends Manager {
+  assigned_properties: AssignedProperty[];
+  access_level: 'full' | 'limited';
+}
+
+export interface ManagerFormData {
+  full_name: string;
+  email: string;
+  username: string;
+  password: string;
+  landlord_id?: number;
+  property_ids?: number[];
+  access_all_properties?: boolean;
+}
+
+export interface ManagerLandlordRelationship {
+  id: number;
+  manager: number;
+  landlord: number;
+  role_note?: string;
+  is_primary: boolean;
+  manager_name?: string;
+  landlord_name?: string;
+  created_at: string;
 }
 
 export interface LandlordSignupData {

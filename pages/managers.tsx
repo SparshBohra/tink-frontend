@@ -7,73 +7,121 @@ import SectionCard from '../components/SectionCard';
 import DataTable from '../components/DataTable';
 import EmptyState from '../components/EmptyState';
 import StatusBadge from '../components/StatusBadge';
+import PropertyAssignmentModal from '../components/PropertyAssignmentModal';
 import { useAuth, withAuth } from '../lib/auth-context';
 import { apiClient } from '../lib/api';
-
-interface Manager {
-  id: number;
-  username: string;
-  email: string;
-  full_name: string;
-  role: string;
-  is_active: boolean;
-  date_joined?: string;
-}
-
-interface ManagerFormData {
-  full_name: string;
-  email: string;
-  username: string;
-  password: string;
-  landlord_id?: number;
-}
+import { ManagerWithProperties, ManagerFormData, Property } from '../lib/types';
 
 function ManagersPage() {
   const { user, isAdmin, isLandlord } = useAuth();
-  const [managers, setManagers] = useState<Manager[]>([]);
+  const [managers, setManagers] = useState<ManagerWithProperties[]>([]);
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [landlordProfile, setLandlordProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
-  const [editingManager, setEditingManager] = useState<Manager | null>(null);
+  const [editingManager, setEditingManager] = useState<ManagerWithProperties | null>(null);
+  const [showPropertySelection, setShowPropertySelection] = useState(false);
+  const [assignmentModalOpen, setAssignmentModalOpen] = useState(false);
+  const [selectedManagerForAssignment, setSelectedManagerForAssignment] = useState<ManagerWithProperties | null>(null);
   const [formData, setFormData] = useState<ManagerFormData>({
     full_name: '',
     email: '',
     username: '',
-    password: ''
+    password: '',
+    property_ids: [],
+    access_all_properties: false
   });
   const [formLoading, setFormLoading] = useState(false);
 
   useEffect(() => {
-    fetchManagers();
+    fetchInitialData();
   }, []);
 
-  const fetchManagers = async () => {
+  const fetchInitialData = async () => {
     try {
       setLoading(true);
+      let profile = null;
+      
+      // Fetch landlord profile first for non-admin users
+      if (isLandlord()) {
+        try {
+          profile = await apiClient.getLandlordProfile();
+          setLandlordProfile(profile);
+          console.log('Fetched landlord profile:', profile);
+        } catch (err) {
+          console.error('Failed to fetch landlord profile:', err);
+        }
+      }
+      
+      // Then fetch managers and properties (pass profile to avoid race condition)
+      await Promise.all([
+        fetchManagers(profile),
+        fetchProperties()
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchManagers = async (currentLandlordProfile?: any) => {
+    try {
       setError(null);
       
-      let managersData: Manager[] = [];
+      let managersData: ManagerWithProperties[] = [];
       
       if (isAdmin()) {
         // Admin can see all managers
         const response = await apiClient.getAllManagers();
-        managersData = response || [];
+        // Convert to ManagerWithProperties format for admin users
+        managersData = (response || []).map((manager: any) => ({
+          ...manager,
+          assigned_properties: [],
+          access_level: manager.role === 'admin' ? 'full' : 'limited'
+        }));
       } else if (isLandlord()) {
-        // Landlords can see their assigned managers
-        const response = await apiClient.getManagers();
-        managersData = response.results || [];
+        // Landlords can see only their assigned managers
+        try {
+          managersData = await apiClient.getManagersWithProperties();
+          console.log('Fetched managers for landlord:', managersData);
+        } catch (err: any) {
+          console.error('Failed to fetch managers with properties:', err);
+          // Fallback: try to get managers by landlord ID if we have the profile
+          const profileToUse = currentLandlordProfile || landlordProfile;
+          if (profileToUse?.id) {
+            try {
+              const fallbackManagers = await apiClient.getManagersForLandlord(profileToUse.id);
+              managersData = (fallbackManagers || []).map((manager: any) => ({
+                ...manager,
+                assigned_properties: [],
+                access_level: 'limited'
+              }));
+            } catch (fallbackErr) {
+              console.error('Fallback manager fetch also failed:', fallbackErr);
+              managersData = [];
+            }
+          }
+        }
       }
       
       setManagers(managersData);
     } catch (err: any) {
       console.error('Failed to fetch managers:', err);
       setError(err?.message || 'Failed to load managers');
-    } finally {
-      setLoading(false);
+      setManagers([]);
     }
   };
 
-  const handleAssignManager = async (e: React.FormEvent) => {
+  const fetchProperties = async () => {
+    try {
+      const response = await apiClient.getProperties();
+      setProperties(response.results || []);
+    } catch (err: any) {
+      console.error('Failed to fetch properties:', err);
+    }
+  };
+
+  const handleCreateManager = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       setFormLoading(true);
@@ -86,13 +134,25 @@ function ManagersPage() {
           email: formData.email,
         });
       } else {
-        // Create new manager assignment logic would go here
-        console.log('Creating new manager:', formData);
+        // Create new manager with property assignments
+        // Use landlord profile ID instead of user ID
+        const landlordId = landlordProfile?.id;
+        if (!landlordId) {
+          throw new Error('Landlord profile not found. Please refresh the page and try again.');
+        }
+        
+        const managerData: ManagerFormData = {
+          ...formData,
+          landlord_id: landlordId
+        };
+        
+        await apiClient.createManagerWithProperties(managerData);
       }
       
       setShowForm(false);
+      setShowPropertySelection(false);
       setEditingManager(null);
-      setFormData({ full_name: '', email: '', username: '', password: '' });
+      resetForm();
       await fetchManagers();
       
     } catch (err: any) {
@@ -102,13 +162,15 @@ function ManagersPage() {
     }
   };
 
-  const handleEditManager = (manager: Manager) => {
+  const handleEditManager = (manager: ManagerWithProperties) => {
     setEditingManager(manager);
     setFormData({
       full_name: manager.full_name,
       email: manager.email,
       username: manager.username,
-      password: '' // Don't populate password for security
+      password: '',
+      property_ids: manager.assigned_properties?.map(p => p.id) || [],
+      access_all_properties: manager.access_level === 'full'
     });
     setShowForm(true);
   };
@@ -125,6 +187,91 @@ function ManagersPage() {
     } catch (err: any) {
       setError(err?.message || 'Failed to delete manager');
     }
+  };
+
+  const handlePropertySelection = (propertyId: number) => {
+    const currentIds = formData.property_ids || [];
+    if (currentIds.includes(propertyId)) {
+      setFormData({
+        ...formData,
+        property_ids: currentIds.filter(id => id !== propertyId)
+      });
+    } else {
+      setFormData({
+        ...formData,
+        property_ids: [...currentIds, propertyId]
+      });
+    }
+  };
+
+  const handleSelectAllProperties = () => {
+    if (formData.access_all_properties) {
+      setFormData({
+        ...formData,
+        access_all_properties: false,
+        property_ids: []
+      });
+    } else {
+      setFormData({
+        ...formData,
+        access_all_properties: true,
+        property_ids: properties.map(p => p.id)
+      });
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      full_name: '',
+      email: '',
+      username: '',
+      password: '',
+      property_ids: [],
+      access_all_properties: false
+    });
+  };
+
+  const getAccessLevelBadge = (manager: ManagerWithProperties) => {
+    if (manager.role === 'admin') {
+      return <StatusBadge status="info" text="System Admin" />;
+    }
+    if (manager.role === 'owner') {
+      return <StatusBadge status="success" text="Property Owner" />;
+    }
+    if (manager.access_level === 'full') {
+      return <StatusBadge status="success" text="Full Access" />;
+    }
+    const propertyCount = manager.assigned_properties?.length || 0;
+    const totalProperties = properties.length;
+    return <StatusBadge status="warning" text={`${propertyCount} of ${totalProperties} Properties`} />;
+  };
+
+  const getPropertyList = (manager: ManagerWithProperties) => {
+    if (manager.role === 'admin') {
+      return <span className="text-muted">All System Access</span>;
+    }
+    if (manager.role === 'owner') {
+      return <span className="text-muted">All Owned Properties</span>;
+    }
+    if (manager.access_level === 'full') {
+      return <span className="text-muted">All Properties</span>;
+    }
+    const propertyNames = manager.assigned_properties?.map(p => p.name).join(', ') || 'None';
+    return <span className="property-display" title={propertyNames}>{propertyNames}</span>;
+  };
+
+  const handleEditAssignments = (manager: ManagerWithProperties) => {
+    setSelectedManagerForAssignment(manager);
+    setAssignmentModalOpen(true);
+  };
+
+  const handleAssignmentModalClose = () => {
+    setAssignmentModalOpen(false);
+    setSelectedManagerForAssignment(null);
+  };
+
+  const handleAssignmentModalSave = async () => {
+    await fetchManagers(); // Refresh the managers list
   };
 
   if (loading) {
@@ -152,22 +299,49 @@ function ManagersPage() {
       <Navigation />
       <DashboardLayout
         title={isAdmin() ? 'All Managers' : 'My Team'}
-        subtitle={isAdmin() ? 'Manage all property managers' : 'Manage your property management team'}
+        subtitle={isAdmin() ? 'Manage all property managers' : 'Manage your property management team with granular property access'}
       >
         {error && <div className="alert alert-error">{error}</div>}
+        
+        {/* Manager Overview Metrics */}
+        <SectionCard title="Team Overview">
+          <div className="metrics-grid">
+            <MetricCard 
+              title="Total Managers" 
+              value={managers.filter(m => m.role === 'manager').length} 
+              color="blue" 
+            />
+            <MetricCard 
+              title="Full Access" 
+              value={managers.filter(m => m.role === 'manager' && m.access_level === 'full').length} 
+              color="green" 
+            />
+            <MetricCard 
+              title="Limited Access" 
+              value={managers.filter(m => m.role === 'manager' && m.access_level === 'limited').length} 
+              color="amber" 
+            />
+            <MetricCard 
+              title="Properties" 
+              value={properties.length} 
+              subtitle="Available for assignment"
+              color="purple" 
+            />
+          </div>
+        </SectionCard>
         
         <SectionCard>
           <div className="actions-container">
             <button className="btn btn-primary" onClick={() => setShowForm(true)}>
-              {isAdmin() ? 'Create Manager' : 'Assign Manager'}
+              {isAdmin() ? 'Create Manager' : 'Add Manager'}
             </button>
             <button className="btn btn-secondary" onClick={fetchManagers}>Refresh</button>
           </div>
         </SectionCard>
 
         {showForm && (
-          <SectionCard title={editingManager ? 'Edit Manager' : 'Assign New Manager'}>
-            <form onSubmit={handleAssignManager} className="manager-form">
+          <SectionCard title={editingManager ? 'Edit Manager' : 'Add New Manager'}>
+            <form onSubmit={handleCreateManager} className="manager-form">
               <div className="form-group">
                 <label htmlFor="full_name">Full Name</label>
                 <input
@@ -213,20 +387,63 @@ function ManagersPage() {
                       required
                     />
                   </div>
+
+                  {/* Property Access Selection */}
+                  <div className="form-group">
+                    <label>Property Access</label>
+                    <div className="property-access-section">
+                      <div className="access-option">
+                        <label className="checkbox-label">
+                          <input
+                            type="checkbox"
+                            checked={formData.access_all_properties}
+                            onChange={handleSelectAllProperties}
+                          />
+                          <span>Full Access (All Properties)</span>
+                        </label>
+                      </div>
+                      
+                      {!formData.access_all_properties && (
+                        <div className="property-selection">
+                          <h4>Select Specific Properties:</h4>
+                          <div className="property-grid">
+                            {properties.map(property => (
+                              <label key={property.id} className="checkbox-label property-item">
+                                <input
+                                  type="checkbox"
+                                  checked={formData.property_ids?.includes(property.id) || false}
+                                  onChange={() => handlePropertySelection(property.id)}
+                                />
+                                <span>
+                                  <strong>{property.name}</strong>
+                                  <br />
+                                  <small className="text-muted">{property.full_address || property.address}</small>
+                                </span>
+                              </label>
+                            ))}
+                          </div>
+                          {properties.length === 0 && (
+                            <p className="text-muted">No properties available. Create properties first.</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </>
               )}
               
               <div className="form-actions">
                 <button type="submit" className="btn btn-primary" disabled={formLoading}>
-                  {formLoading ? 'Saving...' : (editingManager ? 'Update Manager' : 'Assign Manager')}
+                  {formLoading ? 'Saving...' : (editingManager ? 'Update Manager' : 'Create Manager')}
                 </button>
                 <button 
                   type="button" 
                   className="btn btn-secondary" 
                   onClick={() => {
                     setShowForm(false);
+                    setShowPropertySelection(false);
                     setEditingManager(null);
-                    setFormData({ full_name: '', email: '', username: '', password: '' });
+                    resetForm();
                   }}
                 >
                   Cancel
@@ -242,23 +459,29 @@ function ManagersPage() {
               columns={[
                 { key: 'full_name', header: 'Name' },
                 { key: 'email', header: 'Email' },
+                { key: 'access_level', header: 'Access Level' },
+                { key: 'properties', header: 'Assigned Properties' },
                 { key: 'status', header: 'Status' },
-                { key: 'date_joined', header: 'Date Joined' },
                 { key: 'actions', header: 'Actions' },
               ]}
               data={managers}
               renderRow={(manager) => (
                 <tr key={manager.id}>
-                  <td style={{ textAlign: 'center' }}>{manager.full_name}</td>
+                  <td style={{ textAlign: 'center' }}>
+                    <strong>{manager.full_name}</strong>
+                  </td>
                   <td style={{ textAlign: 'center' }}>{manager.email}</td>
+                  <td style={{ textAlign: 'center' }}>
+                    {getAccessLevelBadge(manager)}
+                  </td>
+                  <td style={{ textAlign: 'center', maxWidth: '200px' }}>
+                    {getPropertyList(manager)}
+                  </td>
                   <td style={{ textAlign: 'center' }}>
                     <StatusBadge 
                       status={manager.is_active ? 'success' : 'error'} 
                       text={manager.is_active ? 'Active' : 'Inactive'} 
                     />
-                  </td>
-                  <td style={{ textAlign: 'center' }}>
-                    {manager.date_joined ? new Date(manager.date_joined).toLocaleDateString() : 'N/A'}
                   </td>
                   <td style={{ textAlign: 'center' }}>
                     <div className="action-buttons">
@@ -268,6 +491,15 @@ function ManagersPage() {
                       >
                         Edit
                       </button>
+                      {manager.role === 'manager' && (
+                        <button 
+                          className="btn btn-info btn-sm"
+                          onClick={() => handleEditAssignments(manager)}
+                          title="Edit Property Assignments"
+                        >
+                          Assignments
+                        </button>
+                      )}
                       <button 
                         className="btn btn-error btn-sm" 
                         onClick={() => handleDeleteManager(manager.id, manager.full_name)}
@@ -282,49 +514,149 @@ function ManagersPage() {
           ) : (
             <EmptyState 
               title="No Managers Found" 
-              description={isAdmin() ? "No managers are registered on the platform." : "No managers have been assigned to your organization."} 
+              description={isAdmin() ? "No managers are registered on the platform." : "No managers have been assigned to your organization. Create your first manager to get started with team management."} 
             />
           )}
         </SectionCard>
       </DashboardLayout>
       
+      {/* Property Assignment Modal */}
+      {selectedManagerForAssignment && (
+        <PropertyAssignmentModal
+          manager={selectedManagerForAssignment}
+          isOpen={assignmentModalOpen}
+          onClose={handleAssignmentModalClose}
+          onSave={handleAssignmentModalSave}
+        />
+      )}
+      
       <style jsx>{`
         .actions-container { 
           display: flex; 
-          gap: var(--spacing-md); 
-          margin-bottom: var(--spacing-lg);
+          gap: 1rem; 
+          margin-bottom: 1.5rem;
+        }
+        
+        .metrics-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 1.5rem;
+          margin-bottom: 1.5rem;
         }
         
         .manager-form { 
-          max-width: 500px;
+          max-width: 600px;
         }
         
         .form-group {
-          margin-bottom: var(--spacing-md);
+          margin-bottom: 1rem;
         }
         
         .form-group label {
           display: block;
-          margin-bottom: var(--spacing-xs);
+          margin-bottom: 0.5rem;
           font-weight: 600;
+          color: #374151;
         }
         
         .form-group input {
           width: 100%;
-          padding: var(--spacing-sm);
-          border: 1px solid var(--gray-300);
-          border-radius: var(--radius-sm);
+          padding: 0.75rem;
+          border: 1px solid #d1d5db;
+          border-radius: 0.375rem;
+          font-size: 1rem;
+        }
+        
+        .form-group input:focus {
+          outline: none;
+          border-color: #3b82f6;
+          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .property-access-section {
+          border: 1px solid #d1d5db;
+          border-radius: 0.5rem;
+          padding: 1rem;
+          background-color: #f9fafb;
+          margin-top: 0.5rem;
+        }
+
+        .access-option {
+          margin-bottom: 1rem;
+        }
+
+        .checkbox-label {
+          display: flex;
+          align-items: flex-start;
+          gap: 0.5rem;
+          cursor: pointer;
+          font-weight: normal;
+        }
+
+        .checkbox-label input[type="checkbox"] {
+          width: auto;
+          margin-top: 2px;
+        }
+
+        .property-selection h4 {
+          margin: 1rem 0 0.75rem 0;
+          color: #374151;
+          font-size: 1rem;
+          font-weight: 600;
+        }
+
+        .property-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+          gap: 0.75rem;
+          max-height: 200px;
+          overflow-y: auto;
+          padding: 0.5rem;
+          border: 1px solid #e5e7eb;
+          border-radius: 0.375rem;
+          background-color: white;
+        }
+
+        .property-item {
+          padding: 0.75rem;
+          border: 1px solid #e5e7eb;
+          border-radius: 0.375rem;
+          background-color: white;
+          transition: all 0.2s;
+        }
+
+        .property-item:hover {
+          background-color: #f3f4f6;
+          border-color: #3b82f6;
+        }
+
+        .property-item input[type="checkbox"] {
+          margin-right: 0.5rem;
+        }
+
+        .text-muted {
+          color: #6b7280;
+          font-size: 0.875rem;
+        }
+
+        .property-display {
+          max-width: 200px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
         }
         
         .form-actions { 
           display: flex; 
-          gap: var(--spacing-md); 
-          margin-top: var(--spacing-lg); 
+          gap: 1rem; 
+          margin-top: 1.5rem; 
+          padding-top: 1rem;
+          border-top: 1px solid #e5e7eb;
         }
         
         .action-buttons { 
           display: flex; 
-          gap: var(--spacing-xs); 
+          gap: 0.5rem; 
           justify-content: center; 
         }
         
@@ -333,17 +665,17 @@ function ManagersPage() {
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          padding: var(--spacing-xl);
+          padding: 2rem;
         }
         
         .loading-spinner {
           width: 40px;
           height: 40px;
-          border: 4px solid var(--gray-200);
-          border-top-color: var(--primary-blue);
+          border: 4px solid #e5e7eb;
+          border-top-color: #3b82f6;
           border-radius: 50%;
           animation: spin 1s linear infinite;
-          margin-bottom: var(--spacing-md);
+          margin-bottom: 1rem;
         }
         
         @keyframes spin {
@@ -353,20 +685,82 @@ function ManagersPage() {
         }
         
         .alert {
-          padding: var(--spacing-md);
-          border-radius: var(--radius-md);
-          margin-bottom: var(--spacing-lg);
+          padding: 1rem;
+          border-radius: 0.5rem;
+          margin-bottom: 1.5rem;
         }
         
         .alert-error {
-          background-color: var(--error-red-light);
-          color: var(--error-red-dark);
-          border: 1px solid var(--error-red);
+          background-color: #fef2f2;
+          color: #dc2626;
+          border: 1px solid #fecaca;
         }
-        
-        /* Center align table headers */
-        :global(.data-table .table-header) {
-          text-align: center;
+
+        /* Button styles */
+        .btn {
+          padding: 0.5rem 1rem;
+          border: none;
+          border-radius: 0.375rem;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s;
+          text-decoration: none;
+          display: inline-block;
+        }
+
+        .btn-primary {
+          background-color: #3b82f6;
+          color: white;
+        }
+
+        .btn-primary:hover {
+          background-color: #2563eb;
+        }
+
+        .btn-secondary {
+          background-color: #6b7280;
+          color: white;
+        }
+
+        .btn-secondary:hover {
+          background-color: #4b5563;
+        }
+
+        .btn-warning {
+          background-color: #f59e0b;
+          color: white;
+        }
+
+        .btn-warning:hover {
+          background-color: #d97706;
+        }
+
+        .btn-info {
+          background-color: #06b6d4;
+          color: white;
+        }
+
+        .btn-info:hover {
+          background-color: #0891b2;
+        }
+
+        .btn-error {
+          background-color: #dc2626;
+          color: white;
+        }
+
+        .btn-error:hover {
+          background-color: #b91c1c;
+        }
+
+        .btn-sm {
+          padding: 0.375rem 0.75rem;
+          font-size: 0.875rem;
+        }
+
+        .btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
         }
       `}</style>
     </>

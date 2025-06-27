@@ -21,7 +21,11 @@ import {
   ApplicationFormData,
   LeaseFormData,
   DashboardStats,
-  User
+  User,
+  ManagerWithProperties,
+  ManagerPropertyAssignment,
+  ManagerFormData,
+  ManagerLandlordRelationship
 } from './types';
 
 // Smart environment-based API URL configuration
@@ -313,8 +317,8 @@ class ApiClient {
       if (Array.isArray(response.data)) {
         return {
           count: response.data.length,
-          next: null,
-          previous: null,
+          next: undefined,
+          previous: undefined,
           results: response.data
         };
       }
@@ -324,8 +328,8 @@ class ApiClient {
         // Return empty response if no permission
         return {
           count: 0,
-          next: null,
-          previous: null,
+          next: undefined,
+          previous: undefined,
           results: []
         };
       }
@@ -409,8 +413,8 @@ class ApiClient {
       if (Array.isArray(response.data)) {
         return {
           count: response.data.length,
-          next: null,
-          previous: null,
+          next: undefined,
+          previous: undefined,
           results: response.data
         };
       }
@@ -420,8 +424,8 @@ class ApiClient {
         // Return empty response if no permission
         return {
           count: 0,
-          next: null,
-          previous: null,
+          next: undefined,
+          previous: undefined,
           results: []
         };
       }
@@ -477,8 +481,8 @@ class ApiClient {
     if (Array.isArray(response.data)) {
       return {
         count: response.data.length,
-        next: null,
-        previous: null,
+        next: undefined,
+        previous: undefined,
         results: response.data
       };
     }
@@ -522,8 +526,8 @@ class ApiClient {
       if (Array.isArray(response.data)) {
         return {
           count: response.data.length,
-          next: null,
-          previous: null,
+          next: undefined,
+          previous: undefined,
           results: response.data
         };
       }
@@ -533,8 +537,8 @@ class ApiClient {
         // Return empty response if no permission
         return {
           count: 0,
-          next: null,
-          previous: null,
+          next: undefined,
+          previous: undefined,
           results: []
         };
       }
@@ -615,8 +619,8 @@ class ApiClient {
       if (Array.isArray(response.data)) {
         return {
           count: response.data.length,
-          next: null,
-          previous: null,
+          next: undefined,
+          previous: undefined,
           results: response.data
         };
       }
@@ -626,8 +630,8 @@ class ApiClient {
         // Return empty response if no permission
         return {
           count: 0,
-          next: null,
-          previous: null,
+          next: undefined,
+          previous: undefined,
           results: []
         };
       }
@@ -809,13 +813,125 @@ class ApiClient {
     return response.data;
   }
 
-  // Manager-Landlord Relationship methods
-  async getManagerLandlordRelationships(): Promise<any[]> {
-    const response = await this.api.get('/manager-landlord-relationships/');
-    return response.data.results || response.data;
+  // NEW: Enhanced managers with properties endpoint
+  async getManagersWithProperties(): Promise<ManagerWithProperties[]> {
+    const response = await this.api.get('/managers-with-properties/');
+    return response.data || [];
   }
 
-  async createManagerLandlordRelationship(data: { manager: number; landlord: number; is_primary: boolean }): Promise<any> {
+  // NEW: Property assignment endpoints
+  async getManagerPropertyAssignments(): Promise<ManagerPropertyAssignment[]> {
+    const response = await this.api.get('/manager-property-assignments/');
+    return response.data || [];
+  }
+
+  async createManagerPropertyAssignment(data: { 
+    manager: number; 
+    property: number; 
+    landlord_relationship: number;
+    role_note?: string;
+  }): Promise<ManagerPropertyAssignment> {
+    const response = await this.api.post('/manager-property-assignments/', data);
+    return response.data;
+  }
+
+  async deleteManagerPropertyAssignment(id: number): Promise<void> {
+    await this.api.delete(`/manager-property-assignments/${id}/`);
+  }
+
+  async createManagerWithProperties(data: ManagerFormData): Promise<Manager> {
+    try {
+      // STEP 1: Create Manager Account using /api/signup/
+      console.log('Step 1: Creating manager account via signup...');
+      const signupData = {
+        username: data.username,
+        password: data.password,
+        email: data.email,
+        full_name: data.full_name,
+        role: "manager"
+      };
+      
+      const signupResponse = await this.api.post('/signup/', signupData);
+      const manager = signupResponse.data;
+      console.log('Manager created:', manager);
+
+      // STEP 2: Create Manager-Landlord Relationship
+      console.log('Step 2: Creating manager-landlord relationship...');
+      if (!data.landlord_id) {
+        throw new Error('Landlord ID is required for manager creation');
+      }
+
+      const relationshipData = {
+        manager: manager.id,
+        landlord: data.landlord_id,
+        is_primary: false,  // Set to false as per instructions
+        role_note: `Manager for ${data.full_name}`
+      };
+
+      const relationshipResponse = await this.api.post('/manager-landlord-relationships/', relationshipData);
+      const relationship = relationshipResponse.data;
+      console.log('Relationship created:', relationship);
+
+      // STEP 3: Assign Manager to Properties (if specific properties selected)
+      if (data.property_ids && data.property_ids.length > 0 && !data.access_all_properties) {
+        console.log('Step 3: Assigning manager to specific properties...');
+        for (const propertyId of data.property_ids) {
+          await this.createManagerPropertyAssignment({
+            manager: manager.id,
+            property: propertyId,
+            landlord_relationship: relationship.id,
+            role_note: `Property Manager for Property ${propertyId}`
+          });
+        }
+        console.log(`Assigned manager to ${data.property_ids.length} properties`);
+      }
+
+      return {
+        id: manager.id,
+        username: manager.username ?? data.username,
+        email: manager.email ?? data.email,
+        full_name: manager.full_name ?? data.full_name,
+        role: 'manager',
+        is_active: manager.is_active !== false
+      };
+    } catch (error: any) {
+      console.error('Error creating manager with properties:', error);
+      
+      // Provide detailed error messages based on which step failed
+      if (error.response?.data) {
+        const errorData = error.response.data;
+        let errorMessage = 'Failed to create manager: ';
+        
+        if (typeof errorData === 'string') {
+          errorMessage += errorData;
+        } else if (errorData.detail) {
+          errorMessage += errorData.detail;
+        } else if (errorData.username) {
+          errorMessage += `Username error: ${errorData.username.join(', ')}`;
+        } else if (errorData.email) {
+          errorMessage += `Email error: ${errorData.email.join(', ')}`;
+        } else {
+          errorMessage += JSON.stringify(errorData);
+        }
+        
+        throw new Error(errorMessage);
+      }
+      throw error;
+    }
+  }
+
+  // Manager-Landlord Relationship methods
+  async getManagerLandlordRelationships(): Promise<ManagerLandlordRelationship[]> {
+    const response = await this.api.get('/manager-landlord-relationships/');
+    return response.data || [];
+  }
+
+  async createManagerLandlordRelationship(data: { 
+    manager: number; 
+    landlord: number; 
+    is_primary: boolean;
+    access_all_properties?: boolean;
+  }): Promise<ManagerLandlordRelationship> {
     const response = await this.api.post('/manager-landlord-relationships/', data);
     return response.data;
   }
