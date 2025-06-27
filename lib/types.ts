@@ -41,30 +41,50 @@ export interface Tenant {
 
 export interface Property {
   id: number;
+  landlord: number;
   name: string;
   address: string;
+  address_line1: string;
+  address_line2?: string;
+  city: string;
+  state: string;
+  postal_code: string;
+  country: string;
+  unit_number?: string;
+  pin_code?: string;
   full_address: string;
   property_type: string;
   description?: string;
+  timezone: string;
+  timezone_display: string;
+  lat?: number;
+  lon?: number;
   total_rooms: number;
+  vacant_rooms: number;
   landlord_name?: string;
   created_at: string;
-  updated_at: string;
+  updated_at?: string;
 }
 
 export interface Room {
   id: number;
-  property: number;
+  property_ref: number;
   name: string;
-  room_number: string;
-  room_type: string;
+  room_number?: string;
+  room_type?: string;
   floor?: string;
-  monthly_rent: number;
-  security_deposit: number;
-  is_occupied: boolean;
-  is_vacant?: boolean;
+  max_capacity: number;
+  current_occupancy: number;
+  monthly_rent?: number;
+  security_deposit?: number;
+  is_occupied?: boolean;
+  is_vacant: boolean;
+  occupancy_rate: number;
+  last_occupied_at?: string;
+  property_name: string;
+  can_add_tenant: boolean;
   created_at: string;
-  updated_at: string;
+  updated_at?: string;
 }
 
 export interface Application {

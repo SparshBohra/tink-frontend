@@ -10,11 +10,10 @@ import EmptyState from '../components/EmptyState';
 import Link from 'next/link';
 import { withAuth } from '../lib/auth-context';
 import { apiClient } from '../lib/api';
-import { Property, Room } from '../lib/types';
+import { Property } from '../lib/types';
 
 function Properties() {
   const [properties, setProperties] = useState<Property[]>([]);
-  const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,13 +26,8 @@ function Properties() {
       setLoading(true);
       setError(null);
       
-      const [propertiesResponse, roomsResponse] = await Promise.all([
-        apiClient.getProperties(),
-        apiClient.getRooms()
-      ]);
-
+      const propertiesResponse = await apiClient.getProperties();
       setProperties(propertiesResponse.results || []);
-      setRooms(roomsResponse.results || []);
     } catch (error: any) {
       console.error('Failed to fetch properties data:', error);
       setError(error?.message || 'Failed to load properties data');
@@ -42,17 +36,17 @@ function Properties() {
     }
   };
 
-  const getPropertyStats = (propertyId: number) => {
-    const propertyRooms = rooms.filter(room => room.property === propertyId);
-    const occupiedRooms = propertyRooms.filter(room => !room.is_vacant);
-    const vacantRooms = propertyRooms.filter(room => room.is_vacant);
-    const occupancyRate = propertyRooms.length > 0 ? 
-      Math.round((occupiedRooms.length / propertyRooms.length) * 100) : 0;
+  const getPropertyStats = (property: Property) => {
+    const totalRooms = property.total_rooms || 0;
+    const vacantRooms = property.vacant_rooms || 0;
+    const occupiedRooms = totalRooms - vacantRooms;
+    const occupancyRate = totalRooms > 0 ? 
+      Math.round((occupiedRooms / totalRooms) * 100) : 0;
     
     return {
-      totalRooms: propertyRooms.length,
-      occupiedRooms: occupiedRooms.length,
-      vacantRooms: vacantRooms.length,
+      totalRooms,
+      occupiedRooms,
+      vacantRooms,
       occupancyRate
     };
   };
@@ -61,7 +55,7 @@ function Properties() {
     const csvData = [
       ['Property Name', 'Address', 'Total Rooms', 'Occupied', 'Vacant', 'Occupancy Rate'],
       ...properties.map(property => {
-        const stats = getPropertyStats(property.id);
+        const stats = getPropertyStats(property);
         return [
           property.name,
           property.full_address,
@@ -82,9 +76,9 @@ function Properties() {
   };
 
   // Calculate portfolio summary
-  const totalRooms = rooms.length;
-  const occupiedRooms = rooms.filter(room => !room.is_vacant).length;
-  const vacantRooms = rooms.filter(room => room.is_vacant).length;
+  const totalRooms = properties.reduce((sum, property) => sum + (property.total_rooms || 0), 0);
+  const totalVacantRooms = properties.reduce((sum, property) => sum + (property.vacant_rooms || 0), 0);
+  const occupiedRooms = totalRooms - totalVacantRooms;
   const overallOccupancyRate = totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0;
 
   if (loading) {
@@ -159,7 +153,7 @@ function Properties() {
         
           <MetricCard 
             title="Vacant Rooms" 
-            value={vacantRooms}
+            value={totalVacantRooms}
             color="amber"
           />
           
@@ -219,7 +213,7 @@ function Properties() {
               ]}
               data={properties}
               renderRow={(property) => {
-                const stats = getPropertyStats(property.id);
+                const stats = getPropertyStats(property);
                 const occupancyWarning = stats.occupancyRate < 80;
                 
               return (
@@ -240,25 +234,30 @@ function Properties() {
                     
                     <td style={{ textAlign: 'center' }}>
                       <div className="occupancy-container">
-                        <div className="occupancy-bar">
+                        <div className={`occupancy-bar ${stats.occupancyRate < 50 ? 'low' : stats.occupancyRate < 80 ? 'medium' : 'high'}`}>
                           <div 
                             className="occupancy-progress" 
                             style={{ width: `${stats.occupancyRate}%` }}
                           ></div>
-                      </div>
-                        <div className="occupancy-text">{stats.occupancyRate}%</div>
+                        </div>
+                        <div className="occupancy-text">
+                          <span className="occupancy-percent">{stats.occupancyRate}%</span>
+                          <span className="occupancy-detail">
+                            {stats.occupiedRooms} of {stats.totalRooms} occupied
+                          </span>
+                        </div>
                       </div>
                     </td>
                     
                     <td style={{ textAlign: 'center' }}>
-                      {stats.occupancyRate < 70 ? (
-                        <StatusBadge status="warning" text="Low Occupancy" />
-                      ) : stats.occupancyRate < 90 ? (
-                        <StatusBadge status="info" text="Good" />
+                      {stats.occupancyRate < 50 ? (
+                        <StatusBadge status="error" text="Low Occupancy" />
+                      ) : stats.occupancyRate < 80 ? (
+                        <StatusBadge status="warning" text="Good" />
                       ) : (
                         <StatusBadge status="success" text="Excellent" />
-                    )}
-                  </td>
+                      )}
+                    </td>
                     
                     <td style={{ textAlign: 'center' }}>
                       <div className="action-buttons">
@@ -314,13 +313,16 @@ function Properties() {
         }
         
         .property-name {
-          font-weight: 500;
+          font-weight: 600;
           color: var(--gray-900);
+          font-size: var(--text-base);
+          margin-bottom: 4px;
         }
         
         .property-address {
           font-size: var(--text-small);
           color: var(--gray-600);
+          line-height: 1.4;
         }
         
         .rooms-stats {
@@ -330,30 +332,72 @@ function Properties() {
         .room-detail {
           color: var(--gray-600);
           margin-top: 4px;
+          font-size: 11px;
         }
         
         .occupancy-container {
           display: flex;
           flex-direction: column;
           gap: 8px;
+          align-items: center;
         }
         
         .occupancy-bar {
-          height: 8px;
+          width: 120px;
+          height: 12px;
           background-color: var(--gray-200);
-          border-radius: 4px;
+          border-radius: 8px;
           overflow: hidden;
+          position: relative;
+        }
+        
+        .occupancy-bar.low {
+          background-color: #fee2e2;
+        }
+        
+        .occupancy-bar.medium {
+          background-color: #fef3c7;
+        }
+        
+        .occupancy-bar.high {
+          background-color: #dcfce7;
         }
         
         .occupancy-progress {
           height: 100%;
-          background-color: var(--primary-blue);
-          border-radius: 4px;
+          border-radius: 8px;
+          transition: width 0.3s ease;
+        }
+        
+        .occupancy-bar.low .occupancy-progress {
+          background: linear-gradient(90deg, #ef4444, #dc2626);
+        }
+        
+        .occupancy-bar.medium .occupancy-progress {
+          background: linear-gradient(90deg, #f59e0b, #d97706);
+        }
+        
+        .occupancy-bar.high .occupancy-progress {
+          background: linear-gradient(90deg, #22c55e, #16a34a);
         }
         
         .occupancy-text {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 2px;
+        }
+        
+        .occupancy-percent {
           font-size: var(--text-small);
-          font-weight: 500;
+          font-weight: 600;
+          color: var(--gray-900);
+        }
+        
+        .occupancy-detail {
+          font-size: 11px;
+          color: var(--gray-600);
+          font-weight: 400;
         }
         
         .action-buttons {
@@ -371,6 +415,19 @@ function Properties() {
           display: flex;
           gap: var(--spacing-md);
           flex-wrap: wrap;
+        }
+        
+        /* Table row hover effect */
+        :global(.data-table tbody tr:hover) {
+          background-color: var(--gray-50);
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Occupancy bar hover effect */
+        .occupancy-bar:hover {
+          transform: scale(1.05);
+          transition: transform 0.2s ease;
         }
       `}</style>
     </>
