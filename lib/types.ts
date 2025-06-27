@@ -192,13 +192,41 @@ export interface LeaseFormData {
 }
 
 export interface DashboardStats {
-  total_properties: number;
-  total_rooms: number;
-  occupied_rooms: number;
-  total_tenants: number;
-  pending_applications: number;
-  active_leases: number;
-  monthly_revenue: number;
+  properties: {
+    total: number;
+    occupied: number;
+    vacant: number;
+  };
+  rooms: {
+    total: number;
+    occupied: number;
+    vacant: number;
+    occupancy_rate: number;
+  };
+  tenants: {
+    total: number;
+    active: number;
+  };
+  revenue: {
+    monthly: number;
+    projected_annual: number;
+  };
+  applications: {
+    total: number;
+    pending: number;
+    approved: number;
+    rejected: number;
+  };
+  leases: {
+    total: number;
+    active: number;
+    draft: number;
+    expired: number;
+  };
+  managers: {
+    total: number;
+    active: number;
+  };
 }
 
 export interface LandlordSignupData {
