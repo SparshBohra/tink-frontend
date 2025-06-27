@@ -59,9 +59,9 @@ export default function Login() {
         setPassword('demo123');
       } else {
         // Manager - Works for landlords and manages day-to-day operations
-        credentials = { username: 'sarah_manager', password: 'demo123' };
+        credentials = { username: 'sarah_manager', password: 'demo12345' };
         setUsername('sarah_manager');
-        setPassword('demo123');
+        setPassword('demo12345');
       }
       
       console.log('Demo login - attempting login with:', credentials.username);
