@@ -197,9 +197,11 @@ export interface PropertyFormData {
 }
 
 export interface RoomFormData {
-  property: number;
-  room_number: string;
+  property_ref: number;
+  name: string;
   room_type: string;
+  floor?: string;
+  max_capacity?: number;
   monthly_rent: number;
   security_deposit: number;
 }
@@ -265,4 +267,40 @@ export interface LandlordSignupData {
   username: string;
   password: string;
   confirm_password: string;
+}
+
+export interface ManagerWithProperties {
+  id: number;
+  username: string;
+  email: string;
+  full_name: string;
+  role: string;
+  is_active: boolean;
+  properties?: Property[];
+}
+
+export interface ManagerPropertyAssignment {
+  id: number;
+  manager: number;
+  property: number;
+  landlord_relationship: number;
+  role_note?: string;
+}
+
+export interface ManagerFormData {
+  username: string;
+  password: string;
+  email: string;
+  full_name: string;
+  landlord_id?: number;
+  property_ids?: number[];
+  access_all_properties?: boolean;
+}
+
+export interface ManagerLandlordRelationship {
+  id: number;
+  manager: number;
+  landlord: number;
+  is_primary: boolean;
+  access_all_properties?: boolean;
 } 

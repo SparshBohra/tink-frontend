@@ -187,6 +187,23 @@ export default function Inventory() {
     return filteredItems.filter(item => item.needs_maintenance);
   };
 
+  const handleEditItem = (item: InventoryItem) => {
+    router.push(`/inventory/edit/${item.id}`);
+  };
+
+
+
+  const handleDeleteItem = async (id: number) => {
+    if (confirm('Are you sure you want to delete this inventory item?')) {
+      try {
+        await apiClient.deleteInventoryItem(id);
+        fetchData(); // Refresh the list
+      } catch (error: any) {
+        setError(error.message || 'Failed to delete inventory item');
+      }
+    }
+  };
+
   if (loading) {
     return (
       <>
@@ -228,7 +245,7 @@ export default function Inventory() {
             <button className="btn btn-secondary" onClick={fetchData}>
               👁️ View Inventory
             </button>
-            <button className="btn btn-secondary" onClick={() => alert('CSV download coming soon!')}>
+            <button className="btn btn-secondary" onClick={downloadInventoryCSV}>
               📊 Download CSV
             </button>
           </div>
@@ -265,7 +282,7 @@ export default function Inventory() {
                 className="form-input"
               >
                 <option value="">All Rooms</option>
-                {(selectedProperty ? rooms.filter(r => r.property === selectedProperty) : rooms).map(room => (
+                {(selectedProperty ? rooms.filter(r => r.property_ref === selectedProperty) : rooms).map(room => (
                   <option key={room.id} value={room.id}>{room.name}</option>
                 ))}
               </select>
@@ -336,7 +353,19 @@ export default function Inventory() {
                       <td>{item.qty}</td>
                       <td>${item.cost || '0'}</td>
                       <td>
-                        <button className="btn btn-sm btn-secondary">Edit</button>
+                        <button 
+                          className="btn btn-sm btn-secondary"
+                          onClick={() => handleEditItem(item)}
+                        >
+                          Edit
+                        </button>
+                        <button 
+                          className="btn btn-sm btn-danger"
+                          onClick={() => handleDeleteItem(item.id)}
+                          style={{ marginLeft: '8px' }}
+                        >
+                          Delete
+                        </button>
                       </td>
                     </tr>
                   ))}

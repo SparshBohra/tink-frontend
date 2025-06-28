@@ -487,23 +487,23 @@ function ManagersPage() {
 
         <SectionCard title="Manager List">
           {managers.length > 0 ? (
-            <DataTable
-              columns={[
-                { key: 'full_name', header: 'Name' },
-                { key: 'email', header: 'Email' },
+          <DataTable
+            columns={[
+              { key: 'full_name', header: 'Name' },
+              { key: 'email', header: 'Email' },
                 { key: 'access_level', header: 'Access Level' },
                 { key: 'properties', header: 'Assigned Properties' },
-                { key: 'status', header: 'Status' },
-                { key: 'actions', header: 'Actions' },
-              ]}
-              data={managers}
-              renderRow={(manager) => (
-                <tr key={manager.id}>
+              { key: 'status', header: 'Status' },
+              { key: 'actions', header: 'Actions' },
+            ]}
+            data={managers}
+            renderRow={(manager) => (
+              <tr key={manager.id}>
                   <td style={{ textAlign: 'center' }}>
                     <strong>{manager.full_name}</strong>
                   </td>
-                  <td style={{ textAlign: 'center' }}>{manager.email}</td>
-                  <td style={{ textAlign: 'center' }}>
+                <td style={{ textAlign: 'center' }}>{manager.email}</td>
+                <td style={{ textAlign: 'center' }}>
                     {getAccessLevelBadge(manager)}
                   </td>
                   <td style={{ textAlign: 'center', maxWidth: '200px' }}>
@@ -514,9 +514,9 @@ function ManagersPage() {
                       status={manager.is_active ? 'success' : 'error'} 
                       text={manager.is_active ? 'Active' : 'Inactive'} 
                     />
-                  </td>
-                  <td style={{ textAlign: 'center' }}>
-                    <div className="action-buttons">
+                </td>
+                <td style={{ textAlign: 'center' }}>
+                  <div className="action-buttons">
                       <button 
                         className="btn btn-warning btn-sm"
                         onClick={() => handleEditManager(manager)}
@@ -538,11 +538,11 @@ function ManagersPage() {
                       >
                         Delete
                       </button>
-                    </div>
-                  </td>
-                </tr>
-              )}
-            />
+                  </div>
+                      </td>
+                    </tr>
+            )}
+          />
           ) : (
             <EmptyState 
               title="No Managers Found" 
