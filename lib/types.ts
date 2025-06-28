@@ -75,8 +75,8 @@ export interface Room {
   floor?: string;
   max_capacity: number;
   current_occupancy: number;
-  monthly_rent?: number;
-  security_deposit?: number;
+  monthly_rent?: string | number;
+  security_deposit?: string | number;
   is_occupied?: boolean;
   is_vacant: boolean;
   occupancy_rate: number;
@@ -208,9 +208,13 @@ export interface RoomFormData {
 
 export interface ApplicationFormData {
   tenant: number;
+  property_ref: number;
   room: number;
-  move_in_date: string;
-  notes?: string;
+  desired_move_in_date: string;
+  desired_lease_duration: number;
+  rent_budget: number;
+  message?: string;
+  special_requests?: string;
 }
 
 export interface LeaseFormData {
