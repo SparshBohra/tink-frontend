@@ -85,12 +85,18 @@ export default function DataTable({
         }
         
         .table-header {
-          text-align: left;
+          text-align: center;
           padding: var(--spacing-md) var(--spacing-lg);
           border-bottom: 2px solid var(--gray-200);
           color: var(--gray-600);
           font-weight: 500;
           white-space: nowrap;
+        }
+        
+        .data-table td {
+          text-align: center;
+          vertical-align: middle;
+          padding: var(--spacing-md) var(--spacing-lg);
         }
         
         tbody tr {

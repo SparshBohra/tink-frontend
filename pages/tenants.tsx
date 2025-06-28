@@ -668,12 +668,14 @@ function Tenants() {
           display: flex;
           flex-direction: column;
           gap: var(--spacing-xs);
+          align-items: center;
         }
         
         .action-buttons {
           display: flex;
           gap: var(--spacing-xs);
           flex-wrap: wrap;
+          justify-content: center;
         }
         
         .action-buttons .btn {
