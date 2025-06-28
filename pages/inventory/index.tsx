@@ -19,6 +19,7 @@ export default function Inventory() {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   
   // Filters
   const [selectedProperty, setSelectedProperty] = useState<number | null>(null);
@@ -92,6 +93,7 @@ export default function Inventory() {
     try {
       setLoading(true);
       setError(null);
+      setSuccess(null);
       
       const [inventoryResponse, propertiesResponse, roomsResponse] = await Promise.all([
         apiClient.getInventory(),
@@ -194,12 +196,40 @@ export default function Inventory() {
 
 
   const handleDeleteItem = async (id: number) => {
-    if (confirm('Are you sure you want to delete this inventory item?')) {
+    const item = inventoryItems.find(item => item.id === id);
+    const itemName = item ? item.name : `Item #${id}`;
+    
+    if (confirm(`Are you sure you want to delete "${itemName}"? This action cannot be undone.`)) {
       try {
+        setError(null);
+        setSuccess(null);
+        console.log(`Attempting to delete inventory item ${id}...`);
+        
         await apiClient.deleteInventoryItem(id);
-        fetchData(); // Refresh the list
+        
+        console.log(`Successfully deleted inventory item ${id}`);
+        
+        // Optimistically update the UI
+        setInventoryItems(prevItems => prevItems.filter(item => item.id !== id));
+        
+        // Also refresh from server to ensure consistency
+        await fetchData();
+        
+        // Show success message briefly
+        const successMessage = `Successfully deleted "${itemName}"`;
+        console.log(successMessage);
+        setSuccess(successMessage);
+        
+        // Clear success message after 3 seconds
+        setTimeout(() => setSuccess(null), 3000);
+        
       } catch (error: any) {
-        setError(error.message || 'Failed to delete inventory item');
+        console.error('Delete error:', error);
+        const errorMessage = error?.message || error?.response?.data?.detail || 'Failed to delete inventory item';
+        setError(`Delete failed: ${errorMessage}`);
+        
+        // Refresh data to ensure UI is in sync
+        await fetchData();
       }
     }
   };
@@ -236,6 +266,7 @@ export default function Inventory() {
         subtitle="Track, maintain, and manage inventory across all properties"
       >
         {error && <div className="alert alert-error"><strong>Error:</strong> {error}</div>}
+        {success && <div className="alert alert-success"><strong>Success:</strong> {success}</div>}
         
         <SectionCard>
           <div className="actions-container">
