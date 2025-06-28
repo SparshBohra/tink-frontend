@@ -762,6 +762,15 @@ class ApiClient {
   // Inventory endpoints - Updated
   async getInventory(): Promise<PaginatedResponse<InventoryItem>> {
     const response = await this.api.get('/inventory/');
+    // Handle both paginated and direct array responses
+    if (Array.isArray(response.data)) {
+      return {
+        results: response.data,
+        count: response.data.length,
+        next: undefined,
+        previous: undefined
+      };
+    }
     return response.data;
   }
 

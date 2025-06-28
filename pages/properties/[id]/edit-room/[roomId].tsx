@@ -74,6 +74,7 @@ export default function EditRoom() {
 
     try {
       const updateData = {
+        property_ref: formData.property_ref,
         name: formData.name,
         room_type: formData.room_type,
         floor: formData.floor,
