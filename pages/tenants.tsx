@@ -514,9 +514,11 @@ function Tenants() {
               renderRow={(tenant, index) => (
             <tr key={tenant.id}>
                   <td className="tenant-name-cell">
-                    <div className="tenant-name">{tenant.full_name}</div>
+                    <Link href={`/tenants/${tenant.id}`} className="tenant-name-link">
+                      <div className="tenant-name">{tenant.full_name}</div>
+                    </Link>
                     <div className="tenant-id">ID: {tenant.id}</div>
-                </td>
+                  </td>
                   
                   <td>
                     <div className="tenant-contact">
@@ -624,6 +626,27 @@ function Tenants() {
         .tenant-name {
           font-weight: 500;
           color: var(--gray-900);
+          transition: color 0.2s ease;
+        }
+        
+        .tenant-name-link {
+          text-decoration: none;
+          color: inherit;
+          display: block;
+          border-radius: 4px;
+          padding: 2px 4px;
+          margin: -2px -4px;
+          transition: background-color 0.2s ease;
+        }
+        
+        .tenant-name-link:hover {
+          background-color: var(--primary-blue-light, #eff6ff);
+          text-decoration: none;
+        }
+        
+        .tenant-name-link:hover .tenant-name {
+          color: var(--primary-blue);
+          cursor: pointer;
         }
         
         .tenant-id {
