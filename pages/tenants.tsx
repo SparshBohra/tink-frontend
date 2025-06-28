@@ -632,7 +632,7 @@ function Tenants() {
         .tenant-name-link {
           text-decoration: none;
           color: inherit;
-          display: block;
+          display: inline-block;
           border-radius: 4px;
           padding: 2px 4px;
           margin: -2px -4px;
@@ -681,6 +681,24 @@ function Tenants() {
         .action-buttons .btn {
           padding: 6px 12px;
           font-size: var(--text-small);
+        }
+        
+        /* Explicit center alignment for all table cell content */
+        .tenant-name-cell {
+          text-align: center;
+        }
+        
+        .tenant-contact {
+          text-align: center;
+        }
+        
+        /* Ensure all table content is centered */
+        :global(.data-table td) {
+          text-align: center !important;
+        }
+        
+        :global(.data-table td > *) {
+          text-align: center;
         }
         
         @media (max-width: 768px) {
