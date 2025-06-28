@@ -2,20 +2,21 @@ import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import Navigation from '../../components/Navigation';
-import DashboardLayout from '../../components/DashboardLayout';
-import SectionCard from '../../components/SectionCard';
-import MetricCard from '../../components/MetricCard';
-import { apiClient } from '../../lib/api';
-import { Property } from '../../lib/types';
+import Navigation from '../../../components/Navigation';
+import DashboardLayout from '../../../components/DashboardLayout';
+import SectionCard from '../../../components/SectionCard';
+import { apiClient } from '../../../lib/api';
+import { Property, InventoryItem } from '../../../lib/types';
 
-export default function AddInventoryItem() {
+export default function EditInventoryItem() {
   const router = useRouter();
+  const { id } = router.query;
   const [properties, setProperties] = useState<Property[]>([]);
   const [rooms, setRooms] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [item, setItem] = useState<InventoryItem | null>(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -29,18 +30,47 @@ export default function AddInventoryItem() {
   });
 
   useEffect(() => {
-    const fetchProperties = async () => {
-      try {
-        const res = await apiClient.getProperties();
-        setProperties(res.results || []);
-      } catch (e: any) {
-        setError(e.message || 'Failed to load properties');
-      } finally {
-        setLoading(false);
+    if (id) {
+      fetchItemAndProperties();
+    }
+  }, [id]);
+
+  const fetchItemAndProperties = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const [itemResponse, propertiesResponse] = await Promise.all([
+        apiClient.getInventoryItem(Number(id)),
+        apiClient.getProperties()
+      ]);
+
+      setItem(itemResponse);
+      setProperties(propertiesResponse.results || []);
+      
+      // Populate form with existing data
+      setFormData({
+        name: itemResponse.name,
+        qty: itemResponse.qty,
+        property_ref: itemResponse.property_ref.toString(),
+        room: itemResponse.room?.toString() || '',
+        condition_status: itemResponse.condition_status,
+        cost: itemResponse.cost?.toString() || '',
+        purchase_date: itemResponse.purchase_date || '',
+        needs_maintenance: itemResponse.needs_maintenance || false
+      });
+
+      // Fetch rooms for the property
+      if (itemResponse.property_ref) {
+        const propertyRooms = await apiClient.getPropertyRooms(itemResponse.property_ref);
+        setRooms(propertyRooms);
       }
-    };
-    fetchProperties();
-  }, []);
+    } catch (e: any) {
+      setError(e.message || 'Failed to load inventory item');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleChange = async (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target as HTMLInputElement;
@@ -91,10 +121,10 @@ export default function AddInventoryItem() {
       if (formData.purchase_date) payload.purchase_date = formData.purchase_date;
       payload.needs_maintenance = formData.needs_maintenance;
 
-      await apiClient.createInventoryItem(payload);
+      await apiClient.updateInventoryItem(Number(id), payload);
       router.push('/inventory');
     } catch (e: any) {
-      setError(e.message || 'Failed to add inventory item');
+      setError(e.message || 'Failed to update inventory item');
     } finally {
       setSaving(false);
     }
@@ -104,17 +134,39 @@ export default function AddInventoryItem() {
     return (
       <>
         <Head>
-          <title>Add Inventory Item - Tink</title>
+          <title>Edit Inventory Item - Tink</title>
         </Head>
         <Navigation />
         <DashboardLayout
-          title="Add Inventory Item"
-          subtitle="Loading properties..."
+          title="Edit Inventory Item"
+          subtitle="Loading item data..."
         >
           <div className="loading-indicator">
             <div className="loading-spinner" />
-            <p>Loading form data...</p>
+            <p>Loading inventory item...</p>
           </div>
+        </DashboardLayout>
+      </>
+    );
+  }
+
+  if (!item) {
+    return (
+      <>
+        <Head>
+          <title>Edit Inventory Item - Tink</title>
+        </Head>
+        <Navigation />
+        <DashboardLayout
+          title="Edit Inventory Item"
+          subtitle="Item not found"
+        >
+          <div className="alert alert-error">
+            <strong>Error:</strong> Inventory item not found.
+          </div>
+          <Link href="/inventory" className="btn btn-secondary">
+            ← Back to Inventory
+          </Link>
         </DashboardLayout>
       </>
     );
@@ -123,13 +175,13 @@ export default function AddInventoryItem() {
   return (
     <>
       <Head>
-        <title>Add Inventory Item - Tink</title>
+        <title>Edit Inventory Item - Tink</title>
       </Head>
       <Navigation />
       
       <DashboardLayout
-        title="➕ Add Inventory Item"
-        subtitle="Add a new item to your property inventory"
+        title="✏️ Edit Inventory Item"
+        subtitle={`Editing: ${item.name}`}
       >
         <div className="actions-container">
           <Link href="/inventory" className="btn btn-secondary">
@@ -139,7 +191,7 @@ export default function AddInventoryItem() {
 
         {error && <div className="alert alert-error"><strong>Error:</strong> {error}</div>}
 
-        <SectionCard title="Item Details" subtitle="Enter the basic information for your new inventory item">
+        <SectionCard title="Item Details" subtitle="Update the information for this inventory item">
           <form onSubmit={handleSubmit}>
             <div className="form-grid">
               <div className="form-group full-width">
@@ -244,16 +296,16 @@ export default function AddInventoryItem() {
                 />
               </div>
 
-              <div className="form-group full-width">
-                <label className="form-checkbox">
+              <div className="form-group">
+                <label className="form-label">
                   <input
                     name="needs_maintenance"
                     type="checkbox"
                     checked={formData.needs_maintenance}
                     onChange={handleChange}
+                    className="form-checkbox"
                   />
-                  <span className="checkmark"></span>
-                  Needs Maintenance Immediately
+                  Needs Maintenance
                 </label>
               </div>
             </div>
@@ -264,7 +316,7 @@ export default function AddInventoryItem() {
                 disabled={saving}
                 className="btn btn-primary"
               >
-                {saving ? 'Saving...' : '💾 Save Item'}
+                {saving ? 'Updating...' : 'Update Inventory Item'}
               </button>
               <Link href="/inventory" className="btn btn-secondary">
                 Cancel
@@ -272,32 +324,7 @@ export default function AddInventoryItem() {
             </div>
           </form>
         </SectionCard>
-
-        <SectionCard title="Quick Tips" subtitle="Best practices for inventory management">
-          <div className="info-grid">
-            <div className="info-item">
-              <h4>📝 Item Names</h4>
-              <p>Use descriptive names that include brand/model when relevant (e.g., "IKEA Malm Bed Frame" vs "Bed")</p>
-            </div>
-            <div className="info-item">
-              <h4>🏠 Property Assignment</h4>
-              <p>Always assign items to properties. Room assignment is optional but helps with organization.</p>
-            </div>
-            <div className="info-item">
-              <h4>💰 Cost Tracking</h4>
-              <p>Recording purchase costs helps with budgeting and insurance claims.</p>
-            </div>
-            <div className="info-item">
-              <h4>🔧 Maintenance Flags</h4>
-              <p>Check "Needs Maintenance" for items requiring immediate attention or repair.</p>
-            </div>
-          </div>
-        </SectionCard>
       </DashboardLayout>
     </>
   );
 } 
- 
- 
- 
- 
