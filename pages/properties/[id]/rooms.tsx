@@ -217,12 +217,11 @@ export default function PropertyRooms() {
                   Find Tenant
                 </button>
               </Link>
-              <button 
-                onClick={() => alert('Room editing feature coming soon!')}
-                className="btn btn-warning btn-sm"
-              >
-                Edit Room
-              </button>
+              <Link href={`/properties/${property.id}/edit-room/${room.id}`}>
+                <button className="btn btn-warning btn-sm">
+                  Edit Room
+                </button>
+              </Link>
             </>
           )}
         </div>

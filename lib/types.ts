@@ -197,9 +197,11 @@ export interface PropertyFormData {
 }
 
 export interface RoomFormData {
-  property: number;
-  room_number: string;
+  property_ref: number;
+  name: string;
   room_type: string;
+  floor?: string;
+  max_capacity?: number;
   monthly_rent: number;
   security_deposit: number;
 }

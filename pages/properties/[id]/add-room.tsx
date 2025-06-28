@@ -16,9 +16,11 @@ export default function AddRoom() {
   
   const [property, setProperty] = useState<Property | null>(null);
   const [formData, setFormData] = useState({
-    property: propertyId || 0,
-    room_number: '',
+    property_ref: propertyId || 0,
+    name: '',
     room_type: 'Standard',
+    floor: '',
+    max_capacity: 2,
     monthly_rent: 0,
     security_deposit: 0
   });
@@ -29,7 +31,7 @@ export default function AddRoom() {
   useEffect(() => {
     if (propertyId) {
       fetchPropertyDetails();
-      setFormData(prev => ({ ...prev, property: propertyId }));
+      setFormData(prev => ({ ...prev, property_ref: propertyId }));
     }
   }, [propertyId]);
 
@@ -52,16 +54,18 @@ export default function AddRoom() {
     try {
       const roomData = {
         ...formData,
-        property: propertyId as number
+        property_ref: propertyId as number
       };
       const newRoom = await apiClient.createRoom(roomData);
-      setSuccess(`Room "${newRoom.room_number}" added successfully to ${property?.name}!`);
+      setSuccess(`Room "${newRoom.name}" added successfully to ${property?.name}!`);
       
       // Reset form (except property)
       setFormData({
-        property: propertyId as number,
-        room_number: '',
+        property_ref: propertyId as number,
+        name: '',
         room_type: 'Standard',
+        floor: '',
+        max_capacity: 2,
         monthly_rent: 0,
         security_deposit: 0
       });
@@ -82,7 +86,9 @@ export default function AddRoom() {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: (name === 'monthly_rent' || name === 'security_deposit') ? parseFloat(value) || 0 : value
+      [name]: (name === 'monthly_rent' || name === 'security_deposit' || name === 'max_capacity') 
+        ? parseFloat(value) || 0 
+        : value
     }));
   };
 
@@ -171,8 +177,8 @@ export default function AddRoom() {
                 </label>
                 <input
                   type="text"
-                  name="room_number"
-                  value={formData.room_number}
+                  name="name"
+                  value={formData.name}
                   onChange={handleChange}
                   required
                   placeholder="e.g., Room 101, Suite A, etc."
@@ -196,7 +202,39 @@ export default function AddRoom() {
                   <option value="Suite">Suite</option>
                   <option value="Studio">Studio</option>
                   <option value="Shared">Shared</option>
+                  <option value="Premium">Premium</option>
+                  <option value="Economy">Economy</option>
                 </select>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">
+                  Floor
+                </label>
+                <input
+                  type="text"
+                  name="floor"
+                  value={formData.floor}
+                  onChange={handleChange}
+                  placeholder="e.g., 1st Floor, Ground, etc."
+                  className="form-input"
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">
+                  Max Capacity*
+                </label>
+                <input
+                  type="number"
+                  name="max_capacity"
+                  value={formData.max_capacity}
+                  onChange={handleChange}
+                  required
+                  min="1"
+                  max="10"
+                  className="form-input"
+                />
               </div>
 
               <div className="form-group">
