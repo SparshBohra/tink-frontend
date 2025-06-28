@@ -11,6 +11,7 @@ import SectionCard from '../../../components/SectionCard';
 import DataTable from '../../../components/DataTable';
 import StatusBadge from '../../../components/StatusBadge';
 import EmptyState from '../../../components/EmptyState';
+import TenantAssignmentModal from '../../../components/TenantAssignmentModal';
 import { formatCurrency } from '../../../lib/utils';
 
 export default function PropertyRooms() {
@@ -22,6 +23,8 @@ export default function PropertyRooms() {
   const [leases, setLeases] = useState<Lease[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [assignmentModalOpen, setAssignmentModalOpen] = useState(false);
+  const [selectedRoomForAssignment, setSelectedRoomForAssignment] = useState<Room | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -82,6 +85,22 @@ export default function PropertyRooms() {
       const lease = getRoomOccupancy(room.id);
       return total + (lease ? lease.monthly_rent : 0);
     }, 0);
+  };
+
+  const handleAssignTenant = (room: Room) => {
+    setSelectedRoomForAssignment(room);
+    setAssignmentModalOpen(true);
+  };
+
+  const handleAssignmentModalClose = () => {
+    setAssignmentModalOpen(false);
+    setSelectedRoomForAssignment(null);
+  };
+
+  const handleAssignmentModalSave = async () => {
+    await fetchPropertyData(); // Refresh the room data
+    setAssignmentModalOpen(false);
+    setSelectedRoomForAssignment(null);
   };
 
   if (loading) {
@@ -189,12 +208,24 @@ export default function PropertyRooms() {
       ) : (
         <em style={{ color: 'var(--gray-600)' }}>Available for rent</em>
       ),
-      rent: lease ? (
+      rent: room.monthly_rent ? (
+        <div>
+          <strong>{formatCurrency(Number(room.monthly_rent))}</strong>
+          {lease && lease.monthly_rent !== Number(room.monthly_rent) && (
+            <>
+              <br />
+              <small style={{ color: 'var(--gray-600)' }}>
+                Lease: {formatCurrency(lease.monthly_rent)}
+              </small>
+            </>
+          )}
+        </div>
+      ) : lease ? (
         <strong>{formatCurrency(lease.monthly_rent)}</strong>
       ) : (
-        <span style={{ color: 'var(--gray-600)' }}>-</span>
+        <span style={{ color: 'var(--gray-600)' }}>Not set</span>
       ),
-      type: 'Standard Room',
+      type: room.room_type || 'Standard',
       actions: (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-xs)', alignItems: 'center' }}>
           {lease ? (
@@ -212,9 +243,15 @@ export default function PropertyRooms() {
             </>
           ) : (
             <>
+              <button 
+                className="btn btn-success btn-sm"
+                onClick={() => handleAssignTenant(room)}
+              >
+                Assign Tenant
+              </button>
               <Link href="/applications">
-                <button className="btn btn-success btn-sm">
-                  Find Tenant
+                <button className="btn btn-info btn-sm">
+                  View Applications
                 </button>
               </Link>
               <Link href={`/properties/${property.id}/edit-room/${room.id}`}>
@@ -378,6 +415,16 @@ export default function PropertyRooms() {
           </div>
         </SectionCard>
       </DashboardLayout>
+
+      {/* Tenant Assignment Modal */}
+      {selectedRoomForAssignment && (
+        <TenantAssignmentModal
+          room={selectedRoomForAssignment}
+          isOpen={assignmentModalOpen}
+          onClose={handleAssignmentModalClose}
+          onSave={handleAssignmentModalSave}
+        />
+      )}
 
       <style jsx>{`
         .metrics-grid {
