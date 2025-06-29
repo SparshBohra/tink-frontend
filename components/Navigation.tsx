@@ -219,6 +219,13 @@ export default function Navigation() {
                 <span className="nav-text">Tenants</span>
               </Link>
               <Link 
+                href="/communication" 
+                className={`nav-link ${isActive('/communication') ? 'active' : ''}`}
+              >
+                <span className="nav-icon communication-icon"></span>
+                <span className="nav-text">Communication</span>
+              </Link>
+              <Link 
                 href="/properties" 
                 className={`nav-link ${isActive('/properties') ? 'active' : ''}`}
               >

@@ -321,33 +321,6 @@ function ManagersPage() {
       >
         {error && <div className="alert alert-error">{error}</div>}
         
-        {/* Manager Overview Metrics */}
-        <SectionCard title="Team Overview">
-          <div className="metrics-grid">
-            <MetricCard 
-              title="Total Managers" 
-              value={managers.filter(m => m.role === 'manager').length} 
-              color="blue" 
-            />
-            <MetricCard 
-              title="Full Access" 
-              value={managers.filter(m => m.role === 'manager' && m.access_level === 'full').length} 
-              color="green" 
-            />
-            <MetricCard 
-              title="Limited Access" 
-              value={managers.filter(m => m.role === 'manager' && m.access_level === 'limited').length} 
-              color="amber" 
-            />
-            <MetricCard 
-              title="Properties" 
-              value={properties.length} 
-              subtitle="Available for assignment"
-              color="purple" 
-            />
-          </div>
-        </SectionCard>
-        
         <SectionCard>
           <div className="actions-container">
             <button className="btn btn-primary" onClick={() => setShowForm(true)}>
