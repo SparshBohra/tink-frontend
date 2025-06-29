@@ -133,27 +133,6 @@ export default function AddRoom() {
           </Link>
         </div>
 
-        {/* Property Overview */}
-        {property && (
-          <div className="metrics-grid">
-            <MetricCard 
-              title="Property" 
-              value={property.name}
-              color="blue"
-            />
-            <MetricCard 
-              title="Address" 
-              value={property.full_address || 'N/A'}
-              color="gray"
-            />
-            <MetricCard 
-              title="Current Rooms" 
-              value={property.total_rooms || 0}
-              color="purple"
-            />
-          </div>
-        )}
-
         {/* Error/Success Messages */}
         {error && (
           <div className="alert alert-error">

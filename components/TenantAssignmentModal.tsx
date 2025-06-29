@@ -28,7 +28,22 @@ export default function TenantAssignmentModal({
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'tenants' | 'applications'>('applications');
+  const [activeTab, setActiveTab] = useState<'tenants' | 'applications' | 'create'>('applications');
+  const [newTenantForm, setNewTenantForm] = useState({
+    full_name: '',
+    email: '',
+    phone: '',
+    date_of_birth: '',
+    gender: '',
+    occupation: '',
+    employer: '',
+    monthly_income: '',
+    emergency_contact_name: '',
+    emergency_contact_phone: '',
+    emergency_contact_relationship: '',
+    current_address: ''
+  });
+  const [creatingTenant, setCreatingTenant] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -62,6 +77,73 @@ export default function TenantAssignmentModal({
 
   const handleTenantSelect = (tenantId: number) => {
     setSelectedTenant(tenantId);
+  };
+
+  const handleNewTenantFormChange = (field: string, value: string) => {
+    setNewTenantForm(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleCreateNewTenant = async () => {
+    try {
+      setCreatingTenant(true);
+      setError(null);
+      
+      // Validate required fields
+      if (!newTenantForm.full_name.trim()) {
+        setError('Full name is required');
+        return;
+      }
+      if (!newTenantForm.email.trim()) {
+        setError('Email is required');
+        return;
+      }
+      if (!newTenantForm.phone.trim()) {
+        setError('Phone number is required');
+        return;
+      }
+      
+      // Create the new tenant
+      const tenantData = {
+        ...newTenantForm,
+        monthly_income: newTenantForm.monthly_income ? parseFloat(newTenantForm.monthly_income) : null
+      };
+      
+      const newTenant = await apiClient.createTenant(tenantData);
+      
+      // Add the new tenant to the local state
+      setTenants(prev => [...prev, newTenant]);
+      
+      // Select the newly created tenant
+      setSelectedTenant(newTenant.id);
+      
+      // Switch back to the tenants tab
+      setActiveTab('tenants');
+      
+      // Reset the form
+      setNewTenantForm({
+        full_name: '',
+        email: '',
+        phone: '',
+        date_of_birth: '',
+        gender: '',
+        occupation: '',
+        employer: '',
+        monthly_income: '',
+        emergency_contact_name: '',
+        emergency_contact_phone: '',
+        emergency_contact_relationship: '',
+        current_address: ''
+      });
+      
+    } catch (err: any) {
+      console.error('Error creating tenant:', err);
+      setError(err?.message || 'Failed to create tenant');
+    } finally {
+      setCreatingTenant(false);
+    }
   };
 
   const handleLeaseDataChange = (field: keyof LeaseFormData, value: string | number) => {
@@ -228,6 +310,12 @@ export default function TenantAssignmentModal({
                   >
                     All Tenants ({tenants.length})
                   </button>
+                  <button 
+                    className={`tab-button ${activeTab === 'create' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('create')}
+                  >
+                    + Create New Tenant
+                  </button>
                 </div>
                 
                 <div className="tab-content">
@@ -269,7 +357,7 @@ export default function TenantAssignmentModal({
                         </div>
                       )}
                     </div>
-                  ) : (
+                  ) : activeTab === 'tenants' ? (
                     <div className="tenant-list">
                       {tenants.map(tenant => (
                         <label key={tenant.id} className="tenant-item">
@@ -287,6 +375,181 @@ export default function TenantAssignmentModal({
                           </div>
                         </label>
                       ))}
+                    </div>
+                  ) : (
+                    /* Create New Tenant Form */
+                    <div className="create-tenant-form">
+                      <div className="form-section">
+                        <h4>Basic Information</h4>
+                        <div className="form-grid">
+                          <div className="form-group">
+                            <label className="form-label">Full Name*</label>
+                            <input
+                              type="text"
+                              value={newTenantForm.full_name}
+                              onChange={(e) => handleNewTenantFormChange('full_name', e.target.value)}
+                              className="form-input"
+                              placeholder="Enter full name"
+                              required
+                            />
+                          </div>
+                          
+                          <div className="form-group">
+                            <label className="form-label">Email*</label>
+                            <input
+                              type="email"
+                              value={newTenantForm.email}
+                              onChange={(e) => handleNewTenantFormChange('email', e.target.value)}
+                              className="form-input"
+                              placeholder="Enter email address"
+                              required
+                            />
+                          </div>
+                          
+                          <div className="form-group">
+                            <label className="form-label">Phone*</label>
+                            <input
+                              type="tel"
+                              value={newTenantForm.phone}
+                              onChange={(e) => handleNewTenantFormChange('phone', e.target.value)}
+                              className="form-input"
+                              placeholder="Enter phone number"
+                              required
+                            />
+                          </div>
+                          
+                          <div className="form-group">
+                            <label className="form-label">Date of Birth</label>
+                            <input
+                              type="date"
+                              value={newTenantForm.date_of_birth}
+                              onChange={(e) => handleNewTenantFormChange('date_of_birth', e.target.value)}
+                              className="form-input"
+                            />
+                          </div>
+                          
+                          <div className="form-group">
+                            <label className="form-label">Gender</label>
+                            <select
+                              value={newTenantForm.gender}
+                              onChange={(e) => handleNewTenantFormChange('gender', e.target.value)}
+                              className="form-input"
+                            >
+                              <option value="">Select gender</option>
+                              <option value="male">Male</option>
+                              <option value="female">Female</option>
+                              <option value="other">Other</option>
+                              <option value="prefer_not_to_say">Prefer not to say</option>
+                            </select>
+                          </div>
+                          
+                          <div className="form-group">
+                            <label className="form-label">Occupation</label>
+                            <input
+                              type="text"
+                              value={newTenantForm.occupation}
+                              onChange={(e) => handleNewTenantFormChange('occupation', e.target.value)}
+                              className="form-input"
+                              placeholder="Enter occupation"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="form-section">
+                        <h4>Employment & Financial</h4>
+                        <div className="form-grid">
+                          <div className="form-group">
+                            <label className="form-label">Employer</label>
+                            <input
+                              type="text"
+                              value={newTenantForm.employer}
+                              onChange={(e) => handleNewTenantFormChange('employer', e.target.value)}
+                              className="form-input"
+                              placeholder="Enter employer name"
+                            />
+                          </div>
+                          
+                          <div className="form-group">
+                            <label className="form-label">Monthly Income</label>
+                            <input
+                              type="number"
+                              value={newTenantForm.monthly_income}
+                              onChange={(e) => handleNewTenantFormChange('monthly_income', e.target.value)}
+                              className="form-input"
+                              placeholder="0.00"
+                              step="0.01"
+                              min="0"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="form-section">
+                        <h4>Emergency Contact</h4>
+                        <div className="form-grid">
+                          <div className="form-group">
+                            <label className="form-label">Emergency Contact Name</label>
+                            <input
+                              type="text"
+                              value={newTenantForm.emergency_contact_name}
+                              onChange={(e) => handleNewTenantFormChange('emergency_contact_name', e.target.value)}
+                              className="form-input"
+                              placeholder="Enter emergency contact name"
+                            />
+                          </div>
+                          
+                          <div className="form-group">
+                            <label className="form-label">Emergency Contact Phone</label>
+                            <input
+                              type="tel"
+                              value={newTenantForm.emergency_contact_phone}
+                              onChange={(e) => handleNewTenantFormChange('emergency_contact_phone', e.target.value)}
+                              className="form-input"
+                              placeholder="Enter emergency contact phone"
+                            />
+                          </div>
+                          
+                          <div className="form-group">
+                            <label className="form-label">Relationship</label>
+                            <input
+                              type="text"
+                              value={newTenantForm.emergency_contact_relationship}
+                              onChange={(e) => handleNewTenantFormChange('emergency_contact_relationship', e.target.value)}
+                              className="form-input"
+                              placeholder="e.g., Parent, Spouse, Friend"
+                            />
+                          </div>
+                          
+                          <div className="form-group">
+                            <label className="form-label">Current Address</label>
+                            <textarea
+                              value={newTenantForm.current_address}
+                              onChange={(e) => handleNewTenantFormChange('current_address', e.target.value)}
+                              className="form-input"
+                              placeholder="Enter current address"
+                              rows={2}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="create-tenant-actions">
+                        <button 
+                          className="btn btn-primary"
+                          onClick={handleCreateNewTenant}
+                          disabled={creatingTenant}
+                        >
+                          {creatingTenant ? 'Creating Tenant...' : 'Create & Select Tenant'}
+                        </button>
+                        <button 
+                          className="btn btn-secondary"
+                          onClick={() => setActiveTab('tenants')}
+                          disabled={creatingTenant}
+                        >
+                          Cancel
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -660,6 +923,58 @@ export default function TenantAssignmentModal({
           background-color: var(--error-red-light);
           color: var(--error-red-dark);
           border: 1px solid var(--error-red);
+        }
+
+        .create-tenant-form {
+          max-height: 400px;
+          overflow-y: auto;
+          padding: var(--spacing-md);
+        }
+
+        .form-section {
+          margin-bottom: var(--spacing-lg);
+          padding-bottom: var(--spacing-md);
+          border-bottom: 1px solid var(--gray-200);
+        }
+
+        .form-section:last-of-type {
+          border-bottom: none;
+        }
+
+        .form-section h4 {
+          margin: 0 0 var(--spacing-md) 0;
+          color: var(--gray-700);
+          font-size: 1rem;
+          font-weight: 600;
+        }
+
+        .create-tenant-actions {
+          display: flex;
+          justify-content: flex-end;
+          gap: var(--spacing-md);
+          margin-top: var(--spacing-lg);
+          padding-top: var(--spacing-md);
+          border-top: 1px solid var(--gray-200);
+        }
+
+        .tab-button {
+          white-space: nowrap;
+        }
+
+        @media (max-width: 768px) {
+          .form-grid {
+            grid-template-columns: 1fr;
+          }
+          
+          .tab-buttons {
+            overflow-x: auto;
+            white-space: nowrap;
+          }
+          
+          .modal-content {
+            width: 98%;
+            margin: 1%;
+          }
         }
       `}</style>
     </div>
