@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { useRouter } from 'next/router';
-import { apiClient } from './api';
 import { User, LoginCredentials, ApiError, LandlordSignupData } from './types';
 
 interface AuthContextType {
@@ -28,6 +27,34 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
+// Mock user data for demo
+const mockUsers = {
+  'admin': {
+    id: 1,
+    username: 'admin',
+    email: 'admin@tink.com',
+    full_name: 'Platform Admin',
+    role: 'admin',
+    is_active: true
+  },
+  'premium_owner': {
+    id: 27,
+    username: 'premium_owner',
+    email: 'owner@premiumprops.com',
+    full_name: 'Olivia Wilson',
+    role: 'owner',
+    is_active: true
+  },
+  'sarah_manager': {
+    id: 45,
+    username: 'sarah_manager',
+    email: 'sarah@premiumprops.com',
+    full_name: 'Sarah Manager',
+    role: 'manager',
+    is_active: true
+  }
+};
+
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -36,17 +63,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   // Check if user is authenticated on app load
   useEffect(() => {
-    const initAuth = async () => {
-      if (apiClient.isAuthenticated()) {
-        try {
-          const profile = await apiClient.getProfile();
-          setUser(profile);
-          console.log('User profile loaded:', profile);
-        } catch (error) {
-          console.error('Failed to fetch profile:', error);
-          apiClient.logout();
-          setUser(null);
+    const initAuth = () => {
+      try {
+        const storedUser = localStorage.getItem('mockUser');
+        if (storedUser) {
+          const userData = JSON.parse(storedUser);
+          setUser(userData);
+          console.log('Mock user loaded from localStorage:', userData);
         }
+      } catch (error) {
+        console.error('Failed to load stored user:', error);
+        localStorage.removeItem('mockUser');
       }
       setLoading(false);
     };
@@ -78,52 +105,39 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setLoading(true);
       setError(null);
       
-      const response = await apiClient.login(credentials);
+      console.log('Mock login attempt with:', credentials.username);
       
-      // Check if we have user data in the response
-      if (!response || !response.user) {
-        console.error('No user data in response:', response);
-        throw new Error('Invalid response from server - no user data');
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Check mock users
+      const mockUser = mockUsers[credentials.username as keyof typeof mockUsers];
+      
+      if (!mockUser) {
+        throw new Error('Invalid username or password');
       }
       
-      // The API now returns the correct role directly
-      const actualRole = response.user.role as 'admin' | 'owner' | 'manager';
-      
-      // Create enhanced user object with correct role
-      const enhancedUser: User = {
-        ...response.user,
-        role: actualRole
-      };
-      
-      setUser(enhancedUser);
-      
-      // Store user data in localStorage for persistence
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('userRole', actualRole);
-        localStorage.setItem('userId', response.user.id?.toString() || '');
-        localStorage.setItem('userName', response.user.full_name || response.user.username || '');
-        localStorage.setItem('userEmail', response.user.email || '');
+      // For demo, accept any password for valid usernames
+      if (!credentials.password) {
+        throw new Error('Password is required');
       }
+      
+      console.log('Mock login successful for:', mockUser.full_name);
+      
+      // Store user data
+      setUser(mockUser);
+      localStorage.setItem('mockUser', JSON.stringify(mockUser));
+      localStorage.setItem('userRole', mockUser.role);
+      localStorage.setItem('userId', mockUser.id.toString());
+      localStorage.setItem('userName', mockUser.full_name);
+      localStorage.setItem('userEmail', mockUser.email);
       
       // Navigate based on role
-      redirectBasedOnRole(actualRole);
+      redirectBasedOnRole(mockUser.role);
       
     } catch (error) {
-      console.error('Login error:', error);
-      const apiError = error as ApiError;
-      
-      // Provide more specific error messages
-      let errorMessage = 'Login failed. Please check your credentials.';
-      if (apiError.message) {
-        errorMessage = apiError.message;
-      } else if (apiError.status === 400) {
-        errorMessage = 'Invalid username or password.';
-      } else if (apiError.status === 500) {
-        errorMessage = 'Server error. Please try again later.';
-      } else if (error instanceof Error) {
-        errorMessage = error.message;
-      }
-      
+      console.error('Mock login error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Login failed. Please check your credentials.';
       setError(errorMessage);
       throw error;
     } finally {
@@ -134,24 +148,24 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const logout = async () => {
     try {
       setLoading(true);
-      await apiClient.logout_api();
-    } catch (error) {
-      console.error('Logout error:', error);
-    } finally {
+      
       // Clear all user data
       setUser(null);
       setError(null);
       
       // Clear localStorage
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('userRole');
-        localStorage.removeItem('userId');
-        localStorage.removeItem('userName');
-        localStorage.removeItem('userEmail');
-      }
+      localStorage.removeItem('mockUser');
+      localStorage.removeItem('userRole');
+      localStorage.removeItem('userId');
+      localStorage.removeItem('userName');
+      localStorage.removeItem('userEmail');
       
-      setLoading(false);
+      console.log('Mock logout successful');
       router.push('/login');
+    } catch (error) {
+      console.error('Mock logout error:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -159,12 +173,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       setLoading(true);
       setError(null);
-      await apiClient.signup(userData);
+      
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      console.log('Mock signup successful');
       router.push('/login');
     } catch (error) {
-      const apiError = error as ApiError;
-      setError(apiError.message || 'Signup failed. Please try again.');
-      throw error;
+      const errorMessage = 'Signup failed. Please try again.';
+      setError(errorMessage);
+      throw new Error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -175,34 +193,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setLoading(true);
       setError(null);
       
-      // Call landlord signup endpoint
-      const response = await apiClient.signupLandlord(userData);
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // If signup includes auto-login, set user and redirect
-      if (response.tokens && response.user) {
-        const enhancedUser: User = {
-          ...response.user,
-          role: 'owner'
-        };
-        setUser(enhancedUser);
-        
-        // Store user data
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('userRole', 'owner');
-          localStorage.setItem('userId', response.user.id.toString());
-          localStorage.setItem('userName', response.user.full_name || response.user.username);
-          localStorage.setItem('userEmail', response.user.email || '');
-        }
-        
-        router.push('/landlord-dashboard');
-      } else {
-        // Redirect to login if no auto-login
-        router.push('/login');
-      }
+      console.log('Mock landlord signup successful');
+      router.push('/login');
     } catch (error) {
-      const apiError = error as ApiError;
-      setError(apiError.message || 'Landlord registration failed. Please try again.');
-      throw error;
+      const errorMessage = 'Landlord registration failed. Please try again.';
+      setError(errorMessage);
+      throw new Error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -211,12 +210,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const updateProfile = async (userData: Partial<User>) => {
     try {
       setError(null);
-      const updatedUser = await apiClient.updateProfile(userData);
-      setUser(updatedUser);
+      
+      if (user) {
+        const updatedUser = { ...user, ...userData };
+        setUser(updatedUser);
+        localStorage.setItem('mockUser', JSON.stringify(updatedUser));
+        console.log('Mock profile update successful');
+      }
     } catch (error) {
-      const apiError = error as ApiError;
-      setError(apiError.message || 'Profile update failed.');
-      throw error;
+      const errorMessage = 'Profile update failed.';
+      setError(errorMessage);
+      throw new Error(errorMessage);
     }
   };
 
@@ -320,5 +324,4 @@ export function withAuth<P extends object>(
   AuthenticatedComponent.displayName = `withAuth(${WrappedComponent.displayName || WrappedComponent.name})`;
   
   return AuthenticatedComponent;
-} 
- 
+}

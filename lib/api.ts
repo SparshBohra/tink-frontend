@@ -1,8 +1,6 @@
-import axios, { AxiosInstance, AxiosResponse, AxiosError } from 'axios';
-import Cookies from 'js-cookie';
-import {
-  AuthTokens,
-  LoginCredentials,
+import { 
+  DashboardStats,
+  User,
   Manager,
   Tenant,
   Property,
@@ -20,1053 +18,891 @@ import {
   RoomFormData,
   ApplicationFormData,
   LeaseFormData,
-  DashboardStats,
-  User,
   ManagerWithProperties,
   ManagerPropertyAssignment,
   ManagerFormData,
   ManagerLandlordRelationship
 } from './types';
 
-// Smart environment-based API URL configuration
-const getApiBaseUrl = () => {
-  // If explicitly set via environment variable, use that
-  if (process.env.NEXT_PUBLIC_API_BASE_URL) {
-    return process.env.NEXT_PUBLIC_API_BASE_URL;
-  }
-  
-  // Smart defaults based on environment
-  if (process.env.NODE_ENV === 'development') {
-    // Default to localhost for development, but can be overridden
-    return 'http://localhost:8000/api';
-  }
-  
-  // Production default
-  return 'https://tink.global/api';
-};
-
-const API_BASE_URL = getApiBaseUrl();
-
-class ApiClient {
-  private api: AxiosInstance;
-  private isRefreshing = false;
-  private failedQueue: Array<{
-    resolve: (value: any) => void;
-    reject: (error: any) => void;
-  }> = [];
-
-  constructor() {
-    this.api = axios.create({
-      baseURL: API_BASE_URL,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    // Request interceptor to add auth token
-    this.api.interceptors.request.use(
-      (config) => {
-        const token = this.getAccessToken();
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
-      },
-      (error) => Promise.reject(error)
-    );
-
-    // Response interceptor to handle token refresh
-    this.api.interceptors.response.use(
-      (response) => response,
-      async (error: AxiosError) => {
-        const originalRequest = error.config as any;
-
-        if (error.response?.status === 401 && !originalRequest._retry) {
-          if (this.isRefreshing) {
-            return new Promise((resolve, reject) => {
-              this.failedQueue.push({ resolve, reject });
-            }).then((token) => {
-              originalRequest.headers.Authorization = `Bearer ${token}`;
-              return this.api(originalRequest);
-            }).catch((err) => {
-              return Promise.reject(err);
-            });
-          }
-
-          originalRequest._retry = true;
-          this.isRefreshing = true;
-
-          try {
-            const refreshToken = this.getRefreshToken();
-            if (!refreshToken) {
-              throw new Error('No refresh token');
-            }
-
-            const response = await axios.post(`${API_BASE_URL}/token/refresh/`, {
-              refresh: refreshToken
-            });
-
-            const { access } = response.data;
-            this.setAccessToken(access);
-
-            this.processQueue(null, access);
-            
-            originalRequest.headers.Authorization = `Bearer ${access}`;
-            return this.api(originalRequest);
-          } catch (refreshError) {
-            this.processQueue(refreshError, null);
-            this.logout();
-            if (typeof window !== 'undefined') {
-              window.location.href = '/login';
-            }
-            return Promise.reject(refreshError);
-          } finally {
-            this.isRefreshing = false;
-          }
-        }
-
-        return Promise.reject(this.handleError(error));
-      }
-    );
+// Mock API client for UI testing without backend
+class MockApiClient {
+  private isAuthenticated(): boolean {
+    return !!localStorage.getItem('mockUser');
   }
 
-  private processQueue(error: any, token: string | null = null) {
-    this.failedQueue.forEach(({ resolve, reject }) => {
-      if (error) {
-        reject(error);
-      } else {
-        resolve(token);
-      }
-    });
-    
-    this.failedQueue = [];
+  private getCurrentUser(): User | null {
+    const userData = localStorage.getItem('mockUser');
+    return userData ? JSON.parse(userData) : null;
   }
 
-  private handleError(error: AxiosError): ApiError {
-    const responseData = error.response?.data as any;
-    const message = responseData?.detail || responseData?.message || error.message || 'An error occurred';
-    const errors = responseData?.field_errors || responseData?.errors;
-    const status = error.response?.status || 500;
-
-    return {
-      message,
-      errors,
-      status
-    };
+  private mockDelay(ms: number = 300): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
-  // Token management
-  setTokens(tokens: AuthTokens) {
-    Cookies.set('access_token', tokens.access, { expires: 1 }); // 1 day
-    Cookies.set('refresh_token', tokens.refresh, { expires: 7 }); // 7 days
+  private createMockResponse<T>(data: T): Promise<T> {
+    return this.mockDelay().then(() => data);
   }
 
-  getAccessToken(): string | null {
-    return Cookies.get('access_token') || null;
+  private createMockPaginatedResponse<T>(data: T[]): Promise<PaginatedResponse<T>> {
+    return this.mockDelay().then(() => ({
+      count: data.length,
+      next: undefined,
+      previous: undefined,
+      results: data
+    }));
   }
 
-  getRefreshToken(): string | null {
-    return Cookies.get('refresh_token') || null;
-  }
-
-  setAccessToken(token: string) {
-    Cookies.set('access_token', token, { expires: 1 });
-  }
-
-  logout() {
-    Cookies.remove('access_token');
-    Cookies.remove('refresh_token');
-  }
-
-  isAuthenticated(): boolean {
-    return !!this.getAccessToken();
-  }
-
-  // Authentication endpoints
-  async login(credentials: LoginCredentials): Promise<{ user: User; tokens: AuthTokens }> {
-    const response = await this.api.post('/login/', credentials);
-    
-    const tokens = {
-      access: response.data.access,
-      refresh: response.data.refresh
-    };
-    this.setTokens(tokens);
-    
-    // Handle the actual API response structure
-    // The API returns user data in the 'manager' field for all user types
-    let user: User;
-    if (response.data.manager) {
-      user = response.data.manager;
-    } else if (response.data.user) {
-      // Fallback for different response structure
-      user = response.data.user;
-    } else if (response.data.landlord) {
-      // Another possible structure
-      user = response.data.landlord;
-    } else {
-      // Last resort fallback
-      user = {
-        id: response.data.id || 0,
-        username: response.data.username || credentials.username,
-        email: response.data.email || '',
-        full_name: response.data.full_name || response.data.username || credentials.username,
-        role: response.data.role || 'manager',
-        is_active: response.data.is_active !== false
-      };
-    }
-    
-    return {
-      user,
-      tokens
-    };
+  // Authentication endpoints (not used in mock mode)
+  async login(): Promise<any> {
+    throw new Error('Use mock authentication context instead');
   }
 
   async logout_api(): Promise<void> {
-    const refreshToken = this.getRefreshToken();
-    if (refreshToken) {
-      await this.api.post('/logout/', { refresh: refreshToken });
-    }
-    this.logout();
-  }
-
-  async signup(userData: any): Promise<User> {
-    const response = await this.api.post('/signup/', userData);
-    return response.data;
-  }
-
-  async signupLandlord(userData: any): Promise<{ user: User; tokens: AuthTokens; landlord: any }> {
-    const response = await this.api.post('/landlords/signup/', userData);
-    
-    // If the response includes tokens, set them
-    if (response.data.tokens) {
-      this.setTokens(response.data.tokens);
-    }
-    
-    return {
-      user: response.data.user,
-      tokens: response.data.tokens,
-      landlord: response.data.landlord
-    };
+    await this.mockDelay();
   }
 
   async getProfile(): Promise<User> {
-    const response = await this.api.get('/profile/');
-    return response.data;
+    const user = this.getCurrentUser();
+    if (!user) throw new Error('Not authenticated');
+    return this.createMockResponse(user);
   }
 
-  async updateProfile(userData: Partial<User>): Promise<User> {
-    const response = await this.api.put('/profile/', userData);
-    return response.data;
-  }
-
-  // Dashboard endpoints - Updated to use new API structure
+  // Dashboard endpoints
   async getDashboardStats(): Promise<DashboardStats> {
-    const response = await this.api.get('/dashboard/stats/');
-    return response.data;
-  }
-
-  async getPropertyAnalytics(): Promise<any> {
-    const response = await this.api.get('/dashboard/property-analytics/');
-    return response.data;
-  }
-
-  async getRoomAnalytics(): Promise<any> {
-    const response = await this.api.get('/dashboard/room-analytics/');
-    return response.data;
-  }
-
-  async getApplicationAnalytics(): Promise<any> {
-    const response = await this.api.get('/dashboard/application-analytics/');
-    return response.data;
-  }
-
-  // CSV Export endpoints
-  async exportPropertiesCSV(): Promise<Blob> {
-    const response = await this.api.get('/dashboard/export-properties-csv/', {
-      responseType: 'blob'
-    });
-    return response.data;
-  }
-
-  async exportVacancyCSV(): Promise<Blob> {
-    const response = await this.api.get('/dashboard/export-vacancy-csv/', {
-      responseType: 'blob'
-    });
-    return response.data;
-  }
-
-  async exportApplicationsCSV(): Promise<Blob> {
-    const response = await this.api.get('/dashboard/export-applications-csv/', {
-      responseType: 'blob'
-    });
-    return response.data;
-  }
-
-  async exportLeasesCSV(): Promise<Blob> {
-    const response = await this.api.get('/dashboard/export-leases-csv/', {
-      responseType: 'blob'
-    });
-    return response.data;
+    const mockStats: DashboardStats = {
+      properties: { total: 3, occupied: 2, vacant: 1 },
+      rooms: { total: 15, occupied: 12, vacant: 3, occupancy_rate: 80 },
+      tenants: { total: 12, active: 12 },
+      revenue: { monthly: 15400, projected_annual: 184800 },
+      applications: { total: 8, pending: 3, approved: 4, rejected: 1 },
+      leases: { total: 12, active: 10, draft: 1, expired: 1 },
+      managers: { total: 2, active: 2 }
+    };
+    return this.createMockResponse(mockStats);
   }
 
   // Tenant endpoints
   async getTenants(): Promise<PaginatedResponse<Tenant>> {
-    try {
-      const response = await this.api.get('/tenants/');
-      // Handle both paginated and direct array responses
-      if (Array.isArray(response.data)) {
-        return {
-          count: response.data.length,
-          next: undefined,
-          previous: undefined,
-          results: response.data
-        };
+    const mockTenants: Tenant[] = [
+      {
+        id: 1,
+        full_name: 'Alice Johnson',
+        email: 'alice@email.com',
+        phone: '(555) 123-4567',
+        emergency_contact_name: 'Bob Johnson',
+        emergency_contact_phone: '(555) 123-4568',
+        current_address: '123 Main St',
+        created_at: '2024-01-15T10:00:00Z',
+        updated_at: '2024-01-15T10:00:00Z'
+      },
+      {
+        id: 2,
+        full_name: 'Bob Chen',
+        email: 'bob@email.com',
+        phone: '(555) 234-5678',
+        emergency_contact_name: 'Lisa Chen',
+        emergency_contact_phone: '(555) 234-5679',
+        current_address: '456 Oak Ave',
+        created_at: '2024-01-10T10:00:00Z',
+        updated_at: '2024-01-10T10:00:00Z'
+      },
+      {
+        id: 3,
+        full_name: 'Carol Davis',
+        email: 'carol@email.com',
+        phone: '(555) 345-6789',
+        emergency_contact_name: 'Mike Davis',
+        emergency_contact_phone: '(555) 345-6790',
+        current_address: '789 Pine St',
+        created_at: '2024-01-05T10:00:00Z',
+        updated_at: '2024-01-05T10:00:00Z'
       }
-      return response.data;
-    } catch (error: any) {
-      if (error.status === 403 || error.status === 401) {
-        // Return empty response if no permission
-        return {
-          count: 0,
-          next: undefined,
-          previous: undefined,
-          results: []
-        };
-      }
-      throw error;
-    }
+    ];
+    return this.createMockPaginatedResponse(mockTenants);
   }
 
   async getTenant(id: number): Promise<Tenant> {
-    const response = await this.api.get(`/tenants/${id}/`);
-    return response.data;
+    const tenants = await this.getTenants();
+    const tenant = tenants.results.find(t => t.id === id);
+    if (!tenant) throw new Error('Tenant not found');
+    return this.createMockResponse(tenant);
   }
 
   async createTenant(data: TenantFormData): Promise<Tenant> {
-    try {
-      const response = await this.api.post('/tenants/', data);
-      return response.data;
-    } catch (error: any) {
-      console.error('Tenant creation error:', error);
-      if (error.response?.status === 403) {
-        throw new Error('You do not have permission to create tenants. Please contact your administrator.');
-      }
-      if (error.response?.status === 400) {
-        const errorMessage = error.response?.data?.detail || 
-                           error.response?.data?.message || 
-                           'Invalid tenant data. Please check all required fields.';
-        throw new Error(errorMessage);
-      }
-      if (error.response?.status === 500) {
-        throw new Error('Server error occurred while creating tenant. Please try again later or contact support.');
-      }
-      throw new Error(error.message || 'Failed to create tenant. Please try again.');
-    }
+    const newTenant: Tenant = {
+      id: Date.now(),
+      ...data,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    return this.createMockResponse(newTenant);
   }
 
   async updateTenant(id: number, data: Partial<TenantFormData>): Promise<Tenant> {
-    const response = await this.api.put(`/tenants/${id}/`, data);
-    return response.data;
+    const tenant = await this.getTenant(id);
+    const updatedTenant = { ...tenant, ...data, updated_at: new Date().toISOString() };
+    return this.createMockResponse(updatedTenant);
   }
 
   async deleteTenant(id: number): Promise<void> {
-    await this.api.delete(`/tenants/${id}/`);
-  }
-
-  async uploadTenantDocument(tenantId: number, file: File, documentType: string, notes?: string): Promise<Document> {
-    const formData = new FormData();
-    formData.append('tenant', tenantId.toString());
-    formData.append('document_type', documentType);
-    formData.append('document_file', file);
-    if (notes) {
-      formData.append('notes', notes);
-    }
-
-    const response = await this.api.post(`/tenants/${tenantId}/upload_document/`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    return response.data;
-  }
-
-  async getTenantApplications(tenantId: number): Promise<Application[]> {
-    const response = await this.api.get(`/tenants/${tenantId}/applications/`);
-    return response.data;
-  }
-
-  async getTenantCurrentLease(tenantId: number): Promise<Lease | null> {
-    try {
-      const response = await this.api.get(`/tenants/${tenantId}/current_lease/`);
-      return response.data;
-    } catch (error: any) {
-      if (error.status === 404) return null;
-      throw error;
-    }
+    await this.mockDelay();
   }
 
   // Property endpoints
   async getProperties(): Promise<PaginatedResponse<Property>> {
-    try {
-      const response = await this.api.get('/properties/');
-      // Handle both paginated and direct array responses
-      if (Array.isArray(response.data)) {
-        return {
-          count: response.data.length,
-          next: undefined,
-          previous: undefined,
-          results: response.data
-        };
+    const mockProperties: Property[] = [
+      {
+        id: 1,
+        landlord: 27,
+        name: 'Downtown Professional Suites',
+        address: '123 Business St',
+        address_line1: '123 Business St',
+        city: 'New York',
+        state: 'NY',
+        postal_code: '10001',
+        country: 'United States',
+        full_address: '123 Business St, New York, NY 10001',
+        property_type: 'coliving',
+        timezone: 'America/New_York',
+        timezone_display: 'Eastern Time',
+        total_rooms: 8,
+        vacant_rooms: 2,
+        landlord_name: 'Olivia Wilson',
+        created_at: '2024-01-01T10:00:00Z'
+      },
+      {
+        id: 2,
+        landlord: 27,
+        name: 'University District House',
+        address: '456 College Ave',
+        address_line1: '456 College Ave',
+        city: 'New York',
+        state: 'NY',
+        postal_code: '10002',
+        country: 'United States',
+        full_address: '456 College Ave, New York, NY 10002',
+        property_type: 'coliving',
+        timezone: 'America/New_York',
+        timezone_display: 'Eastern Time',
+        total_rooms: 6,
+        vacant_rooms: 1,
+        landlord_name: 'Olivia Wilson',
+        created_at: '2024-01-01T10:00:00Z'
       }
-      return response.data;
-    } catch (error: any) {
-      if (error.status === 403 || error.status === 401) {
-        // Return empty response if no permission
-        return {
-          count: 0,
-          next: undefined,
-          previous: undefined,
-          results: []
-        };
-      }
-      throw error;
-    }
+    ];
+    return this.createMockPaginatedResponse(mockProperties);
   }
 
   async getProperty(id: number): Promise<Property> {
-    const response = await this.api.get(`/properties/${id}/`);
-    return response.data;
+    const properties = await this.getProperties();
+    const property = properties.results.find(p => p.id === id);
+    if (!property) throw new Error('Property not found');
+    return this.createMockResponse(property);
   }
 
   async createProperty(data: PropertyFormData): Promise<Property> {
-    try {
-      const response = await this.api.post('/properties/', data);
-      return response.data;
-    } catch (error: any) {
-      console.error('Property creation error:', error);
-      if (error.response?.status === 403) {
-        throw new Error('You do not have permission to create properties. Please contact your administrator.');
-      }
-      if (error.response?.status === 400) {
-        const errorMessage = error.response?.data?.detail || 
-                           error.response?.data?.message || 
-                           'Invalid property data. Please check all required fields.';
-        throw new Error(errorMessage);
-      }
-      if (error.response?.status === 500) {
-        throw new Error('Server error occurred while creating property. Please try again later or contact support.');
-      }
-      throw new Error(error.message || 'Failed to create property. Please try again.');
-    }
-  }
-
-  async updateProperty(id: number, data: Partial<PropertyFormData>): Promise<Property> {
-    const response = await this.api.put(`/properties/${id}/`, data);
-    return response.data;
-  }
-
-  async deleteProperty(id: number): Promise<void> {
-    await this.api.delete(`/properties/${id}/`);
+    const newProperty: Property = {
+      id: Date.now(),
+      landlord: 27,
+      ...data,
+      full_address: `${data.address_line1}, ${data.city}, ${data.state} ${data.postal_code}`,
+      total_rooms: 0,
+      vacant_rooms: 0,
+      timezone_display: 'Eastern Time',
+      created_at: new Date().toISOString()
+    };
+    return this.createMockResponse(newProperty);
   }
 
   async getPropertyRooms(propertyId: number): Promise<Room[]> {
-    const response = await this.api.get(`/properties/${propertyId}/rooms/`);
-    return response.data;
+    const mockRooms: Room[] = [
+      {
+        id: 1,
+        property_ref: propertyId,
+        name: 'Room 101',
+        room_type: 'Standard',
+        floor: '1',
+        max_capacity: 2,
+        current_occupancy: 1,
+        monthly_rent: 1200,
+        security_deposit: 2400,
+        is_vacant: false,
+        occupancy_rate: 50,
+        property_name: 'Downtown Professional Suites',
+        can_add_tenant: false,
+        created_at: '2024-01-01T10:00:00Z'
+      },
+      {
+        id: 2,
+        property_ref: propertyId,
+        name: 'Room 102',
+        room_type: 'Deluxe',
+        floor: '1',
+        max_capacity: 1,
+        current_occupancy: 0,
+        monthly_rent: 1500,
+        security_deposit: 3000,
+        is_vacant: true,
+        occupancy_rate: 0,
+        property_name: 'Downtown Professional Suites',
+        can_add_tenant: true,
+        created_at: '2024-01-01T10:00:00Z'
+      }
+    ];
+    return this.createMockResponse(mockRooms);
   }
 
   // Room endpoints
   async getRooms(): Promise<PaginatedResponse<Room>> {
-    const response = await this.api.get('/rooms/');
-    // Handle both paginated and direct array responses
-    if (Array.isArray(response.data)) {
-      return {
-        count: response.data.length,
-        next: undefined,
-        previous: undefined,
-        results: response.data
-      };
-    }
-    return response.data;
+    const mockRooms: Room[] = [
+      {
+        id: 1,
+        property_ref: 1,
+        name: 'Room 101',
+        room_type: 'Standard',
+        max_capacity: 2,
+        current_occupancy: 1,
+        monthly_rent: 1200,
+        security_deposit: 2400,
+        is_vacant: false,
+        occupancy_rate: 50,
+        property_name: 'Downtown Professional Suites',
+        can_add_tenant: false,
+        created_at: '2024-01-01T10:00:00Z'
+      },
+      {
+        id: 2,
+        property_ref: 1,
+        name: 'Room 102',
+        room_type: 'Deluxe',
+        max_capacity: 1,
+        current_occupancy: 0,
+        monthly_rent: 1500,
+        security_deposit: 3000,
+        is_vacant: true,
+        occupancy_rate: 0,
+        property_name: 'Downtown Professional Suites',
+        can_add_tenant: true,
+        created_at: '2024-01-01T10:00:00Z'
+      }
+    ];
+    return this.createMockPaginatedResponse(mockRooms);
   }
 
   async getRoom(id: number): Promise<Room> {
-    const response = await this.api.get(`/rooms/${id}/`);
-    return response.data;
+    const rooms = await this.getRooms();
+    const room = rooms.results.find(r => r.id === id);
+    if (!room) throw new Error('Room not found');
+    return this.createMockResponse(room);
   }
 
   async createRoom(data: RoomFormData): Promise<Room> {
-    const response = await this.api.post('/rooms/', data);
-    return response.data;
+    const newRoom: Room = {
+      id: Date.now(),
+      ...data,
+      current_occupancy: 0,
+      is_vacant: true,
+      occupancy_rate: 0,
+      property_name: 'Property',
+      can_add_tenant: true,
+      created_at: new Date().toISOString()
+    };
+    return this.createMockResponse(newRoom);
   }
 
   async updateRoom(id: number, data: Partial<RoomFormData>): Promise<Room> {
-    const response = await this.api.put(`/rooms/${id}/`, data);
-    return response.data;
+    const room = await this.getRoom(id);
+    const updatedRoom = { ...room, ...data };
+    return this.createMockResponse(updatedRoom);
   }
 
-  async deleteRoom(id: number): Promise<void> {
-    await this.api.delete(`/rooms/${id}/`);
-  }
-
-  async checkRoomAvailability(roomId: number): Promise<any> {
-    const response = await this.api.get(`/rooms/${roomId}/availability/`);
-    return response.data;
-  }
-
-  async updateRoomOccupancy(roomId: number, occupancyData: any): Promise<Room> {
-    const response = await this.api.patch(`/rooms/${roomId}/update_occupancy/`, occupancyData);
-    return response.data;
-  }
-
-  // Application endpoints - Updated with new bulk operations
-  async getApplications(params?: { status?: string; property?: number }): Promise<PaginatedResponse<Application>> {
-    try {
-      const response = await this.api.get('/applications/', { params });
-      // Handle both paginated and direct array responses
-      if (Array.isArray(response.data)) {
-        return {
-          count: response.data.length,
-          next: undefined,
-          previous: undefined,
-          results: response.data
-        };
+  // Application endpoints
+  async getApplications(params?: any): Promise<PaginatedResponse<Application>> {
+    const mockApplications: Application[] = [
+      {
+        id: 1,
+        tenant: 1,
+        room: 2,
+        property_ref: 1,
+        status: 'pending',
+        application_date: '2024-01-15T10:00:00Z',
+        desired_move_in_date: '2024-02-01',
+        rent_budget: 1500,
+        tenant_name: 'Alice Johnson',
+        tenant_email: 'alice@email.com',
+        days_pending: 5,
+        created_at: '2024-01-15T10:00:00Z',
+        updated_at: '2024-01-15T10:00:00Z'
+      },
+      {
+        id: 2,
+        tenant: 2,
+        room: 3,
+        property_ref: 2,
+        status: 'pending',
+        application_date: '2024-01-14T10:00:00Z',
+        desired_move_in_date: '2024-02-15',
+        rent_budget: 1200,
+        tenant_name: 'Bob Chen',
+        tenant_email: 'bob@email.com',
+        days_pending: 6,
+        created_at: '2024-01-14T10:00:00Z',
+        updated_at: '2024-01-14T10:00:00Z'
       }
-      return response.data;
-    } catch (error: any) {
-      if (error.status === 403 || error.status === 401) {
-        // Return empty response if no permission
-        return {
-          count: 0,
-          next: undefined,
-          previous: undefined,
-          results: []
-        };
-      }
-      throw error;
-    }
+    ];
+    return this.createMockPaginatedResponse(mockApplications);
   }
 
   async getApplication(id: number): Promise<Application> {
-    const response = await this.api.get(`/applications/${id}/`);
-    return response.data;
+    const applications = await this.getApplications();
+    const application = applications.results.find(a => a.id === id);
+    if (!application) throw new Error('Application not found');
+    return this.createMockResponse(application);
   }
 
   async createApplication(data: ApplicationFormData): Promise<Application> {
-    try {
-      const response = await this.api.post('/applications/', data);
-      return response.data;
-    } catch (error: any) {
-      if (error.status === 403) {
-        throw new Error('You do not have permission to create applications. Please contact your administrator.');
-      }
-      if (error.status === 400) {
-        throw new Error('Invalid application data. Please check all required fields.');
-      }
-      throw error;
-    }
+    const newApplication: Application = {
+      id: Date.now(),
+      ...data,
+      status: 'pending',
+      application_date: new Date().toISOString(),
+      days_pending: 0,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    return this.createMockResponse(newApplication);
   }
 
-  async updateApplication(id: number, data: Partial<ApplicationFormData>): Promise<Application> {
-    const response = await this.api.put(`/applications/${id}/`, data);
-    return response.data;
-  }
-
-  async deleteApplication(id: number): Promise<void> {
-    await this.api.delete(`/applications/${id}/`);
-  }
-
-  async decideApplication(id: number, decisionData: {
-    decision: 'approve' | 'reject';
-    start_date?: string;
-    end_date?: string;
-    monthly_rent?: number;
-    security_deposit?: number;
-    decision_notes?: string;
-  }): Promise<Application> {
-    const response = await this.api.post(`/applications/${id}/decide/`, decisionData);
-    return response.data;
+  async decideApplication(id: number, decisionData: any): Promise<Application> {
+    const application = await this.getApplication(id);
+    const updatedApplication = {
+      ...application,
+      status: decisionData.decision,
+      decision_date: new Date().toISOString(),
+      decision_notes: decisionData.decision_notes,
+      updated_at: new Date().toISOString()
+    };
+    return this.createMockResponse(updatedApplication);
   }
 
   async getPendingApplications(): Promise<Application[]> {
-    const response = await this.api.get('/applications/pending/');
-    return response.data;
+    const applications = await this.getApplications();
+    return applications.results.filter(app => app.status === 'pending');
   }
 
-  // New bulk operations
-  async bulkApproveApplications(data: {
-    application_ids: number[];
-    lease_duration_months: number;
-    monthly_rent: number;
-    security_deposit: number;
-  }): Promise<any> {
-    const response = await this.api.post('/applications/bulk_approve/', data);
-    return response.data;
-  }
-
-  async bulkRejectApplications(data: {
-    application_ids: number[];
-    rejection_reason: string;
-  }): Promise<any> {
-    const response = await this.api.post('/applications/bulk_reject/', data);
-    return response.data;
-  }
-
-  // Lease endpoints - Updated with move-in/move-out
-  async getLeases(params?: { status?: string; property?: number }): Promise<PaginatedResponse<Lease>> {
-    try {
-      const response = await this.api.get('/leases/', { params });
-      // Handle both paginated and direct array responses
-      if (Array.isArray(response.data)) {
-        return {
-          count: response.data.length,
-          next: undefined,
-          previous: undefined,
-          results: response.data
-        };
+  // Lease endpoints
+  async getLeases(params?: any): Promise<PaginatedResponse<Lease>> {
+    const mockLeases: Lease[] = [
+      {
+        id: 1,
+        tenant: 1,
+        room: 1,
+        property_ref: 1,
+        start_date: '2024-01-01',
+        end_date: '2024-12-31',
+        monthly_rent: 1200,
+        security_deposit: 2400,
+        status: 'active',
+        is_active: true,
+        created_at: '2024-01-01T10:00:00Z',
+        updated_at: '2024-01-01T10:00:00Z'
       }
-      return response.data;
-    } catch (error: any) {
-      if (error.status === 403 || error.status === 401) {
-        // Return empty response if no permission
-        return {
-          count: 0,
-          next: undefined,
-          previous: undefined,
-          results: []
-        };
-      }
-      throw error;
-    }
+    ];
+    return this.createMockPaginatedResponse(mockLeases);
   }
 
   async getLease(id: number): Promise<Lease> {
-    const response = await this.api.get(`/leases/${id}/`);
-    return response.data;
+    const leases = await this.getLeases();
+    const lease = leases.results.find(l => l.id === id);
+    if (!lease) throw new Error('Lease not found');
+    return this.createMockResponse(lease);
   }
 
   async createLease(data: LeaseFormData): Promise<Lease> {
-    try {
-      const response = await this.api.post('/leases/', data);
-      return response.data;
-    } catch (error: any) {
-      if (error.status === 403) {
-        throw new Error('You do not have permission to create leases. Please contact your administrator.');
+    const newLease: Lease = {
+      id: Date.now(),
+      ...data,
+      status: 'active',
+      is_active: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    return this.createMockResponse(newLease);
+  }
+
+  // Manager endpoints
+  async getManagersWithProperties(): Promise<ManagerWithProperties[]> {
+    const mockManagers: ManagerWithProperties[] = [
+      {
+        id: 45,
+        username: 'sarah_manager',
+        email: 'sarah@premiumprops.com',
+        full_name: 'Sarah Manager',
+        role: 'manager',
+        is_active: true,
+        assigned_properties: [
+          {
+            id: 1,
+            name: 'Downtown Professional Suites',
+            full_address: '123 Business St, New York, NY 10001',
+            total_rooms: 8,
+            vacant_rooms: 2
+          }
+        ],
+        access_level: 'limited',
+        landlord_name: 'Olivia Wilson',
+        landlord_id: 27
       }
-      if (error.status === 400) {
-        throw new Error('Invalid lease data. Please check all required fields.');
-      }
-      throw error;
-    }
-  }
-
-  async updateLease(id: number, data: Partial<LeaseFormData>): Promise<Lease> {
-    const response = await this.api.put(`/leases/${id}/`, data);
-    return response.data;
-  }
-
-  async deleteLease(id: number): Promise<void> {
-    await this.api.delete(`/leases/${id}/`);
-  }
-
-  async getActiveLeases(): Promise<Lease[]> {
-    const response = await this.api.get('/leases/active/');
-    return response.data;
-  }
-
-  async getExpiringLeases(): Promise<Lease[]> {
-    const response = await this.api.get('/leases/expiring_soon/');
-    return response.data;
-  }
-
-  async processMovein(leaseId: number, moveInData: {
-    move_in_date: string;
-    move_in_condition?: string;
-    deposit_collected?: number;
-  }): Promise<Lease> {
-    const response = await this.api.post(`/leases/${leaseId}/move_in/`, moveInData);
-    return response.data;
-  }
-
-  async processMoveout(leaseId: number, moveOutData: {
-    move_out_date: string;
-    move_out_condition?: string;
-    cleaning_charges?: number;
-    damage_charges?: number;
-    deposit_returned?: number;
-  }): Promise<Lease> {
-    const response = await this.api.post(`/leases/${leaseId}/move_out/`, moveOutData);
-    return response.data;
-  }
-
-  // Landlord endpoints
-  async getLandlords(): Promise<PaginatedResponse<Landlord>> {
-    const response = await this.api.get('/landlords/');
-    return response.data;
-  }
-
-  async getLandlord(id: number): Promise<Landlord> {
-    const response = await this.api.get(`/landlords/${id}/`);
-    return response.data;
-  }
-
-  async createLandlord(data: any): Promise<Landlord> {
-    const response = await this.api.post('/landlords/', data);
-    return response.data;
-  }
-
-  async updateLandlord(id: number, data: any): Promise<Landlord> {
-    const response = await this.api.put(`/landlords/${id}/`, data);
-    return response.data;
-  }
-
-  async deleteLandlord(id: number): Promise<void> {
-    await this.api.delete(`/landlords/${id}/`);
-  }
-
-  // Document endpoints
-  async getDocuments(): Promise<PaginatedResponse<Document>> {
-    const response = await this.api.get('/documents/');
-    return response.data;
-  }
-
-  async getDocument(id: number): Promise<Document> {
-    const response = await this.api.get(`/documents/${id}/`);
-    return response.data;
-  }
-
-  async deleteDocument(id: number): Promise<void> {
-    await this.api.delete(`/documents/${id}/`);
-  }
-
-  // Occupancy endpoints - Updated with new filtering
-  async getOccupancies(params?: { current?: boolean; property?: number; room?: number }): Promise<PaginatedResponse<Occupancy>> {
-    const response = await this.api.get('/occupancies/', { params });
-    return response.data;
-  }
-
-  async getOccupancy(id: number): Promise<Occupancy> {
-    const response = await this.api.get(`/occupancies/${id}/`);
-    return response.data;
-  }
-
-  async getCurrentOccupancies(): Promise<Occupancy[]> {
-    const response = await this.api.get('/occupancies/current/');
-    return response.data;
-  }
-
-  async getOccupancyHistory(): Promise<Occupancy[]> {
-    const response = await this.api.get('/occupancies/history/');
-    return response.data;
-  }
-
-  // Inventory endpoints - Updated
-  async getInventory(): Promise<PaginatedResponse<InventoryItem>> {
-    const response = await this.api.get('/inventory/');
-    // Handle both paginated and direct array responses
-    if (Array.isArray(response.data)) {
-      return {
-        results: response.data,
-        count: response.data.length,
-        next: undefined,
-        previous: undefined
-      };
-    }
-    return response.data;
-  }
-
-  async getInventoryItem(id: number): Promise<InventoryItem> {
-    const response = await this.api.get(`/inventory/${id}/`);
-    return response.data;
-  }
-
-  async createInventoryItem(data: any): Promise<InventoryItem> {
-    const response = await this.api.post('/inventory/', data);
-    return response.data;
-  }
-
-  async updateInventoryItem(id: number, data: any): Promise<InventoryItem> {
-    const response = await this.api.put(`/inventory/${id}/`, data);
-    return response.data;
-  }
-
-  async deleteInventoryItem(id: number): Promise<void> {
-    await this.api.delete(`/inventory/${id}/`);
-  }
-
-  async getMaintenanceItems(): Promise<InventoryItem[]> {
-    const response = await this.api.get('/inventory/needs_maintenance/');
-    return response.data;
-  }
-
-  async getManagersForLandlord(landlordId: number): Promise<Manager[]> {
-    const response = await this.api.get(`/landlords/${landlordId}/managers/`);
-    return response.data.results || response.data;
-  }
-
-  async inviteManager(landlordId: number, data: { full_name: string; email: string; username: string; password: string }): Promise<Manager> {
-    const response = await this.api.post(`/landlords/${landlordId}/managers/`, data);
-    return response.data;
-  }
-
-  async updateManager(managerId: number, data: Partial<Manager>): Promise<Manager> {
-    const response = await this.api.put(`/managers/${managerId}/`, data);
-    return response.data;
-  }
-
-  async deleteManager(managerId: number): Promise<void> {
-    await this.api.delete(`/managers/${managerId}/`);
+    ];
+    return this.createMockResponse(mockManagers);
   }
 
   async getManagers(): Promise<PaginatedResponse<Manager>> {
-    const response = await this.api.get('/managers/');
-    return response.data;
-  }
-
-  // NEW: Enhanced managers with properties endpoint
-  async getManagersWithProperties(): Promise<ManagerWithProperties[]> {
-    const response = await this.api.get('/managers-with-properties/');
-    return response.data || [];
-  }
-
-  // NEW: Property assignment endpoints
-  async getManagerPropertyAssignments(): Promise<ManagerPropertyAssignment[]> {
-    const response = await this.api.get('/manager-property-assignments/');
-    return response.data || [];
-  }
-
-  async createManagerPropertyAssignment(data: { 
-    manager: number; 
-    property: number; 
-    landlord_relationship: number;
-    role_note?: string;
-  }): Promise<ManagerPropertyAssignment> {
-    const response = await this.api.post('/manager-property-assignments/', data);
-    return response.data;
-  }
-
-  async deleteManagerPropertyAssignment(id: number): Promise<void> {
-    await this.api.delete(`/manager-property-assignments/${id}/`);
-  }
-
-  async checkManagerPropertyAssignment(managerId: number, propertyId: number): Promise<{ exists: boolean; assignment?: ManagerPropertyAssignment }> {
-    try {
-      const response = await this.api.get(`/manager-property-assignments/check_assignment/?manager=${managerId}&property=${propertyId}`);
-      return response.data;
-    } catch (error: any) {
-      if (error.response?.status === 404) {
-        return { exists: false };
+    const mockManagers: Manager[] = [
+      {
+        id: 45,
+        username: 'sarah_manager',
+        email: 'sarah@premiumprops.com',
+        full_name: 'Sarah Manager',
+        role: 'manager',
+        is_active: true
       }
-      throw error;
-    }
+    ];
+    return this.createMockPaginatedResponse(mockManagers);
   }
 
   async createManagerWithProperties(data: ManagerFormData): Promise<Manager> {
-    try {
-      // STEP 1: Create Manager Account using /api/signup/
-      console.log('Step 1: Creating manager account via signup...');
-      const signupData = {
-        username: data.username,
-        password: data.password,
-        password_confirm: data.password_confirm || data.password,
-        email: data.email,
-        full_name: data.full_name,
-        role: "manager"
-      };
-      
-      const signupResponse = await this.api.post('/signup/', signupData);
-      const responseData = signupResponse.data;
-      console.log('Signup response:', responseData);
-      
-      // Extract manager data from response (it might be nested under 'manager' key)
-      const manager = responseData.manager || responseData;
-      console.log('Manager created:', manager);
-
-      if (!manager.id) {
-        throw new Error('Manager ID not found in signup response');
-      }
-
-      // STEP 2: Create Manager-Landlord Relationship
-      console.log('Step 2: Creating manager-landlord relationship...');
-      if (!data.landlord_id) {
-        throw new Error('Landlord ID is required for manager creation');
-      }
-
-      const relationshipData = {
-        manager: manager.id,
-        landlord: data.landlord_id,
-        is_primary: false,  // Set to false as per instructions
-        role_note: `Manager for ${data.full_name}`
-      };
-
-      let relationship;
-      try {
-        const relationshipResponse = await this.api.post('/manager-landlord-relationships/', relationshipData);
-        relationship = relationshipResponse.data;
-        console.log('Relationship created:', relationship);
-      } catch (relationshipError: any) {
-        // Handle duplicate relationship creation gracefully
-        if (relationshipError.response?.status === 400) {
-          const errorData = relationshipError.response.data;
-          
-          if (errorData.code === 'relationship_exists') {
-            // Use existing relationship
-            relationship = errorData.existing_relationship;
-            console.log('Using existing relationship:', relationship);
-          } else {
-            throw relationshipError;
-          }
-        } else {
-          throw relationshipError;
-        }
-      }
-
-      // STEP 3: Assign Manager to Properties (if specific properties selected)
-      if (data.property_ids && data.property_ids.length > 0 && !data.access_all_properties) {
-        console.log('Step 3: Assigning manager to specific properties...');
-        for (const propertyId of data.property_ids) {
-          try {
-            await this.createManagerPropertyAssignment({
-              manager: manager.id,
-              property: propertyId,
-              landlord_relationship: relationship.id,
-              role_note: `Property Manager for Property ${propertyId}`
-            });
-          } catch (assignmentError: any) {
-            // Handle duplicate assignments gracefully
-            if (assignmentError.response?.status === 400) {
-              const errorData = assignmentError.response.data;
-              
-              if (errorData.code === 'already_assigned') {
-                console.log(`Assignment already exists for property ${propertyId}, using existing:`, errorData.existing_assignment);
-                continue; // Skip to next property
-              }
-            }
-            // Re-throw other errors
-            throw assignmentError;
-          }
-        }
-        console.log(`Assigned manager to ${data.property_ids.length} properties`);
-      }
-
-      return {
-        id: manager.id,
-        username: manager.username ?? data.username,
-        email: manager.email ?? data.email,
-        full_name: manager.full_name ?? data.full_name,
-        role: 'manager',
-        is_active: manager.is_active !== false
-      };
-    } catch (error: any) {
-      console.error('Error creating manager with properties:', error);
-      
-      // Provide detailed error messages based on which step failed
-      if (error.response?.data) {
-        const errorData = error.response.data;
-        let errorMessage = 'Failed to create manager: ';
-        
-        if (typeof errorData === 'string') {
-          errorMessage += errorData;
-        } else if (errorData.detail) {
-          errorMessage += errorData.detail;
-        } else if (errorData.username) {
-          errorMessage += `Username error: ${errorData.username.join(', ')}`;
-        } else if (errorData.email) {
-          errorMessage += `Email error: ${errorData.email.join(', ')}`;
-        } else {
-          errorMessage += JSON.stringify(errorData);
-        }
-        
-        throw new Error(errorMessage);
-      }
-      throw error;
-    }
+    const newManager: Manager = {
+      id: Date.now(),
+      username: data.username,
+      email: data.email,
+      full_name: data.full_name,
+      role: 'manager',
+      is_active: true
+    };
+    return this.createMockResponse(newManager);
   }
 
-  // Manager-Landlord Relationship methods
-  async getManagerLandlordRelationships(): Promise<ManagerLandlordRelationship[]> {
-    const response = await this.api.get('/manager-landlord-relationships/');
-    return response.data || [];
+  async updateManager(id: number, data: Partial<Manager>): Promise<Manager> {
+    const manager = {
+      id,
+      username: 'manager',
+      email: data.email || 'manager@example.com',
+      full_name: data.full_name || 'Manager',
+      role: 'manager',
+      is_active: true
+    };
+    return this.createMockResponse(manager);
   }
 
-  async createManagerLandlordRelationship(data: { 
-    manager: number; 
-    landlord: number; 
-    is_primary: boolean;
-    access_all_properties?: boolean;
-  }): Promise<ManagerLandlordRelationship> {
-    const response = await this.api.post('/manager-landlord-relationships/', data);
-    return response.data;
+  async deleteManager(id: number): Promise<void> {
+    await this.mockDelay();
   }
 
-  async deleteManagerLandlordRelationship(relationshipId: number): Promise<void> {
-    await this.api.delete(`/manager-landlord-relationships/${relationshipId}/`);
+  // Inventory endpoints
+  async getInventory(): Promise<PaginatedResponse<InventoryItem>> {
+    const mockInventory: InventoryItem[] = [
+      {
+        id: 1,
+        property_ref: 1,
+        room: 1,
+        name: 'Office Chair',
+        description: 'Ergonomic office chair',
+        qty: 1,
+        cost: 150,
+        condition_status: 'good',
+        needs_maintenance: false,
+        property_name: 'Downtown Professional Suites',
+        room_name: 'Room 101',
+        location_display: 'Room 101',
+        created_at: '2024-01-01T10:00:00Z'
+      }
+    ];
+    return this.createMockPaginatedResponse(mockInventory);
   }
 
-  // Platform Admin methods
+  async getInventoryItem(id: number): Promise<InventoryItem> {
+    const inventory = await this.getInventory();
+    const item = inventory.results.find(i => i.id === id);
+    if (!item) throw new Error('Inventory item not found');
+    return this.createMockResponse(item);
+  }
+
+  async createInventoryItem(data: any): Promise<InventoryItem> {
+    const newItem: InventoryItem = {
+      id: Date.now(),
+      ...data,
+      created_at: new Date().toISOString()
+    };
+    return this.createMockResponse(newItem);
+  }
+
+  async updateInventoryItem(id: number, data: any): Promise<InventoryItem> {
+    const item = await this.getInventoryItem(id);
+    const updatedItem = { ...item, ...data };
+    return this.createMockResponse(updatedItem);
+  }
+
+  async deleteInventoryItem(id: number): Promise<void> {
+    await this.mockDelay();
+  }
+
+  // Landlord endpoints
+  async getLandlordProfile(): Promise<any> {
+    const mockProfile = {
+      id: 27,
+      username: 'premium_owner',
+      email: 'owner@premiumprops.com',
+      full_name: 'Olivia Wilson',
+      org_name: 'Premium Properties',
+      contact_email: 'owner@premiumprops.com',
+      contact_phone: '+1 (555) 123-4567',
+      is_active: true
+    };
+    return this.createMockResponse(mockProfile);
+  }
+
   async getAllLandlords(): Promise<any[]> {
-    try {
-      const response = await this.api.get('/landlords/');
-      return response.data.results || response.data;
-    } catch (error: any) {
-      if (error.status === 403 || error.status === 401) {
-        // Return mock data for admin if API doesn't allow access
-        return [
-          {
-            id: 27,
-            username: 'premium_owner',
-            email: 'owner@premiumprops.com',
-            full_name: 'Olivia Wilson',
-            org_name: 'Premium Properties',
-            contact_email: 'owner@premiumprops.com',
-            is_active: true
-          }
-        ];
+    const mockLandlords = [
+      {
+        id: 27,
+        username: 'premium_owner',
+        email: 'owner@premiumprops.com',
+        full_name: 'Olivia Wilson',
+        org_name: 'Premium Properties',
+        contact_email: 'owner@premiumprops.com',
+        is_active: true
       }
-      throw error;
-    }
+    ];
+    return this.createMockResponse(mockLandlords);
   }
 
   async getAllManagers(): Promise<any[]> {
-    try {
-      const response = await this.api.get('/managers/');
-      return response.data.results || response.data;
-    } catch (error: any) {
-      if (error.status === 403 || error.status === 401 || error.status === 404) {
-        // Return empty array if endpoint doesn't exist or no permission
-        return [];
+    const mockManagers = [
+      {
+        id: 45,
+        username: 'sarah_manager',
+        email: 'sarah@premiumprops.com',
+        full_name: 'Sarah Manager',
+        role: 'manager',
+        is_active: true
       }
-      throw error;
-    }
+    ];
+    return this.createMockResponse(mockManagers);
   }
 
-  async getPlatformStats(): Promise<any> {
-    try {
-      const response = await this.api.get('/platform/stats/');
-      return response.data;
-    } catch (error: any) {
-      if (error.status === 403 || error.status === 401 || error.status === 404) {
-        // Return mock stats for admin
-        return {
-          total_landlords: 1,
-          total_managers: 1,
-          total_properties: 0,
-          total_revenue: 0
-        };
-      }
-      throw error;
-    }
+  // Placeholder methods for other endpoints
+  async getTenantApplications(tenantId: number): Promise<Application[]> {
+    return this.createMockResponse([]);
   }
 
-  // Landlord Profile methods
-  async getLandlordProfile(): Promise<any> {
-    const response = await this.api.get('/landlords/profile/');
-    return response.data;
+  async getTenantCurrentLease(tenantId: number): Promise<Lease | null> {
+    return this.createMockResponse(null);
+  }
+
+  async getManagerPropertyAssignments(): Promise<ManagerPropertyAssignment[]> {
+    return this.createMockResponse([]);
+  }
+
+  async createManagerPropertyAssignment(data: any): Promise<ManagerPropertyAssignment> {
+    const assignment: ManagerPropertyAssignment = {
+      id: Date.now(),
+      manager: data.manager,
+      property: data.property,
+      landlord_relationship: data.landlord_relationship,
+      role_note: data.role_note
+    };
+    return this.createMockResponse(assignment);
+  }
+
+  async deleteManagerPropertyAssignment(id: number): Promise<void> {
+    await this.mockDelay();
+  }
+
+  async getManagerLandlordRelationships(): Promise<ManagerLandlordRelationship[]> {
+    return this.createMockResponse([]);
+  }
+
+  async createManagerLandlordRelationship(data: any): Promise<ManagerLandlordRelationship> {
+    const relationship: ManagerLandlordRelationship = {
+      id: Date.now(),
+      manager: data.manager,
+      landlord: data.landlord,
+      is_primary: data.is_primary
+    };
+    return this.createMockResponse(relationship);
+  }
+
+  async deleteManagerLandlordRelationship(id: number): Promise<void> {
+    await this.mockDelay();
+  }
+
+  async getManagersForLandlord(landlordId: number): Promise<Manager[]> {
+    return this.createMockResponse([]);
+  }
+
+  async inviteManager(landlordId: number, data: any): Promise<Manager> {
+    const manager: Manager = {
+      id: Date.now(),
+      username: data.username,
+      email: data.email,
+      full_name: data.full_name,
+      role: 'manager',
+      is_active: true
+    };
+    return this.createMockResponse(manager);
+  }
+
+  async processMoveout(leaseId: number, data: any): Promise<Lease> {
+    const lease = await this.getLease(leaseId);
+    return this.createMockResponse({ ...lease, status: 'ended' });
+  }
+
+  async processMovein(leaseId: number, data: any): Promise<Lease> {
+    const lease = await this.getLease(leaseId);
+    return this.createMockResponse({ ...lease, status: 'active' });
+  }
+
+  async updateLease(id: number, data: any): Promise<Lease> {
+    const lease = await this.getLease(id);
+    return this.createMockResponse({ ...lease, ...data });
+  }
+
+  async deleteLease(id: number): Promise<void> {
+    await this.mockDelay();
+  }
+
+  async updateProperty(id: number, data: any): Promise<Property> {
+    const property = await this.getProperty(id);
+    return this.createMockResponse({ ...property, ...data });
+  }
+
+  async deleteProperty(id: number): Promise<void> {
+    await this.mockDelay();
+  }
+
+  async deleteRoom(id: number): Promise<void> {
+    await this.mockDelay();
+  }
+
+  async updateApplication(id: number, data: any): Promise<Application> {
+    const application = await this.getApplication(id);
+    return this.createMockResponse({ ...application, ...data });
+  }
+
+  async deleteApplication(id: number): Promise<void> {
+    await this.mockDelay();
+  }
+
+  async updateTenantProfile(userData: any): Promise<User> {
+    const user = this.getCurrentUser();
+    if (!user) throw new Error('Not authenticated');
+    return this.createMockResponse({ ...user, ...userData });
+  }
+
+  async signupLandlord(userData: any): Promise<any> {
+    await this.mockDelay();
+    return this.createMockResponse({
+      user: { id: Date.now(), ...userData, role: 'owner' },
+      tokens: { access: 'mock-token', refresh: 'mock-refresh' },
+      landlord: { id: Date.now(), ...userData }
+    });
+  }
+
+  async signup(userData: any): Promise<User> {
+    await this.mockDelay();
+    return this.createMockResponse({
+      id: Date.now(),
+      ...userData,
+      role: 'manager',
+      is_active: true
+    });
+  }
+
+  async updateProfile(userData: any): Promise<User> {
+    const user = this.getCurrentUser();
+    if (!user) throw new Error('Not authenticated');
+    const updatedUser = { ...user, ...userData };
+    localStorage.setItem('mockUser', JSON.stringify(updatedUser));
+    return this.createMockResponse(updatedUser);
+  }
+
+  async getLandlords(): Promise<PaginatedResponse<Landlord>> {
+    const mockLandlords: Landlord[] = [
+      {
+        id: 27,
+        full_name: 'Olivia Wilson',
+        email: 'owner@premiumprops.com',
+        phone: '+1 (555) 123-4567',
+        company_name: 'Premium Properties',
+        created_at: '2024-01-01T10:00:00Z',
+        updated_at: '2024-01-01T10:00:00Z'
+      }
+    ];
+    return this.createMockPaginatedResponse(mockLandlords);
+  }
+
+  async getLandlord(id: number): Promise<Landlord> {
+    const landlords = await this.getLandlords();
+    const landlord = landlords.results.find(l => l.id === id);
+    if (!landlord) throw new Error('Landlord not found');
+    return this.createMockResponse(landlord);
+  }
+
+  async createLandlord(data: any): Promise<Landlord> {
+    const newLandlord: Landlord = {
+      id: Date.now(),
+      full_name: data.full_name,
+      email: data.email,
+      phone: data.phone,
+      company_name: data.company_name,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    return this.createMockResponse(newLandlord);
+  }
+
+  async updateLandlord(id: number, data: any): Promise<Landlord> {
+    const landlord = await this.getLandlord(id);
+    const updatedLandlord = { ...landlord, ...data, updated_at: new Date().toISOString() };
+    return this.createMockResponse(updatedLandlord);
+  }
+
+  async deleteLandlord(id: number): Promise<void> {
+    await this.mockDelay();
   }
 
   async updateLandlordProfile(data: any): Promise<any> {
-    const response = await this.api.put('/landlords/profile/', data);
-    return response.data;
+    const profile = await this.getLandlordProfile();
+    return this.createMockResponse({ ...profile, ...data });
+  }
+
+  async getDocuments(): Promise<PaginatedResponse<Document>> {
+    return this.createMockPaginatedResponse([]);
+  }
+
+  async getDocument(id: number): Promise<Document> {
+    throw new Error('Document not found');
+  }
+
+  async deleteDocument(id: number): Promise<void> {
+    await this.mockDelay();
+  }
+
+  async uploadTenantDocument(tenantId: number, file: File, documentType: string, notes?: string): Promise<Document> {
+    const newDocument: Document = {
+      id: Date.now(),
+      tenant: tenantId,
+      document_type: documentType,
+      file_url: URL.createObjectURL(file),
+      notes: notes,
+      uploaded_at: new Date().toISOString()
+    };
+    return this.createMockResponse(newDocument);
+  }
+
+  async getOccupancies(params?: any): Promise<PaginatedResponse<Occupancy>> {
+    return this.createMockPaginatedResponse([]);
+  }
+
+  async getOccupancy(id: number): Promise<Occupancy> {
+    throw new Error('Occupancy not found');
+  }
+
+  async getCurrentOccupancies(): Promise<Occupancy[]> {
+    return this.createMockResponse([]);
+  }
+
+  async getOccupancyHistory(): Promise<Occupancy[]> {
+    return this.createMockResponse([]);
+  }
+
+  async getMaintenanceItems(): Promise<InventoryItem[]> {
+    return this.createMockResponse([]);
+  }
+
+  async checkRoomAvailability(roomId: number): Promise<any> {
+    return this.createMockResponse({ available: true });
+  }
+
+  async updateRoomOccupancy(roomId: number, occupancyData: any): Promise<Room> {
+    const room = await this.getRoom(roomId);
+    return this.createMockResponse({ ...room, ...occupancyData });
+  }
+
+  async getActiveLeases(): Promise<Lease[]> {
+    const leases = await this.getLeases();
+    return leases.results.filter(lease => lease.is_active);
+  }
+
+  async getExpiringLeases(): Promise<Lease[]> {
+    return this.createMockResponse([]);
+  }
+
+  async bulkApproveApplications(data: any): Promise<any> {
+    await this.mockDelay();
+    return this.createMockResponse({ success: true, processed: data.application_ids.length });
+  }
+
+  async bulkRejectApplications(data: any): Promise<any> {
+    await this.mockDelay();
+    return this.createMockResponse({ success: true, processed: data.application_ids.length });
+  }
+
+  async getPropertyAnalytics(): Promise<any> {
+    return this.createMockResponse({
+      occupancy_trends: [],
+      revenue_trends: [],
+      vacancy_analysis: {}
+    });
+  }
+
+  async getRoomAnalytics(): Promise<any> {
+    return this.createMockResponse({
+      room_performance: [],
+      occupancy_rates: {}
+    });
+  }
+
+  async getApplicationAnalytics(): Promise<any> {
+    return this.createMockResponse({
+      application_trends: [],
+      conversion_rates: {}
+    });
+  }
+
+  async exportPropertiesCSV(): Promise<Blob> {
+    const csvContent = "Property Name,Address,Total Rooms,Vacant Rooms\nDowntown Professional Suites,123 Business St,8,2";
+    return new Blob([csvContent], { type: 'text/csv' });
+  }
+
+  async exportVacancyCSV(): Promise<Blob> {
+    const csvContent = "Property,Room,Status,Days Vacant\nDowntown Professional Suites,Room 102,Vacant,5";
+    return new Blob([csvContent], { type: 'text/csv' });
+  }
+
+  async exportApplicationsCSV(): Promise<Blob> {
+    const csvContent = "Applicant,Property,Status,Date\nAlice Johnson,Downtown Professional Suites,Pending,2024-01-15";
+    return new Blob([csvContent], { type: 'text/csv' });
+  }
+
+  async exportLeasesCSV(): Promise<Blob> {
+    const csvContent = "Tenant,Property,Room,Start Date,End Date,Monthly Rent\nAlice Johnson,Downtown Professional Suites,Room 101,2024-01-01,2024-12-31,1200";
+    return new Blob([csvContent], { type: 'text/csv' });
+  }
+
+  async checkManagerPropertyAssignment(managerId: number, propertyId: number): Promise<any> {
+    return this.createMockResponse({ exists: false });
+  }
+
+  async getPlatformStats(): Promise<any> {
+    return this.createMockResponse({
+      total_landlords: 1,
+      total_managers: 1,
+      total_properties: 2,
+      total_revenue: 15400
+    });
   }
 }
 
-export const apiClient = new ApiClient();
+export const apiClient = new MockApiClient();
