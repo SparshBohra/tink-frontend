@@ -29,6 +29,7 @@ function ManagersPage() {
     email: '',
     username: '',
     password: '',
+    password_confirm: '',
     property_ids: [],
     access_all_properties: false
   });
@@ -136,6 +137,13 @@ function ManagersPage() {
       setFormLoading(true);
       setError(null);
       
+      // Validate password confirmation for new managers
+      if (!editingManager && formData.password !== formData.password_confirm) {
+        setError('Password and confirm password do not match');
+        setFormLoading(false);
+        return;
+      }
+      
       if (editingManager) {
         // Update existing manager
         await apiClient.updateManager(editingManager.id, {
@@ -235,6 +243,7 @@ function ManagersPage() {
       email: '',
       username: '',
       password: '',
+      password_confirm: '',
       property_ids: [],
       access_all_properties: false
     });
@@ -396,6 +405,17 @@ function ManagersPage() {
                       required
                     />
                   </div>
+                  
+                  <div className="form-group">
+                    <label htmlFor="password_confirm">Confirm Password</label>
+                    <input
+                      type="password"
+                      id="password_confirm"
+                      value={formData.password_confirm || ''}
+                      onChange={(e) => setFormData({ ...formData, password_confirm: e.target.value })}
+                      required
+                    />
+                  </div>
 
                   {/* Property Access Selection */}
                   <div className="form-group">
@@ -487,22 +507,22 @@ function ManagersPage() {
 
         <SectionCard title="Manager List">
           {managers.length > 0 ? (
-          <DataTable
-            columns={[
-              { key: 'full_name', header: 'Name' },
-              { key: 'email', header: 'Email' },
+            <DataTable
+              columns={[
+                { key: 'full_name', header: 'Name' },
+                { key: 'email', header: 'Email' },
                 { key: 'access_level', header: 'Access Level' },
                 { key: 'properties', header: 'Assigned Properties' },
-              { key: 'status', header: 'Status' },
-              { key: 'actions', header: 'Actions' },
-            ]}
-            data={managers}
-            renderRow={(manager) => (
-              <tr key={manager.id}>
+                { key: 'status', header: 'Status' },
+                { key: 'actions', header: 'Actions' },
+              ]}
+              data={managers}
+              renderRow={(manager) => (
+                <tr key={manager.id}>
                   <td style={{ textAlign: 'center' }}>
                     <strong>{manager.full_name}</strong>
                   </td>
-                <td style={{ textAlign: 'center' }}>{manager.email}</td>
+                  <td style={{ textAlign: 'center' }}>{manager.email}</td>
                 <td style={{ textAlign: 'center' }}>
                     {getAccessLevelBadge(manager)}
                   </td>
@@ -514,9 +534,9 @@ function ManagersPage() {
                       status={manager.is_active ? 'success' : 'error'} 
                       text={manager.is_active ? 'Active' : 'Inactive'} 
                     />
-                </td>
-                <td style={{ textAlign: 'center' }}>
-                  <div className="action-buttons">
+                  </td>
+                  <td style={{ textAlign: 'center' }}>
+                    <div className="action-buttons">
                       <button 
                         className="btn btn-warning btn-sm"
                         onClick={() => handleEditManager(manager)}
@@ -538,11 +558,11 @@ function ManagersPage() {
                       >
                         Delete
                       </button>
-                  </div>
-                      </td>
-                    </tr>
-            )}
-          />
+                    </div>
+                  </td>
+                </tr>
+              )}
+            />
           ) : (
             <EmptyState 
               title="No Managers Found" 
@@ -902,7 +922,7 @@ function ManagersPage() {
           background-color: #6b7280;
           color: white;
         }
-
+        
         .btn-secondary:hover {
           background-color: #4b5563;
         }

@@ -515,10 +515,10 @@ function Tenants() {
             <tr key={tenant.id}>
                   <td className="tenant-name-cell">
                     <Link href={`/tenants/${tenant.id}`} className="tenant-name-link">
-                      <div className="tenant-name">{tenant.full_name}</div>
+                    <div className="tenant-name">{tenant.full_name}</div>
                     </Link>
                     <div className="tenant-id">ID: {tenant.id}</div>
-                  </td>
+                </td>
                   
                   <td>
                     <div className="tenant-contact">

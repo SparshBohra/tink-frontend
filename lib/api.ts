@@ -848,6 +848,18 @@ class ApiClient {
     await this.api.delete(`/manager-property-assignments/${id}/`);
   }
 
+  async checkManagerPropertyAssignment(managerId: number, propertyId: number): Promise<{ exists: boolean; assignment?: ManagerPropertyAssignment }> {
+    try {
+      const response = await this.api.get(`/manager-property-assignments/check_assignment/?manager=${managerId}&property=${propertyId}`);
+      return response.data;
+    } catch (error: any) {
+      if (error.response?.status === 404) {
+        return { exists: false };
+      }
+      throw error;
+    }
+  }
+
   async createManagerWithProperties(data: ManagerFormData): Promise<Manager> {
     try {
       // STEP 1: Create Manager Account using /api/signup/
@@ -855,14 +867,23 @@ class ApiClient {
       const signupData = {
         username: data.username,
         password: data.password,
+        password_confirm: data.password_confirm || data.password,
         email: data.email,
         full_name: data.full_name,
         role: "manager"
       };
       
       const signupResponse = await this.api.post('/signup/', signupData);
-      const manager = signupResponse.data;
+      const responseData = signupResponse.data;
+      console.log('Signup response:', responseData);
+      
+      // Extract manager data from response (it might be nested under 'manager' key)
+      const manager = responseData.manager || responseData;
       console.log('Manager created:', manager);
+
+      if (!manager.id) {
+        throw new Error('Manager ID not found in signup response');
+      }
 
       // STEP 2: Create Manager-Landlord Relationship
       console.log('Step 2: Creating manager-landlord relationship...');
@@ -877,20 +898,52 @@ class ApiClient {
         role_note: `Manager for ${data.full_name}`
       };
 
-      const relationshipResponse = await this.api.post('/manager-landlord-relationships/', relationshipData);
-      const relationship = relationshipResponse.data;
-      console.log('Relationship created:', relationship);
+      let relationship;
+      try {
+        const relationshipResponse = await this.api.post('/manager-landlord-relationships/', relationshipData);
+        relationship = relationshipResponse.data;
+        console.log('Relationship created:', relationship);
+      } catch (relationshipError: any) {
+        // Handle duplicate relationship creation gracefully
+        if (relationshipError.response?.status === 400) {
+          const errorData = relationshipError.response.data;
+          
+          if (errorData.code === 'relationship_exists') {
+            // Use existing relationship
+            relationship = errorData.existing_relationship;
+            console.log('Using existing relationship:', relationship);
+          } else {
+            throw relationshipError;
+          }
+        } else {
+          throw relationshipError;
+        }
+      }
 
       // STEP 3: Assign Manager to Properties (if specific properties selected)
       if (data.property_ids && data.property_ids.length > 0 && !data.access_all_properties) {
         console.log('Step 3: Assigning manager to specific properties...');
         for (const propertyId of data.property_ids) {
-          await this.createManagerPropertyAssignment({
-            manager: manager.id,
-            property: propertyId,
-            landlord_relationship: relationship.id,
-            role_note: `Property Manager for Property ${propertyId}`
-          });
+          try {
+            await this.createManagerPropertyAssignment({
+              manager: manager.id,
+              property: propertyId,
+              landlord_relationship: relationship.id,
+              role_note: `Property Manager for Property ${propertyId}`
+            });
+          } catch (assignmentError: any) {
+            // Handle duplicate assignments gracefully
+            if (assignmentError.response?.status === 400) {
+              const errorData = assignmentError.response.data;
+              
+              if (errorData.code === 'already_assigned') {
+                console.log(`Assignment already exists for property ${propertyId}, using existing:`, errorData.existing_assignment);
+                continue; // Skip to next property
+              }
+            }
+            // Re-throw other errors
+            throw assignmentError;
+          }
         }
         console.log(`Assigned manager to ${data.property_ids.length} properties`);
       }

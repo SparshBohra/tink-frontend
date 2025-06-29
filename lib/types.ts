@@ -91,10 +91,18 @@ export interface Application {
   id: number;
   tenant: number;
   room: number;
+  property_ref: number;
   status: string;
   application_date: string;
   move_in_date?: string;
+  desired_move_in_date?: string;
+  rent_budget?: number;
   notes?: string;
+  tenant_name?: string;
+  tenant_email?: string;
+  days_pending?: number;
+  decision_date?: string;
+  decision_notes?: string;
   created_at: string;
   updated_at: string;
 }
@@ -280,7 +288,21 @@ export interface ManagerWithProperties {
   full_name: string;
   role: string;
   is_active: boolean;
+  phone_country_code?: string;
+  phone_number?: string;
+  phone_full?: string;
+  date_joined: string;
   properties?: Property[];
+  assigned_properties: AssignedProperty[];
+  access_level: string;
+}
+
+export interface AssignedProperty {
+  id: number;
+  name: string;
+  address: string;
+  access_type: string;
+  role_note?: string;
 }
 
 export interface ManagerPropertyAssignment {
@@ -294,6 +316,7 @@ export interface ManagerPropertyAssignment {
 export interface ManagerFormData {
   username: string;
   password: string;
+  password_confirm?: string;
   email: string;
   full_name: string;
   landlord_id?: number;

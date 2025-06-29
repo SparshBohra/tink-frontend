@@ -310,6 +310,10 @@ function Applications() {
               >
                 Download Report
           </button>
+          
+          <Link href="/tenants" className="btn btn-primary">
+            View All Tenants
+          </Link>
             </div>
       </div>
         </SectionCard>
@@ -381,6 +385,10 @@ function Applications() {
                     >
                         Reject
                     </button>
+                    
+                    <Link href={`/tenants/${app.tenant}`} className="btn btn-secondary">
+                      View Tenant
+                    </Link>
                       </div>
                   </td>
                 </tr>
@@ -433,7 +441,7 @@ function Applications() {
                 </td>
                   
                   <td>
-                    <Link href={`/tenants`} className="btn btn-secondary">
+                    <Link href={`/tenants/${app.tenant}`} className="btn btn-secondary">
                       View Tenant
                     </Link>
                 </td>
@@ -486,12 +494,19 @@ function Applications() {
         .applicant-name {
           font-weight: 500;
           color: var(--gray-900);
+          text-align: center;
         }
         
         .applicant-email,
         .property-vacancy {
           font-size: var(--text-small);
           color: var(--gray-600);
+          text-align: center;
+        }
+        
+        .property-name {
+          text-align: center;
+          color: var(--gray-900);
         }
         
         .app-details {
@@ -499,12 +514,15 @@ function Applications() {
           flex-direction: column;
           gap: 2px;
           font-size: var(--text-small);
+          text-align: center;
+          align-items: center;
         }
         
         .decision-notes {
           font-style: italic;
           color: var(--gray-600);
           margin-top: 4px;
+          text-align: center;
         }
         
         .pending-days {
@@ -512,12 +530,15 @@ function Applications() {
           color: var(--warning-amber);
           font-weight: 500;
           margin-top: var(--spacing-xs);
+          text-align: center;
         }
         
         .action-buttons {
           display: flex;
           gap: var(--spacing-xs);
           flex-direction: column;
+          align-items: center;
+          justify-content: center;
         }
         
         @media (min-width: 768px) {

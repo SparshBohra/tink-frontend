@@ -239,7 +239,7 @@ function Properties() {
                             className="occupancy-progress" 
                             style={{ width: `${stats.occupancyRate}%` }}
                           ></div>
-                        </div>
+                      </div>
                         <div className="occupancy-text">
                           <span className="occupancy-percent">{stats.occupancyRate}%</span>
                           <span className="occupancy-detail">
@@ -256,8 +256,8 @@ function Properties() {
                         <StatusBadge status="warning" text="Good" />
                       ) : (
                         <StatusBadge status="success" text="Excellent" />
-                      )}
-                    </td>
+                    )}
+                  </td>
                     
                     <td style={{ textAlign: 'center' }}>
                       <div className="action-buttons">
