@@ -61,6 +61,14 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
   };
 
   // SVG Icons
+  const MenuIcon = () => (
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <line x1="4" y1="6" x2="20" y2="6"/>
+      <line x1="4" y1="12" x2="20" y2="12"/>
+      <line x1="4" y1="18" x2="20" y2="18"/>
+    </svg>
+  );
+
   const DashboardIcon = () => (
     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <rect x="3" y="3" width="7" height="7"/>
@@ -191,10 +199,12 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
   return (
     <>
       <div className={`sidebar ${isCollapsed ? 'collapsed' : ''}`}>
-        {/* Logo Section */}
+        {/* Menu Section */}
         <div className="sidebar-header">
-          <div className="logo-container">
-            <div className="logo" onClick={onToggle}>T</div>
+          <div className="menu-container">
+            <button className="menu-toggle" onClick={onToggle}>
+              <MenuIcon />
+            </button>
             {!isCollapsed && <span className="logo-text">Tink</span>}
           </div>
         </div>
@@ -297,31 +307,34 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
           align-items: center;
         }
 
-        .logo-container {
+        .menu-container {
           display: flex;
           align-items: center;
           gap: 12px;
         }
 
-        .logo {
+        .menu-toggle {
           width: 44px;
           height: 44px;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          background: rgba(255, 255, 255, 0.1);
+          border: 1px solid rgba(255, 255, 255, 0.2);
           border-radius: 12px;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 20px;
-          font-weight: 700;
-          color: white;
-          box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+          color: rgba(255, 255, 255, 0.9);
           cursor: pointer;
-          transition: all 0.2s ease;
+          transition: all 0.3s ease;
         }
 
-        .logo:hover {
+        .menu-toggle:hover {
+          background: rgba(255, 255, 255, 0.15);
+          border-color: rgba(255, 255, 255, 0.3);
           transform: scale(1.05);
-          box-shadow: 0 6px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .menu-toggle:active {
+          transform: scale(0.95);
         }
 
         .logo-text {

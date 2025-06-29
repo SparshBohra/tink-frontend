@@ -150,10 +150,6 @@ export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarPr
     <>
       <div className={`topbar ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
         <div className="topbar-left">
-          <button className="sidebar-toggle" onClick={onSidebarToggle}>
-            <span className="hamburger"></span>
-          </button>
-          
           <div className="search-container">
             <div className="search-input-wrapper">
               <span className="search-icon"><SearchIcon /></span>
@@ -296,46 +292,6 @@ export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarPr
         .topbar-left {
           display: flex;
           align-items: center;
-          gap: 20px;
-        }
-
-        .sidebar-toggle {
-          background: none;
-          border: none;
-          cursor: pointer;
-          padding: 10px;
-          border-radius: 12px;
-          transition: background 0.2s ease;
-        }
-
-        .sidebar-toggle:hover {
-          background: rgba(0, 0, 0, 0.05);
-        }
-
-        .hamburger {
-          display: block;
-          width: 24px;
-          height: 3px;
-          background: #374151;
-          position: relative;
-        }
-
-        .hamburger::before,
-        .hamburger::after {
-          content: '';
-          position: absolute;
-          width: 24px;
-          height: 3px;
-          background: #374151;
-          transition: transform 0.2s ease;
-        }
-
-        .hamburger::before {
-          top: -8px;
-        }
-
-        .hamburger::after {
-          bottom: -8px;
         }
 
         .search-container {
