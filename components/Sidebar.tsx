@@ -62,10 +62,10 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
 
   // SVG Icons
   const MenuIcon = () => (
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <line x1="4" y1="6" x2="20" y2="6"/>
-      <line x1="4" y1="12" x2="20" y2="12"/>
-      <line x1="4" y1="18" x2="20" y2="18"/>
+    <svg width="24" height="24" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="10,1 19,7 10,13 1,7"/>
+      <polyline points="1,14 10,20 19,14"/>
+      <polyline points="1,10.5 10,16.5 19,10.5"/>
     </svg>
   );
 
@@ -99,10 +99,8 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
 
   const TenantsIcon = () => (
     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="9" cy="7" r="4"/>
-      <path d="M3 21V19C3 16.79 4.79 15 7 15H11C13.21 15 15 16.79 15 19V21"/>
-      <circle cx="17" cy="7" r="3"/>
-      <path d="M21 21V19C21 17.35 19.65 16 18 16H16"/>
+      <circle cx="12" cy="8" r="5"/>
+      <path d="M3 21V19C3 16.79 4.79 15 7 15H17C19.21 15 21 16.79 21 19V21"/>
     </svg>
   );
 
@@ -115,10 +113,10 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
 
   const ManagersIcon = () => (
     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M16 21V19C16 16.79 14.21 15 12 15H5C2.79 15 1 16.79 1 19V21"/>
-      <circle cx="8.5" cy="7" r="4"/>
-      <path d="M23 21V19C23 16.79 21.21 15 19 15C17.94 15 16.93 15.53 16.2 16.36"/>
-      <circle cx="20" cy="7" r="4"/>
+      <rect x="2" y="4" width="20" height="16" rx="2"/>
+      <path d="M7 15L10 12L13 15L17 9"/>
+      <circle cx="7" cy="9" r="1"/>
+      <circle cx="17" cy="9" r="1"/>
     </svg>
   );
 
