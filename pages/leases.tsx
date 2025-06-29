@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
-import Navigation from '../components/Navigation';
 import DashboardLayout from '../components/DashboardLayout';
 import MetricCard from '../components/MetricCard';
 import SectionCard from '../components/SectionCard';
@@ -198,17 +197,14 @@ function Leases() {
 
   if (loading) {
     return (
-      <>
-        <Navigation />
-        <DashboardLayout
-          title="Lease Management"
-          subtitle="Loading lease data..."
-        >
-          <div className="loading-indicator">
-            <div className="loading-spinner"></div>
-            <p>Fetching lease data...</p>
-          </div>
-        </DashboardLayout>
+      <DashboardLayout
+        title="Lease Management"
+        subtitle="Loading lease data..."
+      >
+        <div className="loading-indicator">
+          <div className="loading-spinner"></div>
+          <p>Fetching lease data...</p>
+        </div>
         
         <style jsx>{`
           .loading-indicator {
@@ -235,21 +231,15 @@ function Leases() {
             }
           }
         `}</style>
-      </>
+      </DashboardLayout>
     );
   }
 
   return (
-    <>
-      <Head>
-        <title>Lease Management - Tink Property Management</title>
-      </Head>
-      <Navigation />
-      
-      <DashboardLayout
-        title="Lease Management"
-        subtitle="Manage active leases, process renewals, and handle move-outs."
-      >
+    <DashboardLayout
+      title="Lease Management"
+      subtitle="Manage active leases, process renewals, and handle move-outs."
+    >
         {error && <div className="alert alert-error">{error}</div>}
         
         {/* Metrics */}
@@ -317,7 +307,7 @@ function Leases() {
               action={
                 <Link href="/applications" className="btn btn-primary">
                   Create from Applications
-        </Link>
+                </Link>
               }
             />
           ) : (
@@ -416,27 +406,27 @@ function Leases() {
                     <td>
                       {getPropertyName(lease.property_ref)}
                       <div className="room-name">{getRoomName(lease.room)}</div>
-                  </td>
+                    </td>
                     <td>
                       <div>{lease.end_date}</div>
                       <div className="expiry-days">{daysToExpiry} days left</div>
-                  </td>
+                    </td>
                     <td>
                       {daysToExpiry <= 30 ? (
                         <StatusBadge status="error" text="Critical" />
                       ) : (
                         <StatusBadge status="warning" text="Expiring soon" />
                       )}
-                  </td>
+                    </td>
                     <td>
                       <button 
                         onClick={() => handleRenewLease(lease.id)} 
                         className="btn btn-primary btn-sm"
                       >
                         Renew Now
-                </button>
-              </td>
-            </tr>
+                      </button>
+                    </td>
+                  </tr>
                 );
               }}
             />
@@ -458,7 +448,7 @@ function Leases() {
               ]}
               data={draftLeases}
               renderRow={(lease) => (
-            <tr key={lease.id}>
+                <tr key={lease.id}>
                   <td>{getTenantName(lease.tenant)}</td>
                   <td>
                     {getPropertyName(lease.property_ref)}
@@ -471,54 +461,13 @@ function Leases() {
                   <td>
                     <button className="btn btn-success btn-sm">Activate</button>
                     <button className="btn btn-error btn-sm">Delete</button>
-              </td>
-            </tr>
+                  </td>
+                </tr>
               )}
             />
           </SectionCard>
         )}
-      </DashboardLayout>
-      
-      <style jsx>{`
-        .metrics-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-          gap: var(--spacing-lg);
-          margin-bottom: var(--spacing-xl);
-        }
-        
-        .actions-container {
-          display: flex;
-          gap: var(--spacing-md);
-          flex-wrap: wrap;
-        }
-        
-        .tenant-name {
-          font-weight: 500;
-          color: var(--gray-900);
-        }
-        
-        .tenant-contact,
-        .room-name,
-        .expiry-days {
-          font-size: var(--text-small);
-          color: var(--gray-600);
-        }
-        
-        .lease-details {
-          font-size: var(--text-small);
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-        }
-        
-        .action-buttons {
-          display: flex;
-          gap: var(--spacing-xs);
-          flex-wrap: wrap;
-        }
-      `}</style>
-    </>
+    </DashboardLayout>
   );
 }
 

@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
-import Navigation from '../components/Navigation';
 import DashboardLayout from '../components/DashboardLayout';
 import SectionCard from '../components/SectionCard';
 import DataTable from '../components/DataTable';
@@ -186,17 +185,14 @@ function Applications() {
 
   if (loading) {
     return (
-      <>
-        <Navigation />
-        <DashboardLayout
-          title="Applications Review"
-          subtitle="Loading applications data..."
-        >
-          <div className="loading-indicator">
-            <div className="loading-spinner"></div>
-            <p>Fetching application data...</p>
-      </div>
-        </DashboardLayout>
+      <DashboardLayout
+        title="Applications Review"
+        subtitle="Loading applications data..."
+      >
+        <div className="loading-indicator">
+          <div className="loading-spinner"></div>
+          <p>Fetching application data...</p>
+        </div>
         
         <style jsx>{`
           .loading-indicator {
@@ -205,7 +201,7 @@ function Applications() {
             align-items: center;
             justify-content: center;
             padding: var(--spacing-xl);
-  }
+          }
           
           .loading-spinner {
             width: 40px;
@@ -223,7 +219,7 @@ function Applications() {
             }
           }
         `}</style>
-      </>
+      </DashboardLayout>
     );
   }
 
@@ -236,16 +232,10 @@ function Applications() {
   };
 
   return (
-    <>
-      <Head>
-        <title>Applications Review - Tink Property Management</title>
-      </Head>
-      <Navigation />
-      
-      <DashboardLayout
-        title="Applications Review"
-        subtitle="Review and decide on rental applications. Approved tenants must be assigned to rooms and moved in."
-      >
+    <DashboardLayout
+      title="Applications Review"
+      subtitle="Review and decide on rental applications. Approved tenants must be assigned to rooms and moved in."
+    >
         {error && <div className="alert alert-error">{error}</div>}
         
         {/* Metrics */}
@@ -450,8 +440,7 @@ function Applications() {
             />
           )}
         </SectionCard>
-      </DashboardLayout>
-      
+
       <style jsx>{`
         .metrics-grid {
           display: grid;
@@ -547,7 +536,7 @@ function Applications() {
           }
         }
       `}</style>
-    </>
+    </DashboardLayout>
   );
 } 
 

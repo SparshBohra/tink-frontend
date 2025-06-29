@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
-import Navigation from '../components/Navigation';
 import DashboardLayout from '../components/DashboardLayout';
 import MetricCard from '../components/MetricCard';
 import SectionCard from '../components/SectionCard';
@@ -515,18 +514,14 @@ function ManagersPage() {
 
   if (loading) {
     return (
-      <>
-        <Navigation />
-        <DashboardLayout
-          title={isAdmin() ? 'All Managers' : 'My Team'}
-          subtitle="Loading managers..."
-        >
-          <div className="loading-indicator">
-            <div className="loading-spinner" />
-            <p>Fetching manager data...</p>
-          </div>
-        </DashboardLayout>
-      </>
+      <DashboardLayout
+        title="Loading managers..."
+      >
+        <div className="loading-indicator">
+          <div className="loading-spinner" />
+          <p>Fetching manager data...</p>
+        </div>
+      </DashboardLayout>
     );
   }
 
@@ -535,7 +530,6 @@ function ManagersPage() {
       <Head>
         <title>Manage Team - Tink</title>
       </Head>
-      <Navigation />
       <DashboardLayout
         title={isAdmin() ? 'All Managers' : 'My Team'}
         subtitle={isAdmin() ? 'Manage all property managers' : 'Manage your property management team with granular property access'}

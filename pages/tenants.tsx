@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Head from 'next/head';
-import Navigation from '../components/Navigation';
 import DashboardLayout from '../components/DashboardLayout';
 import SectionCard from '../components/SectionCard';
 import EmptyState from '../components/EmptyState';
@@ -23,7 +22,6 @@ function Tenants() {
     full_name: '',
     email: '',
     phone: '',
-    date_of_birth: '',
     emergency_contact_name: '',
     emergency_contact_phone: ''
   });
@@ -73,7 +71,6 @@ function Tenants() {
         full_name: '',
         email: '',
         phone: '',
-        date_of_birth: '',
         emergency_contact_name: '',
         emergency_contact_phone: ''
       });
@@ -94,7 +91,6 @@ function Tenants() {
       full_name: tenant.full_name,
       email: tenant.email,
       phone: tenant.phone,
-      date_of_birth: tenant.date_of_birth || '',
       emergency_contact_name: tenant.emergency_contact_name || '',
       emergency_contact_phone: tenant.emergency_contact_phone || ''
     });
@@ -127,7 +123,7 @@ function Tenants() {
         }
       } else {
         const appDetails = applications.map(app => 
-          `• ${app.property_name || 'Unknown Property'} - Status: ${app.status.toUpperCase()}`
+          `• Property ID: ${app.property_ref} - Status: ${app.status.toUpperCase()}`
         ).join('\n');
         
         const viewAll = confirm(
@@ -152,8 +148,8 @@ function Tenants() {
         const isExpiringSoon = daysUntilExpiry <= 90;
         
         const leaseInfo = `Current lease for ${tenant?.full_name}:\n\n` +
-          `Property: ${lease.property_name}\n` +
-          `Room: ${lease.room_name}\n` +
+          `Property ID: ${lease.property_ref}\n` +
+          `Room ID: ${lease.room}\n` +
           `Rent: $${lease.monthly_rent}/month\n` +
           `Lease Period: ${lease.start_date} to ${lease.end_date}\n` +
           `Days until expiry: ${daysUntilExpiry}\n` +
@@ -178,19 +174,15 @@ function Tenants() {
 
   const downloadTenantsReport = () => {
     const csvData = [
-      ['ID', 'Full Name', 'Email', 'Phone', 'Date of Birth', 'Emergency Contact', 'Emergency Phone', 'Current Property', 'Current Room', 'Application Status', 'Lease Status'],
+      ['ID', 'Full Name', 'Email', 'Phone', 'Emergency Contact', 'Emergency Phone', 'Created At'],
       ...tenants.map(tenant => [
         tenant.id.toString(),
         tenant.full_name,
-          tenant.email,
-          tenant.phone,
-        tenant.date_of_birth || '',
+        tenant.email,
+        tenant.phone,
         tenant.emergency_contact_name || '',
         tenant.emergency_contact_phone || '',
-        tenant.current_property_name || 'Not assigned',
-        tenant.current_room_name || 'Not assigned',
-        tenant.current_application_status || 'No application',
-        tenant.current_lease_status || 'No lease'
+        tenant.created_at
       ])
     ];
     const csvContent = csvData.map(row => row.join(',')).join('\n');
@@ -204,15 +196,13 @@ function Tenants() {
 
   const downloadContactList = () => {
     const csvData = [
-      ['Name', 'Phone', 'Email', 'Emergency Contact', 'Emergency Phone', 'Property', 'Room'],
+      ['Name', 'Email', 'Phone', 'Emergency Contact', 'Emergency Phone'],
       ...tenants.map(tenant => [
         tenant.full_name,
-          tenant.phone,
-          tenant.email,
+        tenant.email,
+        tenant.phone,
         tenant.emergency_contact_name || '',
-        tenant.emergency_contact_phone || '',
-        tenant.current_property_name || 'Not assigned',
-        tenant.current_room_name || 'Not assigned'
+        tenant.emergency_contact_phone || ''
       ])
     ];
     const csvContent = csvData.map(row => row.join(',')).join('\n');
@@ -224,373 +214,321 @@ function Tenants() {
     a.click();
   };
 
-  // Count tenants by status
   const getTenantMetrics = () => {
-    const activeCount = tenants.filter(t => t.current_lease_status === 'active').length;
-    const pendingCount = tenants.filter(t => t.current_application_status === 'pending').length;
-    const totalCount = tenants.length;
+    const total = tenants.length;
+    // Since we don't have lease status in the basic Tenant type, we'll show simplified metrics
+    const active = tenants.length; // All tenants are considered "active" if they exist
+    const pending = 0; // We'd need to fetch applications separately to get this
     
-    return { activeCount, pendingCount, totalCount };
+    return {
+      totalCount: total,
+      activeCount: active,
+      pendingCount: pending
+    };
   };
-  
-  const metrics = getTenantMetrics();
 
   if (loading) {
     return (
-      <>
-        <Navigation />
-        <DashboardLayout
-          title="Tenant Management"
-          subtitle="Loading tenant data..."
-        >
-          <div className="loading-indicator">
-            <div className="loading-spinner"></div>
-            <p>Fetching tenant data...</p>
-      </div>
-        </DashboardLayout>
-        
-        <style jsx>{`
-          .loading-indicator {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: var(--spacing-xl);
-          }
-          
-          .loading-spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid var(--gray-200);
-            border-top-color: var(--primary-blue);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-bottom: var(--spacing-md);
-          }
-          
-          @keyframes spin {
-            to {
-              transform: rotate(360deg);
-            }
-          }
-        `}</style>
-      </>
-    );
-  }
-
-  return (
-    <>
-      <Head>
-        <title>Tenant Management - Tink Property Management</title>
-      </Head>
-      <Navigation />
-      
-      <DashboardLayout
+      <DashboardLayout 
         title="Tenant Management"
         subtitle="Manage active tenants across all properties"
       >
-        {/* Alerts */}
-        {error && <div className="alert alert-error">{error}</div>}
-        {success && <div className="alert alert-success">{success}</div>}
-        
-        {/* Metrics */}
-        <div className="metrics-grid">
-          <MetricCard 
-            title="Total Tenants" 
-            value={metrics.totalCount}
-            color="blue"
-          />
-          
-          <MetricCard 
-            title="Active Tenants" 
-            value={metrics.activeCount}
-            subtitle="With current leases"
-            color="green"
-          />
-          
-          <MetricCard 
-            title="Pending Applications" 
-            value={metrics.pendingCount}
-            color="amber"
-          />
+        <div className="loading-state">
+          <div className="loading-spinner">Loading tenants...</div>
         </div>
+        
+        <style jsx>{`
+          .loading-state {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 400px;
+          }
+          
+          .loading-spinner {
+            font-size: 18px;
+            color: var(--gray-600);
+          }
+        `}</style>
+      </DashboardLayout>
+    );
+  }
 
-        {/* Actions */}
-        <SectionCard>
-          <div className="actions-container">
-        <button 
-              className="btn btn-primary"
-              onClick={() => {
-                setEditingTenant(null);
-                setFormData({
-                  full_name: '',
-                  email: '',
-                  phone: '',
-                  date_of_birth: '',
-                  emergency_contact_name: '',
-                  emergency_contact_phone: ''
-                });
-                setShowForm(true);
-              }}
-            >
-              Register New Tenant
-            </button>
-            
-            <button 
-              className="btn btn-secondary"
-              onClick={() => fetchTenants()}
-        >
-              Refresh
-        </button>
-            
-        <button 
-              className="btn btn-secondary"
-          onClick={downloadTenantsReport}
-            >
-              Download Report
-        </button>
-            
-        <button 
-              className="btn btn-secondary"
-          onClick={downloadContactList}
-            >
-              Download Contacts
-        </button>
+  const metrics = getTenantMetrics();
+
+  return (
+    <DashboardLayout
+      title="Tenant Management"
+      subtitle="Manage active tenants across all properties"
+    >
+      {/* Alerts */}
+      {error && <div className="alert alert-error">{error}</div>}
+      {success && <div className="alert alert-success">{success}</div>}
+      
+      {/* Metrics */}
+      <div className="metrics-grid">
+        <MetricCard 
+          title="Total Tenants" 
+          value={metrics.totalCount}
+          color="blue"
+        />
+        
+        <MetricCard 
+          title="Registered Tenants" 
+          value={metrics.activeCount}
+          subtitle="In the system"
+          color="green"
+        />
+        
+        <MetricCard 
+          title="Applications" 
+          value={metrics.pendingCount}
+          subtitle="Check Applications page"
+          color="amber"
+        />
       </div>
-        </SectionCard>
 
-        {/* Tenant Form */}
-      {showForm && (
-          <SectionCard 
-            title={editingTenant ? "Edit Tenant" : "Register New Tenant"}
-            subtitle={editingTenant ? `Updating information for ${editingTenant.full_name}` : "Add a new tenant to the system"}
+      {/* Actions */}
+      <SectionCard>
+        <div className="actions-container">
+          <button 
+            className="btn btn-primary"
+            onClick={() => {
+              setEditingTenant(null);
+              setFormData({
+                full_name: '',
+                email: '',
+                phone: '',
+                emergency_contact_name: '',
+                emergency_contact_phone: ''
+              });
+              setShowForm(true);
+            }}
           >
-            <form onSubmit={handleSubmit} className="tenant-form">
-              <div className="form-grid">
-                <div className="form-group">
-                  <label htmlFor="full_name" className="form-label">
-                    Full Name *
-                  </label>
-              <input
-                    id="full_name"
-                    name="full_name"
-                type="text"
-                value={formData.full_name}
-                onChange={(e) => setFormData({...formData, full_name: e.target.value})}
-                required
-                    className="form-input"
-                    placeholder="John Doe"
-              />
-            </div>
-            
-                <div className="form-group">
-                  <label htmlFor="email" className="form-label">
-                    Email Address *
-                  </label>
+            Register New Tenant
+          </button>
+          
+          <button 
+            className="btn btn-secondary"
+            onClick={() => fetchTenants()}
+          >
+            Refresh
+          </button>
+          
+          <button 
+            className="btn btn-secondary"
+            onClick={downloadTenantsReport}
+          >
+            Download Report
+          </button>
+          
+          <button 
+            className="btn btn-secondary"
+            onClick={downloadContactList}
+          >
+            Download Contacts
+          </button>
+        </div>
+      </SectionCard>
+
+      {/* Tenant Form */}
+      {showForm && (
+        <SectionCard 
+          title={editingTenant ? "Edit Tenant" : "Register New Tenant"}
+          subtitle={editingTenant ? `Updating information for ${editingTenant.full_name}` : "Add a new tenant to the system"}
+        >
+          <form onSubmit={handleSubmit} className="tenant-form">
+            <div className="form-grid">
+              <div className="form-group">
+                <label htmlFor="full_name" className="form-label">
+                  Full Name *
+                </label>
                 <input
-                    id="email"
-                    name="email"
+                  id="full_name"
+                  name="full_name"
+                  type="text"
+                  value={formData.full_name}
+                  onChange={(e) => setFormData({...formData, full_name: e.target.value})}
+                  required
+                  className="form-input"
+                  placeholder="John Doe"
+                />
+              </div>
+              
+              <div className="form-group">
+                <label htmlFor="email" className="form-label">
+                  Email Address *
+                </label>
+                <input
+                  id="email"
+                  name="email"
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({...formData, email: e.target.value})}
                   required
-                    className="form-input"
-                    placeholder="john.doe@example.com"
+                  className="form-input"
+                  placeholder="john.doe@example.com"
                 />
               </div>
                 
-                <div className="form-group">
-                  <label htmlFor="phone" className="form-label">
-                    Phone Number *
-                  </label>
+              <div className="form-group">
+                <label htmlFor="phone" className="form-label">
+                  Phone Number *
+                </label>
                 <input
-                    id="phone"
-                    name="phone"
+                  id="phone"
+                  name="phone"
                   type="tel"
                   value={formData.phone}
                   onChange={(e) => setFormData({...formData, phone: e.target.value})}
                   required
-                    className="form-input"
-                    placeholder="+1 (555) 123-4567"
+                  className="form-input"
+                  placeholder="+1 (555) 123-4567"
                 />
-            </div>
+              </div>
 
-                <div className="form-group">
-                  <label htmlFor="date_of_birth" className="form-label">
-                    Date of Birth
-                  </label>
-              <input
-                    id="date_of_birth"
-                    name="date_of_birth"
-                type="date"
-                value={formData.date_of_birth}
-                onChange={(e) => setFormData({...formData, date_of_birth: e.target.value})}
-                    className="form-input"
-              />
-            </div>
-
-                <div className="form-group">
-                  <label htmlFor="emergency_contact_name" className="form-label">
-                    Emergency Contact Name
-                  </label>
+              <div className="form-group">
+                <label htmlFor="emergency_contact_name" className="form-label">
+                  Emergency Contact Name
+                </label>
                 <input
-                    id="emergency_contact_name"
-                    name="emergency_contact_name"
+                  id="emergency_contact_name"
+                  name="emergency_contact_name"
                   type="text"
-                  value={formData.emergency_contact_name}
+                  value={formData.emergency_contact_name || ''}
                   onChange={(e) => setFormData({...formData, emergency_contact_name: e.target.value})}
-                    className="form-input"
-                    placeholder="Jane Doe"
+                  className="form-input"
+                  placeholder="Jane Doe"
                 />
               </div>
                 
-                <div className="form-group">
-                  <label htmlFor="emergency_contact_phone" className="form-label">
-                    Emergency Contact Phone
-                  </label>
+              <div className="form-group">
+                <label htmlFor="emergency_contact_phone" className="form-label">
+                  Emergency Contact Phone
+                </label>
                 <input
-                    id="emergency_contact_phone"
-                    name="emergency_contact_phone"
+                  id="emergency_contact_phone"
+                  name="emergency_contact_phone"
                   type="tel"
-                  value={formData.emergency_contact_phone}
+                  value={formData.emergency_contact_phone || ''}
                   onChange={(e) => setFormData({...formData, emergency_contact_phone: e.target.value})}
-                    className="form-input"
-                    placeholder="+1 (555) 987-6543"
+                  className="form-input"
+                  placeholder="+1 (555) 987-6543"
                 />
               </div>
             </div>
 
-              <div className="form-actions">
+            <div className="form-actions">
               <button 
                 type="submit"
-                  className="btn btn-primary"
+                className="btn btn-primary"
               >
-                  {editingTenant ? 'Update Tenant' : 'Save Tenant'}
+                {editingTenant ? 'Update Tenant' : 'Save Tenant'}
               </button>
                 
               <button 
                 type="button"
-                  className="btn btn-secondary"
-                  onClick={() => setShowForm(false)}
+                className="btn btn-secondary"
+                onClick={() => setShowForm(false)}
               >
                 Cancel
               </button>
             </div>
           </form>
-          </SectionCard>
+        </SectionCard>
       )}
 
-        {/* Tenant List */}
-        <SectionCard
-          title="All Tenants"
-          subtitle={`${tenants.length} ${tenants.length === 1 ? 'tenant' : 'tenants'} registered in the system`}
-        >
-          {tenants.length === 0 ? (
-            <EmptyState
-              title="No tenants found"
-              description="There are no tenants registered in the system yet."
-              action={
-                <button 
-                  className="btn btn-primary"
-                  onClick={() => {
-                    setEditingTenant(null);
-                    setShowForm(true);
-                  }}
-                >
-                  Register First Tenant
-                </button>
-              }
-            />
-          ) : (
-            <DataTable
-              columns={[
-                { key: 'name', header: 'Tenant', width: '25%' },
-                { key: 'contact', header: 'Contact Information', width: '20%' },
-                { key: 'property', header: 'Current Property', width: '20%' },
-                { key: 'status', header: 'Status', width: '15%' },
-                { key: 'actions', header: 'Actions', width: '20%' }
-              ]}
-              data={tenants}
-              renderRow={(tenant, index) => (
-            <tr key={tenant.id}>
-                  <td className="tenant-name-cell">
-                    <Link href={`/tenants/${tenant.id}`} className="tenant-name-link">
+      {/* Tenants List */}
+      <SectionCard title="All Tenants" subtitle={`${tenants.length} tenant(s) registered in the system`}>
+        {tenants.length === 0 ? (
+          <EmptyState 
+            title="No tenants registered"
+            description="Start by registering your first tenant in the system."
+            actionText="Register New Tenant"
+            onAction={() => {
+              setEditingTenant(null);
+              setFormData({
+                full_name: '',
+                email: '',
+                phone: '',
+                emergency_contact_name: '',
+                emergency_contact_phone: ''
+              });
+              setShowForm(true);
+            }}
+          />
+        ) : (
+          <DataTable
+            headers={['Tenant', 'Contact Information', 'Emergency Contact', 'Created', 'Actions']}
+            data={tenants.map(tenant => (
+              <tr key={tenant.id}>
+                <td className="tenant-name-cell">
+                  <Link href={`/tenants/${tenant.id}`} className="tenant-name-link">
                     <div className="tenant-name">{tenant.full_name}</div>
-                    </Link>
-                    <div className="tenant-id">ID: {tenant.id}</div>
+                  </Link>
+                  <div className="tenant-id">ID: {tenant.id}</div>
                 </td>
                   
-                  <td>
-                    <div className="tenant-contact">
-                      <div>{tenant.phone}</div>
-                      <div className="tenant-email">{tenant.email}</div>
+                <td>
+                  <div className="tenant-contact">
+                    <div>{tenant.phone}</div>
+                    <div className="tenant-email">{tenant.email}</div>
+                  </div>
+                </td>
+                  
+                <td>
+                  {tenant.emergency_contact_name ? (
+                    <div>
+                      <div>{tenant.emergency_contact_name}</div>
+                      <div className="tenant-emergency-phone">{tenant.emergency_contact_phone || 'No phone'}</div>
                     </div>
-                </td>
-                  
-                  <td>
-                    {tenant.current_property_name ? (
-                      <div>
-                        <div>{tenant.current_property_name}</div>
-                        <div className="tenant-room">{tenant.current_room_name || 'Room not assigned'}</div>
-                      </div>
-                    ) : (
-                      <span className="text-muted">Not assigned</span>
+                  ) : (
+                    <span className="text-muted">Not provided</span>
                   )}
                 </td>
-                  
-                  <td>
-                    <div className="tenant-statuses">
-                      {tenant.current_lease_status && (
-                        <StatusBadge status={tenant.current_lease_status} />
-                      )}
-                      
-                      {tenant.current_application_status && (
-                        <StatusBadge status={tenant.current_application_status} />
-                      )}
-                      
-                      {!tenant.current_lease_status && !tenant.current_application_status && (
-                        <StatusBadge status="neutral" text="No active status" />
-                  )}
-                    </div>
+
+                <td>
+                  <div className="tenant-date">
+                    {new Date(tenant.created_at).toLocaleDateString()}
+                  </div>
                 </td>
                   
-                  <td>
-                    <div className="action-buttons">
-                      <button 
-                        onClick={() => handleEdit(tenant)} 
-                        className="btn btn-secondary"
-                      >
-                        Edit
-                      </button>
-                      
+                <td>
+                  <div className="action-buttons">
                     <button 
-                        onClick={() => handleViewApplications(tenant.id)}
-                        className="btn btn-secondary"
+                      onClick={() => handleEdit(tenant)} 
+                      className="btn btn-secondary"
                     >
-                        Applications
+                      Edit
                     </button>
                     
-                      <button
-                        onClick={() => handleViewCurrentLease(tenant.id)}
-                        className="btn btn-secondary"
-                      >
-                        Lease
-                </button>
-                    
+                    <button 
+                      onClick={() => handleViewApplications(tenant.id)}
+                      className="btn btn-secondary"
+                    >
+                      Applications
+                    </button>
+                  
+                    <button
+                      onClick={() => handleViewCurrentLease(tenant.id)}
+                      className="btn btn-secondary"
+                    >
+                      Lease
+                    </button>
+                  
                     <button 
                       onClick={() => handleDelete(tenant.id)}
-                        className="btn btn-error"
+                      className="btn btn-error"
                     >
-                        Delete
-                </button>
+                      Delete
+                    </button>
                   </div>
-              </td>
-            </tr>
-              )}
-            />
-          )}
-        </SectionCard>
-      </DashboardLayout>
+                </td>
+              </tr>
+            ))}
+          />
+        )}
+      </SectionCard>
       
       <style jsx>{`
         .metrics-grid {
@@ -659,16 +597,14 @@ function Tenants() {
           color: var(--gray-600);
         }
         
-        .tenant-room {
+        .tenant-emergency-phone {
           font-size: var(--text-small);
           color: var(--gray-600);
         }
-        
-        .tenant-statuses {
-          display: flex;
-          flex-direction: column;
-          gap: var(--spacing-xs);
-          align-items: center;
+
+        .tenant-date {
+          font-size: var(--text-small);
+          color: var(--gray-600);
         }
         
         .action-buttons {
@@ -711,7 +647,7 @@ function Tenants() {
           }
         }
       `}</style>
-    </>
+    </DashboardLayout>
   );
 }
 
