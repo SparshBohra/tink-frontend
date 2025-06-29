@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
+import { useRouter } from 'next/router';
 import Navigation from '../components/Navigation';
 import DashboardLayout from '../components/DashboardLayout';
 import MetricCard from '../components/MetricCard';
@@ -14,6 +15,7 @@ import { ManagerWithProperties, ManagerFormData, Property } from '../lib/types';
 
 function ManagersPage() {
   const { user, isAdmin, isLandlord } = useAuth();
+  const router = useRouter();
   const [managers, setManagers] = useState<ManagerWithProperties[]>([]);
   const [properties, setProperties] = useState<Property[]>([]);
   const [landlordProfile, setLandlordProfile] = useState<any>(null);
@@ -24,6 +26,16 @@ function ManagersPage() {
   const [showPropertySelection, setShowPropertySelection] = useState(false);
   const [assignmentModalOpen, setAssignmentModalOpen] = useState(false);
   const [selectedManagerForAssignment, setSelectedManagerForAssignment] = useState<ManagerWithProperties | null>(null);
+  
+  // Filter states
+  const [filterByProperty, setFilterByProperty] = useState<number | null>(null);
+  const [filterByLandlord, setFilterByLandlord] = useState<number | null>(null);
+  const [landlords, setLandlords] = useState<any[]>([]);
+  
+  // Sorting states
+  const [sortBy, setSortBy] = useState<string>('full_name');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  
   const [formData, setFormData] = useState<ManagerFormData>({
     full_name: '',
     email: '',
@@ -38,6 +50,45 @@ function ManagersPage() {
   useEffect(() => {
     fetchInitialData();
   }, []);
+
+  // Handle URL parameters for filtering
+  useEffect(() => {
+    if (router.isReady && landlords.length > 0) {
+      const { landlord, property, action } = router.query;
+      
+      // Auto-filter by landlord if coming from landlord page
+      if (landlord && typeof landlord === 'string') {
+        const landlordId = parseInt(landlord);
+        if (!isNaN(landlordId)) {
+          // Check if landlord exists in current data
+          const landlordExists = landlords.find(l => l.id === landlordId);
+          if (landlordExists) {
+            setFilterByLandlord(landlordId);
+            console.log('Auto-filtering by landlord ID:', landlordId, 'Name:', landlordExists.full_name);
+          } else {
+            console.warn('Landlord ID from URL not found in current data:', landlordId);
+            // Still set the filter - it might be from API data that's not loaded yet
+            setFilterByLandlord(landlordId);
+          }
+        }
+      }
+      
+      // Auto-filter by property if specified
+      if (property && typeof property === 'string') {
+        const propertyId = parseInt(property);
+        if (!isNaN(propertyId)) {
+          setFilterByProperty(propertyId);
+          console.log('Auto-filtering by property ID:', propertyId);
+        }
+      }
+      
+      // Handle action parameter (e.g., assign)
+      if (action === 'assign') {
+        setShowForm(true);
+        console.log('Auto-opening manager creation form for assignment');
+      }
+    }
+  }, [router.isReady, router.query, landlords]);
 
   const fetchInitialData = async () => {
     try {
@@ -56,10 +107,17 @@ function ManagersPage() {
       }
       
       // Then fetch managers and properties (pass profile to avoid race condition)
-      await Promise.all([
+      const promises = [
         fetchManagers(profile),
         fetchProperties()
-      ]);
+      ];
+      
+      // Fetch landlords for admin users (for filtering)
+      if (isAdmin()) {
+        promises.push(fetchLandlords());
+      }
+      
+      await Promise.all(promises);
     } finally {
       setLoading(false);
     }
@@ -72,14 +130,80 @@ function ManagersPage() {
       let managersData: ManagerWithProperties[] = [];
       
       if (isAdmin()) {
-        // Admin can see all managers
+        // Admin can see all managers with landlord information
         const response = await apiClient.getAllManagers();
-        // Convert to ManagerWithProperties format for admin users
-        managersData = (response || []).map((manager: any) => ({
-          ...manager,
-          assigned_properties: [],
-          access_level: manager.role === 'admin' ? 'full' : 'limited'
-        }));
+        
+        // Fetch all related data: relationships, landlords, and property assignments
+        try {
+          const [relationships, landlords, propertyAssignments, allProperties] = await Promise.all([
+            apiClient.getManagerLandlordRelationships(),
+            apiClient.getAllLandlords(),
+            apiClient.getManagerPropertyAssignments(),
+            apiClient.getProperties()
+          ]);
+          
+          console.log('Fetched relationships:', relationships);
+          console.log('Fetched landlords:', landlords);
+          console.log('Fetched property assignments:', propertyAssignments);
+          
+          // Convert to ManagerWithProperties format and enhance with all related data
+          managersData = (response || []).map((manager: any) => {
+            const relationship = relationships.find(rel => rel.manager === manager.id);
+            let landlordInfo = {};
+            let assignedProperties: any[] = [];
+            
+            console.log(`Processing manager ${manager.full_name} (ID: ${manager.id})`);
+            console.log('Found relationship:', relationship);
+            
+            // Get landlord information
+            if (relationship) {
+              const landlord = landlords.find(l => l.id === relationship.landlord);
+              console.log('Found landlord:', landlord);
+              if (landlord) {
+                landlordInfo = {
+                  landlord_id: landlord.id,
+                  landlord_name: landlord.full_name,
+                  landlord_org_name: landlord.org_name
+                };
+              }
+            }
+            
+            // Get assigned properties for this manager
+            const managerAssignments = propertyAssignments.filter(assignment => assignment.manager === manager.id);
+            console.log(`Found ${managerAssignments.length} assignments for manager ${manager.id}`);
+            
+            assignedProperties = managerAssignments.map(assignment => {
+              const property = allProperties.results?.find(p => p.id === assignment.property);
+              return property ? {
+                id: property.id,
+                name: property.name,
+                address: property.address,
+                full_address: property.full_address,
+                total_rooms: property.total_rooms,
+                vacant_rooms: property.vacant_rooms
+              } : null;
+            }).filter(Boolean);
+            
+            const enhancedManager = {
+              ...manager,
+              ...landlordInfo,
+              assigned_properties: assignedProperties,
+              access_level: manager.role === 'admin' || manager.role === 'owner' ? 'full' : 
+                           assignedProperties.length > 0 ? 'limited' : 'limited'
+            };
+            
+            console.log('Enhanced manager:', enhancedManager);
+            return enhancedManager;
+          });
+        } catch (relationshipError) {
+          console.log('Could not fetch landlord relationships, using basic manager data:', relationshipError);
+          // Fallback to basic manager data
+          managersData = (response || []).map((manager: any) => ({
+            ...manager,
+            assigned_properties: [],
+            access_level: manager.role === 'admin' ? 'full' : 'limited'
+          }));
+        }
       } else if (isLandlord()) {
         // Landlords can see only their assigned managers
         try {
@@ -128,6 +252,15 @@ function ManagersPage() {
       setProperties(response.results || []);
     } catch (err: any) {
       console.error('Failed to fetch properties:', err);
+    }
+  };
+
+  const fetchLandlords = async () => {
+    try {
+      const response = await apiClient.getAllLandlords();
+      setLandlords(response || []);
+    } catch (err: any) {
+      console.error('Failed to fetch landlords:', err);
     }
   };
 
@@ -256,12 +389,20 @@ function ManagersPage() {
     if (manager.role === 'owner') {
       return <StatusBadge status="success" text="Property Owner" />;
     }
+    
+    // For regular managers, show their assignment status
+    const propertyCount = manager.assigned_properties?.length || 0;
+    
+    if (propertyCount === 0) {
+      return <StatusBadge status="error" text="No Access" />;
+    }
+    
+    // Check if they have access to all landlord's properties
     if (manager.access_level === 'full') {
       return <StatusBadge status="success" text="Full Access" />;
     }
-    const propertyCount = manager.assigned_properties?.length || 0;
-    const totalProperties = properties.length;
-    return <StatusBadge status="warning" text={`${propertyCount} of ${totalProperties} Properties`} />;
+    
+    return <StatusBadge status="warning" text={`${propertyCount} Properties`} />;
   };
 
   const getPropertyList = (manager: ManagerWithProperties) => {
@@ -274,8 +415,18 @@ function ManagersPage() {
     if (manager.access_level === 'full') {
       return <span className="text-muted">All Properties</span>;
     }
-    const propertyNames = manager.assigned_properties?.map(p => p.name).join(', ') || 'None';
-    return <span className="property-display" title={propertyNames}>{propertyNames}</span>;
+    
+    const assignedProperties = manager.assigned_properties || [];
+    if (assignedProperties.length === 0) {
+      return <span className="text-muted">No Properties Assigned</span>;
+    }
+    
+    const propertyNames = assignedProperties.map(p => p.name).join(', ');
+    const displayText = assignedProperties.length > 2 
+      ? `${assignedProperties.slice(0, 2).map(p => p.name).join(', ')} +${assignedProperties.length - 2} more`
+      : propertyNames;
+      
+    return <span className="property-display" title={propertyNames}>{displayText}</span>;
   };
 
   const handleEditAssignments = (manager: ManagerWithProperties) => {
@@ -290,6 +441,76 @@ function ManagersPage() {
 
   const handleAssignmentModalSave = async () => {
     await fetchManagers(); // Refresh the managers list
+  };
+
+  // Filter and sort managers
+  const filteredAndSortedManagers = managers
+    .filter(manager => {
+      if (filterByProperty && manager.assigned_properties) {
+        const hasProperty = manager.assigned_properties.some(prop => prop.id === filterByProperty);
+        if (!hasProperty) return false;
+      }
+      
+      if (filterByLandlord && manager.landlord_id) {
+        if (manager.landlord_id !== filterByLandlord) return false;
+      }
+      
+      return true;
+    })
+    .sort((a, b) => {
+      let aValue: any, bValue: any;
+      
+      switch (sortBy) {
+        case 'full_name':
+          aValue = a.full_name || '';
+          bValue = b.full_name || '';
+          break;
+        case 'email':
+          aValue = a.email || '';
+          bValue = b.email || '';
+          break;
+        case 'landlord':
+          aValue = a.landlord_name || '';
+          bValue = b.landlord_name || '';
+          break;
+        case 'access_level':
+          aValue = a.access_level || '';
+          bValue = b.access_level || '';
+          break;
+        case 'properties':
+          aValue = a.assigned_properties?.length || 0;
+          bValue = b.assigned_properties?.length || 0;
+          break;
+        case 'status':
+          aValue = a.is_active ? 1 : 0;
+          bValue = b.is_active ? 1 : 0;
+          break;
+        default:
+          aValue = a.full_name || '';
+          bValue = b.full_name || '';
+      }
+      
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        const comparison = aValue.toLowerCase().localeCompare(bValue.toLowerCase());
+        return sortOrder === 'asc' ? comparison : -comparison;
+      } else {
+        const comparison = aValue - bValue;
+        return sortOrder === 'asc' ? comparison : -comparison;
+      }
+    });
+
+  const clearFilters = () => {
+    setFilterByProperty(null);
+    setFilterByLandlord(null);
+  };
+
+  const handleSort = (column: string) => {
+    if (sortBy === column) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(column);
+      setSortOrder('asc');
+    }
   };
 
   if (loading) {
@@ -327,6 +548,110 @@ function ManagersPage() {
               {isAdmin() ? 'Create Manager' : 'Add Manager'}
             </button>
             <button className="btn btn-secondary" onClick={fetchManagers}>Refresh</button>
+          </div>
+        </SectionCard>
+
+        {/* Filters Section */}
+        <SectionCard title="Filters">
+          <div className="filters-container">
+            <div className="filter-group">
+              <label htmlFor="propertyFilter">Filter by Property:</label>
+              <select 
+                id="propertyFilter"
+                value={filterByProperty || ''} 
+                onChange={(e) => setFilterByProperty(e.target.value ? Number(e.target.value) : null)}
+                className="filter-select"
+              >
+                <option value="">All Properties</option>
+                {properties.map(property => (
+                  <option key={property.id} value={property.id}>
+                    {property.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {isAdmin() && (
+              <div className="filter-group">
+                <label htmlFor="landlordFilter">Filter by Landlord:</label>
+                <select 
+                  id="landlordFilter"
+                  value={filterByLandlord || ''} 
+                  onChange={(e) => setFilterByLandlord(e.target.value ? Number(e.target.value) : null)}
+                  className="filter-select"
+                >
+                  <option value="">All Landlords</option>
+                  {landlords.map(landlord => (
+                    <option key={landlord.id} value={landlord.id}>
+                      {landlord.full_name} ({landlord.org_name})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div className="filter-group">
+              <label htmlFor="sortBy">Sort by:</label>
+              <select 
+                id="sortBy"
+                value={sortBy} 
+                onChange={(e) => setSortBy(e.target.value)}
+                className="filter-select"
+              >
+                <option value="full_name">Name</option>
+                <option value="email">Email</option>
+                {isAdmin() && <option value="landlord">Landlord</option>}
+                <option value="access_level">Access Level</option>
+                <option value="properties">Property Count</option>
+                <option value="status">Status</option>
+              </select>
+            </div>
+
+            <div className="filter-group">
+              <label htmlFor="sortOrder">Order:</label>
+              <select 
+                id="sortOrder"
+                value={sortOrder} 
+                onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
+                className="filter-select"
+              >
+                <option value="asc">Ascending</option>
+                <option value="desc">Descending</option>
+              </select>
+            </div>
+
+            <div className="filter-actions">
+              <button 
+                className="btn btn-outline btn-sm" 
+                onClick={clearFilters}
+                disabled={!filterByProperty && !filterByLandlord}
+              >
+                Clear Filters
+              </button>
+              <span className="filter-count">
+                Showing {filteredAndSortedManagers.length} of {managers.length} managers
+                {(filterByProperty || filterByLandlord) && ' (filtered)'}
+                {sortBy !== 'full_name' && ` (sorted by ${sortBy})`}
+              </span>
+              {(router.query.landlord || router.query.property || router.query.action) && (
+                <div className="url-filter-notice">
+                  <span className="notice-icon">🔗</span>
+                  <span className="notice-text">
+                    {router.query.action === 'assign' && 'Ready to assign manager to landlord'}
+                    {router.query.landlord && !router.query.action && (() => {
+                      const landlordId = parseInt(router.query.landlord as string);
+                      const landlord = landlords.find(l => l.id === landlordId);
+                      return `Filtered by landlord: ${landlord ? `${landlord.full_name} (${landlord.org_name})` : `ID ${landlordId}`}`;
+                    })()}
+                    {router.query.property && (() => {
+                      const propertyId = parseInt(router.query.property as string);
+                      const property = properties.find(p => p.id === propertyId);
+                      return `Filtered by property: ${property ? property.name : `ID ${propertyId}`}`;
+                    })()}
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
         </SectionCard>
 
@@ -479,24 +804,47 @@ function ManagersPage() {
         )}
 
         <SectionCard title="Manager List">
-          {managers.length > 0 ? (
+          {filteredAndSortedManagers.length > 0 ? (
             <DataTable
               columns={[
                 { key: 'full_name', header: 'Name' },
                 { key: 'email', header: 'Email' },
+                ...(isAdmin() ? [{ key: 'landlord', header: 'Works Under' }] : []),
                 { key: 'access_level', header: 'Access Level' },
                 { key: 'properties', header: 'Assigned Properties' },
                 { key: 'status', header: 'Status' },
                 { key: 'actions', header: 'Actions' },
               ]}
-              data={managers}
+              data={filteredAndSortedManagers}
               renderRow={(manager) => (
                 <tr key={manager.id}>
                   <td style={{ textAlign: 'center' }}>
                     <strong>{manager.full_name}</strong>
                   </td>
                   <td style={{ textAlign: 'center' }}>{manager.email}</td>
-                <td style={{ textAlign: 'center' }}>
+                  {isAdmin() && (
+                    <td style={{ textAlign: 'center' }}>
+                      {manager.role === 'owner' || manager.role === 'admin' ? (
+                        <span className="text-secondary">Platform Role</span>
+                      ) : (
+                        <div>
+                          {manager.landlord_name ? (
+                            <>
+                              <strong>{manager.landlord_name}</strong>
+                              {manager.landlord_org_name && (
+                                <div className="text-small text-secondary">
+                                  {manager.landlord_org_name}
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            <span className="text-warning">No Landlord Assigned</span>
+                          )}
+                        </div>
+                      )}
+                    </td>
+                  )}
+                  <td style={{ textAlign: 'center' }}>
                     {getAccessLevelBadge(manager)}
                   </td>
                   <td style={{ textAlign: 'center', maxWidth: '200px' }}>
@@ -830,8 +1178,85 @@ function ManagersPage() {
         
         .action-buttons { 
           display: flex; 
-          gap: 0.5rem; 
+          gap: 0.5rem;
           justify-content: center; 
+        }
+
+        .text-small {
+          font-size: 0.875rem;
+        }
+
+        .text-secondary {
+          color: var(--gray-600);
+        }
+
+        .text-warning {
+          color: var(--amber-600);
+          font-weight: 500;
+          font-style: italic;
+        }
+
+        .filters-container {
+          display: flex;
+          gap: var(--spacing-lg);
+          align-items: end;
+          flex-wrap: wrap;
+        }
+
+        .filter-group {
+          display: flex;
+          flex-direction: column;
+          gap: var(--spacing-xs);
+          min-width: 200px;
+        }
+
+        .filter-group label {
+          font-weight: 600;
+          color: var(--gray-700);
+          font-size: 0.9rem;
+        }
+
+        .filter-select {
+          padding: var(--spacing-sm);
+          border: 1px solid var(--gray-300);
+          border-radius: var(--radius-sm);
+          font-size: 0.9rem;
+          background: white;
+        }
+
+        .filter-select:focus {
+          outline: none;
+          border-color: var(--primary-blue);
+          box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+        }
+
+        .filter-actions {
+          display: flex;
+          flex-direction: column;
+          gap: var(--spacing-xs);
+          align-items: flex-start;
+        }
+
+        .filter-count {
+          font-size: 0.85rem;
+          color: var(--gray-600);
+          font-style: italic;
+        }
+
+        .btn-outline {
+          background: transparent;
+          border: 1px solid var(--gray-300);
+          color: var(--gray-700);
+        }
+
+        .btn-outline:hover:not(:disabled) {
+          background: var(--gray-50);
+          border-color: var(--gray-400);
+        }
+
+        .btn-outline:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
         }
         
         .loading-indicator {
@@ -935,6 +1360,26 @@ function ManagersPage() {
         .btn:disabled {
           opacity: 0.5;
           cursor: not-allowed;
+        }
+
+        .url-filter-notice {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          padding: 0.5rem;
+          background-color: #fef3c7;
+          border-radius: 0.375rem;
+          margin-top: 1rem;
+        }
+
+        .notice-icon {
+          font-size: 1.2rem;
+          color: #d97706;
+        }
+
+        .notice-text {
+          font-size: 0.875rem;
+          color: #6b7280;
         }
       `}</style>
     </>

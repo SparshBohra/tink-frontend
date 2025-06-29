@@ -288,21 +288,13 @@ export interface ManagerWithProperties {
   full_name: string;
   role: string;
   is_active: boolean;
-  phone_country_code?: string;
-  phone_number?: string;
-  phone_full?: string;
-  date_joined: string;
-  properties?: Property[];
-  assigned_properties: AssignedProperty[];
-  access_level: string;
-}
-
-export interface AssignedProperty {
-  id: number;
-  name: string;
-  address: string;
-  access_type: string;
-  role_note?: string;
+  phone?: string;
+  date_joined?: string;
+  assigned_properties?: AssignedProperty[];
+  access_level?: 'full' | 'limited';
+  landlord_name?: string;
+  landlord_id?: number;
+  landlord_org_name?: string;
 }
 
 export interface ManagerPropertyAssignment {
@@ -322,6 +314,15 @@ export interface ManagerFormData {
   landlord_id?: number;
   property_ids?: number[];
   access_all_properties?: boolean;
+}
+
+export interface AssignedProperty {
+  id: number;
+  name: string;
+  address?: string;
+  full_address?: string;
+  total_rooms?: number;
+  vacant_rooms?: number;
 }
 
 export interface ManagerLandlordRelationship {
