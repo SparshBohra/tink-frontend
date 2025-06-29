@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
-import Navigation from '../components/Navigation';
 import DashboardLayout from '../components/DashboardLayout';
 import SectionCard from '../components/SectionCard';
 import DataTable from '../components/DataTable';
@@ -60,7 +59,6 @@ function Reminders() {
       <Head>
         <title>Tasks & Reminders - Tink</title>
       </Head>
-      <Navigation />
       <DashboardLayout
         title="Tasks & Reminders"
         subtitle="Manage your daily tasks, communications, and follow-ups."

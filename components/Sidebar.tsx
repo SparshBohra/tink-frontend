@@ -91,10 +91,10 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
 
   const TenantsIcon = () => (
     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M17 21V19C17 17.9 16.1 17 15 17H9C7.9 17 7 17.9 7 19V21"/>
-      <circle cx="12" cy="7" r="4"/>
-      <path d="M6 21V19C6 16.79 7.79 15 10 15L12 15"/>
-      <circle cx="20" cy="8" r="4"/>
+      <circle cx="9" cy="7" r="4"/>
+      <path d="M3 21V19C3 16.79 4.79 15 7 15H11C13.21 15 15 16.79 15 19V21"/>
+      <circle cx="17" cy="7" r="3"/>
+      <path d="M21 21V19C21 17.35 19.65 16 18 16H16"/>
     </svg>
   );
 
@@ -117,15 +117,23 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
   const SettingsIcon = () => (
     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <circle cx="12" cy="12" r="3"/>
-      <path d="M19.4 15C19.2 15.3 19.1 15.6 19 16L20.4 17.1C20.8 17.4 20.9 18 20.6 18.4L19 21.4C18.7 21.8 18.1 21.9 17.7 21.6L16.2 20.7C15.8 20.9 15.4 21.1 15 21.2L14.8 23C14.7 23.5 14.3 23.9 13.8 23.9H10.2C9.7 23.9 9.3 23.5 9.2 23L9 21.2C8.6 21.1 8.2 20.9 7.8 20.7L6.3 21.6C5.9 21.9 5.3 21.8 5 21.4L3.4 18.4C3.1 18 3.2 17.4 3.6 17.1L5 16C4.9 15.6 4.8 15.3 4.6 15L3.2 14.8C2.7 14.7 2.3 14.3 2.3 13.8V10.2C2.3 9.7 2.7 9.3 3.2 9.2L4.6 9C4.8 8.6 4.9 8.2 5 7.8L3.6 6.3C3.2 5.9 3.1 5.3 3.4 4.9L5 1.9C5.3 1.5 5.9 1.4 6.3 1.7L7.8 2.6C8.2 2.4 8.6 2.2 9 2.1L9.2 0.3C9.3 -0.2 9.7 -0.6 10.2 -0.6H13.8C14.3 -0.6 14.7 -0.2 14.8 0.3L15 2.1C15.4 2.2 15.8 2.4 16.2 2.6L17.7 1.7C18.1 1.4 18.7 1.5 19 1.9L20.6 4.9C20.9 5.3 20.8 5.9 20.4 6.3L19 7.8C19.1 8.2 19.2 8.6 19.4 9L20.8 9.2C21.3 9.3 21.7 9.7 21.7 10.2V13.8C21.7 14.3 21.3 14.7 20.8 14.8L19.4 15Z"/>
+      <path d="M19.43 12.98C19.47 12.66 19.5 12.34 19.5 12C19.5 11.66 19.47 11.34 19.43 11.02L21.54 9.37C21.73 9.22 21.78 8.95 21.66 8.73L19.66 5.27C19.54 5.05 19.27 4.97 19.05 5.05L16.56 6.05C16.04 5.65 15.48 5.32 14.87 5.07L14.49 2.42C14.46 2.18 14.25 2 14 2H10C9.75 2 9.54 2.18 9.51 2.42L9.13 5.07C8.52 5.32 7.96 5.66 7.44 6.05L4.95 5.05C4.72 4.96 4.46 5.05 4.34 5.27L2.34 8.73C2.21 8.95 2.27 9.22 2.46 9.37L4.57 11.02C4.53 11.34 4.5 11.67 4.5 12C4.5 12.33 4.53 12.66 4.57 12.98L2.46 14.63C2.27 14.78 2.21 15.05 2.34 15.27L4.34 18.73C4.46 18.95 4.73 19.03 4.95 18.95L7.44 17.95C7.96 18.35 8.52 18.68 9.13 18.93L9.51 21.58C9.54 21.82 9.75 22 10 22H14C14.25 22 14.46 21.82 14.49 21.58L14.87 18.93C15.48 18.68 16.04 18.34 16.56 17.95L19.05 18.95C19.28 19.04 19.54 18.95 19.66 18.73L21.66 15.27C21.78 15.05 21.73 14.78 21.54 14.63L19.43 12.98Z"/>
+    </svg>
+  );
+
+  const CommunicationIcon = () => (
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z"/>
+      <path d="M8 9H16"/>
+      <path d="M8 13H12"/>
     </svg>
   );
 
   const SupportIcon = () => (
     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <circle cx="12" cy="12" r="10"/>
-      <path d="M9.09 9C9.3251 8.33167 9.78915 7.76811 10.4 7.40913C11.0109 7.05016 11.7289 6.91894 12.4272 7.03871C13.1255 7.15849 13.7588 7.52152 14.2151 8.06353C14.6713 8.60553 14.9211 9.29152 14.92 10C14.92 12 11.92 13 11.92 13"/>
-      <path d="M12 17H12.01"/>
+      <path d="M9.09 9C9.32 8.33 9.78 7.77 10.4 7.41C11.01 7.05 11.73 6.92 12.43 7.04C13.13 7.16 13.76 7.52 14.22 8.06C14.67 8.61 14.92 9.29 14.92 10C14.92 12 11.92 13 11.92 13"/>
+      <circle cx="12" cy="17" r="0.5" fill="currentColor"/>
     </svg>
   );
 
@@ -171,6 +179,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         { path: '/properties', label: 'Properties', icon: <PropertiesIcon /> },
         { path: '/leases', label: 'Leases', icon: <LeasesIcon /> },
         { path: '/tenants', label: 'Tenants', icon: <TenantsIcon /> },
+        { path: '/communication', label: 'Communication', icon: <CommunicationIcon /> },
       ];
     }
 
@@ -185,7 +194,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         {/* Logo Section */}
         <div className="sidebar-header">
           <div className="logo-container">
-            <div className="logo">T</div>
+            <div className="logo" onClick={onToggle}>T</div>
             {!isCollapsed && <span className="logo-text">Tink</span>}
           </div>
         </div>
@@ -306,6 +315,13 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
           font-weight: 700;
           color: white;
           box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .logo:hover {
+          transform: scale(1.05);
+          box-shadow: 0 6px 25px rgba(102, 126, 234, 0.4);
         }
 
         .logo-text {

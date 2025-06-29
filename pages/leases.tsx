@@ -242,36 +242,6 @@ function Leases() {
     >
         {error && <div className="alert alert-error">{error}</div>}
         
-        {/* Metrics */}
-        <div className="metrics-grid">
-          <MetricCard 
-            title="Active Leases" 
-            value={activeLeases.length}
-            color="green"
-          />
-          
-          <MetricCard 
-            title="Expiring Soon" 
-            value={expiringLeases.length}
-            subtitle="Within 90 days"
-            color="amber"
-          />
-          
-          <MetricCard 
-            title="Draft Leases" 
-            value={draftLeases.length}
-            subtitle="Awaiting activation"
-            color="gray"
-          />
-          
-          <MetricCard 
-            title="Monthly Revenue" 
-            value={formatCurrency(monthlyRevenue)}
-            isMonetary={false}
-            color="blue"
-          />
-        </div>
-        
         {/* Actions */}
         <SectionCard>
           <div className="actions-container">

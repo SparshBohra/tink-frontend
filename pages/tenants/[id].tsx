@@ -4,7 +4,6 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { apiClient } from '../../lib/api';
 import { Tenant, Lease, Application } from '../../lib/types';
-import Navigation from '../../components/Navigation';
 import DashboardLayout from '../../components/DashboardLayout';
 import SectionCard from '../../components/SectionCard';
 import MetricCard from '../../components/MetricCard';
@@ -68,7 +67,6 @@ export default function TenantDetails() {
         <Head>
           <title>Loading Tenant - Tink Property Management</title>
         </Head>
-        <Navigation />
         <DashboardLayout
           title="Tenant Details"
           subtitle="Loading tenant information..."
@@ -88,7 +86,6 @@ export default function TenantDetails() {
         <Head>
           <title>Tenant Not Found - Tink Property Management</title>
         </Head>
-        <Navigation />
         <DashboardLayout
           title="Tenant Not Found"
           subtitle="Unable to load tenant details"
@@ -150,8 +147,6 @@ export default function TenantDetails() {
       <Head>
         <title>{tenant.full_name} - Tenant Details - Tink Property Management</title>
       </Head>
-      <Navigation />
-      
       <DashboardLayout
         title={`👤 ${tenant.full_name}`}
         subtitle={`Tenant ID: ${tenant.id} • Member since ${tenant.created_at ? new Date(tenant.created_at).toLocaleDateString() : 'Unknown'}`}

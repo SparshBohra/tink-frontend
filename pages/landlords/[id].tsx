@@ -4,7 +4,6 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { apiClient } from '../../lib/api';
 import { withAuth } from '../../lib/auth-context';
-import Navigation from '../../components/Navigation';
 import DashboardLayout from '../../components/DashboardLayout';
 import SectionCard from '../../components/SectionCard';
 import MetricCard from '../../components/MetricCard';
@@ -89,7 +88,6 @@ function LandlordDetailsPage() {
         <Head>
           <title>Landlord Details - Tink Property Management</title>
         </Head>
-        <Navigation />
         <DashboardLayout
           title="Landlord Details"
           subtitle="Loading landlord information..."
@@ -109,7 +107,6 @@ function LandlordDetailsPage() {
         <Head>
           <title>Landlord Not Found - Tink Property Management</title>
         </Head>
-        <Navigation />
         <DashboardLayout
           title="Landlord Not Found"
           subtitle="Unable to load landlord details"
@@ -132,8 +129,6 @@ function LandlordDetailsPage() {
       <Head>
         <title>{landlord.org_name} - Landlord Details</title>
       </Head>
-      <Navigation />
-      
       <DashboardLayout
         title={landlord.org_name}
         subtitle={`Landlord Details - ${landlord.full_name}`}

@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import Navigation from '../../../components/Navigation';
 import DashboardLayout from '../../../components/DashboardLayout';
 import SectionCard from '../../../components/SectionCard';
 import { apiClient } from '../../../lib/api';
@@ -136,7 +135,6 @@ export default function EditInventoryItem() {
         <Head>
           <title>Edit Inventory Item - Tink</title>
         </Head>
-        <Navigation />
         <DashboardLayout
           title="Edit Inventory Item"
           subtitle="Loading item data..."
@@ -156,7 +154,6 @@ export default function EditInventoryItem() {
         <Head>
           <title>Edit Inventory Item - Tink</title>
         </Head>
-        <Navigation />
         <DashboardLayout
           title="Edit Inventory Item"
           subtitle="Item not found"
@@ -177,8 +174,6 @@ export default function EditInventoryItem() {
       <Head>
         <title>Edit Inventory Item - Tink</title>
       </Head>
-      <Navigation />
-      
       <DashboardLayout
         title="✏️ Edit Inventory Item"
         subtitle={`Editing: ${item.name}`}

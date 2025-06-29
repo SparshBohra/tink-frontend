@@ -238,34 +238,6 @@ function Applications() {
     >
         {error && <div className="alert alert-error">{error}</div>}
         
-        {/* Metrics */}
-        <div className="metrics-grid">
-          <MetricCard 
-            title="Total Applications" 
-            value={metrics.total}
-            color="blue"
-          />
-          
-          <MetricCard 
-            title="Pending Review" 
-            value={metrics.pending}
-            subtitle="Waiting for decision"
-            color={metrics.pending > 0 ? "amber" : "gray"}
-          />
-          
-          <MetricCard 
-            title="Approved" 
-            value={metrics.approved}
-            color="green"
-          />
-          
-          <MetricCard 
-            title="Rejected" 
-            value={metrics.rejected}
-            color="gray"
-          />
-        </div>
-        
         {/* Filters & Actions */}
         <SectionCard>
           <div className="filters-container">
@@ -442,12 +414,6 @@ function Applications() {
         </SectionCard>
 
       <style jsx>{`
-        .metrics-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-          gap: var(--spacing-lg);
-          margin-bottom: var(--spacing-xl);
-        }
         
         .filters-container {
           display: flex;

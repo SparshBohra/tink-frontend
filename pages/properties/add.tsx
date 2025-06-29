@@ -3,7 +3,6 @@ import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Link from 'next/link';
 import { apiClient } from '../../lib/api';
-import Navigation from '../../components/Navigation';
 import DashboardLayout from '../../components/DashboardLayout';
 import SectionCard from '../../components/SectionCard';
 import MetricCard from '../../components/MetricCard';
@@ -73,8 +72,6 @@ export default function AddProperty() {
       <Head>
         <title>Register New Property - Tink Property Management</title>
       </Head>
-      <Navigation />
-      
       <DashboardLayout
         title="🏢 Register New Property"
         subtitle="Add a new property to your management portfolio"

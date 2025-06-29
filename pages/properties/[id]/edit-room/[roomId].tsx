@@ -4,7 +4,6 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { apiClient } from '../../../../lib/api';
 import { Property, Room, RoomFormData } from '../../../../lib/types';
-import Navigation from '../../../../components/Navigation';
 import DashboardLayout from '../../../../components/DashboardLayout';
 import SectionCard from '../../../../components/SectionCard';
 import MetricCard from '../../../../components/MetricCard';
@@ -117,7 +116,6 @@ export default function EditRoom() {
         <Head>
           <title>Edit Room - Invalid Parameters - Tink Property Management</title>
         </Head>
-        <Navigation />
         <DashboardLayout
           title="Invalid Parameters"
           subtitle="Unable to edit room without proper selection"
@@ -141,7 +139,6 @@ export default function EditRoom() {
         <Head>
           <title>Edit Room - Loading - Tink Property Management</title>
         </Head>
-        <Navigation />
         <DashboardLayout
           title="Loading Room Details"
           subtitle="Fetching room information..."
@@ -186,8 +183,6 @@ export default function EditRoom() {
       <Head>
         <title>Edit Room - {room?.name || 'Room'} - {property?.name || 'Property'} - Tink Property Management</title>
       </Head>
-      <Navigation />
-      
       <DashboardLayout
         title="✏️ Edit Room"
         subtitle={property && room ? `Editing ${room.name} in ${property.name}` : 'Edit room details'}

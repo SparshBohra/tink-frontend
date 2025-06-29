@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
-import Navigation from '../components/Navigation';
 import DashboardLayout from '../components/DashboardLayout';
 import SectionCard from '../components/SectionCard';
 import DataTable from '../components/DataTable';
@@ -89,18 +88,15 @@ function CommunicationPage() {
 
   if (loading) {
     return (
-      <>
-        <Navigation />
-        <DashboardLayout
-          title="Communication"
-          subtitle="Loading communication data..."
-        >
-          <div className="loading-indicator">
-            <div className="loading-spinner" />
-            <p>Loading messages...</p>
-          </div>
-        </DashboardLayout>
-      </>
+      <DashboardLayout
+        title="Communication"
+        subtitle="Loading communication data..."
+      >
+        <div className="loading-indicator">
+          <div className="loading-spinner" />
+          <p>Loading messages...</p>
+        </div>
+      </DashboardLayout>
     );
   }
 
@@ -109,7 +105,6 @@ function CommunicationPage() {
       <Head>
         <title>Communication - Tink Property Management</title>
       </Head>
-      <Navigation />
       
       <DashboardLayout
         title="Communication"

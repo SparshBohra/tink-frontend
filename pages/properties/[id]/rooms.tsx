@@ -105,17 +105,14 @@ export default function PropertyRooms() {
 
   if (loading) {
     return (
-      <>
-        <Navigation />
-        <DashboardLayout
-          title="Property Rooms"
-          subtitle="Loading property details..."
-        >
+      <DashboardLayout
+        title="Property Rooms"
+        subtitle="Loading property details..."
+      >
           <div className="loading-indicator">
             <div className="loading-spinner"></div>
             <p>Fetching property and room information...</p>
           </div>
-        </DashboardLayout>
         
         <style jsx>{`
           .loading-indicator {
@@ -142,18 +139,16 @@ export default function PropertyRooms() {
             }
           }
         `}</style>
-      </>
+      </DashboardLayout>
     );
   }
 
   if (error || !property) {
     return (
-      <>
-        <Navigation />
-        <DashboardLayout
-          title="Property Not Found"
-          subtitle="Unable to load property details"
-        >
+      <DashboardLayout
+        title="Property Not Found"
+        subtitle="Unable to load property details"
+      >
           <div className="alert alert-error">
             <strong>Error:</strong> {error || 'Property not found'}
           </div>
@@ -163,7 +158,6 @@ export default function PropertyRooms() {
             </Link>
           </div>
         </DashboardLayout>
-      </>
     );
   }
 
@@ -291,7 +285,6 @@ export default function PropertyRooms() {
       <Head>
         <title>{property.name} - Rooms - Tink Property Management</title>
       </Head>
-      <Navigation />
       
       <DashboardLayout
         title={property.name}

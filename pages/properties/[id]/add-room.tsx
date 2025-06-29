@@ -4,7 +4,6 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { apiClient } from '../../../lib/api';
 import { Property } from '../../../lib/types';
-import Navigation from '../../../components/Navigation';
 import DashboardLayout from '../../../components/DashboardLayout';
 import SectionCard from '../../../components/SectionCard';
 import MetricCard from '../../../components/MetricCard';
@@ -98,7 +97,6 @@ export default function AddRoom() {
         <Head>
           <title>Add Room - Property ID Missing - Tink Property Management</title>
         </Head>
-        <Navigation />
         <DashboardLayout
           title="Property ID Missing"
           subtitle="Unable to add room without property selection"
@@ -121,8 +119,6 @@ export default function AddRoom() {
       <Head>
         <title>Add New Room - {property?.name || 'Property'} - Tink Property Management</title>
       </Head>
-      <Navigation />
-      
       <DashboardLayout
         title="🚪 Add New Room"
         subtitle={property ? `Adding a room to ${property.name}` : 'Add a new room to the property'}

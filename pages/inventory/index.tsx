@@ -4,7 +4,6 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { apiClient } from '../../lib/api';
 import { InventoryItem, Property, Room } from '../../lib/types';
-import Navigation from '../../components/Navigation';
 import DashboardLayout from '../../components/DashboardLayout';
 import SectionCard from '../../components/SectionCard';
 import MetricCard from '../../components/MetricCard';
@@ -210,7 +209,6 @@ export default function Inventory() {
         <Head>
           <title>Inventory Management - Tink</title>
         </Head>
-        <Navigation />
         <DashboardLayout
           title="Property Inventory Management"
           subtitle="Loading inventory data..."
@@ -229,8 +227,6 @@ export default function Inventory() {
       <Head>
         <title>Inventory Management - Tink</title>
       </Head>
-      <Navigation />
-      
       <DashboardLayout
         title="📦 Property Inventory Management"
         subtitle="Track, maintain, and manage inventory across all properties"

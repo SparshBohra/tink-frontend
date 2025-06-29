@@ -3,7 +3,6 @@ import Head from 'next/head';
 import { useAuth } from '../lib/auth-context';
 import { apiClient } from '../lib/api';
 import { withAuth } from '../lib/auth-context';
-import Navigation from '../components/Navigation';
 import DashboardLayout from '../components/DashboardLayout';
 import SectionCard from '../components/SectionCard';
 import MetricCard from '../components/MetricCard';
@@ -262,7 +261,6 @@ function LandlordsPage() {
         <Head>
           <title>All Landlords - Tink Property Management</title>
         </Head>
-        <Navigation />
         <DashboardLayout
           title="All Landlords"
           subtitle="Loading landlords..."
@@ -281,8 +279,6 @@ function LandlordsPage() {
       <Head>
         <title>All Landlords - Tink Property Management</title>
       </Head>
-      <Navigation />
-      
       <DashboardLayout
         title="All Landlords"
         subtitle="Manage all property owners on the platform"

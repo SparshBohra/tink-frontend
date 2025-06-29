@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import Navigation from '../../components/Navigation';
 import DashboardLayout from '../../components/DashboardLayout';
 import SectionCard from '../../components/SectionCard';
 import MetricCard from '../../components/MetricCard';
@@ -106,7 +105,6 @@ export default function AddInventoryItem() {
         <Head>
           <title>Add Inventory Item - Tink</title>
         </Head>
-        <Navigation />
         <DashboardLayout
           title="Add Inventory Item"
           subtitle="Loading properties..."
@@ -125,8 +123,6 @@ export default function AddInventoryItem() {
       <Head>
         <title>Add Inventory Item - Tink</title>
       </Head>
-      <Navigation />
-      
       <DashboardLayout
         title="➕ Add Inventory Item"
         subtitle="Add a new item to your property inventory"

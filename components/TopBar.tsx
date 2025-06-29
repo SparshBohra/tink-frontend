@@ -16,9 +16,10 @@ interface Notification {
 }
 
 export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarProps) {
-  const { user, isAdmin, isLandlord, isManager } = useAuth();
+  const { user, isAdmin, isLandlord, isManager, logout } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -95,6 +96,20 @@ export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarPr
     setUnreadCount(0);
   };
 
+  const handleLogout = async () => {
+    try {
+      await logout();
+      window.location.href = '/login';
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
+
+  const handleSettings = () => {
+    alert('Settings page coming soon!');
+    setShowUserMenu(false);
+  };
+
   // SVG Icons
   const SearchIcon = () => (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -113,6 +128,21 @@ export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarPr
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
       <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+    </svg>
+  );
+
+  const SettingsIcon = () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M19.43 12.98C19.47 12.66 19.5 12.34 19.5 12C19.5 11.66 19.47 11.34 19.43 11.02L21.54 9.37C21.73 9.22 21.78 8.95 21.66 8.73L19.66 5.27C19.54 5.05 19.27 4.97 19.05 5.05L16.56 6.05C16.04 5.65 15.48 5.32 14.87 5.07L14.49 2.42C14.46 2.18 14.25 2 14 2H10C9.75 2 9.54 2.18 9.51 2.42L9.13 5.07C8.52 5.32 7.96 5.66 7.44 6.05L4.95 5.05C4.72 4.96 4.46 5.05 4.34 5.27L2.34 8.73C2.21 8.95 2.27 9.22 2.46 9.37L4.57 11.02C4.53 11.34 4.5 11.67 4.5 12C4.5 12.33 4.53 12.66 4.57 12.98L2.46 14.63C2.27 14.78 2.21 15.05 2.34 15.27L4.34 18.73C4.46 18.95 4.73 19.03 4.95 18.95L7.44 17.95C7.96 18.35 8.52 18.68 9.13 18.93L9.51 21.58C9.54 21.82 9.75 22 10 22H14C14.25 22 14.46 21.82 14.49 21.58L14.87 18.93C15.48 18.68 16.04 18.34 16.56 17.95L19.05 18.95C19.28 19.04 19.54 18.95 19.66 18.73L21.66 15.27C21.78 15.05 21.73 14.78 21.54 14.63L19.43 12.98Z"/>
+    </svg>
+  );
+
+  const LogoutIcon = () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M9 21H5C3.89543 21 3 20.1046 3 19V5C3 3.89543 3.89543 3 5 3H9"/>
+      <path d="M16 17L21 12L16 7"/>
+      <path d="M21 12H9"/>
     </svg>
   );
 
@@ -202,7 +232,7 @@ export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarPr
           </div>
 
           <div className="user-menu">
-            <div className="user-info">
+            <div className="user-info" onClick={() => setShowUserMenu(!showUserMenu)}>
               {isSidebarCollapsed && (
                 <div className="user-details">
                   <div className="user-name">{user?.full_name || user?.username || 'User'}</div>
@@ -213,6 +243,31 @@ export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarPr
                 {user?.full_name?.charAt(0) || user?.username?.charAt(0) || 'U'}
               </div>
             </div>
+            
+            {showUserMenu && (
+              <div className="user-dropdown">
+                <div className="user-dropdown-header">
+                  <div className="user-avatar-small">
+                    {user?.full_name?.charAt(0) || user?.username?.charAt(0) || 'U'}
+                  </div>
+                  <div className="user-info-dropdown">
+                    <div className="user-name-dropdown">{user?.full_name || user?.username || 'User'}</div>
+                    <div className="user-role-dropdown">{getRoleTitle()}</div>
+                  </div>
+                </div>
+                <div className="user-dropdown-divider"></div>
+                <div className="user-dropdown-items">
+                  <button className="user-dropdown-item" onClick={handleSettings}>
+                    <span className="dropdown-icon"><SettingsIcon /></span>
+                    <span>Settings</span>
+                  </button>
+                  <button className="user-dropdown-item logout" onClick={handleLogout}>
+                    <span className="dropdown-icon"><LogoutIcon /></span>
+                    <span>Logout</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -519,6 +574,7 @@ export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarPr
         .user-menu {
           display: flex;
           align-items: center;
+          position: relative;
         }
 
         .user-info {
@@ -534,6 +590,107 @@ export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarPr
 
         .user-info:hover {
           background: rgba(0, 0, 0, 0.05);
+        }
+
+        .user-dropdown {
+          position: absolute;
+          top: calc(100% + 8px);
+          right: 0;
+          width: 280px;
+          background: white;
+          border: 1px solid #e5e7eb;
+          border-radius: 16px;
+          box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+          z-index: 1000;
+          overflow: hidden;
+        }
+
+        .user-dropdown-header {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 20px 24px 16px;
+        }
+
+        .user-avatar-small {
+          width: 40px;
+          height: 40px;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 600;
+          font-size: 16px;
+          color: white;
+          flex-shrink: 0;
+        }
+
+        .user-info-dropdown {
+          flex: 1;
+          min-width: 0;
+        }
+
+        .user-name-dropdown {
+          font-size: 16px;
+          font-weight: 600;
+          color: #1f2937;
+          line-height: 1.2;
+          margin-bottom: 2px;
+        }
+
+        .user-role-dropdown {
+          font-size: 13px;
+          color: #6b7280;
+          line-height: 1.2;
+        }
+
+        .user-dropdown-divider {
+          height: 1px;
+          background: #f3f4f6;
+          margin: 0 16px;
+        }
+
+        .user-dropdown-items {
+          padding: 8px 0;
+        }
+
+        .user-dropdown-item {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          width: 100%;
+          padding: 12px 24px;
+          background: none;
+          border: none;
+          text-align: left;
+          cursor: pointer;
+          transition: background 0.2s ease;
+          font-size: 15px;
+          color: #374151;
+        }
+
+        .user-dropdown-item:hover {
+          background: #f9fafb;
+        }
+
+        .user-dropdown-item.logout {
+          color: #dc2626;
+        }
+
+        .user-dropdown-item.logout:hover {
+          background: #fef2f2;
+        }
+
+        .dropdown-icon {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #6b7280;
+        }
+
+        .user-dropdown-item.logout .dropdown-icon {
+          color: #dc2626;
         }
 
         .user-details {

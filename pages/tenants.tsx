@@ -459,8 +459,15 @@ function Tenants() {
           />
         ) : (
           <DataTable
-            headers={['Tenant', 'Contact Information', 'Emergency Contact', 'Created', 'Actions']}
-            data={tenants.map(tenant => (
+            columns={[
+              { key: 'tenant', header: 'Tenant' },
+              { key: 'contact', header: 'Contact Information' },
+              { key: 'emergency', header: 'Emergency Contact' },
+              { key: 'created', header: 'Created' },
+              { key: 'actions', header: 'Actions' }
+            ]}
+            data={tenants}
+            renderRow={(tenant, index) => (
               <tr key={tenant.id}>
                 <td className="tenant-name-cell">
                   <Link href={`/tenants/${tenant.id}`} className="tenant-name-link">
@@ -525,7 +532,7 @@ function Tenants() {
                   </div>
                 </td>
               </tr>
-            ))}
+            )}
           />
         )}
       </SectionCard>
