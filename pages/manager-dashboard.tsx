@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import Head from 'next/head';
-import Navigation from '../components/Navigation';
 import DashboardLayout from '../components/DashboardLayout';
 import MetricCard from '../components/MetricCard';
 import SectionCard from '../components/SectionCard';
@@ -63,32 +62,23 @@ function ManagerDashboard() {
 
   if (loading) {
     return (
-      <>
-        <Navigation />
-        <DashboardLayout
-          title="Manager Dashboard"
-          subtitle="Loading your tasks and assignments..."
-        >
-          <div className="loading-indicator">
-            <div className="loading-spinner" />
-            <p>Fetching data...</p>
+      <DashboardLayout
+        title="Manager Dashboard"
+        subtitle="Loading your tasks and assignments..."
+      >
+        <div className="loading-indicator">
+          <div className="loading-spinner" />
+          <p>Fetching data...</p>
         </div>
-        </DashboardLayout>
-      </>
+      </DashboardLayout>
     );
   }
 
   return (
-    <>
-      <Head>
-        <title>Manager Dashboard - Tink</title>
-      </Head>
-      <Navigation />
-      
-      <DashboardLayout
-        title="Manager Dashboard"
-        subtitle="Property management operations and tenant services."
-      >
+    <DashboardLayout
+      title="Manager Dashboard"
+      subtitle="Property management operations and tenant services."
+    >
         {error && <div className="alert alert-error">{error}</div>}
 
         {/* Overview */}
@@ -169,7 +159,6 @@ function ManagerDashboard() {
             <Link href="/inventory" className="btn btn-primary">Check Inventory</Link>
           </div>
         </SectionCard>
-      </DashboardLayout>
       
       <style jsx>{`
         /* Minimal styles */
@@ -189,7 +178,7 @@ function ManagerDashboard() {
           text-align: center;
         }
       `}</style>
-    </>
+    </DashboardLayout>
   );
 }
 

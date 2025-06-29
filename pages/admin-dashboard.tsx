@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import Head from 'next/head';
-import Navigation from '../components/Navigation';
 import DashboardLayout from '../components/DashboardLayout';
 import MetricCard from '../components/MetricCard';
 import SectionCard from '../components/SectionCard';
@@ -64,32 +63,23 @@ function AdminDashboard() {
 
   if (loading) {
     return (
-      <>
-        <Navigation />
-        <DashboardLayout
-          title="Platform Administration"
-          subtitle="Loading platform data..."
-        >
-          <div className="loading-indicator">
-            <div className="loading-spinner" />
-            <p>Fetching platform data...</p>
+      <DashboardLayout
+        title="Platform Administration"
+        subtitle="Loading platform data..."
+      >
+        <div className="loading-indicator">
+          <div className="loading-spinner" />
+          <p>Fetching platform data...</p>
         </div>
-        </DashboardLayout>
-      </>
+      </DashboardLayout>
     );
   }
 
   return (
-    <>
-      <Head>
-        <title>Admin Dashboard - Tink Property Management</title>
-      </Head>
-      <Navigation />
-      
-      <DashboardLayout
-        title="Platform Administration Dashboard"
-        subtitle={`Welcome back, ${user?.full_name || user?.username}! You have administrative access to all platform features.`}
-      >
+    <DashboardLayout
+      title="Platform Administration Dashboard"
+      subtitle={`Welcome back, ${user?.full_name || user?.username}! You have administrative access to all platform features.`}
+    >
         {error && <div className="alert alert-error">{error}</div>}
 
         {/* Platform Overview */}
@@ -164,8 +154,7 @@ function AdminDashboard() {
             <button className="btn btn-warning">Platform Settings</button>
           </div>
         </SectionCard>
-      </DashboardLayout>
-      
+
       <style jsx>{`
         .loading-indicator {
           display: flex;
@@ -207,7 +196,7 @@ function AdminDashboard() {
           flex-wrap: wrap;
         }
       `}</style>
-    </>
+    </DashboardLayout>
   );
 }
 

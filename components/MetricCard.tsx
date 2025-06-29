@@ -47,57 +47,104 @@ export default function MetricCard({
       
       <style jsx>{`
         .metric-card {
-          background: white;
-          border-radius: var(--radius-md);
-          padding: var(--spacing-lg);
-          border-top: 4px solid;
-          box-shadow: var(--shadow-sm);
+          background: rgba(255, 255, 255, 0.8);
+          backdrop-filter: blur(20px);
+          border-radius: 20px;
+          padding: 24px;
+          border: 1px solid rgba(226, 232, 240, 0.6);
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03), 
+                      0 1px 3px rgba(0, 0, 0, 0.02), 
+                      inset 0 1px 0 rgba(255, 255, 255, 0.8);
           height: 100%;
           display: flex;
           flex-direction: column;
+          position: relative;
+          overflow: hidden;
+          transition: all 0.3s ease;
         }
         
-        .metric-blue { border-color: var(--primary-blue); }
-        .metric-green { border-color: var(--success-green); }
-        .metric-amber { border-color: var(--warning-amber); }
-        .metric-purple { border-color: var(--info-purple); }
-        .metric-gray { border-color: var(--gray-400); }
+        .metric-card::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 3px;
+          border-radius: 20px 20px 0 0;
+        }
+
+        .metric-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 25px rgba(0, 0, 0, 0.05), 
+                      0 2px 6px rgba(0, 0, 0, 0.03), 
+                      inset 0 1px 0 rgba(255, 255, 255, 0.9);
+        }
+        
+        .metric-blue::before { background: linear-gradient(90deg, #3b82f6, #2563eb); }
+        .metric-green::before { background: linear-gradient(90deg, #10b981, #059669); }
+        .metric-amber::before { background: linear-gradient(90deg, #f59e0b, #d97706); }
+        .metric-purple::before { background: linear-gradient(90deg, #8b5cf6, #7c3aed); }
+        .metric-gray::before { background: linear-gradient(90deg, #6b7280, #4b5563); }
         
         .metric-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: var(--spacing-sm);
+          margin-bottom: 16px;
         }
         
         .metric-title {
-          font-size: var(--text-body);
-          font-weight: 500;
-          color: var(--gray-600);
+          font-size: 14px;
+          font-weight: 600;
+          color: #6b7280;
           margin: 0;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
         }
         
         .metric-icon {
-          color: var(--gray-400);
+          color: #9ca3af;
+          font-size: 18px;
         }
         
         .metric-value {
-          font-size: 28px;
-          font-weight: 600;
-          color: var(--gray-900);
-          margin: var(--spacing-sm) 0;
+          font-size: 32px;
+          font-weight: 700;
+          color: #1f2937;
+          margin: 12px 0;
+          line-height: 1;
         }
         
         .currency {
-          font-size: 20px;
+          font-size: 24px;
           vertical-align: top;
           margin-right: 2px;
+          opacity: 0.8;
         }
         
         .metric-subtitle {
-          font-size: var(--text-small);
-          color: var(--gray-400);
+          font-size: 13px;
+          color: #9ca3af;
           margin-top: auto;
+          font-weight: 500;
+        }
+
+        @media (max-width: 768px) {
+          .metric-card {
+            padding: 20px;
+          }
+
+          .metric-value {
+            font-size: 28px;
+          }
+
+          .metric-title {
+            font-size: 13px;
+          }
+
+          .metric-subtitle {
+            font-size: 12px;
+          }
         }
       `}</style>
     </div>
