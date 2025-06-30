@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../lib/auth-context';
 import { useTheme } from '../lib/theme-context';
 import { apiClient } from '../lib/api';
@@ -50,6 +50,48 @@ export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarPr
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  
+  // Refs for click outside detection
+  const notificationsRef = useRef<HTMLDivElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+
+  // Handle outside clicks and auto-close functionality
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      
+      // Close notifications if clicking outside notifications dropdown
+      if (showNotifications && notificationsRef.current && !notificationsRef.current.contains(target)) {
+        setShowNotifications(false);
+      }
+      
+      // Close user menu if clicking outside user menu dropdown
+      if (showUserMenu && userMenuRef.current && !userMenuRef.current.contains(target)) {
+        setShowUserMenu(false);
+      }
+    };
+
+    // Add event listener
+    document.addEventListener('mousedown', handleClickOutside);
+    
+    // Cleanup
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showNotifications, showUserMenu]);
+
+  // Auto-close menus when other menus are opened
+  useEffect(() => {
+    if (showNotifications) {
+      setShowUserMenu(false);
+    }
+  }, [showNotifications]);
+
+  useEffect(() => {
+    if (showUserMenu) {
+      setShowNotifications(false);
+    }
+  }, [showUserMenu]);
 
   // Fetch real notifications data
   useEffect(() => {
@@ -228,7 +270,7 @@ export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarPr
               <span className="btn-label">Messages</span>
             </button>
             
-            <div className="notifications-container">
+            <div className="notifications-container" ref={notificationsRef}>
               <button 
                 className="action-btn notification-btn"
                 onClick={() => setShowNotifications(!showNotifications)}
@@ -277,7 +319,7 @@ export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarPr
             </div>
           </div>
 
-          <div className="user-menu">
+          <div className="user-menu" ref={userMenuRef}>
             <div className="user-info" onClick={() => setShowUserMenu(!showUserMenu)}>
               {isSidebarCollapsed && (
                 <div className="user-details">
