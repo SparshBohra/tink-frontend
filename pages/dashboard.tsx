@@ -4,6 +4,32 @@ import DashboardLayout from '../components/DashboardLayout';
 import { withAuth } from '../lib/auth-context';
 import { useAuth } from '../lib/auth-context';
 
+// Icon Components
+const SparklesIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3L9.27 9.27L3 12l6.27 2.73L12 21l2.73-6.27L21 12l-6.27-2.73z"></path></svg>
+);
+const BriefcaseIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
+);
+const HouseIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+);
+const LightningIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+);
+const ChartIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 20V10m12 20V4m6 20V14"></path></svg>
+);
+const BellIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+);
+const TrendingUpIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
+);
+const TargetIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>
+);
+
 // Custom hook for counter animation
 const useCounterAnimation = (targetValue, duration = 2000, isRevenue = false) => {
   const [currentValue, setCurrentValue] = useState(0);
@@ -47,6 +73,61 @@ function Dashboard() {
   const { user, isLandlord, isManager, isAdmin } = useAuth();
   const [loading, setLoading] = useState(false);
   const [propertyFilter, setPropertyFilter] = useState('All');
+  const [currentMessage, setCurrentMessage] = useState<{ text: string; icon: React.ReactElement | null }>({ text: '', icon: null });
+  const [isFading, setIsFading] = useState(false);
+  const [isTyping, setIsTyping] = useState(true);
+  const [messageIndex, setMessageIndex] = useState(0);
+  
+  const welcomeMessage = `Welcome back, ${user?.full_name || 'User'}! Here's an overview of your property management operations.`;
+  
+  const notificationMessages = [
+    { text: "Here's what's happening with your properties.", icon: <SparklesIcon /> },
+    { text: "You have 3 pending applications to review.", icon: <BriefcaseIcon /> },
+    { text: "Downtown Hub is at 86% occupancy.", icon: <HouseIcon /> },
+    { text: "2 maintenance requests are overdue.", icon: <LightningIcon /> },
+    { text: "Revenue is 5% above target this month.", icon: <ChartIcon /> },
+    { text: "Lease renewals start next week.", icon: <BellIcon /> },
+    { text: "Your portfolio performance is excellent.", icon: <TrendingUpIcon /> },
+    { text: "All critical tasks are on track.", icon: <TargetIcon /> }
+  ];
+
+  useEffect(() => {
+    let rotationTimeout;
+    if (isTyping) {
+      if (currentMessage.text.length < welcomeMessage.length) {
+        const typingTimeout = setTimeout(() => {
+          setCurrentMessage({ text: welcomeMessage.substring(0, currentMessage.text.length + 1), icon: null });
+        }, 40);
+        return () => clearTimeout(typingTimeout);
+      } else {
+        rotationTimeout = setTimeout(() => setIsTyping(false), 3000); // Pause after typing
+      }
+    } else {
+      // Fade and rotate notifications
+      rotationTimeout = setTimeout(() => {
+        setIsFading(true);
+        setTimeout(() => {
+          const nextIndex = (messageIndex + 1) % notificationMessages.length;
+          setMessageIndex(nextIndex);
+          setCurrentMessage(notificationMessages[nextIndex]);
+          setIsFading(false);
+          if (nextIndex === notificationMessages.length - 1) {
+            // Restart the whole cycle
+            setTimeout(() => {
+              setIsFading(true);
+              setTimeout(() => {
+                setCurrentMessage({ text: '', icon: null });
+                setMessageIndex(0);
+                setIsTyping(true);
+                setIsFading(false);
+              }, 500);
+            }, 5000);
+          }
+        }, 500); // Fade animation duration
+      }, 5000); // Time message is displayed
+    }
+    return () => clearTimeout(rotationTimeout);
+  }, [currentMessage, isTyping, messageIndex, notificationMessages, welcomeMessage]);
   
   // Counter animations for metrics
   const propertiesCount = useCounterAnimation(5, 1500);
@@ -298,20 +379,24 @@ function Dashboard() {
           <div className="header-content">
             <div className="header-left">
               <h1 className="dashboard-title">Dashboard</h1>
-              <p className="welcome-message">
-                Welcome back, <span className="user-name">{userName}</span>! Here's an overview of your property management operations.
-              </p>
+              <div className="subtitle-container">
+                <p className={`welcome-message ${isFading ? 'fading' : ''} ${isTyping ? 'typing' : 'notification'}`}>
+                  {currentMessage.icon && <span className="message-icon">{currentMessage.icon}</span>}
+                  <span className="message-text">{currentMessage.text}</span>
+                  {isTyping && <span className="typing-cursor"></span>}
+                </p>
+              </div>
             </div>
             <div className="header-right">
               {/* Weekday on first line, date on second line, right aligned */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center', minWidth: 180 }}>
                 <span style={{ display: 'flex', alignItems: 'center', fontSize: '13px', color: '#94a3b8', fontWeight: 500, letterSpacing: 0.2, marginBottom: 2 }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: 6 }}>
-                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                    <line x1="16" y1="2" x2="16" y2="6"/>
-                    <line x1="8" y1="2" x2="8" y2="6"/>
-                    <line x1="3" y1="10" x2="21" y2="10"/>
-                  </svg>
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                  <line x1="16" y1="2" x2="16" y2="6"/>
+                  <line x1="8" y1="2" x2="8" y2="6"/>
+                  <line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
                   {weekday}
                 </span>
                 <span style={{ fontSize: '17px', color: '#334155', fontWeight: 600, letterSpacing: 0.1, lineHeight: 1.3, textAlign: 'right', width: '100%' }}>
@@ -504,7 +589,7 @@ function Dashboard() {
             <div>
               <h2 className="section-title">My Properties</h2>
               <p className="section-subtitle">Manage and monitor your property portfolio</p>
-            </div>
+              </div>
             <button className="view-all-btn">View All</button>
           </div>
 
@@ -527,68 +612,68 @@ function Dashboard() {
             <div className="properties-scroll-container">
               <div className="properties-table-container">
                 <table className="properties-table">
-                  <thead>
-                    <tr>
-                      <th className="table-left">Property</th>
-                      <th className="table-left">Status</th>
-                      <th className="table-left">Occupancy</th>
-                      <th className="table-right">Monthly Revenue</th>
-                      <th className="table-left">Tasks</th>
-                      <th className="table-center">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                <thead>
+                  <tr>
+                    <th className="table-left">Property</th>
+                    <th className="table-left">Status</th>
+                    <th className="table-left">Occupancy</th>
+                    <th className="table-right">Monthly Revenue</th>
+                    <th className="table-left">Tasks</th>
+                    <th className="table-center">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
                     {filteredProperties.map((property) => (
-                      <tr key={property.id}>
-                        <td className="table-left">{property.name}</td>
-                        <td className="table-left">
-                          <span className={`status-badge ${property.status.toLowerCase()}`}>
-                            {property.status}
-                          </span>
-                        </td>
-                        <td className="table-left">
-                          <div className="occupancy-cell">
-                            <div className="occupancy-info">
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                                <circle cx="12" cy="7" r="4"/>
-                              </svg>
-                              <span className="occupancy-text">{property.occupancy}</span>
-                              <span className="occupancy-percent">{property.occupancyPercent}%</span>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="table-right">
-                          <div className="revenue-cell">
-                            <div className="revenue-amount">$ {property.revenue.toLocaleString()}</div>
-                            <div className="revenue-change">{property.revenueChange} vs last month</div>
-                          </div>
-                        </td>
-                        <td className="table-left">
-                          <div className="tasks-cell">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2">
-                              <path d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                            </svg>
-                            <span className="tasks-count">{property.tasks} pending</span>
-                          </div>
-                        </td>
-                        <td className="table-center">
-                          <button className="manage-btn">
+                    <tr key={property.id}>
+                      <td className="table-left">{property.name}</td>
+                      <td className="table-left">
+                        <span className={`status-badge ${property.status.toLowerCase()}`}>
+                          {property.status}
+                        </span>
+                      </td>
+                      <td className="table-left">
+                        <div className="occupancy-cell">
+                          <div className="occupancy-info">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <path d="M12 20h9"/>
-                              <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                              <circle cx="12" cy="7" r="4"/>
                             </svg>
-                            Manage
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                            <span className="occupancy-text">{property.occupancy}</span>
+                            <span className="occupancy-percent">{property.occupancyPercent}%</span>
+                      </div>
+                        </div>
+                      </td>
+                      <td className="table-right">
+                        <div className="revenue-cell">
+                          <div className="revenue-amount">$ {property.revenue.toLocaleString()}</div>
+                          <div className="revenue-change">{property.revenueChange} vs last month</div>
+                        </div>
+                      </td>
+                      <td className="table-left">
+                        <div className="tasks-cell">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2">
+                            <path d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                          </svg>
+                          <span className="tasks-count">{property.tasks} pending</span>
+                        </div>
+                      </td>
+                      <td className="table-center">
+                        <button className="manage-btn">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M12 20h9"/>
+                            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                          </svg>
+                          Manage
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
               </div>
             </div>
-          </div>
-        </div>
+                      </div>
+              </div>
                     
         {/* Recent Applications Section */}
         <div className="applications-section">
@@ -643,22 +728,22 @@ function Dashboard() {
       <style jsx>{`
         .dashboard-container {
           width: 100%;
-          padding: 24px 32px 32px 32px; /* scaled down padding */
+          padding: 16px 20px 20px 20px; /* Reduced padding */
           background: #f8fafc;
-          min-height: calc(100vh - 64px); /* match new topbar */
+          min-height: calc(100vh - 72px); /* Updated for new topbar height */
           box-sizing: border-box;
         }
 
         /* Custom Header */
         .dashboard-header {
-          margin-bottom: 40px;
+          margin-bottom: 24px; /* Reduced margin */
         }
 
         .header-content {
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
-          gap: 24px;
+          gap: 20px; /* Reduced gap */
         }
 
         .header-left {
@@ -666,18 +751,52 @@ function Dashboard() {
         }
 
         .dashboard-title {
-          font-size: 28px;
-          font-weight: 800;
+          font-size: 22px; /* Reduced from 28px */
+          font-weight: 700; /* Reduced from 800 */
           color: #1e293b;
-          margin: 0 0 6px 0;
+          margin: 0 0 4px 0; /* Reduced margin */
           line-height: 1.15;
         }
 
+        .subtitle-container {
+          min-height: 22px; /* Reduced height */
+        }
+
         .welcome-message {
-          font-size: 14px;
-          color: #64748b;
+          font-size: 14px; /* Reduced from 16px */
+          color: #4b5563;
           margin: 0;
           line-height: 1.45;
+          display: inline-flex;
+          align-items: center;
+          gap: 8px; /* Reduced gap */
+        }
+
+        .welcome-message.notification {
+          transition: opacity 0.5s ease-in-out;
+        }
+
+        .welcome-message.fading {
+          opacity: 0;
+        }
+
+        .message-icon svg {
+          width: 16px; /* Reduced from 18px */
+          height: 16px;
+          color: #64748b;
+        }
+        
+        .typing-cursor {
+          display: inline-block;
+          width: 2px;
+          height: 14px; /* Reduced height */
+          background-color: #4b5563;
+          animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0; }
         }
 
         .user-name {
@@ -707,14 +826,14 @@ function Dashboard() {
         .metrics-grid {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
-          gap: 16px;
-          margin-bottom: 24px;
+          gap: 12px; /* Reduced gap */
+          margin-bottom: 20px; /* Reduced margin */
         }
 
         .metric-card {
           background: white;
-          border-radius: 8px;
-          padding: 18px;
+          border-radius: 6px; /* Reduced radius */
+          padding: 14px; /* Reduced padding */
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
           border: 1px solid #e2e8f0;
           transition: all 0.2s ease;
@@ -729,7 +848,7 @@ function Dashboard() {
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
-          margin-bottom: 16px;
+          margin-bottom: 12px; /* Reduced margin */
         }
 
         .metric-info {
@@ -740,15 +859,15 @@ function Dashboard() {
         }
 
         .metric-title {
-          font-size: 12px;
+          font-size: 11px; /* Reduced font size */
           font-weight: 600;
           color: #64748b;
           margin: 0;
         }
 
         .metric-icon {
-          width: 24px;
-          height: 24px;
+          width: 20px; /* Reduced size */
+          height: 20px;
           color: #64748b;
         }
 
@@ -757,17 +876,17 @@ function Dashboard() {
         }
 
         .metric-value {
-          font-size: 24px;
+          font-size: 20px; /* Reduced from 24px */
           font-weight: 700;
           color: #1e293b;
-          margin-bottom: 4px;
+          margin-bottom: 3px; /* Reduced margin */
           line-height: 1;
         }
 
         .metric-subtitle {
-          font-size: 12px;
+          font-size: 11px; /* Reduced font size */
           color: #64748b;
-          margin-bottom: 12px;
+          margin-bottom: 10px; /* Reduced margin */
         }
 
         .metric-progress {
@@ -777,12 +896,12 @@ function Dashboard() {
         }
 
         .metric-label {
-          font-size: 14px;
+          font-size: 12px; /* Reduced font size */
           color: #64748b;
         }
 
         .metric-change {
-          font-size: 14px;
+          font-size: 12px; /* Reduced font size */
           font-weight: 600;
         }
 
@@ -794,7 +913,7 @@ function Dashboard() {
         .main-content {
           display: grid;
           grid-template-columns: 2fr 1fr;
-          gap: 32px;
+          gap: 20px; /* Reduced gap */
         }
 
         /* Section Headers */
@@ -802,18 +921,18 @@ function Dashboard() {
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
-          margin-bottom: 20px;
+          margin-bottom: 16px; /* Reduced margin */
         }
 
         .section-title {
-          font-size: 16px;
+          font-size: 14px; /* Reduced font size */
           font-weight: 700;
           color: #1e293b;
-          margin: 0 0 4px 0;
+          margin: 0 0 3px 0; /* Reduced margin */
         }
 
         .section-subtitle {
-          font-size: 12px;
+          font-size: 12px; /* Reduced font size */
           color: #64748b;
           margin: 0;
         }
@@ -821,11 +940,11 @@ function Dashboard() {
         /* Tasks Section */
         .tasks-section {
           background: white;
-          border-radius: 8px;
-          padding: 24px;
+          border-radius: 6px; /* Reduced radius */
+          padding: 18px; /* Reduced padding */
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
           border: 1px solid #e2e8f0;
-          height: 480px;
+          height: 400px; /* Reduced height */
           display: flex;
           flex-direction: column;
         }
@@ -854,14 +973,14 @@ function Dashboard() {
           background: #6366f1;
           color: white;
           border: none;
-          padding: 12px 16px;
-          border-radius: 8px;
-          font-size: 14px;
+          padding: 10px 14px; /* Reduced padding */
+          border-radius: 6px; /* Reduced radius */
+          font-size: 12px; /* Reduced font size */
           font-weight: 600;
           cursor: pointer;
           display: flex;
           align-items: center;
-          gap: 8px;
+          gap: 6px; /* Reduced gap */
           transition: all 0.2s ease;
         }
 
@@ -984,8 +1103,8 @@ function Dashboard() {
         /* Quick Actions Section */
         .quick-actions-section {
           background: white;
-          border-radius: 8px;
-          padding: 24px;
+          border-radius: 6px; /* Reduced radius */
+          padding: 18px; /* Reduced padding */
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
           border: 1px solid #e2e8f0;
           height: fit-content;
@@ -994,15 +1113,15 @@ function Dashboard() {
         .actions-grid {
           display: flex;
           flex-direction: column;
-          gap: 16px;
+          gap: 12px; /* Reduced gap */
         }
 
         .action-card {
           display: flex;
           align-items: center;
-          gap: 16px;
-          padding: 16px;
-          border-radius: 6px;
+          gap: 12px; /* Reduced gap */
+          padding: 12px; /* Reduced padding */
+          border-radius: 5px; /* Reduced radius */
           border: 1px solid #e2e8f0;
           cursor: pointer;
           transition: all 0.2s ease;
@@ -1058,14 +1177,14 @@ function Dashboard() {
         }
 
         .action-title {
-          font-size: 16px;
+          font-size: 14px; /* Reduced font size */
           font-weight: 600;
           color: #1e293b;
-          margin: 0 0 4px 0;
+          margin: 0 0 3px 0; /* Reduced margin */
         }
 
         .action-subtitle {
-          font-size: 14px;
+          font-size: 12px; /* Reduced font size */
           color: #64748b;
           margin: 0;
         }
@@ -1075,14 +1194,14 @@ function Dashboard() {
           background: #6366f1;
           color: white;
           border: none;
-          padding: 12px 16px;
-          border-radius: 8px;
-          font-size: 14px;
+          padding: 10px 14px; /* Reduced padding */
+          border-radius: 6px; /* Reduced radius */
+          font-size: 12px; /* Reduced font size */
           font-weight: 600;
           cursor: pointer;
           display: flex;
           align-items: center;
-          gap: 8px;
+          gap: 6px; /* Reduced gap */
           transition: all 0.2s ease;
         }
 
@@ -1094,17 +1213,17 @@ function Dashboard() {
         /* Properties Section */
         .properties-section {
           background: white;
-          border-radius: 8px;
-          padding: 32px;
+          border-radius: 6px; /* Reduced radius */
+          padding: 20px; /* Reduced padding */
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
           border: 1px solid #e2e8f0;
-          margin-top: 48px;
-          margin-bottom: 32px;
+          margin-top: 32px; /* Reduced margin */
+          margin-bottom: 20px; /* Reduced margin */
         }
 
         .properties-container {
-          margin-top: 20px;
-          height: 500px;
+          margin-top: 16px; /* Reduced margin */
+          height: 420px; /* Reduced height */
           display: flex;
           flex-direction: column;
         }
@@ -1131,8 +1250,8 @@ function Dashboard() {
         .properties-table-container {
           width: 100%;
           overflow-x: auto;
-          max-height: 420px;
-          border-radius: 12px;
+          max-height: 350px; /* Reduced height */
+          border-radius: 8px; /* Reduced radius */
           background: white;
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
         }
@@ -1148,10 +1267,10 @@ function Dashboard() {
           top: 0;
           background: #f8fafc;
           z-index: 2;
-          font-size: 15px;
+          font-size: 13px; /* Reduced font size */
           font-weight: 700;
           color: #1e293b;
-          padding: 16px 12px;
+          padding: 12px 10px; /* Reduced padding */
           border-bottom: 2px solid #e2e8f0;
         }
 
@@ -1199,7 +1318,7 @@ function Dashboard() {
 
         .revenue-cell {
           flex-direction: column;
-          text-align: center;
+          text-align: right;
         }
 
         .manage-btn {
@@ -1209,16 +1328,16 @@ function Dashboard() {
         /* Applications Section */
         .applications-section {
           background: white;
-          border-radius: 8px;
-          padding: 32px;
+          border-radius: 6px; /* Reduced radius */
+          padding: 20px; /* Reduced padding */
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
           border: 1px solid #e2e8f0;
         }
 
         .applications-scroll-container {
-          height: 400px;
+          height: 320px; /* Reduced height */
           overflow-y: auto;
-          margin-top: 20px;
+          margin-top: 16px; /* Reduced margin */
         }
 
         .applications-scroll-container::-webkit-scrollbar {
@@ -1238,13 +1357,13 @@ function Dashboard() {
         .applications-grid {
           display: grid;
           grid-template-columns: repeat(3, 1fr);
-          gap: 24px;
+          gap: 16px; /* Reduced gap */
         }
 
         .application-card {
           background: white;
-          border-radius: 8px;
-          padding: 24px;
+          border-radius: 6px; /* Reduced radius */
+          padding: 16px; /* Reduced padding */
           border: 1px solid #e2e8f0;
           transition: all 0.2s ease;
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
@@ -1259,7 +1378,7 @@ function Dashboard() {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 20px;
+          margin-bottom: 14px; /* Reduced margin */
         }
 
         .applicant-avatar {
@@ -1454,7 +1573,7 @@ function Dashboard() {
           .add-task-btn {
             align-self: flex-start;
           }
-          
+
           .application-card {
             padding: 16px;
           }
@@ -1478,6 +1597,111 @@ function Dashboard() {
         .occupancy-cell { display: flex; align-items: center; gap: 6px; }
         .tasks-cell { display: flex; align-items: center; gap: 6px; }
         .revenue-cell { text-align: right; }
+
+        /* Dark Mode Styles */
+        :global(.dark-mode) .dashboard-container { background: transparent; }
+        :global(.dark-mode) .metric-card, 
+        :global(.dark-mode) .tasks-section, 
+        :global(.dark-mode) .quick-actions-section, 
+        :global(.dark-mode) .properties-section, 
+        :global(.dark-mode) .applications-section,
+        :global(.dark-mode) .action-card,
+        :global(.dark-mode) .application-card {
+          background: #111111 !important;
+          border: 1px solid #333333 !important;
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4) !important;
+        }
+        :global(.dark-mode) .metric-card:hover,
+        :global(.dark-mode) .action-card:hover,
+        :global(.dark-mode) .application-card:hover {
+          background: #222222 !important;
+          border-color: #ffffff !important;
+        }
+        :global(.dark-mode) .tasks-table th, 
+        :global(.dark-mode) .properties-table th {
+          background-color: #1a1a1a !important;
+          border-bottom: 1px solid #333333 !important;
+        }
+        :global(.dark-mode) .tasks-table td, 
+        :global(.dark-mode) .properties-table td {
+          background-color: #111111 !important;
+          border-bottom: 1px solid #333333 !important;
+        }
+        :global(.dark-mode) .tasks-table tbody tr:hover, 
+        :global(.dark-mode) .properties-table tbody tr:hover {
+          background-color: #222222 !important;
+        }
+        :global(.dark-mode) .add-task-btn,
+        :global(.dark-mode) .view-all-btn,
+        :global(.dark-mode) .review-btn {
+            background: #1a1a1a !important;
+            border: 1px solid #333333 !important;
+        }
+        :global(.dark-mode) .add-task-btn:hover,
+        :global(.dark-mode) .view-all-btn:hover,
+        :global(.dark-mode) .review-btn:hover {
+            background: #2a2a2a !important;
+            border-color: #ffffff !important;
+        }
+        :global(.dark-mode) .priority-badge,
+        :global(.dark-mode) .status-badge {
+            color: #ffffff !important;
+        }
+        :global(.dark-mode) .priority-badge.high,
+        :global(.dark-mode) .status-badge.maintenance { background: rgba(239, 68, 68, 0.3); }
+        :global(.dark-mode) .priority-badge.medium,
+        :global(.dark-mode) .status-badge.pending { background: rgba(249, 115, 22, 0.3); }
+        :global(.dark-mode) .priority-badge.low,
+        :global(.dark-mode) .status-badge.completed,
+        :global(.dark-mode) .status-badge.active { background: rgba(34, 197, 94, 0.3); }
+        :global(.dark-mode) .status-badge.in-progress { background: rgba(59, 130, 246, 0.3); }
+        :global(.dark-mode) .action-card.blue .action-icon { background: rgba(59, 130, 246, 0.3); }
+        :global(.dark-mode) .action-card.green .action-icon { background: rgba(34, 197, 94, 0.3); }
+        :global(.dark-mode) .action-card.purple .action-icon { background: rgba(139, 92, 246, 0.3); }
+        :global(.dark-mode) .tasks-cell .task-count { background: rgba(139, 92, 246, 0.3); }
+        :global(.dark-mode) select {
+          background-color: #111111 !important;
+          border-color: #333333 !important;
+        }
+        :global(.dark-mode) .occupancy-cell .occupancy-progress { background: #333333; }
+        :global(.dark-mode) .occupancy-cell .occupancy-bar { background: #3b82f6; }
+        :global(.dark-mode) .properties-table .btn-outline {
+            background-color: #1a1a1a !important;
+            border-color: #333333 !important;
+        }
+        :global(.dark-mode) .properties-table .btn-outline:hover {
+            background-color: #2a2a2a !important;
+            border-color: #ffffff !important;
+        }
+        :global(.dark-mode) .occupancy-cell .occupancy-bar { background: #3b82f6; }
+        
+        /* Custom black text for specific light-bg buttons in dark mode */
+        :global(.dark-mode) .properties-table .btn-outline,
+        :global(.dark-mode) .properties-table .btn-outline svg {
+            color: #000000 !important;
+            stroke: #000000 !important;
+        }
+
+        :global(.dark-mode) .status-badge.pending-review {
+            color: #000000 !important;
+        }
+
+        :global(.dark-mode) .occupancy-cell .occupancy-bar { background: #3b82f6; }
+        
+        /* Custom black text for specific light-bg buttons in dark mode */
+        :global(.dark-mode) .manage-btn {
+            background-color: #f0f0f0 !important;
+            color: #000000 !important;
+        }
+
+        :global(.dark-mode) .manage-btn svg {
+            stroke: #000000 !important;
+        }
+
+        :global(.dark-mode) .status-badge.pending-review {
+            background-color: #fef9c3 !important;
+            color: #000000 !important;
+        }
       `}</style>
     </DashboardLayout>
   );

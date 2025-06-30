@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../lib/auth-context';
+import { useTheme } from '../lib/theme-context';
 import { apiClient } from '../lib/api';
 
 interface TopBarProps {
@@ -43,40 +44,12 @@ const TargetIcon = () => (
 
 export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarProps) {
   const { user, isAdmin, isLandlord, isManager, logout } = useAuth();
+  const { isDarkMode, toggleDarkMode } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
-  const [isAnimating, setIsAnimating] = useState(false);
-  const [rotatingMessages, setRotatingMessages] = useState<any[]>([]);
-
-  const getTimeBasedGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Good morning';
-    if (hour < 17) return 'Good afternoon';
-    return 'Good evening';
-  };
-
-  useEffect(() => {
-    const greetingText = `${getTimeBasedGreeting()}, ${user?.full_name?.split(' ')[0] || 'User'}`;
-    const baseMessages = [
-      { text: "Here's what's happening with your properties.", icon: <SparklesIcon /> },
-      { text: "You have 3 pending applications to review.", icon: <BriefcaseIcon /> },
-      { text: "Downtown Hub is at 86% occupancy.", icon: <HouseIcon /> },
-      { text: "2 maintenance requests are overdue.", icon: <LightningIcon /> },
-      { text: "Revenue is 5% above target this month.", icon: <ChartIcon /> },
-      { text: "Lease renewals start next week.", icon: <BellIcon /> },
-      { text: "Your portfolio performance is excellent.", icon: <TrendingUpIcon /> },
-      { text: "All critical tasks are on track.", icon: <TargetIcon /> }
-    ];
-
-    setRotatingMessages([
-      { text: greetingText, icon: null, isGreeting: true },
-      ...baseMessages
-    ]);
-  }, [user]);
 
   // Fetch real notifications data
   useEffect(() => {
@@ -120,21 +93,6 @@ export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarPr
     }
   }, [user, isAdmin, isLandlord, isManager]);
 
-  // Rotate messages with animation effect
-  useEffect(() => {
-    if (rotatingMessages.length === 0) return;
-    const rotateMessage = () => {
-      setIsAnimating(true);
-      setTimeout(() => {
-        setCurrentMessageIndex((prev) => (prev + 1) % rotatingMessages.length);
-        setIsAnimating(false);
-      }, 400); // Animation duration
-    };
-
-    const interval = setInterval(rotateMessage, 5000); // Change message every 5 seconds
-    return () => clearInterval(interval);
-  }, [rotatingMessages]);
-
   const getRelativeTime = (dateString: string) => {
     try {
       const date = new Date(dateString);
@@ -159,6 +117,13 @@ export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarPr
     if (isLandlord()) return 'Business Owner';
     if (isManager()) return 'Property Manager';
     return 'User';
+  };
+
+  const getTimeBasedGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
   };
 
   const markAllAsRead = () => {
@@ -216,10 +181,28 @@ export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarPr
     </svg>
   );
 
+  const MoonIcon = () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+    </svg>
+  );
+
+  const SunIcon = () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="12" cy="12" r="5"/>
+      <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+    </svg>
+  );
+
   return (
     <>
       <div className={`topbar ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
         <div className="topbar-left">
+          <div className="greeting-section">
+            <span className="greeting-text">
+              {getTimeBasedGreeting()}, {user?.full_name?.split(' ')[0] || 'User'}
+            </span>
+          </div>
           <div className="search-container">
             <div className="search-input-wrapper">
               <span className="search-icon"><SearchIcon /></span>
@@ -235,20 +218,7 @@ export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarPr
         </div>
 
         <div className="topbar-center">
-          <div className="page-title">
-            <div className="animated-messages-container">
-              {rotatingMessages.length > 0 && (
-                <div className={`assistant-message ${isAnimating ? 'animating' : ''} ${rotatingMessages[currentMessageIndex].isGreeting ? 'is-greeting' : ''}`}>
-                  {rotatingMessages[currentMessageIndex].icon && (
-                    <span className="message-icon">
-                      {rotatingMessages[currentMessageIndex].icon}
-                    </span>
-                  )}
-                  <span>{rotatingMessages[currentMessageIndex].text}</span>
-                </div>
-              )}
-            </div>
-          </div>
+          {/* This space is now intentionally left blank */}
         </div>
 
         <div className="topbar-right">
@@ -333,6 +303,12 @@ export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarPr
                 </div>
                 <div className="user-dropdown-divider"></div>
                 <div className="user-dropdown-items">
+                  <button className="user-dropdown-item" onClick={toggleDarkMode}>
+                    <span className="dropdown-icon">
+                      {isDarkMode ? <SunIcon /> : <MoonIcon />}
+                    </span>
+                    <span>{isDarkMode ? 'Light Mode' : 'Dark Mode'}</span>
+                  </button>
                   <button className="user-dropdown-item" onClick={handleSettings}>
                     <span className="dropdown-icon"><SettingsIcon /></span>
                     <span>Settings</span>
@@ -360,7 +336,7 @@ export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarPr
           border-bottom: 1px solid rgba(0, 0, 0, 0.05);
           display: flex;
           align-items: center;
-          padding: 0 24px;
+          padding: 0 20px;
           z-index: 999;
           transition: left 0.3s ease;
         }
@@ -372,10 +348,24 @@ export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarPr
         .topbar-left {
           display: flex;
           align-items: center;
+          gap: 24px; /* Space between greeting and search */
+          flex: 1; /* Take up remaining space */
+        }
+
+        .greeting-section {
+          flex-shrink: 0;
+        }
+
+        .greeting-text {
+          font-size: 16px;
+          font-weight: 600;
+          color: #1f2937;
+          white-space: nowrap;
         }
 
         .search-container {
-          min-width: 360px;
+          flex: 1; /* Stretch to fill remaining space */
+          max-width: 600px; /* Prevent it from getting too wide */
         }
 
         .search-input-wrapper {
@@ -386,7 +376,7 @@ export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarPr
 
         .search-icon {
           position: absolute;
-          left: 20px;
+          left: 16px;
           color: #9ca3af;
           z-index: 1;
           display: flex;
@@ -396,19 +386,19 @@ export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarPr
 
         .search-input {
           width: 100%;
-          padding: 14px 24px 14px 52px;
+          padding: 12px 20px 12px 46px;
           border: 1px solid #e5e7eb;
-          border-radius: 14px;
-          font-size: 16px;
+          border-radius: 12px;
+          font-size: 14px;
           background: rgba(255, 255, 255, 0.8);
           transition: all 0.2s ease;
-          height: 50px;
+          height: 44px;
           box-sizing: border-box;
         }
 
         .search-input::placeholder {
           color: #9ca3af;
-          font-size: 16px;
+          font-size: 14px;
         }
 
         .search-input:focus {
@@ -432,78 +422,30 @@ export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarPr
           margin: 0 0 4px 0;
         }
 
-        .animated-messages-container {
-          overflow: hidden;
-          height: 30px; /* Adjust height based on font size */
-          position: relative;
-        }
-
-        .assistant-message {
-          margin: 0;
-          font-size: 16px;
-          color: #475569;
-          font-weight: 500;
-          position: absolute;
-          top: 0;
-          left: 0;
-          width: 100%;
-          text-align: center;
-          transition: opacity 0.4s ease-in-out, transform 0.4s ease-in-out;
-          opacity: 1;
-          transform: translateY(0);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-        }
-        
-        .assistant-message.is-greeting {
-          font-size: 20px;
-          font-weight: 700;
-          color: #1e293b;
-        }
-
-        .assistant-message.animating {
-          opacity: 0;
-          transform: translateY(-12px);
-        }
-        
-        .message-icon {
-          display: inline-flex;
-          align-items: center;
-          width: 18px;
-          height: 18px;
-          color: #64748b;
-        }
-        
-        .assistant-message.is-greeting .message-icon {
-          display: none;
-        }
-
         .topbar-right {
           display: flex;
           align-items: center;
-          gap: 24px;
+          gap: 16px; /* Evenly space all items */
         }
 
         .action-buttons {
           display: flex;
           align-items: center;
-          gap: 14px;
+          gap: 16px; /* Match the main gap */
         }
 
         .action-btn {
           display: flex;
           align-items: center;
-          gap: 12px;
-          padding: 12px 22px;
+          gap: 10px;
+          padding: 10px 18px;
           background: rgba(255, 255, 255, 0.8);
           border: 1px solid #e5e7eb;
-          border-radius: 14px;
+          border-radius: 12px;
           cursor: pointer;
           transition: all 0.2s ease;
           position: relative;
-          height: 50px;
+          height: 44px;
           box-sizing: border-box;
         }
 
@@ -515,27 +457,27 @@ export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarPr
         }
 
         .btn-icon svg {
-          width: 26px;
-          height: 26px;
+          width: 22px;
+          height: 22px;
         }
 
         .btn-label {
-          font-size: 16px;
+          font-size: 14px;
           font-weight: 600;
           color: #374151;
         }
 
         .notification-badge {
           position: absolute;
-          top: -6px;
-          right: -6px;
+          top: -4px;
+          right: -4px;
           background: #ef4444;
           color: white;
-          font-size: 12px;
+          font-size: 11px;
           font-weight: 600;
-          padding: 3px 7px;
-          border-radius: 12px;
-          min-width: 20px;
+          padding: 2px 6px;
+          border-radius: 10px;
+          min-width: 18px;
           text-align: center;
         }
 
@@ -850,6 +792,59 @@ export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarPr
             height: 36px;
             font-size: 14px;
           }
+        }
+
+        /* Dark Mode Styles */
+        :global(.dark-mode) .topbar {
+          background: rgba(10, 10, 10, 0.85); /* near-black transparent */
+          backdrop-filter: blur(20px);
+          border-bottom: 1px solid #333333 !important;
+        }
+        :global(.dark-mode) .search-input {
+          background: #1a1a1a !important;
+          border-color: #333333 !important;
+        }
+        :global(.dark-mode) .search-input:focus {
+          background: #222222 !important;
+          border-color: #ffffff !important;
+          box-shadow: none !important;
+        }
+        :global(.dark-mode) .action-btn {
+          background: transparent !important;
+          border: 1px solid #333333 !important;
+        }
+        :global(.dark-mode) .action-btn:hover {
+          background: #222222 !important;
+          border-color: #ffffff !important;
+        }
+        :global(.dark-mode) .user-info:hover {
+          background: #222222 !important;
+        }
+        :global(.dark-mode) .user-dropdown,
+        :global(.dark-mode) .notifications-dropdown {
+          background: #111111 !important;
+          border: 1px solid #333333 !important;
+          box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4) !important;
+        }
+        :global(.dark-mode) .user-dropdown-divider,
+        :global(.dark-mode) .notifications-header,
+        :global(.dark-mode) .notifications-footer,
+        :global(.dark-mode) .notification-item {
+          border-color: #333333 !important;
+        }
+        :global(.dark-mode) .user-dropdown-item:hover,
+        :global(.dark-mode) .notification-item:hover,
+        :global(.dark-mode) .view-all-btn:hover {
+          background: #222222 !important;
+        }
+        :global(.dark-mode) .user-dropdown-item.logout:hover {
+          background: rgba(239, 68, 68, 0.2) !important;
+        }
+        :global(.dark-mode) .notification-item.unread {
+          background: rgba(59, 130, 246, 0.1) !important;
+        }
+        :global(.dark-mode) .notification-item.unread::before {
+          background: #3b82f6 !important;
         }
       `}</style>
     </>

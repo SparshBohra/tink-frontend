@@ -298,7 +298,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         }
 
         .sidebar-header {
-          padding: 20px 18px;
+          padding: 16px 14px;
           border-bottom: 1px solid rgba(255, 255, 255, 0.1);
           height: 72px;
           display: flex;
@@ -308,15 +308,15 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         .menu-container {
           display: flex;
           align-items: center;
-          gap: 12px;
+          gap: 10px;
         }
 
         .menu-toggle {
-          width: 36px;
-          height: 36px;
+          width: 32px;
+          height: 32px;
           background: rgba(255, 255, 255, 0.1);
           border: 1px solid rgba(255, 255, 255, 0.2);
-          border-radius: 12px;
+          border-radius: 10px;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -336,7 +336,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         }
 
         .logo-text {
-          font-size: 20px;
+          font-size: 18px;
           font-weight: 700;
           color: white;
           white-space: nowrap;
@@ -344,7 +344,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
 
         .sidebar-nav {
           flex: 1;
-          padding: 20px 16px;
+          padding: 16px 12px;
           overflow-y: auto;
         }
 
@@ -365,27 +365,27 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
           display: flex;
           align-items: center;
           width: 100%;
-          padding: 16px 20px;
-          margin-bottom: 8px;
+          padding: 12px 16px;
+          margin-bottom: 6px;
           border: none;
           background: transparent;
           color: rgba(243, 244, 246, 0.85);
-          border-radius: 14px;
+          border-radius: 12px;
           cursor: pointer;
           transition: all 0.2s ease;
           text-align: left;
-          font-size: 16px;
+          font-size: 14px;
           font-weight: 400;
           position: relative;
-          gap: 16px;
+          gap: 12px;
         }
 
         .sidebar.collapsed .nav-item {
           justify-content: center;
-          padding: 12px;
-          width: 48px;
-          height: 48px;
-          margin: 0 auto 12px auto;
+          padding: 10px;
+          width: 42px;
+          height: 42px;
+          margin: 0 auto 10px auto;
         }
 
         .nav-item.active {
@@ -412,8 +412,8 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         }
 
         .nav-icon svg {
-          width: 24px;
-          height: 24px;
+          width: 20px;
+          height: 20px;
         }
 
         .nav-label {
@@ -426,11 +426,11 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         .nav-badge {
           background: #ef4444;
           color: #fff;
-          font-size: 11px;
+          font-size: 10px;
           font-weight: 500;
-          padding: 1px 6px;
-          border-radius: 10px;
-          min-width: 18px;
+          padding: 1px 5px;
+          border-radius: 8px;
+          min-width: 16px;
           text-align: center;
           line-height: 1.2;
           box-shadow: 0 2px 6px rgba(239, 68, 68, 0.15), 0 0 0 1px #fff;
@@ -439,12 +439,12 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         }
 
         .sidebar-bottom {
-          padding: 16px;
+          padding: 12px;
           border-top: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .sidebar-user {
-          padding: 20px 16px;
+          padding: 16px 12px;
           border-top: 1px solid rgba(255, 255, 255, 0.1);
         }
 
@@ -528,6 +528,40 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
           .sidebar:not(.collapsed) {
             transform: translateX(0);
           }
+        }
+
+        /* Dark Mode Styles */
+        :global(.dark-mode) .sidebar {
+          background: #111111;
+          border-right: 1px solid #333333 !important;
+        }
+        :global(.dark-mode) .sidebar-header {
+          background: transparent;
+          border-bottom: 1px solid #333333 !important;
+        }
+        :global(.dark-mode) .sidebar-nav::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        :global(.dark-mode) .sidebar-nav::-webkit-scrollbar-thumb {
+          background: #333;
+        }
+        :global(.dark-mode) .nav-item.active {
+          background: #222222 !important;
+        }
+        :global(.dark-mode) .nav-item:hover {
+          background: #222222 !important;
+        }
+        :global(.dark-mode) .sidebar-bottom,
+        :global(.dark-mode) .sidebar-user {
+          border-top: 1px solid #333333 !important;
+        }
+        :global(.dark-mode) .logout-btn,
+        :global(.dark-mode) .logout-btn-collapsed {
+          background: #222222 !important;
+        }
+        :global(.dark-mode) .logout-btn:hover,
+        :global(.dark-mode) .logout-btn-collapsed:hover {
+          background: #ef4444 !important;
         }
       `}</style>
     </>

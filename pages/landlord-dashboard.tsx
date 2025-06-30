@@ -646,6 +646,93 @@ function LandlordDashboard() {
             font-size: 9px;
           }
         }
+
+        /* Dark Mode Styles */
+        :global(.dark-mode) .property-card-compact {
+          background: #374151;
+          border: 1px solid #4b5563;
+        }
+
+        :global(.dark-mode) .property-card-compact:hover {
+          background: #4b5563;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        :global(.dark-mode) .property-name {
+          color: #f9fafb;
+        }
+
+        :global(.dark-mode) .property-location {
+          color: #9ca3af;
+        }
+
+        :global(.dark-mode) .stat-value {
+          color: #f9fafb;
+        }
+
+        :global(.dark-mode) .stat-label {
+          color: #9ca3af;
+        }
+
+        :global(.dark-mode) .view-all-link {
+          background: rgba(99, 102, 241, 0.2);
+          color: #c4b5fd;
+        }
+
+        :global(.dark-mode) .view-all-link:hover {
+          background: rgba(99, 102, 241, 0.3);
+        }
+
+        :global(.dark-mode) .action-card-compact {
+          background: rgba(31, 41, 55, 0.8);
+          border: 1px solid #4b5563;
+        }
+
+        :global(.dark-mode) .action-card-compact:hover {
+          background: rgba(55, 65, 81, 0.9);
+          border-color: rgba(99, 102, 241, 0.4);
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        :global(.dark-mode) .action-icon-compact {
+          background: rgba(99, 102, 241, 0.2);
+          color: #c4b5fd;
+        }
+
+        :global(.dark-mode) .action-title-compact {
+          color: #f9fafb;
+        }
+
+        :global(.dark-mode) .action-description-compact {
+          color: #9ca3af;
+        }
+
+        :global(.dark-mode) .light-btn {
+          background: rgba(99, 102, 241, 0.2) !important;
+          border: 1px solid rgba(99, 102, 241, 0.4) !important;
+          color: #c4b5fd !important;
+          box-shadow: 0 2px 8px rgba(99, 102, 241, 0.2) !important;
+        }
+
+        :global(.dark-mode) .light-btn:hover {
+          background: rgba(99, 102, 241, 0.3) !important;
+          box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3) !important;
+          color: #e0e7ff !important;
+        }
+
+        :global(.dark-mode) .status-pending {
+          background: rgba(245, 158, 11, 0.2);
+          color: #fcd34d;
+          border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        :global(.dark-mode) .quick-actions-compact::-webkit-scrollbar-track {
+          background: rgba(55, 65, 81, 0.3);
+        }
+
+        :global(.dark-mode) .quick-actions-compact::-webkit-scrollbar-thumb {
+          background: rgba(99, 102, 241, 0.4);
+        }
       `}</style>
     </DashboardLayout>
   );

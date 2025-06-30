@@ -93,8 +93,8 @@ export default function DashboardLayout({
 
           .main-content {
             margin-left: 240px;
-            margin-top: 64px;
-            min-height: calc(100vh - 64px);
+            margin-top: 72px;
+            min-height: calc(100vh - 72px);
             transition: margin-left 0.3s ease;
             width: calc(100% - 240px);
           }
@@ -105,14 +105,14 @@ export default function DashboardLayout({
           }
 
           .content-wrapper {
-            padding: 24px;
+            padding: 16px 20px;
             width: 100%;
             position: relative;
             z-index: 1;
           }
 
           .page-header {
-            margin-bottom: 32px;
+            margin-bottom: 20px;
             padding: 0;
           }
 
@@ -122,15 +122,15 @@ export default function DashboardLayout({
           }
 
           .page-title {
-            font-size: 32px;
-            font-weight: 800;
+            font-size: 24px;
+            font-weight: 700;
             color: #1f2937;
-            margin: 0 0 8px 0;
+            margin: 0 0 6px 0;
             line-height: 1.2;
           }
 
           .page-subtitle {
-            font-size: 18px;
+            font-size: 14px;
             color: #6b7280;
             margin: 0;
             line-height: 1.4;
@@ -140,6 +140,12 @@ export default function DashboardLayout({
           .page-content {
             position: relative;
             z-index: 1;
+          }
+
+          .page-header-icon {
+            width: 56px;
+            height: 56px;
+            font-size: 24px;
           }
 
           @media (max-width: 768px) {
@@ -234,8 +240,8 @@ export default function DashboardLayout({
 
         .main-content {
           margin-left: 240px;
-          margin-top: 64px;
-          min-height: calc(100vh - 64px);
+          margin-top: 72px;
+          min-height: calc(100vh - 72px);
           transition: margin-left 0.3s ease;
           width: calc(100% - 240px);
         }
@@ -251,14 +257,14 @@ export default function DashboardLayout({
         }
 
         .content-wrapper {
-          padding: 24px;
+          padding: 16px 20px;
           width: 100%;
           position: relative;
           z-index: 1;
         }
 
         .page-header {
-          margin-bottom: 32px;
+          margin-bottom: 20px;
           padding: 0;
         }
 
@@ -268,15 +274,15 @@ export default function DashboardLayout({
         }
 
         .page-title {
-          font-size: 32px;
-          font-weight: 800;
+          font-size: 24px;
+          font-weight: 700;
           color: #1f2937;
-          margin: 0 0 8px 0;
+          margin: 0 0 6px 0;
           line-height: 1.2;
         }
 
         .page-subtitle {
-          font-size: 18px;
+          font-size: 14px;
           color: #6b7280;
           margin: 0;
           line-height: 1.4;
@@ -286,6 +292,12 @@ export default function DashboardLayout({
         .page-content {
           position: relative;
           z-index: 1;
+        }
+
+        .page-header-icon {
+          width: 56px;
+          height: 56px;
+          font-size: 24px;
         }
 
         @media (max-width: 768px) {
@@ -319,6 +331,20 @@ export default function DashboardLayout({
             height: 56px;
             font-size: 24px;
           }
+        }
+
+        /* Dark Mode Styles */
+        :global(.dark-mode) .dashboard-layout {
+          background: var(--bg-primary, #0a0a0a);
+        }
+
+        :global(.dark-mode) .dashboard-layout::before {
+          background: none;
+        }
+
+        :global(.dark-mode) .page-title,
+        :global(.dark-mode) .page-subtitle {
+          color: var(--text-primary, #ffffff) !important;
         }
       `}</style>
     </>

@@ -627,6 +627,135 @@ p {
   .col-md-10 { flex: 0 0 83.333333%; max-width: 83.333333%; }
   .col-md-11 { flex: 0 0 91.666667%; max-width: 91.666667%; }
   .col-md-12 { flex: 0 0 100%; max-width: 100%; }
+}
+
+/* Dark Mode Styles */
+.dark-mode {
+  --bg-primary: #0a0a0a;
+  --bg-secondary: #1a1a1a;
+  --bg-tertiary: #2a2a2a;
+  --text-primary: #ffffff;
+  --text-secondary: #ffffff;
+  --text-muted: #ffffff;
+  --border-color: #333333;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --error: #ef4444;
+  --info: #3b82f6;
+  --pending: #f97316;
+}
+
+.dark-mode body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+/* Enforce white text and icons on everything in dark mode */
+.dark-mode *,
+.dark-mode *:before,
+.dark-mode *:after {
+  color: #ffffff !important;
+  border-color: var(--border-color) !important;
+}
+
+.dark-mode svg {
+    stroke: #ffffff !important;
+}
+
+.dark-mode h1,
+.dark-mode h2,
+.dark-mode h3,
+.dark-mode h4,
+.dark-mode h5,
+.dark-mode h6 {
+  color: var(--text-primary) !important;
+}
+
+.dark-mode .card {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color) !important;
+  color: var(--text-primary) !important;
+}
+
+.dark-mode .card-header {
+  background-color: var(--gray-200);
+  border-bottom: 1px solid var(--gray-300);
+}
+
+.dark-mode .form-input,
+.dark-mode .form-textarea,
+.dark-mode .form-select {
+  background-color: var(--gray-100);
+  border: 1px solid var(--gray-200);
+  color: var(--gray-900);
+}
+
+.dark-mode .form-input:focus,
+.dark-mode .form-textarea:focus,
+.dark-mode .form-select:focus {
+  border-color: var(--primary-blue);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.dark-mode .form-input::placeholder,
+.dark-mode .form-textarea::placeholder {
+  color: var(--gray-500);
+}
+
+.dark-mode .table {
+  color: var(--gray-900);
+}
+
+.dark-mode .table th {
+  background-color: var(--gray-200);
+  color: var(--gray-900);
+}
+
+.dark-mode .table tbody tr:hover {
+  background-color: var(--gray-100);
+}
+
+.dark-mode .btn-primary {
+  background-color: var(--primary-blue);
+  color: white;
+}
+
+.dark-mode .btn-primary:hover,
+.dark-mode .btn-primary:focus {
+  background-color: var(--primary-blue-dark);
+}
+
+.dark-mode .btn-secondary {
+  background-color: var(--gray-200);
+  color: var(--gray-900);
+}
+
+.dark-mode .btn-secondary:hover,
+.dark-mode .btn-secondary:focus {
+  background-color: var(--gray-300);
+}
+
+.dark-mode .text-muted {
+  color: var(--gray-500);
+}
+
+.dark-mode .text-secondary {
+  color: var(--gray-600);
+}
+
+/* Ensure all SVGs are white in dark mode */
+.dark-mode svg {
+  color: #ffffff !important;
+}
+
+/* Ensure all text is white in dark mode */
+.dark-mode * {
+  color: #ffffff;
+}
+
+/* Ensure all text is white in dark mode */
+.dark-mode * {
+  color: #ffffff;
 } 
  
  
