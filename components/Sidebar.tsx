@@ -153,7 +153,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
 
   const getNavigationItems = (): NavigationItem[] => {
     const baseItems: NavigationItem[] = [
-      { path: isAdmin() ? '/admin-dashboard' : isLandlord() ? '/landlord-dashboard' : '/manager-dashboard', label: 'Dashboard', icon: <DashboardIcon /> },
+      { path: isAdmin() ? '/admin-dashboard' : isLandlord() ? '/landlord-dashboard' : '/dashboard', label: 'Dashboard', icon: <DashboardIcon /> },
     ];
 
     if (isAdmin()) {
