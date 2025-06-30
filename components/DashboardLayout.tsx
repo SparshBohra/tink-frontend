@@ -92,16 +92,16 @@ export default function DashboardLayout({
           }
 
           .main-content {
-            margin-left: 90px;
-            margin-top: 84px;
-            min-height: calc(100vh - 84px);
+            margin-left: 240px;
+            margin-top: 64px;
+            min-height: calc(100vh - 64px);
             transition: margin-left 0.3s ease;
-            width: calc(100% - 90px);
+            width: calc(100% - 240px);
           }
 
           .main-content.sidebar-collapsed {
-            margin-left: 90px;
-            width: calc(100% - 90px);
+            margin-left: 70px;
+            width: calc(100% - 70px);
           }
 
           .content-wrapper {
@@ -145,7 +145,7 @@ export default function DashboardLayout({
           @media (max-width: 768px) {
             .main-content {
               margin-left: 0;
-              margin-top: 84px;
+              margin-top: 64px;
               width: 100%;
             }
 
@@ -233,21 +233,21 @@ export default function DashboardLayout({
         }
 
         .main-content {
-          margin-left: 320px;
-          margin-top: 84px;
-          min-height: calc(100vh - 84px);
+          margin-left: 240px;
+          margin-top: 64px;
+          min-height: calc(100vh - 64px);
           transition: margin-left 0.3s ease;
-          width: calc(100% - 320px);
+          width: calc(100% - 240px);
         }
 
         .main-content.sidebar-collapsed {
-          margin-left: 90px;
-          width: calc(100% - 90px);
+          margin-left: 70px;
+          width: calc(100% - 70px);
         }
 
         .main-content.sidebar-expanded {
-          margin-left: 320px;
-          width: calc(100% - 320px);
+          margin-left: 240px;
+          width: calc(100% - 240px);
         }
 
         .content-wrapper {
@@ -293,7 +293,7 @@ export default function DashboardLayout({
           .main-content.sidebar-collapsed,
           .main-content.sidebar-expanded {
             margin-left: 0;
-            margin-top: 84px;
+            margin-top: 64px;
             width: 100%;
           }
 

@@ -15,6 +15,32 @@ interface Notification {
   read?: boolean;
 }
 
+// Icon Components
+const BriefcaseIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
+);
+const HouseIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+);
+const LightningIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+);
+const ChartIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 20V10m12 20V4m6 20V14"></path></svg>
+);
+const BellIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+);
+const SparklesIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3L9.27 9.27L3 12l6.27 2.73L12 21l2.73-6.27L21 12l-6.27-2.73z"></path></svg>
+);
+const TrendingUpIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
+);
+const TargetIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>
+);
+
 export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarProps) {
   const { user, isAdmin, isLandlord, isManager, logout } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
@@ -22,6 +48,35 @@ export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarPr
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [rotatingMessages, setRotatingMessages] = useState<any[]>([]);
+
+  const getTimeBasedGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  };
+
+  useEffect(() => {
+    const greetingText = `${getTimeBasedGreeting()}, ${user?.full_name?.split(' ')[0] || 'User'}`;
+    const baseMessages = [
+      { text: "Here's what's happening with your properties.", icon: <SparklesIcon /> },
+      { text: "You have 3 pending applications to review.", icon: <BriefcaseIcon /> },
+      { text: "Downtown Hub is at 86% occupancy.", icon: <HouseIcon /> },
+      { text: "2 maintenance requests are overdue.", icon: <LightningIcon /> },
+      { text: "Revenue is 5% above target this month.", icon: <ChartIcon /> },
+      { text: "Lease renewals start next week.", icon: <BellIcon /> },
+      { text: "Your portfolio performance is excellent.", icon: <TrendingUpIcon /> },
+      { text: "All critical tasks are on track.", icon: <TargetIcon /> }
+    ];
+
+    setRotatingMessages([
+      { text: greetingText, icon: null, isGreeting: true },
+      ...baseMessages
+    ]);
+  }, [user]);
 
   // Fetch real notifications data
   useEffect(() => {
@@ -64,6 +119,21 @@ export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarPr
       return () => clearInterval(interval);
     }
   }, [user, isAdmin, isLandlord, isManager]);
+
+  // Rotate messages with animation effect
+  useEffect(() => {
+    if (rotatingMessages.length === 0) return;
+    const rotateMessage = () => {
+      setIsAnimating(true);
+      setTimeout(() => {
+        setCurrentMessageIndex((prev) => (prev + 1) % rotatingMessages.length);
+        setIsAnimating(false);
+      }, 400); // Animation duration
+    };
+
+    const interval = setInterval(rotateMessage, 5000); // Change message every 5 seconds
+    return () => clearInterval(interval);
+  }, [rotatingMessages]);
 
   const getRelativeTime = (dateString: string) => {
     try {
@@ -166,8 +236,18 @@ export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarPr
 
         <div className="topbar-center">
           <div className="page-title">
-            <h1>Good evening, {user?.full_name?.split(' ')[0] || 'User'}</h1>
-            <p>Here's what's happening with your properties today.</p>
+            <div className="animated-messages-container">
+              {rotatingMessages.length > 0 && (
+                <div className={`assistant-message ${isAnimating ? 'animating' : ''} ${rotatingMessages[currentMessageIndex].isGreeting ? 'is-greeting' : ''}`}>
+                  {rotatingMessages[currentMessageIndex].icon && (
+                    <span className="message-icon">
+                      {rotatingMessages[currentMessageIndex].icon}
+                    </span>
+                  )}
+                  <span>{rotatingMessages[currentMessageIndex].text}</span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -272,21 +352,21 @@ export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarPr
         .topbar {
           position: fixed;
           top: 0;
-          left: 320px;
+          left: 240px;
           right: 0;
-          height: 84px;
+          height: 72px;
           background: rgba(255, 255, 255, 0.95);
           backdrop-filter: blur(20px);
           border-bottom: 1px solid rgba(0, 0, 0, 0.05);
           display: flex;
           align-items: center;
-          padding: 0 32px;
+          padding: 0 24px;
           z-index: 999;
           transition: left 0.3s ease;
         }
 
         .topbar.sidebar-collapsed {
-          left: 90px;
+          left: 70px;
         }
 
         .topbar-left {
@@ -295,7 +375,7 @@ export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarPr
         }
 
         .search-container {
-          min-width: 420px;
+          min-width: 360px;
         }
 
         .search-input-wrapper {
@@ -316,14 +396,19 @@ export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarPr
 
         .search-input {
           width: 100%;
-          padding: 18px 24px 18px 56px;
+          padding: 14px 24px 14px 52px;
           border: 1px solid #e5e7eb;
-          border-radius: 18px;
+          border-radius: 14px;
           font-size: 16px;
           background: rgba(255, 255, 255, 0.8);
           transition: all 0.2s ease;
-          height: 56px;
+          height: 50px;
           box-sizing: border-box;
+        }
+
+        .search-input::placeholder {
+          color: #9ca3af;
+          font-size: 16px;
         }
 
         .search-input:focus {
@@ -341,16 +426,58 @@ export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarPr
         }
 
         .page-title h1 {
-          font-size: 26px;
+          font-size: 22px;
           font-weight: 700;
           color: #1f2937;
           margin: 0 0 4px 0;
         }
 
-        .page-title p {
-          font-size: 15px;
-          color: #6b7280;
+        .animated-messages-container {
+          overflow: hidden;
+          height: 30px; /* Adjust height based on font size */
+          position: relative;
+        }
+
+        .assistant-message {
           margin: 0;
+          font-size: 16px;
+          color: #475569;
+          font-weight: 500;
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          text-align: center;
+          transition: opacity 0.4s ease-in-out, transform 0.4s ease-in-out;
+          opacity: 1;
+          transform: translateY(0);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+        }
+        
+        .assistant-message.is-greeting {
+          font-size: 20px;
+          font-weight: 700;
+          color: #1e293b;
+        }
+
+        .assistant-message.animating {
+          opacity: 0;
+          transform: translateY(-12px);
+        }
+        
+        .message-icon {
+          display: inline-flex;
+          align-items: center;
+          width: 18px;
+          height: 18px;
+          color: #64748b;
+        }
+        
+        .assistant-message.is-greeting .message-icon {
+          display: none;
         }
 
         .topbar-right {
@@ -369,14 +496,14 @@ export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarPr
           display: flex;
           align-items: center;
           gap: 12px;
-          padding: 14px 22px;
+          padding: 12px 22px;
           background: rgba(255, 255, 255, 0.8);
           border: 1px solid #e5e7eb;
-          border-radius: 16px;
+          border-radius: 14px;
           cursor: pointer;
           transition: all 0.2s ease;
           position: relative;
-          height: 52px;
+          height: 50px;
           box-sizing: border-box;
         }
 
@@ -387,16 +514,14 @@ export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarPr
           border-color: #d1d5db;
         }
 
-        .btn-icon {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: #6b7280;
+        .btn-icon svg {
+          width: 26px;
+          height: 26px;
         }
 
         .btn-label {
           font-size: 16px;
-          font-weight: 500;
+          font-weight: 600;
           color: #374151;
         }
 

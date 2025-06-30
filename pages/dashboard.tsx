@@ -46,7 +46,8 @@ const useCounterAnimation = (targetValue, duration = 2000, isRevenue = false) =>
 function Dashboard() {
   const { user, isLandlord, isManager, isAdmin } = useAuth();
   const [loading, setLoading] = useState(false);
-
+  const [propertyFilter, setPropertyFilter] = useState('All');
+  
   // Counter animations for metrics
   const propertiesCount = useCounterAnimation(5, 1500);
   const roomsCount = useCounterAnimation(87, 2000);
@@ -105,7 +106,7 @@ function Dashboard() {
   ];
 
   const quickActions = [
-    {
+    { 
       title: 'Add Property',
       subtitle: 'Register New Property',
       icon: (
@@ -113,10 +114,10 @@ function Dashboard() {
           <line x1="12" y1="5" x2="12" y2="19"/>
           <line x1="5" y1="12" x2="19" y2="12"/>
         </svg>
-      ),
-      color: 'blue'
+      ), 
+      color: 'blue' 
     },
-    {
+    { 
       title: 'Review Applications',
       subtitle: 'Process Tenant Applications',
       icon: (
@@ -127,10 +128,10 @@ function Dashboard() {
           <line x1="16" y1="17" x2="8" y2="17"/>
           <polyline points="10,9 9,9 8,9"/>
         </svg>
-      ),
-      color: 'blue'
+      ), 
+      color: 'blue' 
     },
-    {
+    { 
       title: 'Manage Tenants',
       subtitle: 'View and Manage Tenants',
       icon: (
@@ -138,10 +139,10 @@ function Dashboard() {
           <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
           <circle cx="12" cy="7" r="4"/>
         </svg>
-      ),
+      ), 
       color: 'green'
     },
-    {
+    { 
       title: 'Generate Reports',
       subtitle: 'Create Financial Reports',
       icon: (
@@ -150,7 +151,7 @@ function Dashboard() {
           <line x1="12" y1="20" x2="12" y2="4"/>
           <line x1="6" y1="20" x2="6" y2="14"/>
         </svg>
-      ),
+      ), 
       color: 'purple'
     }
   ];
@@ -273,8 +274,17 @@ function Dashboard() {
       status: 'Pending Review'
     }
   ];
-
+  
   const userName = user?.full_name || user?.username || 'User';
+
+  // Add dynamic date logic
+  const today = new Date();
+  const weekday = today.toLocaleDateString('en-US', { weekday: 'long' });
+  const dateString = today.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+  const filteredProperties = propertyFilter === 'All'
+    ? properties
+    : properties.filter((p) => p.status === propertyFilter);
 
   return (
     <DashboardLayout title="">
@@ -293,202 +303,203 @@ function Dashboard() {
               </p>
             </div>
             <div className="header-right">
-              <div className="date-display">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                  <line x1="16" y1="2" x2="16" y2="6"/>
-                  <line x1="8" y1="2" x2="8" y2="6"/>
-                  <line x1="3" y1="10" x2="21" y2="10"/>
-                </svg>
-                Sunday, June 29, 2025
+              {/* Weekday on first line, date on second line, right aligned */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center', minWidth: 180 }}>
+                <span style={{ display: 'flex', alignItems: 'center', fontSize: '13px', color: '#94a3b8', fontWeight: 500, letterSpacing: 0.2, marginBottom: 2 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: 6 }}>
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                    <line x1="16" y1="2" x2="16" y2="6"/>
+                    <line x1="8" y1="2" x2="8" y2="6"/>
+                    <line x1="3" y1="10" x2="21" y2="10"/>
+                  </svg>
+                  {weekday}
+                </span>
+                <span style={{ fontSize: '17px', color: '#334155', fontWeight: 600, letterSpacing: 0.1, lineHeight: 1.3, textAlign: 'right', width: '100%' }}>
+                  {dateString}
+                </span>
               </div>
             </div>
           </div>
         </div>
-        {/* Top Metrics Row */}
+          {/* Top Metrics Row */}
         <div className="metrics-grid">
           <div className="metric-card">
             <div className="metric-header">
               <div className="metric-info">
                 <h3 className="metric-title">My Properties</h3>
-                <div className="metric-icon">
+              <div className="metric-icon">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M3 21h18"/>
-                    <path d="M5 21V7l8-4v18"/>
-                    <path d="M19 21V11l-6-4"/>
-                  </svg>
+                  <path d="M3 21h18"/>
+                  <path d="M5 21V7l8-4v18"/>
+                  <path d="M19 21V11l-6-4"/>
+                </svg>
                 </div>
               </div>
-            </div>
-            <div className="metric-content">
+              </div>
+              <div className="metric-content">
               <div className="metric-value">{propertiesCount}</div>
               <div className="metric-subtitle">{metrics.properties.subtitle}</div>
               <div className="metric-progress">
                 <span className="metric-label">85% capacity</span>
                 <span className="metric-change positive">{metrics.properties.change}</span>
               </div>
+              </div>
             </div>
-          </div>
-
+            
           <div className="metric-card">
             <div className="metric-header">
               <div className="metric-info">
                 <h3 className="metric-title">Total Rooms</h3>
-                <div className="metric-icon">
+              <div className="metric-icon">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M3 21h18"/>
                     <path d="M5 21V7l8-4v18"/>
                     <path d="M19 21V11l-6-4"/>
-                  </svg>
+                </svg>
                 </div>
               </div>
-            </div>
-            <div className="metric-content">
+              </div>
+              <div className="metric-content">
               <div className="metric-value">{roomsCount}</div>
               <div className="metric-subtitle">{metrics.rooms.subtitle}</div>
               <div className="metric-progress">
                 <span className="metric-label">92% occupied</span>
                 <span className="metric-change positive">{metrics.rooms.change}</span>
               </div>
+              </div>
             </div>
-          </div>
-
+            
           <div className="metric-card">
             <div className="metric-header">
               <div className="metric-info">
                 <h3 className="metric-title">Active Tenants</h3>
-                <div className="metric-icon">
+              <div className="metric-icon">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
                     <circle cx="12" cy="7" r="4"/>
-                  </svg>
+                </svg>
                 </div>
               </div>
-            </div>
-            <div className="metric-content">
+              </div>
+              <div className="metric-content">
               <div className="metric-value">{tenantsCount}</div>
               <div className="metric-subtitle">{metrics.tenants.subtitle}</div>
               <div className="metric-progress">
                 <span className="metric-label">Great retention</span>
                 <span className="metric-change positive">{metrics.tenants.change}</span>
               </div>
+              </div>
             </div>
-          </div>
-
+            
           <div className="metric-card">
             <div className="metric-header">
               <div className="metric-info">
                 <h3 className="metric-title">Monthly Revenue</h3>
-                <div className="metric-icon">
+              <div className="metric-icon">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <line x1="12" y1="1" x2="12" y2="23"/>
-                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-                  </svg>
+                  <line x1="12" y1="1" x2="12" y2="23"/>
+                  <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                </svg>
                 </div>
               </div>
-            </div>
-            <div className="metric-content">
+              </div>
+              <div className="metric-content">
               <div className="metric-value">{revenueValue}</div>
               <div className="metric-subtitle">{metrics.revenue.subtitle}</div>
               <div className="metric-progress">
                 <span className="metric-label">95% of target</span>
                 <span className="metric-change positive">{metrics.revenue.change}</span>
               </div>
+              </div>
             </div>
           </div>
-        </div>
 
         {/* Main Content */}
-        <div className="main-content">
+          <div className="main-content">
           {/* Pending Tasks Section */}
-          <div className="tasks-section">
-            <div className="section-header">
+            <div className="tasks-section">
+              <div className="section-header">
               <div>
-                <h2 className="section-title">Pending Tasks</h2>
-                <p className="section-subtitle">Tasks requiring your attention</p>
-              </div>
-              <button className="add-task-btn">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <line x1="12" y1="5" x2="12" y2="19"/>
-                  <line x1="5" y1="12" x2="19" y2="12"/>
-                </svg>
-                Add Task
-              </button>
-            </div>
-
+                  <h2 className="section-title">Pending Tasks</h2>
+                  <p className="section-subtitle">Tasks requiring your attention</p>
+                </div>
+                <button className="add-task-btn">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <line x1="12" y1="5" x2="12" y2="19"/>
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                  </svg>
+                  Add Task
+                </button>
+        </div>
+        
             <div className="tasks-scroll-container">
-              <div className="tasks-table-container">
-                <table className="tasks-table">
-                <thead>
-                  <tr>
-                    <th>Task</th>
-                    <th>Property</th>
-                    <th>Priority</th>
-                    <th>Due Date</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
+                <div className="tasks-table-container">
+                  <table className="tasks-table">
+                    <thead>
+                      <tr>
+                        <th className="table-left">Task</th>
+                        <th className="table-left">Property</th>
+                        <th className="table-center">Priority</th>
+                        <th className="table-left">Due Date</th>
+                        <th className="table-center">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
                   {tasks.map((task) => (
                     <tr key={task.id}>
-                      <td>{task.task}</td>
-                      <td>{task.property}</td>
-                      <td>
+                      <td className="table-left">{task.task}</td>
+                      <td className="table-left">{task.property}</td>
+                      <td className="table-center">
                         <span className={`priority-badge ${task.priority.toLowerCase()}`}>
                           {task.priority}
                         </span>
-                      </td>
-                      <td>
-                        <div className="due-date">
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          </td>
+                      <td className="table-left"><span className="due-date-cell"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
                             <line x1="16" y1="2" x2="16" y2="6"/>
                             <line x1="8" y1="2" x2="8" y2="6"/>
                             <line x1="3" y1="10" x2="21" y2="10"/>
-                          </svg>
-                          {task.dueDate}
-                        </div>
-                      </td>
-                      <td>
+                          </svg>{task.dueDate}</span></td>
+                      <td className="table-center">
                         <span className={`status-badge ${task.status.toLowerCase().replace(' ', '-')}`}>
                           {task.status === 'In Progress' ? 'In Progress' : task.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                            </span>
+                </td>
+              </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
-          </div>
 
           {/* Quick Actions Section */}
           <div className="quick-actions-section">
-            <div className="section-header">
+              <div className="section-header">
               <div>
-                <h2 className="section-title">Quick Actions</h2>
-                <p className="section-subtitle">Frequently used actions</p>
+                  <h2 className="section-title">Quick Actions</h2>
+                  <p className="section-subtitle">Frequently used actions</p>
+                </div>
               </div>
-            </div>
-
-            <div className="actions-grid">
-              {quickActions.map((action, index) => (
+              
+                <div className="actions-grid">
+                  {quickActions.map((action, index) => (
                 <div key={index} className={`action-card ${action.color}`}>
                   <div className="action-icon">
                     {action.icon}
                   </div>
-                  <div className="action-content">
+                      <div className="action-content">
                     <h3 className="action-title">{action.title}</h3>
                     <p className="action-subtitle">{action.subtitle}</p>
-                  </div>
                 </div>
-              ))}
+                </div>
+                  ))}
+              </div>
             </div>
           </div>
-        </div>
 
         {/* My Properties Section */}
-        <div className="properties-section">
+          <div className="properties-section">
           <div className="section-header">
             <div>
               <h2 className="section-title">My Properties</h2>
@@ -498,97 +509,96 @@ function Dashboard() {
           </div>
 
           <div className="properties-container">
-            <div className="properties-tabs">
-              <button className="tab active">All Properties</button>
-              <button className="tab">Active</button>
-              <button className="tab">Maintenance</button>
+            {/* Filter Dropdown */}
+            <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <label htmlFor="property-filter" style={{ fontSize: 14, color: '#64748b', fontWeight: 500 }}>Filter:</label>
+              <select
+                id="property-filter"
+                value={propertyFilter}
+                onChange={e => setPropertyFilter(e.target.value)}
+                style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: 14 }}
+              >
+                <option value="All">All</option>
+                <option value="Active">Active</option>
+                <option value="Maintenance">Maintenance</option>
+              </select>
             </div>
-
+            {/* Remove tabs, keep table always visible */}
             <div className="properties-scroll-container">
               <div className="properties-table-container">
                 <table className="properties-table">
-                <thead>
-                  <tr>
-                    <th>Property</th>
-                    <th>Status</th>
-                    <th>Occupancy</th>
-                    <th>Monthly Revenue</th>
-                    <th>Tasks</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {properties.map((property) => (
-                    <tr key={property.id}>
-                      <td>
-                        <div className="property-info-cell">
-                          <div className="property-avatar" style={{ backgroundColor: property.color }}>
-                            {property.initials}
-                          </div>
-                          <div className="property-details">
-                            <div className="property-name">{property.name}</div>
-                            <div className="property-location">{property.location}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td>
-                        <span className={`status-badge ${property.status.toLowerCase()}`}>
-                          {property.status}
-                        </span>
-                      </td>
-                      <td>
-                        <div className="occupancy-cell">
-                          <div className="occupancy-info">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                              <circle cx="12" cy="7" r="4"/>
-                            </svg>
-                            <span className="occupancy-text">{property.occupancy}</span>
-                            <span className="occupancy-percent">{property.occupancyPercent}%</span>
-                          </div>
-                        </div>
-                      </td>
-                      <td>
-                        <div className="revenue-cell">
-                          <div className="revenue-amount">$ {property.revenue.toLocaleString()}</div>
-                          <div className="revenue-change">{property.revenueChange} vs last month</div>
-                        </div>
-                      </td>
-                      <td>
-                        <div className="tasks-cell">
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2">
-                            <path d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                          </svg>
-                          <span className="tasks-count">{property.tasks} pending</span>
-                        </div>
-                      </td>
-                      <td>
-                        <button className="manage-btn">
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M12 20h9"/>
-                            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
-                          </svg>
-                          Manage
-                        </button>
-                      </td>
+                  <thead>
+                    <tr>
+                      <th className="table-left">Property</th>
+                      <th className="table-left">Status</th>
+                      <th className="table-left">Occupancy</th>
+                      <th className="table-right">Monthly Revenue</th>
+                      <th className="table-left">Tasks</th>
+                      <th className="table-center">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {filteredProperties.map((property) => (
+                      <tr key={property.id}>
+                        <td className="table-left">{property.name}</td>
+                        <td className="table-left">
+                          <span className={`status-badge ${property.status.toLowerCase()}`}>
+                            {property.status}
+                          </span>
+                        </td>
+                        <td className="table-left">
+                          <div className="occupancy-cell">
+                            <div className="occupancy-info">
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                                <circle cx="12" cy="7" r="4"/>
+                              </svg>
+                              <span className="occupancy-text">{property.occupancy}</span>
+                              <span className="occupancy-percent">{property.occupancyPercent}%</span>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="table-right">
+                          <div className="revenue-cell">
+                            <div className="revenue-amount">$ {property.revenue.toLocaleString()}</div>
+                            <div className="revenue-change">{property.revenueChange} vs last month</div>
+                          </div>
+                        </td>
+                        <td className="table-left">
+                          <div className="tasks-cell">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2">
+                              <path d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <span className="tasks-count">{property.tasks} pending</span>
+                          </div>
+                        </td>
+                        <td className="table-center">
+                          <button className="manage-btn">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M12 20h9"/>
+                              <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                            </svg>
+                            Manage
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
         </div>
-
+                    
         {/* Recent Applications Section */}
         <div className="applications-section">
           <div className="section-header">
             <div>
               <h2 className="section-title">Recent Applications</h2>
               <p className="section-subtitle">Latest tenant applications requiring review</p>
-            </div>
+                </div>
             <button className="view-all-btn">View All Applications</button>
-          </div>
+                </div>
 
           <div className="applications-scroll-container">
             <div className="applications-grid">
@@ -597,7 +607,7 @@ function Dashboard() {
                   <div className="application-header">
                     <div className="applicant-avatar">{application.initials}</div>
                     <span className="status-badge pending-review">{application.status}</span>
-                  </div>
+                </div>
                   
                   <div className="application-content">
                     <h3 className="applicant-name">{application.name}</h3>
@@ -607,11 +617,11 @@ function Dashboard() {
                         <polyline points="12,6 12,12 16,14"/>
                       </svg>
                       Applied {application.appliedDate}
-                    </div>
+              </div>
                     <div className="application-property">
                       <strong>Property:</strong> {application.property}
-                    </div>
                   </div>
+              </div>
 
                   <button className="review-btn">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -629,14 +639,14 @@ function Dashboard() {
           </div>
         </div>
       </div>
-
+      
       <style jsx>{`
         .dashboard-container {
-          padding: 32px 20px;
+          width: 100%;
+          padding: 24px 32px 32px 32px; /* scaled down padding */
           background: #f8fafc;
-          min-height: 100vh;
-          max-width: 1600px;
-          margin: 0 auto;
+          min-height: calc(100vh - 64px); /* match new topbar */
+          box-sizing: border-box;
         }
 
         /* Custom Header */
@@ -656,18 +666,18 @@ function Dashboard() {
         }
 
         .dashboard-title {
-          font-size: 36px;
+          font-size: 28px;
           font-weight: 800;
           color: #1e293b;
-          margin: 0 0 8px 0;
-          line-height: 1.1;
+          margin: 0 0 6px 0;
+          line-height: 1.15;
         }
 
         .welcome-message {
-          font-size: 16px;
+          font-size: 14px;
           color: #64748b;
           margin: 0;
-          line-height: 1.5;
+          line-height: 1.45;
         }
 
         .user-name {
@@ -697,14 +707,14 @@ function Dashboard() {
         .metrics-grid {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
-          gap: 24px;
-          margin-bottom: 32px;
+          gap: 16px;
+          margin-bottom: 24px;
         }
 
         .metric-card {
           background: white;
           border-radius: 8px;
-          padding: 24px;
+          padding: 18px;
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
           border: 1px solid #e2e8f0;
           transition: all 0.2s ease;
@@ -730,7 +740,7 @@ function Dashboard() {
         }
 
         .metric-title {
-          font-size: 14px;
+          font-size: 12px;
           font-weight: 600;
           color: #64748b;
           margin: 0;
@@ -747,7 +757,7 @@ function Dashboard() {
         }
 
         .metric-value {
-          font-size: 32px;
+          font-size: 24px;
           font-weight: 700;
           color: #1e293b;
           margin-bottom: 4px;
@@ -755,7 +765,7 @@ function Dashboard() {
         }
 
         .metric-subtitle {
-          font-size: 14px;
+          font-size: 12px;
           color: #64748b;
           margin-bottom: 12px;
         }
@@ -796,14 +806,14 @@ function Dashboard() {
         }
 
         .section-title {
-          font-size: 20px;
+          font-size: 16px;
           font-weight: 700;
           color: #1e293b;
           margin: 0 0 4px 0;
         }
 
         .section-subtitle {
-          font-size: 14px;
+          font-size: 12px;
           color: #64748b;
           margin: 0;
         }
@@ -869,24 +879,26 @@ function Dashboard() {
           border-collapse: collapse;
         }
 
-        .tasks-table th {
-          text-align: left;
-          padding: 12px 16px;
-          font-size: 14px;
-          font-weight: 600;
-          color: #64748b;
-          border-bottom: 1px solid #e2e8f0;
-          background: #fafafa;
-          position: sticky;
-          top: 0;
-          z-index: 10;
+        /* Center align all table headers and cell values for both tables */
+        .tasks-table th, .tasks-table td, .properties-table th, .properties-table td {
+          text-align: center !important;
+          font-size: 15px;
+          padding: 16px 16px;
+          vertical-align: middle;
+          height: 56px;
+          box-sizing: border-box;
         }
 
-        .tasks-table td {
-          padding: 16px;
-          border-bottom: 1px solid #f1f5f9;
-          font-size: 14px;
+        .tasks-table th, .properties-table th {
+          font-weight: 700;
           color: #1e293b;
+          background: #f8fafc;
+        }
+
+        .tasks-table td, .properties-table td {
+          font-weight: 400;
+          color: #1e293b;
+          background: #fff;
         }
 
         .priority-badge {
@@ -912,11 +924,19 @@ function Dashboard() {
           color: #16a34a;
         }
 
-        .due-date {
+        .due-date-cell {
           display: flex;
           align-items: center;
+          justify-content: center;
           gap: 6px;
-          color: #64748b;
+          font-weight: 500;
+          color: #1e293b;
+        }
+
+        .due-date-cell svg {
+          stroke: #64748b;
+          stroke-width: 1.5;
+          flex-shrink: 0;
         }
 
         .status-badge {
@@ -1052,18 +1072,23 @@ function Dashboard() {
 
         /* View All Button */
         .view-all-btn {
-          background: transparent;
-          color: #6366f1;
+          background: #6366f1;
+          color: white;
           border: none;
-          padding: 8px 0;
+          padding: 12px 16px;
+          border-radius: 8px;
           font-size: 14px;
           font-weight: 600;
           cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 8px;
           transition: all 0.2s ease;
         }
 
         .view-all-btn:hover {
-          color: #4f46e5;
+          background: #4f46e5;
+          transform: translateY(-1px);
         }
 
         /* Properties Section */
@@ -1103,69 +1128,31 @@ function Dashboard() {
           border-radius: 3px;
         }
 
-        .properties-tabs {
-          display: flex;
-          gap: 48px;
-          margin: 32px 0 40px 0;
-          border-bottom: 1px solid #e2e8f0;
-          background: #f8fafc;
-          border-radius: 12px;
-          padding: 8px;
-        }
-
-        .tab {
-          background: transparent;
-          border: none;
-          padding: 16px 32px;
-          font-size: 15px;
-          font-weight: 600;
-          color: #64748b;
-          cursor: pointer;
-          border-radius: 8px;
-          transition: all 0.2s ease;
-          flex: 1;
-          text-align: center;
-        }
-
-        .tab.active {
-          color: #1e293b;
-          background: white;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        }
-
-        .tab:hover {
-          color: #1e293b;
-          background: rgba(255, 255, 255, 0.7);
-        }
-
         .properties-table-container {
+          width: 100%;
           overflow-x: auto;
+          max-height: 420px;
+          border-radius: 12px;
+          background: white;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
         }
 
         .properties-table {
           width: 100%;
-          border-collapse: collapse;
+          border-collapse: separate;
+          border-spacing: 0;
         }
 
         .properties-table th {
-          text-align: left;
-          padding: 20px 16px;
-          font-size: 15px;
-          font-weight: 600;
-          color: #64748b;
-          border-bottom: 1px solid #e2e8f0;
-          background: #fafafa;
           position: sticky;
           top: 0;
-          z-index: 10;
-        }
-
-        .properties-table td {
-          padding: 24px 16px;
-          border-bottom: 1px solid #f1f5f9;
+          background: #f8fafc;
+          z-index: 2;
           font-size: 15px;
+          font-weight: 700;
           color: #1e293b;
-          vertical-align: middle;
+          padding: 16px 12px;
+          border-bottom: 2px solid #e2e8f0;
         }
 
         .property-info-cell {
@@ -1189,7 +1176,7 @@ function Dashboard() {
         .property-details {
           flex: 1;
         }
-
+        
         .property-name {
           font-weight: 700;
           font-size: 16px;
@@ -1203,69 +1190,20 @@ function Dashboard() {
           font-weight: 500;
         }
 
-        .occupancy-cell {
+        .occupancy-cell, .revenue-cell, .tasks-cell {
           display: flex;
           align-items: center;
-        }
-
-        .occupancy-info {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-
-        .occupancy-text {
-          font-weight: 600;
-        }
-
-        .occupancy-percent {
-          color: #64748b;
-        }
-
-        .revenue-cell {
-          text-align: left;
-        }
-
-        .revenue-amount {
-          font-weight: 600;
-          font-size: 16px;
-          margin-bottom: 4px;
-        }
-
-        .revenue-change {
-          font-size: 12px;
-          color: #10b981;
-        }
-
-        .tasks-cell {
-          display: flex;
-          align-items: center;
+          justify-content: center;
           gap: 6px;
         }
 
-        .tasks-count {
-          color: #64748b;
+        .revenue-cell {
+          flex-direction: column;
+          text-align: center;
         }
 
         .manage-btn {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          background: transparent;
-          border: 1px solid #e2e8f0;
-          padding: 8px 16px;
-          border-radius: 8px;
-          font-size: 14px;
-          font-weight: 600;
-          color: #64748b;
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-
-        .manage-btn:hover {
-          background: #f8fafc;
-          border-color: #d1d5db;
-          color: #1e293b;
+          margin: 0 auto;
         }
 
         /* Applications Section */
@@ -1280,7 +1218,7 @@ function Dashboard() {
         .applications-scroll-container {
           height: 400px;
           overflow-y: auto;
-          margin-top: 24px;
+          margin-top: 20px;
         }
 
         .applications-scroll-container::-webkit-scrollbar {
@@ -1400,7 +1338,7 @@ function Dashboard() {
             grid-template-columns: 1fr;
             gap: 24px;
           }
-
+          
           .applications-grid {
             grid-template-columns: repeat(2, 1fr);
           }
@@ -1420,27 +1358,27 @@ function Dashboard() {
             flex-direction: column;
             gap: 16px;
           }
-
+          
           .dashboard-title {
             font-size: 28px;
           }
-
+          
           .welcome-message {
             font-size: 14px;
           }
-
+          
           .date-display {
             align-self: flex-start;
           }
-
+          
           .metric-card {
             padding: 16px;
           }
-
+          
           .metric-value {
             font-size: 24px;
           }
-
+          
           .tasks-section,
           .quick-actions-section,
           .properties-section,
@@ -1512,19 +1450,11 @@ function Dashboard() {
             gap: 12px;
             align-items: stretch;
           }
-
+          
           .add-task-btn {
             align-self: flex-start;
           }
-
-          .properties-tabs {
-            gap: 16px;
-          }
-
-          .tab {
-            font-size: 12px;
-          }
-
+          
           .application-card {
             padding: 16px;
           }
@@ -1533,9 +1463,24 @@ function Dashboard() {
             font-size: 16px;
           }
         }
+
+        @media (max-width: 1024px) {
+          .dashboard-container {
+            padding: 20px 12px 24px 12px;
+          }
+        }
+
+        /* Add utility classes for alignment */
+        .table-left { text-align: left !important; }
+        .table-right { text-align: right !important; }
+        .table-center { text-align: center !important; }
+        .due-date-cell { display: flex; align-items: center; gap: 6px; justify-content: flex-start; }
+        .occupancy-cell { display: flex; align-items: center; gap: 6px; }
+        .tasks-cell { display: flex; align-items: center; gap: 6px; }
+        .revenue-cell { text-align: right; }
       `}</style>
     </DashboardLayout>
   );
 }
 
-export default withAuth(Dashboard);
+export default withAuth(Dashboard); 

@@ -282,7 +282,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
           position: fixed;
           left: 0;
           top: 0;
-          width: 320px;
+          width: 240px;
           height: 100vh;
           background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
           border-right: 1px solid rgba(255, 255, 255, 0.1);
@@ -294,13 +294,13 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         }
 
         .sidebar.collapsed {
-          width: 90px;
+          width: 70px;
         }
 
         .sidebar-header {
-          padding: 20px;
+          padding: 20px 18px;
           border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-          height: 84px;
+          height: 72px;
           display: flex;
           align-items: center;
         }
@@ -312,8 +312,8 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         }
 
         .menu-toggle {
-          width: 44px;
-          height: 44px;
+          width: 36px;
+          height: 36px;
           background: rgba(255, 255, 255, 0.1);
           border: 1px solid rgba(255, 255, 255, 0.2);
           border-radius: 12px;
@@ -336,7 +336,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         }
 
         .logo-text {
-          font-size: 24px;
+          font-size: 20px;
           font-weight: 700;
           color: white;
           white-space: nowrap;
@@ -365,45 +365,41 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
           display: flex;
           align-items: center;
           width: 100%;
-          padding: 16px;
+          padding: 16px 20px;
           margin-bottom: 8px;
           border: none;
           background: transparent;
-          color: rgba(255, 255, 255, 0.7);
-          border-radius: 16px;
+          color: rgba(243, 244, 246, 0.85);
+          border-radius: 14px;
           cursor: pointer;
           transition: all 0.2s ease;
           text-align: left;
           font-size: 16px;
-          font-weight: 500;
+          font-weight: 400;
           position: relative;
           gap: 16px;
         }
 
         .sidebar.collapsed .nav-item {
           justify-content: center;
-          padding: 16px;
-          width: 54px;
-          height: 54px;
+          padding: 12px;
+          width: 48px;
+          height: 48px;
           margin: 0 auto 12px auto;
         }
 
-        .nav-item:hover {
-          background: rgba(255, 255, 255, 0.1);
-          color: rgba(255, 255, 255, 0.9);
-          transform: translateX(4px);
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-        }
-
-        .sidebar.collapsed .nav-item:hover {
-          transform: none;
-          box-shadow: 0 4px 20px rgba(255, 255, 255, 0.1);
-        }
-
         .nav-item.active {
-          background: rgba(102, 126, 234, 0.2);
-          color: #667eea;
-          box-shadow: 0 4px 20px rgba(102, 126, 234, 0.2);
+          background: rgba(255, 255, 255, 0.08);
+          color: #ffffff;
+          border-left: 4px solid #8b5cf6;
+          box-shadow: none;
+        }
+
+        .nav-item:hover {
+          background: rgba(255, 255, 255, 0.15);
+          color: #ffffff;
+          transform: translateX(2px);
+          box-shadow: none;
         }
 
         .nav-icon {
@@ -411,6 +407,13 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
           align-items: center;
           justify-content: center;
           flex-shrink: 0;
+          color: inherit;
+          opacity: 0.85;
+        }
+
+        .nav-icon svg {
+          width: 24px;
+          height: 24px;
         }
 
         .nav-label {
@@ -422,14 +425,17 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
 
         .nav-badge {
           background: #ef4444;
-          color: white;
-          font-size: 12px;
-          font-weight: 600;
-          padding: 4px 8px;
-          border-radius: 12px;
-          min-width: 20px;
+          color: #fff;
+          font-size: 11px;
+          font-weight: 500;
+          padding: 1px 6px;
+          border-radius: 10px;
+          min-width: 18px;
           text-align: center;
-          line-height: 1;
+          line-height: 1.2;
+          box-shadow: 0 2px 6px rgba(239, 68, 68, 0.15), 0 0 0 1px #fff;
+          letter-spacing: 0.02em;
+          display: inline-block;
         }
 
         .sidebar-bottom {
