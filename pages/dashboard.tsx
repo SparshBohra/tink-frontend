@@ -632,7 +632,7 @@ function Dashboard() {
 
       <style jsx>{`
         .dashboard-container {
-          padding: 32px 20px;
+          padding: 32px 6px;
           background: #f8fafc;
           min-height: 100vh;
           max-width: 1600px;

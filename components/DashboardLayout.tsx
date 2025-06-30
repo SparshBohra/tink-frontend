@@ -105,7 +105,7 @@ export default function DashboardLayout({
           }
 
           .content-wrapper {
-            padding: 24px;
+            padding: 24px 12px;
             width: 100%;
             position: relative;
             z-index: 1;
@@ -251,7 +251,7 @@ export default function DashboardLayout({
         }
 
         .content-wrapper {
-          padding: 24px;
+          padding: 24px 12px;
           width: 100%;
           position: relative;
           z-index: 1;
