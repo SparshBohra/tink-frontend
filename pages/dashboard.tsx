@@ -703,7 +703,7 @@ function Dashboard() {
 
         .metric-card {
           background: white;
-          border-radius: 16px;
+          border-radius: 8px;
           padding: 24px;
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
           border: 1px solid #e2e8f0;
@@ -811,7 +811,7 @@ function Dashboard() {
         /* Tasks Section */
         .tasks-section {
           background: white;
-          border-radius: 16px;
+          border-radius: 8px;
           padding: 24px;
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
           border: 1px solid #e2e8f0;
@@ -964,7 +964,7 @@ function Dashboard() {
         /* Quick Actions Section */
         .quick-actions-section {
           background: white;
-          border-radius: 16px;
+          border-radius: 8px;
           padding: 24px;
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
           border: 1px solid #e2e8f0;
@@ -982,7 +982,7 @@ function Dashboard() {
           align-items: center;
           gap: 16px;
           padding: 16px;
-          border-radius: 12px;
+          border-radius: 6px;
           border: 1px solid #e2e8f0;
           cursor: pointer;
           transition: all 0.2s ease;
@@ -1069,7 +1069,7 @@ function Dashboard() {
         /* Properties Section */
         .properties-section {
           background: white;
-          border-radius: 16px;
+          border-radius: 8px;
           padding: 32px;
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
           border: 1px solid #e2e8f0;
@@ -1271,7 +1271,7 @@ function Dashboard() {
         /* Applications Section */
         .applications-section {
           background: white;
-          border-radius: 16px;
+          border-radius: 8px;
           padding: 32px;
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
           border: 1px solid #e2e8f0;
@@ -1305,7 +1305,7 @@ function Dashboard() {
 
         .application-card {
           background: white;
-          border-radius: 16px;
+          border-radius: 8px;
           padding: 24px;
           border: 1px solid #e2e8f0;
           transition: all 0.2s ease;
