@@ -325,18 +325,24 @@ export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarPr
       </div>
 
       <style jsx>{`
+        :global(body) {
+          margin: 0;
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+          background-color: #f8f9fa;
+        }
+
         .topbar {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          height: 72px;
+          background-color: #ffffff;
+          border-bottom: 1px solid #e2e8f0;
+          padding: 0 24px;
           position: fixed;
           top: 0;
           left: 240px;
           right: 0;
-          height: 72px;
-          background: rgba(255, 255, 255, 0.95);
-          backdrop-filter: blur(20px);
-          border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-          display: flex;
-          align-items: center;
-          padding: 0 20px;
           z-index: 999;
           transition: left 0.3s ease;
         }
@@ -348,24 +354,24 @@ export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarPr
         .topbar-left {
           display: flex;
           align-items: center;
-          gap: 24px; /* Space between greeting and search */
-          flex: 1; /* Take up remaining space */
+          flex-grow: 1;
         }
 
         .greeting-section {
-          flex-shrink: 0;
+          padding-left: 12px;
+          margin-right: 24px;
         }
 
         .greeting-text {
-          font-size: 16px;
+          font-size: 20px;
           font-weight: 600;
-          color: #1f2937;
+          color: #1e293b;
           white-space: nowrap;
         }
 
         .search-container {
-          flex: 1; /* Stretch to fill remaining space */
-          max-width: 600px; /* Prevent it from getting too wide */
+          flex-grow: 1;
+          max-width: 600px;
         }
 
         .search-input-wrapper {

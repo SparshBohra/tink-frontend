@@ -631,7 +631,7 @@ function Dashboard() {
                           {property.status}
                         </span>
                       </td>
-                      <td className="table-left">
+                      <td className="table-center">
                         <div className="occupancy-cell">
                           <div className="occupancy-info">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -643,7 +643,7 @@ function Dashboard() {
                       </div>
                         </div>
                       </td>
-                      <td className="table-right">
+                      <td className="table-center">
                         <div className="revenue-cell">
                           <div className="revenue-amount">$ {property.revenue.toLocaleString()}</div>
                           <div className="revenue-change">{property.revenueChange} vs last month</div>
@@ -990,12 +990,47 @@ function Dashboard() {
         }
 
         .tasks-table-container {
-          overflow-x: auto;
+          overflow: hidden;
+          height: 100%;
+          display: flex;
+          flex-direction: column;
         }
 
         .tasks-table {
           width: 100%;
           border-collapse: collapse;
+        }
+
+        .tasks-table thead {
+          position: sticky;
+          top: 0;
+          z-index: 1;
+        }
+
+        .tasks-table tbody {
+          overflow-y: auto;
+          display: block;
+          height: calc(100% - 57px); /* Adjust based on header height */
+        }
+
+        .tasks-table tbody::-webkit-scrollbar {
+          width: 6px;
+        }
+
+        .tasks-table tbody::-webkit-scrollbar-track {
+          background: rgba(226, 232, 240, 0.3);
+          border-radius: 3px;
+        }
+
+        .tasks-table tbody::-webkit-scrollbar-thumb {
+          background: rgba(156, 163, 175, 0.5);
+          border-radius: 3px;
+        }
+
+        .tasks-table tr {
+          display: table;
+          width: 100%;
+          table-layout: fixed;
         }
 
         /* Center align all table headers and cell values for both tables */
@@ -1594,9 +1629,9 @@ function Dashboard() {
         .table-right { text-align: right !important; }
         .table-center { text-align: center !important; }
         .due-date-cell { display: flex; align-items: center; gap: 6px; justify-content: flex-start; }
-        .occupancy-cell { display: flex; align-items: center; gap: 6px; }
+        .occupancy-cell { display: flex; align-items: center; justify-content: center; gap: 6px; }
         .tasks-cell { display: flex; align-items: center; gap: 6px; }
-        .revenue-cell { text-align: right; }
+        .revenue-cell { }
 
         /* Dark Mode Styles */
         :global(.dark-mode) .dashboard-container { background: transparent; }
