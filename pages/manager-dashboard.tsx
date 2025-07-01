@@ -407,7 +407,7 @@ function Dashboard() {
           </div>
         </div>
           {/* Top Metrics Row */}
-        <div className="metrics-grid">
+          <div className="metrics-grid">
           <div className="metric-card">
             <div className="metric-header">
               <div className="metric-info">
@@ -418,7 +418,7 @@ function Dashboard() {
                   <path d="M5 21V7l8-4v18"/>
                   <path d="M19 21V11l-6-4"/>
                 </svg>
-                </div>
+          </div>
               </div>
               </div>
               <div className="metric-content">
@@ -531,7 +531,7 @@ function Dashboard() {
                     </thead>
                     <tbody>
                   {tasks.map((task) => (
-                    <tr key={task.id}>
+                <tr key={task.id}>
                       <td className="table-left">{task.task}</td>
                       <td className="table-left">{task.property}</td>
                       <td className="table-center">
@@ -549,8 +549,8 @@ function Dashboard() {
                         <span className={`status-badge ${task.status.toLowerCase().replace(' ', '-')}`}>
                           {task.status === 'In Progress' ? 'In Progress' : task.status}
                             </span>
-                </td>
-              </tr>
+                  </td>
+                </tr>
                       ))}
                     </tbody>
                   </table>
@@ -681,7 +681,7 @@ function Dashboard() {
             <div>
               <h2 className="section-title">Recent Applications</h2>
               <p className="section-subtitle">Latest tenant applications requiring review</p>
-                </div>
+          </div>
             <button className="view-all-btn">View All Applications</button>
                 </div>
 
@@ -1249,7 +1249,7 @@ function Dashboard() {
         .properties-section {
           background: white;
           border-radius: 6px; /* Reduced radius */
-          padding: 20px; /* Reduced padding */
+          padding: 18px; /* Reduced padding */
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
           border: 1px solid #e2e8f0;
           margin-top: 32px; /* Reduced margin */
@@ -1384,7 +1384,7 @@ function Dashboard() {
         .applications-section {
           background: white;
           border-radius: 6px; /* Reduced radius */
-          padding: 20px; /* Reduced padding */
+          padding: 18px; /* Reduced padding */
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
           border: 1px solid #e2e8f0;
         }

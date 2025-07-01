@@ -4,8 +4,6 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { apiClient } from '../../lib/api';
 import DashboardLayout from '../../components/DashboardLayout';
-import SectionCard from '../../components/SectionCard';
-import MetricCard from '../../components/MetricCard';
 
 export default function AddProperty() {
   const router = useRouter();
@@ -72,50 +70,48 @@ export default function AddProperty() {
       <Head>
         <title>Register New Property - Tink Property Management</title>
       </Head>
-      <DashboardLayout
-        title="🏢 Register New Property"
-        subtitle="Add a new property to your management portfolio"
-      >
-        <div className="actions-container">
-          <Link href="/properties" className="btn btn-secondary">
-            ← Back to Properties
-          </Link>
-        </div>
-
-        {/* Quick Stats */}
-        <div className="metrics-grid">
-          <MetricCard 
-            title="Property Types" 
-            value="4 Available"
-            color="blue"
-          />
-          <MetricCard 
-            title="Time Zones" 
-            value="6 Supported"
-            color="purple"
-          />
-          <MetricCard 
-            title="Next Steps" 
-            value="Add Rooms"
-            color="green"
-          />
-        </div>
-
-        {/* Error/Success Messages */}
-        {error && (
-          <div className="alert alert-error">
-            <strong>Error:</strong> {error}
+      <DashboardLayout title="">
+        <div className="dashboard-container">
+          {/* Custom Header */}
+          <div className="dashboard-header">
+            <div className="header-content">
+              <div className="header-left">
+                <h1 className="dashboard-title">🏢 Register New Property</h1>
+                <div className="subtitle-container">
+                  <p className="welcome-message">
+                    Add a new property to your management portfolio
+                  </p>
+                </div>
+              </div>
+              <div className="header-right">
+                <Link href="/properties" className="back-btn">
+                  ← Back to Properties
+                </Link>
+              </div>
+            </div>
           </div>
-        )}
-        
-        {success && (
-          <div className="alert alert-success">
-            <strong>Success:</strong> {success}
-          </div>
-        )}
 
-        {/* Property Form */}
-        <SectionCard title="Property Details" subtitle="Enter the basic information for your new property">
+          {/* Error/Success Messages */}
+          {error && (
+            <div className="alert alert-error">
+              <strong>Error:</strong> {error}
+            </div>
+          )}
+          
+          {success && (
+            <div className="alert alert-success">
+              <strong>Success:</strong> {success}
+            </div>
+          )}
+
+          {/* Property Form */}
+          <div className="property-form-section">
+            <div className="section-header">
+              <div>
+                <h2 className="section-title">Property Details</h2>
+                <p className="section-subtitle">Enter the basic information for your new property</p>
+              </div>
+            </div>
           <form onSubmit={handleSubmit}>
             <div className="form-grid">
               <div className="form-group full-width">
@@ -275,10 +271,16 @@ export default function AddProperty() {
               </Link>
             </div>
           </form>
-        </SectionCard>
+          </div>
 
-        {/* Next Steps Guide */}
-        <SectionCard title="Next Steps After Creation" subtitle="What to do once your property is registered">
+          {/* Next Steps Guide */}
+          <div className="next-steps-section">
+            <div className="section-header">
+              <div>
+                <h2 className="section-title">Next Steps After Creation</h2>
+                <p className="section-subtitle">What to do once your property is registered</p>
+              </div>
+            </div>
           <div className="steps-grid">
             <div className="step-item">
               <div className="step-number">1</div>
@@ -309,10 +311,16 @@ export default function AddProperty() {
               </div>
             </div>
           </div>
-        </SectionCard>
+          </div>
 
-        {/* Quick Actions */}
-        <SectionCard title="Quick Actions" subtitle="Other property management tasks">
+          {/* Quick Actions */}
+          <div className="quick-actions-section">
+            <div className="section-header">
+              <div>
+                <h2 className="section-title">Quick Actions</h2>
+                <p className="section-subtitle">Other property management tasks</p>
+              </div>
+            </div>
           <div className="actions-grid">
             <Link href="/properties" className="btn btn-secondary">
               View All Properties
@@ -324,22 +332,117 @@ export default function AddProperty() {
               Review Applications
             </Link>
           </div>
-        </SectionCard>
+          </div>
+        </div>
       </DashboardLayout>
 
       <style jsx>{`
-        .metrics-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-          gap: var(--spacing-lg);
-          margin-bottom: var(--spacing-xl);
+        .dashboard-container {
+          width: 100%;
+          padding: 16px 20px 20px 20px;
+          background: #f8fafc;
+          min-height: calc(100vh - 72px);
+          box-sizing: border-box;
         }
-        
+
+        /* Custom Header */
+        .dashboard-header {
+          margin-bottom: 24px;
+        }
+
+        .header-content {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          gap: 20px;
+        }
+
+        .header-left {
+          flex: 1;
+        }
+
+        .header-right {
+          flex-shrink: 0;
+        }
+
+        .dashboard-title {
+          font-size: 22px;
+          font-weight: 700;
+          color: #1e293b;
+          margin: 0 0 4px 0;
+          line-height: 1.15;
+        }
+
+        .subtitle-container {
+          min-height: 22px;
+        }
+
+        .welcome-message {
+          font-size: 14px;
+          color: #4b5563;
+          margin: 0;
+          line-height: 1.45;
+        }
+
+        .back-btn {
+          background: #6366f1;
+          color: white;
+          border: none;
+          padding: 10px 14px;
+          border-radius: 6px;
+          font-size: 12px;
+          font-weight: 600;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          transition: all 0.2s ease;
+          text-decoration: none;
+        }
+
+        .back-btn:hover {
+          background: #4f46e5;
+          transform: translateY(-1px);
+        }
+
+        /* Section Styling */
+        .property-form-section,
+        .next-steps-section,
+        .quick-actions-section {
+          background: white;
+          border-radius: 6px;
+          padding: 18px;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+          border: 1px solid #e2e8f0;
+          margin-bottom: 20px;
+        }
+
+        .section-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          margin-bottom: 16px;
+        }
+
+        .section-title {
+          font-size: 14px;
+          font-weight: 700;
+          color: #1e293b;
+          margin: 0 0 3px 0;
+        }
+
+        .section-subtitle {
+          font-size: 12px;
+          color: #64748b;
+          margin: 0;
+        }
+
+        /* Form Styling */
         .form-grid {
           display: grid;
           grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-          gap: var(--spacing-lg);
-          margin-bottom: var(--spacing-xl);
+          gap: 16px;
+          margin-bottom: 20px;
         }
         
         .form-group {
@@ -353,49 +456,101 @@ export default function AddProperty() {
         
         .form-label {
           font-weight: 600;
-          margin-bottom: var(--spacing-sm);
-          color: var(--text-primary);
+          margin-bottom: 8px;
+          color: #1e293b;
+          font-size: 14px;
         }
         
         .form-input {
-          padding: var(--spacing-md);
-          border: 1px solid var(--gray-300);
-          border-radius: var(--radius-md);
-          font-size: var(--text-base);
+          padding: 12px;
+          border: 1px solid #e2e8f0;
+          border-radius: 6px;
+          font-size: 14px;
           transition: border-color 0.2s ease;
+          background: white;
         }
         
         .form-input:focus {
           outline: none;
-          border-color: var(--primary-blue);
-          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+          border-color: #6366f1;
+          box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
         }
         
         .form-actions {
           display: flex;
-          gap: var(--spacing-md);
-          margin-top: var(--spacing-xl);
+          gap: 12px;
+          margin-top: 20px;
+        }
+
+        /* Button Styling */
+        .btn {
+          padding: 12px 16px;
+          border-radius: 6px;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          transition: all 0.2s ease;
+          text-decoration: none;
+          border: none;
+        }
+
+        .btn-primary {
+          background: #6366f1;
+          color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+          background: #4f46e5;
+          transform: translateY(-1px);
+        }
+
+        .btn-primary:disabled {
+          background: #9ca3af;
+          cursor: not-allowed;
+          transform: none;
+        }
+
+        .btn-secondary {
+          background: #f8fafc;
+          color: #1e293b;
+          border: 1px solid #e2e8f0;
+        }
+
+        .btn-secondary:hover {
+          background: #f1f5f9;
+          transform: translateY(-1px);
         }
         
+        /* Steps Grid */
         .steps-grid {
           display: grid;
           grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-          gap: var(--spacing-lg);
+          gap: 16px;
         }
         
         .step-item {
           display: flex;
-          gap: var(--spacing-md);
-          padding: var(--spacing-lg);
-          background: var(--gray-50);
-          border-radius: var(--radius-md);
-          border: 1px solid var(--gray-200);
+          gap: 12px;
+          padding: 16px;
+          background: #f8fafc;
+          border-radius: 6px;
+          border: 1px solid #e2e8f0;
+          transition: all 0.2s ease;
+        }
+
+        .step-item:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
         
         .step-number {
           width: 32px;
           height: 32px;
-          background: var(--primary-blue);
+          background: #6366f1;
           color: white;
           border-radius: 50%;
           display: flex;
@@ -403,45 +558,77 @@ export default function AddProperty() {
           justify-content: center;
           font-weight: 600;
           flex-shrink: 0;
+          font-size: 14px;
         }
         
         .step-content h4 {
-          margin: 0 0 var(--spacing-xs) 0;
-          color: var(--text-primary);
+          margin: 0 0 4px 0;
+          color: #1e293b;
+          font-size: 14px;
+          font-weight: 600;
         }
         
         .step-content p {
           margin: 0;
-          color: var(--text-secondary);
-          font-size: var(--text-small);
+          color: #64748b;
+          font-size: 12px;
+          line-height: 1.4;
         }
         
+        /* Actions Grid */
         .actions-grid {
           display: flex;
-          gap: var(--spacing-md);
+          gap: 12px;
           flex-wrap: wrap;
         }
         
-        .actions-container {
-          margin-bottom: var(--spacing-lg);
-        }
-        
+        /* Alert Styling */
         .alert {
-          padding: var(--spacing-md);
-          border-radius: var(--radius-md);
-          margin-bottom: var(--spacing-lg);
+          padding: 12px 16px;
+          border-radius: 6px;
+          margin-bottom: 20px;
+          font-size: 14px;
         }
         
         .alert-error {
-          background-color: var(--red-50);
-          border: 1px solid var(--red-200);
-          color: var(--red-800);
+          background-color: #fef2f2;
+          border: 1px solid #fecaca;
+          color: #dc2626;
         }
         
         .alert-success {
-          background-color: var(--green-50);
-          border: 1px solid var(--green-200);
-          color: var(--green-800);
+          background-color: #f0fdf4;
+          border: 1px solid #bbf7d0;
+          color: #16a34a;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+          .dashboard-container {
+            padding: 16px;
+          }
+
+          .header-content {
+            flex-direction: column;
+            gap: 16px;
+          }
+
+          .form-grid {
+            grid-template-columns: 1fr;
+            gap: 12px;
+          }
+
+          .form-actions {
+            flex-direction: column;
+          }
+
+          .steps-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .actions-grid {
+            flex-direction: column;
+          }
         }
       `}</style>
     </>
