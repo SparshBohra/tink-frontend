@@ -293,457 +293,460 @@ function Tenants() {
           </div>
         )}
         
-        {/* Top Metrics Row */}
-        <div className="metrics-grid">
-          <div className="metric-card">
-            <div className="metric-header">
-              <div className="metric-info">
-                <h3 className="metric-title">Total Tenants</h3>
-                <div className="metric-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                    <circle cx="12" cy="7" r="4"/>
-                  </svg>
-                </div>
-              </div>
-            </div>
-            <div className="metric-content">
-              <div className="metric-value">{metrics.totalCount}</div>
-              <div className="metric-subtitle">Registered in system</div>
-              <div className="metric-progress">
-                <span className="metric-label">Active accounts</span>
-                <span className="metric-change positive">+{metrics.totalCount > 0 ? '1' : '0'}</span>
-              </div>
-            </div>
-          </div>
-          
-          <div className="metric-card">
-            <div className="metric-header">
-              <div className="metric-info">
-                <h3 className="metric-title">Active Tenants</h3>
-                <div className="metric-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                    <circle cx="8.5" cy="7" r="4"/>
-                    <path d="M20 8v6"/>
-                    <path d="M23 11h-6"/>
-                  </svg>
-                </div>
-              </div>
-            </div>
-            <div className="metric-content">
-              <div className="metric-value">{metrics.activeCount}</div>
-              <div className="metric-subtitle">In the system</div>
-              <div className="metric-progress">
-                <span className="metric-label">Currently active</span>
-                <span className="metric-change positive">+2</span>
-              </div>
-            </div>
-          </div>
-          
-          <div className="metric-card">
-            <div className="metric-header">
-              <div className="metric-info">
-                <h3 className="metric-title">Applications</h3>
-                <div className="metric-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                    <polyline points="14,2 14,8 20,8"/>
-                    <line x1="16" y1="13" x2="8" y2="13"/>
-                    <line x1="16" y1="17" x2="8" y2="17"/>
-                  </svg>
-                </div>
-              </div>
-            </div>
-            <div className="metric-content">
-              <div className="metric-value">{metrics.pendingCount}</div>
-              <div className="metric-subtitle">Check Applications page</div>
-              <div className="metric-progress">
-                <span className="metric-label">Pending review</span>
-                <span className="metric-change positive">+{metrics.pendingCount > 0 ? '1' : '0'}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Main Content */}
-        <div className="main-content">
-          {/* Tenants Section */}
-          <div className="tenants-section">
-            <div className="section-header">
-              <div>
-                <h2 className="section-title">All Tenants ({tenants.length})</h2>
-                <p className="section-subtitle">{tenants.length} tenant(s) registered in the system</p>
-              </div>
-              <div className="section-actions">
-                <button 
-                  onClick={() => fetchTenants()}
-                  className="refresh-btn"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <polyline points="23 4 23 10 17 10"/>
-                    <polyline points="1 20 1 14 7 14"/>
-                    <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>
-                  </svg>
-                  Refresh
-                </button>
-                <button 
-                  onClick={downloadTenantsReport}
-                  className="download-btn"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                    <polyline points="7,10 12,15 17,10"/>
-                    <line x1="12" y1="15" x2="12" y2="3"/>
-                  </svg>
-                  Download Report
-                </button>
-                <button 
-                  className="register-btn"
-                  onClick={() => {
-                    setEditingTenant(null);
-                    setFormData({
-                      full_name: '',
-                      email: '',
-                      phone: '',
-                      emergency_contact_name: '',
-                      emergency_contact_phone: ''
-                    });
-                    setShowForm(true);
-                  }}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <line x1="12" y1="5" x2="12" y2="19"/>
-                    <line x1="5" y1="12" x2="19" y2="12"/>
-                  </svg>
-                  Register New Tenant
-                </button>
-              </div>
-            </div>
-
-            {/* Tenant Form */}
-            {showForm && (
-              <div className="tenant-form-section">
-                <div className="form-header">
-                  <h3 className="form-title">
-                    {editingTenant ? "Edit Tenant" : "Register New Tenant"}
-                  </h3>
-                  <p className="form-subtitle">
-                    {editingTenant ? `Updating information for ${editingTenant.full_name}` : "Add a new tenant to the system"}
-                  </p>
-                </div>
-                
-                <form onSubmit={handleSubmit} className="tenant-form">
-                  <div className="form-grid">
-                    <div className="form-group">
-                      <label htmlFor="full_name" className="form-label">
-                        Full Name *
-                      </label>
-                      <input
-                        id="full_name"
-                        name="full_name"
-                        type="text"
-                        value={formData.full_name}
-                        onChange={(e) => setFormData({...formData, full_name: e.target.value})}
-                        required
-                        className="form-input"
-                        placeholder="John Doe"
-                      />
-                    </div>
-                    
-                    <div className="form-group">
-                      <label htmlFor="email" className="form-label">
-                        Email Address *
-                      </label>
-                      <input
-                        id="email"
-                        name="email"
-                        type="email"
-                        value={formData.email}
-                        onChange={(e) => setFormData({...formData, email: e.target.value})}
-                        required
-                        className="form-input"
-                        placeholder="john.doe@example.com"
-                      />
-                    </div>
-                      
-                    <div className="form-group">
-                      <label htmlFor="phone" className="form-label">
-                        Phone Number *
-                      </label>
-                      <input
-                        id="phone"
-                        name="phone"
-                        type="tel"
-                        value={formData.phone}
-                        onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                        required
-                        className="form-input"
-                        placeholder="+1 (555) 123-4567"
-                      />
-                    </div>
-
-                    <div className="form-group">
-                      <label htmlFor="emergency_contact_name" className="form-label">
-                        Emergency Contact Name
-                      </label>
-                      <input
-                        id="emergency_contact_name"
-                        name="emergency_contact_name"
-                        type="text"
-                        value={formData.emergency_contact_name || ''}
-                        onChange={(e) => setFormData({...formData, emergency_contact_name: e.target.value})}
-                        className="form-input"
-                        placeholder="Jane Doe"
-                      />
-                    </div>
-                      
-                    <div className="form-group">
-                      <label htmlFor="emergency_contact_phone" className="form-label">
-                        Emergency Contact Phone
-                      </label>
-                      <input
-                        id="emergency_contact_phone"
-                        name="emergency_contact_phone"
-                        type="tel"
-                        value={formData.emergency_contact_phone || ''}
-                        onChange={(e) => setFormData({...formData, emergency_contact_phone: e.target.value})}
-                        className="form-input"
-                        placeholder="+1 (555) 987-6543"
-                      />
+        {/* Main Content Layout */}
+        <div className="main-content-grid">
+          <div className="left-column">
+            {/* Top Metrics Row */}
+            <div className="metrics-grid">
+              <div className="metric-card">
+                <div className="metric-header">
+                  <div className="metric-info">
+                    <h3 className="metric-title">Total Tenants</h3>
+                    <div className="metric-icon">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                        <circle cx="12" cy="7" r="4"/>
+                      </svg>
                     </div>
                   </div>
-
-                  <div className="form-actions">
-                    <button 
-                      type="submit"
-                      className="save-btn"
-                    >
-                      {editingTenant ? 'Update Tenant' : 'Save Tenant'}
-                    </button>
-                      
-                    <button 
-                      type="button"
-                      className="cancel-btn"
-                      onClick={() => setShowForm(false)}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </form>
-              </div>
-            )}
-
-            {tenants.length === 0 ? (
-              <div className="empty-state">
-                <div className="empty-icon">
-                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                    <circle cx="12" cy="7" r="4"/>
-                  </svg>
                 </div>
-                <h3>No tenants registered</h3>
-                <p>Start by registering your first tenant in the system.</p>
-                <button 
-                  className="empty-action-btn"
-                  onClick={() => {
-                    setEditingTenant(null);
-                    setFormData({
-                      full_name: '',
-                      email: '',
-                      phone: '',
-                      emergency_contact_name: '',
-                      emergency_contact_phone: ''
-                    });
-                    setShowForm(true);
-                  }}
-                >
-                  Register New Tenant
-                </button>
+                <div className="metric-content">
+                  <div className="metric-value">{metrics.totalCount}</div>
+                  <div className="metric-subtitle">Registered in system</div>
+                  <div className="metric-progress">
+                    <span className="metric-label">Active accounts</span>
+                    <span className="metric-change positive">+{metrics.totalCount > 0 ? '1' : '0'}</span>
+                  </div>
+                </div>
               </div>
-            ) : (
-              <div className="tenants-scroll-container">
-                <div className="tenants-table-container">
-                  <table className="tenants-table">
-                    <thead>
-                      <tr>
-                        <th className="table-left">Tenant</th>
-                        <th className="table-left">Contact Information</th>
-                        <th className="table-left">Emergency Contact</th>
-                        <th className="table-center">Created</th>
-                        <th className="table-center">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {tenants.map((tenant) => (
-                        <tr key={tenant.id}>
-                          <td className="table-left">
-                            <Link href={`/tenants/${tenant.id}`} className="tenant-name-link">
-                              <div className="tenant-name">{tenant.full_name}</div>
-                            </Link>
-                            <div className="tenant-id">ID: {tenant.id}</div>
-                          </td>
-                            
-                          <td className="table-left">
-                            <div className="tenant-contact">
-                              <div className="tenant-phone">{tenant.phone}</div>
-                              <div className="tenant-email">{tenant.email}</div>
-                            </div>
-                          </td>
-                            
-                          <td className="table-left">
-                            {tenant.emergency_contact_name ? (
-                              <div>
-                                <div className="emergency-name">{tenant.emergency_contact_name}</div>
-                                <div className="emergency-phone">{tenant.emergency_contact_phone || 'No phone'}</div>
-                              </div>
-                            ) : (
-                              <span className="text-muted">Not provided</span>
-                            )}
-                          </td>
+              
+              <div className="metric-card">
+                <div className="metric-header">
+                  <div className="metric-info">
+                    <h3 className="metric-title">Active Tenants</h3>
+                    <div className="metric-icon">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                        <circle cx="8.5" cy="7" r="4"/>
+                        <path d="M20 8v6"/>
+                        <path d="M23 11h-6"/>
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+                <div className="metric-content">
+                  <div className="metric-value">{metrics.activeCount}</div>
+                  <div className="metric-subtitle">In the system</div>
+                  <div className="metric-progress">
+                    <span className="metric-label">Currently active</span>
+                    <span className="metric-change positive">+2</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="metric-card">
+                <div className="metric-header">
+                  <div className="metric-info">
+                    <h3 className="metric-title">Applications</h3>
+                    <div className="metric-icon">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14,2 14,8 20,8"/>
+                        <line x1="16" y1="13" x2="8" y2="13"/>
+                        <line x1="16" y1="17" x2="8" y2="17"/>
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+                <div className="metric-content">
+                  <div className="metric-value">{metrics.pendingCount}</div>
+                  <div className="metric-subtitle">Check Applications page</div>
+                  <div className="metric-progress">
+                    <span className="metric-label">Pending review</span>
+                    <span className="metric-change positive">+{metrics.pendingCount > 0 ? '1' : '0'}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            {/* Tenants Section */}
+            <div className="tenants-section">
+              <div className="section-header">
+                <div>
+                  <h2 className="section-title">All Tenants ({tenants.length})</h2>
+                  <p className="section-subtitle">{tenants.length} tenant(s) registered in the system</p>
+                </div>
+                <div className="section-actions">
+                  <button 
+                    onClick={() => fetchTenants()}
+                    className="refresh-btn"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polyline points="23 4 23 10 17 10"/>
+                      <polyline points="1 20 1 14 7 14"/>
+                      <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>
+                    </svg>
+                    Refresh
+                  </button>
+                  <button 
+                    onClick={downloadTenantsReport}
+                    className="download-btn"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                      <polyline points="7,10 12,15 17,10"/>
+                      <line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                    Download Report
+                  </button>
+                  <button 
+                    className="register-btn"
+                    onClick={() => {
+                      setEditingTenant(null);
+                      setFormData({
+                        full_name: '',
+                        email: '',
+                        phone: '',
+                        emergency_contact_name: '',
+                        emergency_contact_phone: ''
+                      });
+                      setShowForm(true);
+                    }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <line x1="12" y1="5" x2="12" y2="19"/>
+                      <line x1="5" y1="12" x2="19" y2="12"/>
+                    </svg>
+                    Register New Tenant
+                  </button>
+                </div>
+              </div>
 
-                          <td className="table-center">
-                            <div className="tenant-date">
-                              {new Date(tenant.created_at).toLocaleDateString()}
-                            </div>
-                          </td>
-                            
-                          <td className="table-center">
-                            <div className="action-buttons">
-                              <button 
-                                onClick={() => handleEdit(tenant)} 
-                                className="edit-btn"
-                              >
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                  <path d="M12 20h9"/>
-                                  <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
-                                </svg>
-                                Edit
-                              </button>
-                              
-                              <button 
-                                onClick={() => handleViewApplications(tenant.id)}
-                                className="applications-btn"
-                              >
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                                  <polyline points="14,2 14,8 20,8"/>
-                                </svg>
-                                Applications
-                              </button>
-                            
-                              <button
-                                onClick={() => handleViewCurrentLease(tenant.id)}
-                                className="lease-btn"
-                              >
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                                  <polyline points="14,2 14,8 20,8"/>
-                                  <line x1="16" y1="13" x2="8" y2="13"/>
-                                  <line x1="16" y1="17" x2="8" y2="17"/>
-                                </svg>
-                                Lease
-                              </button>
-                            
-                              <button 
-                                onClick={() => handleDelete(tenant.id)}
-                                className="delete-btn"
-                              >
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                  <polyline points="3,6 5,6 21,6"/>
-                                  <path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2V6"/>
-                                </svg>
-                                Delete
-                              </button>
-                            </div>
-                          </td>
+              {/* Tenant Form */}
+              {showForm && (
+                <div className="tenant-form-section">
+                  <div className="form-header">
+                    <h3 className="form-title">
+                      {editingTenant ? "Edit Tenant" : "Register New Tenant"}
+                    </h3>
+                    <p className="form-subtitle">
+                      {editingTenant ? `Updating information for ${editingTenant.full_name}` : "Add a new tenant to the system"}
+                    </p>
+                  </div>
+                  
+                  <form onSubmit={handleSubmit} className="tenant-form">
+                    <div className="form-grid">
+                      <div className="form-group">
+                        <label htmlFor="full_name" className="form-label">
+                          Full Name *
+                        </label>
+                        <input
+                          id="full_name"
+                          name="full_name"
+                          type="text"
+                          value={formData.full_name}
+                          onChange={(e) => setFormData({...formData, full_name: e.target.value})}
+                          required
+                          className="form-input"
+                          placeholder="John Doe"
+                        />
+                      </div>
+                      
+                      <div className="form-group">
+                        <label htmlFor="email" className="form-label">
+                          Email Address *
+                        </label>
+                        <input
+                          id="email"
+                          name="email"
+                          type="email"
+                          value={formData.email}
+                          onChange={(e) => setFormData({...formData, email: e.target.value})}
+                          required
+                          className="form-input"
+                          placeholder="john.doe@example.com"
+                        />
+                      </div>
+                        
+                      <div className="form-group">
+                        <label htmlFor="phone" className="form-label">
+                          Phone Number *
+                        </label>
+                        <input
+                          id="phone"
+                          name="phone"
+                          type="tel"
+                          value={formData.phone}
+                          onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                          required
+                          className="form-input"
+                          placeholder="+1 (555) 123-4567"
+                        />
+                      </div>
+
+                      <div className="form-group">
+                        <label htmlFor="emergency_contact_name" className="form-label">
+                          Emergency Contact Name
+                        </label>
+                        <input
+                          id="emergency_contact_name"
+                          name="emergency_contact_name"
+                          type="text"
+                          value={formData.emergency_contact_name || ''}
+                          onChange={(e) => setFormData({...formData, emergency_contact_name: e.target.value})}
+                          className="form-input"
+                          placeholder="Jane Doe"
+                        />
+                      </div>
+                        
+                      <div className="form-group">
+                        <label htmlFor="emergency_contact_phone" className="form-label">
+                          Emergency Contact Phone
+                        </label>
+                        <input
+                          id="emergency_contact_phone"
+                          name="emergency_contact_phone"
+                          type="tel"
+                          value={formData.emergency_contact_phone || ''}
+                          onChange={(e) => setFormData({...formData, emergency_contact_phone: e.target.value})}
+                          className="form-input"
+                          placeholder="+1 (555) 987-6543"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="form-actions">
+                      <button 
+                        type="submit"
+                        className="save-btn"
+                      >
+                        {editingTenant ? 'Update Tenant' : 'Save Tenant'}
+                      </button>
+                        
+                      <button 
+                        type="button"
+                        className="cancel-btn"
+                        onClick={() => setShowForm(false)}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
+
+              {tenants.length === 0 ? (
+                <div className="empty-state">
+                  <div className="empty-icon">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                      <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                  </div>
+                  <h3>No tenants registered</h3>
+                  <p>Start by registering your first tenant in the system.</p>
+                  <button 
+                    className="empty-action-btn"
+                    onClick={() => {
+                      setEditingTenant(null);
+                      setFormData({
+                        full_name: '',
+                        email: '',
+                        phone: '',
+                        emergency_contact_name: '',
+                        emergency_contact_phone: ''
+                      });
+                      setShowForm(true);
+                    }}
+                  >
+                    Register New Tenant
+                  </button>
+                </div>
+              ) : (
+                <div className="tenants-scroll-container">
+                  <div className="tenants-table-container">
+                    <table className="tenants-table">
+                      <thead>
+                        <tr>
+                          <th className="table-left">Tenant</th>
+                          <th className="table-left">Contact Information</th>
+                          <th className="table-left">Emergency Contact</th>
+                          <th className="table-center">Created</th>
+                          <th className="table-center">Actions</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {tenants.map((tenant) => (
+                          <tr key={tenant.id}>
+                            <td className="table-left">
+                              <Link href={`/tenants/${tenant.id}`} className="tenant-name-link">
+                                <div className="tenant-name">{tenant.full_name}</div>
+                              </Link>
+                              <div className="tenant-id">ID: {tenant.id}</div>
+                            </td>
+                              
+                            <td className="table-left">
+                              <div className="tenant-contact">
+                                <div className="tenant-phone">{tenant.phone}</div>
+                                <div className="tenant-email">{tenant.email}</div>
+                              </div>
+                            </td>
+                              
+                            <td className="table-left">
+                              {tenant.emergency_contact_name ? (
+                                <div>
+                                  <div className="emergency-name">{tenant.emergency_contact_name}</div>
+                                  <div className="emergency-phone">{tenant.emergency_contact_phone || 'No phone'}</div>
+                                </div>
+                              ) : (
+                                <span className="text-muted">Not provided</span>
+                              )}
+                            </td>
+
+                            <td className="table-center">
+                              <div className="tenant-date">
+                                {new Date(tenant.created_at).toLocaleDateString()}
+                              </div>
+                            </td>
+                              
+                            <td className="table-center">
+                              <div className="action-buttons">
+                                <button 
+                                  onClick={() => handleEdit(tenant)} 
+                                  className="edit-btn"
+                                >
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M12 20h9"/>
+                                    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                                  </svg>
+                                  Edit
+                                </button>
+                                
+                                <button 
+                                  onClick={() => handleViewApplications(tenant.id)}
+                                  className="applications-btn"
+                                >
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                    <polyline points="14,2 14,8 20,8"/>
+                                  </svg>
+                                  Applications
+                                </button>
+                              
+                                <button
+                                  onClick={() => handleViewCurrentLease(tenant.id)}
+                                  className="lease-btn"
+                                >
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                    <polyline points="14,2 14,8 20,8"/>
+                                    <line x1="16" y1="13" x2="8" y2="13"/>
+                                    <line x1="16" y1="17" x2="8" y2="17"/>
+                                  </svg>
+                                  Lease
+                                </button>
+                              
+                                <button 
+                                  onClick={() => handleDelete(tenant.id)}
+                                  className="delete-btn"
+                                >
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <polyline points="3,6 5,6 21,6"/>
+                                    <path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2V6"/>
+                                  </svg>
+                                  Delete
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
-          {/* Quick Actions Section */}
-          <div className="quick-actions-section">
-            <div className="section-header">
-              <div>
-                <h2 className="section-title">Quick Actions</h2>
-                <p className="section-subtitle">Common tenant management tasks</p>
-              </div>
-            </div>
-            
-            <div className="actions-grid">
-              <div 
-                className="action-card blue"
-                onClick={() => {
-                  setEditingTenant(null);
-                  setFormData({
-                    full_name: '',
-                    email: '',
-                    phone: '',
-                    emergency_contact_name: '',
-                    emergency_contact_phone: ''
-                  });
-                  setShowForm(true);
-                }}
-              >
-                <div className="action-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                    <circle cx="8.5" cy="7" r="4"/>
-                    <path d="M20 8v6"/>
-                    <path d="M23 11h-6"/>
-                  </svg>
-                </div>
-                <div className="action-content">
-                  <h3 className="action-title">Register Tenant</h3>
-                  <p className="action-subtitle">Add new tenant to system</p>
+          <div className="right-column">
+            {/* Quick Actions Section */}
+            <div className="quick-actions-section">
+              <div className="section-header">
+                <div>
+                  <h2 className="section-title">Quick Actions</h2>
+                  <p className="section-subtitle">Common tenant management tasks</p>
                 </div>
               </div>
+              
+              <div className="actions-grid">
+                <div 
+                  className="action-card blue"
+                  onClick={() => {
+                    setEditingTenant(null);
+                    setFormData({
+                      full_name: '',
+                      email: '',
+                      phone: '',
+                      emergency_contact_name: '',
+                      emergency_contact_phone: ''
+                    });
+                    setShowForm(true);
+                  }}
+                >
+                  <div className="action-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                      <circle cx="8.5" cy="7" r="4"/>
+                      <path d="M20 8v6"/>
+                      <path d="M23 11h-6"/>
+                    </svg>
+                  </div>
+                  <div className="action-content">
+                    <h3 className="action-title">Register Tenant</h3>
+                    <p className="action-subtitle">Add new tenant to system</p>
+                  </div>
+                </div>
 
-              <div className="action-card green" onClick={downloadTenantsReport}>
-                <div className="action-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                    <polyline points="7,10 12,15 17,10"/>
-                    <line x1="12" y1="15" x2="12" y2="3"/>
-                  </svg>
+                <div className="action-card green" onClick={downloadTenantsReport}>
+                  <div className="action-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                      <polyline points="7,10 12,15 17,10"/>
+                      <line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                  </div>
+                  <div className="action-content">
+                    <h3 className="action-title">Download Report</h3>
+                    <p className="action-subtitle">Export tenant data to CSV</p>
+                  </div>
                 </div>
-                <div className="action-content">
-                  <h3 className="action-title">Download Report</h3>
-                  <p className="action-subtitle">Export tenant data to CSV</p>
+
+                <div className="action-card purple" onClick={downloadContactList}>
+                  <div className="action-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                    </svg>
+                  </div>
+                  <div className="action-content">
+                    <h3 className="action-title">Contact List</h3>
+                    <p className="action-subtitle">Download contact information</p>
+                  </div>
+                </div>
+
+                <div className="action-card blue" onClick={() => window.location.href = '/applications'}>
+                  <div className="action-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                      <polyline points="14,2 14,8 20,8"/>
+                      <line x1="16" y1="13" x2="8" y2="13"/>
+                      <line x1="16" y1="17" x2="8" y2="17"/>
+                    </svg>
+                  </div>
+                  <div className="action-content">
+                    <h3 className="action-title">View Applications</h3>
+                    <p className="action-subtitle">Manage tenant applications</p>
+                  </div>
                 </div>
               </div>
-
-              <div className="action-card purple" onClick={downloadContactList}>
-                <div className="action-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
-                  </svg>
-                </div>
-                <div className="action-content">
-                  <h3 className="action-title">Contact List</h3>
-                  <p className="action-subtitle">Download contact information</p>
-                </div>
-              </div>
-
-              <Link href="/applications" className="action-card blue">
-                <div className="action-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                    <polyline points="14,2 14,8 20,8"/>
-                    <line x1="16" y1="13" x2="8" y2="13"/>
-                    <line x1="16" y1="17" x2="8" y2="17"/>
-                  </svg>
-                </div>
-                <div className="action-content">
-                  <h3 className="action-title">View Applications</h3>
-                  <p className="action-subtitle">Manage tenant applications</p>
-                </div>
-              </Link>
             </div>
           </div>
         </div>
@@ -805,6 +808,7 @@ function Tenants() {
           align-items: center;
           gap: 8px;
           font-size: 14px;
+          font-weight: 500;
         }
 
         .success-banner {
@@ -818,14 +822,14 @@ function Tenants() {
           align-items: center;
           gap: 8px;
           font-size: 14px;
+          font-weight: 500;
         }
 
         /* Metrics Grid */
         .metrics-grid {
           display: grid;
-          grid-template-columns: repeat(4, 1fr);
-          gap: 12px;
-          margin-bottom: 20px;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 16px;
         }
 
         .metric-card {
@@ -900,21 +904,52 @@ function Tenants() {
 
         .metric-change {
           font-size: 12px;
-          font-weight: 500;
-          padding: 2px 6px;
-          border-radius: 4px;
+          font-weight: 600;
         }
 
         .metric-change.positive {
-          background: #dcfce7;
-          color: #16a34a;
+          color: #10b981;
         }
 
-        /* Main Content */
-        .main-content {
+        /* Main Layout Grid */
+        .main-content-grid {
           display: grid;
-          grid-template-columns: 1fr;
-          gap: 20px;
+          grid-template-columns: 2.5fr 1fr;
+          gap: 24px;
+          align-items: flex-start;
+        }
+
+        .left-column, .right-column {
+          display: flex;
+          flex-direction: column;
+          gap: 24px;
+        }
+
+        /* Section Headers */
+        .section-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          margin-bottom: 16px;
+        }
+
+        .section-title {
+          font-size: 14px;
+          font-weight: 700;
+          color: #1e293b;
+          margin: 0 0 3px 0;
+        }
+
+        .section-subtitle {
+          font-size: 12px;
+          color: #64748b;
+          margin: 0;
+        }
+
+        .section-actions {
+          display: flex;
+          gap: 12px;
+          align-items: center;
         }
 
         /* Section Styling */
@@ -922,37 +957,10 @@ function Tenants() {
         .quick-actions-section {
           background: white;
           border-radius: 6px;
+          padding: 18px;
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
           border: 1px solid #e2e8f0;
-          overflow: hidden;
-        }
-
-        .section-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          padding: 16px 20px;
-          border-bottom: 1px solid #f1f5f9;
-          background: white;
-        }
-
-        .section-title {
-          font-size: 16px;
-          font-weight: 600;
-          color: #1e293b;
-          margin: 0 0 2px 0;
-        }
-
-        .section-subtitle {
-          font-size: 13px;
-          color: #64748b;
-          margin: 0;
-        }
-
-        .section-actions {
-          display: flex;
-          gap: 8px;
-          flex-wrap: wrap;
+          height: fit-content;
         }
 
         /* Button Styles */
@@ -981,34 +989,62 @@ function Tenants() {
 
         .refresh-btn {
           background: #f8fafc;
-          color: #475569;
-          border-color: #e2e8f0;
+          color: #64748b;
+          border: 1px solid #e2e8f0;
+          padding: 10px 14px;
+          border-radius: 6px;
+          font-size: 12px;
+          font-weight: 600;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          transition: all 0.2s ease;
         }
 
         .refresh-btn:hover {
-          background: #f1f5f9;
-          border-color: #cbd5e1;
+          background: #e2e8f0;
+          transform: translateY(-1px);
         }
 
         .download-btn {
           background: #ecfdf5;
           color: #059669;
-          border-color: #a7f3d0;
+          border: 1px solid #a7f3d0;
+          padding: 10px 14px;
+          border-radius: 6px;
+          font-size: 12px;
+          font-weight: 600;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          transition: all 0.2s ease;
         }
 
         .download-btn:hover {
           background: #d1fae5;
+          transform: translateY(-1px);
         }
 
         .register-btn {
-          background: #3b82f6;
+          background: #6366f1;
           color: white;
-          border-color: #3b82f6;
+          border: none;
+          padding: 10px 14px;
+          border-radius: 6px;
+          font-size: 12px;
+          font-weight: 600;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          transition: all 0.2s ease;
         }
 
         .register-btn:hover {
-          background: #2563eb;
-          border-color: #2563eb;
+          background: #4f46e5;
+          transform: translateY(-1px);
         }
 
         .save-btn {
@@ -1034,61 +1070,108 @@ function Tenants() {
         .edit-btn {
           background: #fef3c7;
           color: #d97706;
-          border-color: #fed7aa;
+          border: 1px solid #fed7aa;
+          padding: 8px 12px;
+          border-radius: 6px;
           font-size: 12px;
-          padding: 4px 8px;
+          font-weight: 600;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          transition: all 0.2s ease;
+          text-decoration: none;
         }
 
         .edit-btn:hover {
           background: #fde68a;
+          transform: translateY(-1px);
         }
 
         .applications-btn {
           background: #dbeafe;
           color: #2563eb;
-          border-color: #93c5fd;
+          border: 1px solid #93c5fd;
+          padding: 8px 12px;
+          border-radius: 6px;
           font-size: 12px;
-          padding: 4px 8px;
+          font-weight: 600;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          transition: all 0.2s ease;
+          text-decoration: none;
         }
 
         .applications-btn:hover {
           background: #bfdbfe;
+          transform: translateY(-1px);
         }
 
         .lease-btn {
           background: #f3e8ff;
           color: #7c3aed;
-          border-color: #c4b5fd;
+          border: 1px solid #c4b5fd;
+          padding: 8px 12px;
+          border-radius: 6px;
           font-size: 12px;
-          padding: 4px 8px;
+          font-weight: 600;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          transition: all 0.2s ease;
+          text-decoration: none;
         }
 
         .lease-btn:hover {
           background: #e9d5ff;
+          transform: translateY(-1px);
         }
 
         .delete-btn {
           background: #fee2e2;
           color: #dc2626;
-          border-color: #fca5a5;
+          border: 1px solid #fca5a5;
+          padding: 8px 12px;
+          border-radius: 6px;
           font-size: 12px;
-          padding: 4px 8px;
+          font-weight: 600;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          transition: all 0.2s ease;
+          text-decoration: none;
         }
 
         .delete-btn:hover {
           background: #fecaca;
+          transform: translateY(-1px);
         }
 
         .empty-action-btn {
-          background: #3b82f6;
+          background: #6366f1;
           color: white;
-          border-color: #3b82f6;
-          padding: 8px 16px;
+          border: none;
+          padding: 12px 20px;
+          border-radius: 6px;
           font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          text-decoration: none;
+          display: inline-block;
+          transition: all 0.2s ease;
         }
 
         .empty-action-btn:hover {
-          background: #2563eb;
+          background: #4f46e5;
+          transform: translateY(-1px);
         }
 
         /* Form Styling */
@@ -1159,37 +1242,58 @@ function Tenants() {
 
         /* Table Styling */
         .tenants-scroll-container {
-          overflow-x: auto;
+          overflow-y: auto;
+          max-height: 600px;
+        }
+
+        .tenants-scroll-container::-webkit-scrollbar {
+          width: 6px;
+        }
+
+        .tenants-scroll-container::-webkit-scrollbar-track {
+          background: rgba(226, 232, 240, 0.3);
+          border-radius: 3px;
+        }
+
+        .tenants-scroll-container::-webkit-scrollbar-thumb {
+          background: rgba(156, 163, 175, 0.5);
+          border-radius: 3px;
         }
 
         .tenants-table-container {
-          min-width: 800px;
+          width: 100%;
+          overflow-x: auto;
+          border-radius: 8px;
+          background: white;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
         }
 
         .tenants-table {
           width: 100%;
-          border-collapse: collapse;
-          font-size: 13px;
+          border-collapse: separate;
+          border-spacing: 0;
         }
 
         .tenants-table th {
+          position: sticky;
+          top: 0;
           background: #f8fafc;
-          color: #475569;
-          font-weight: 600;
-          padding: 12px 16px;
-          text-align: left;
-          border-bottom: 1px solid #e2e8f0;
-          font-size: 12px;
+          z-index: 2;
+          font-size: 13px;
+          font-weight: 700;
+          color: #1e293b;
+          padding: 12px 10px;
+          border-bottom: 2px solid #e2e8f0;
         }
 
         .tenants-table td {
-          padding: 12px 16px;
-          border-bottom: 1px solid #f1f5f9;
-          vertical-align: middle;
+          font-size: 14px;
+          padding: 16px 10px;
+          border-bottom: 1px solid #e2e8f0;
         }
-
-        .tenants-table tbody tr:hover {
-          background: #f8fafc;
+        
+        .tenants-table tr:last-child td {
+          border-bottom: none;
         }
 
         .table-left {
@@ -1285,69 +1389,66 @@ function Tenants() {
 
         /* Quick Actions Grid */
         .actions-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-          gap: 16px;
-          padding: 20px;
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
         }
 
         .action-card {
-          background: white;
-          border: 1px solid #e2e8f0;
-          border-radius: 6px;
-          padding: 16px;
           display: flex;
           align-items: center;
           gap: 12px;
-          transition: all 0.2s ease;
+          padding: 12px;
+          border-radius: 5px;
+          border: 1px solid #e2e8f0;
           cursor: pointer;
+          transition: all 0.2s ease;
           text-decoration: none;
-          color: inherit;
         }
 
         .action-card:hover {
           transform: translateY(-1px);
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-          border-color: #cbd5e1;
         }
 
         .action-card.blue {
-          border-left: 3px solid #3b82f6;
+          background: #eff6ff;
+          border-color: #dbeafe;
         }
 
         .action-card.green {
-          border-left: 3px solid #10b981;
+          background: #f0fdf4;
+          border-color: #dcfce7;
         }
 
         .action-card.purple {
-          border-left: 3px solid #8b5cf6;
+          background: #faf5ff;
+          border-color: #e9d5ff;
         }
 
         .action-icon {
-          width: 32px;
-          height: 32px;
-          background: #f8fafc;
-          border-radius: 6px;
+          width: 40px;
+          height: 40px;
+          border-radius: 8px;
           display: flex;
           align-items: center;
           justify-content: center;
-          color: #64748b;
           flex-shrink: 0;
         }
 
         .action-card.blue .action-icon {
-          background: #dbeafe;
-          color: #3b82f6;
+          background: #3b82f6;
+          color: white;
         }
 
         .action-card.green .action-icon {
-          background: #d1fae5;
-          color: #10b981;
+          background: #10b981;
+          color: white;
         }
 
         .action-card.purple .action-icon {
-          background: #e9d5ff;
-          color: #8b5cf6;
+          background: #8b5cf6;
+          color: white;
         }
 
         .action-content {
@@ -1369,54 +1470,155 @@ function Tenants() {
 
         /* Responsive Design */
         @media (max-width: 1200px) {
-          .metrics-grid {
-            grid-template-columns: repeat(2, 1fr);
+          .main-content-grid {
+            grid-template-columns: 1fr;
+            gap: 24px;
           }
         }
 
         @media (max-width: 768px) {
-          .dashboard-container {
-            padding: 12px 16px;
-          }
-
           .metrics-grid {
             grid-template-columns: 1fr;
+            gap: 16px;
+          }
+
+          .dashboard-container {
+            padding: 24px 16px;
+          }
+
+          .header-content {
+            flex-direction: column;
+            gap: 16px;
+          }
+          
+          .dashboard-title {
+            font-size: 28px;
+          }
+          
+          .welcome-message {
+            font-size: 14px;
+          }
+          
+          .metric-card {
+            padding: 16px;
+          }
+          
+          .metric-value {
+            font-size: 24px;
+          }
+          
+          .tenants-section,
+          .quick-actions-section {
+            padding: 16px;
+          }
+
+          .tenants-table-container {
+            overflow-x: scroll;
+          }
+
+          .tenants-table th,
+          .tenants-table td {
+            padding: 12px 8px;
+            font-size: 12px;
+          }
+
+          .section-actions {
+            flex-direction: column;
             gap: 8px;
           }
 
           .form-grid {
             grid-template-columns: 1fr;
           }
-
-          .section-actions {
-            flex-direction: column;
-            align-items: stretch;
-          }
-
-          .action-buttons {
-            flex-direction: column;
-            gap: 4px;
-          }
-
-          .actions-grid {
-            grid-template-columns: 1fr;
-          }
         }
 
         @media (max-width: 480px) {
+          .dashboard-container {
+            padding: 16px;
+          }
+
+          .dashboard-title {
+            font-size: 24px;
+          }
+
+          .welcome-message {
+            font-size: 13px;
+          }
+
           .section-header {
-            padding: 12px 16px;
-          }
-
-          .tenants-table th,
-          .tenants-table td {
-            padding: 8px 12px;
-          }
-
-          .form-actions {
             flex-direction: column;
+            gap: 12px;
+            align-items: stretch;
           }
         }
+
+        /* Dark Mode Styles */
+        :global(.dark-mode) .dashboard-container { background: transparent; }
+        :global(.dark-mode) .metric-card, 
+        :global(.dark-mode) .tenants-section, 
+        :global(.dark-mode) .quick-actions-section,
+        :global(.dark-mode) .action-card {
+          background: #111111 !important;
+          border: 1px solid #333333 !important;
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4) !important;
+        }
+        :global(.dark-mode) .metric-card:hover,
+        :global(.dark-mode) .action-card:hover {
+          background: #222222 !important;
+          border-color: #ffffff !important;
+        }
+        :global(.dark-mode) .tenants-table th {
+          background-color: #1a1a1a !important;
+          border-bottom: 1px solid #333333 !important;
+        }
+        :global(.dark-mode) .tenants-table td {
+          background-color: #111111 !important;
+          border-bottom: 1px solid #333333 !important;
+        }
+        :global(.dark-mode) .tenants-table tbody tr:hover {
+          background-color: #222222 !important;
+        }
+        :global(.dark-mode) .refresh-btn {
+            background: #1a1a1a !important;
+            border: 1px solid #333333 !important;
+        }
+        :global(.dark-mode) .refresh-btn:hover {
+            background: #2a2a2a !important;
+            border-color: #ffffff !important;
+        }
+        :global(.dark-mode) .empty-action-btn,
+        :global(.dark-mode) .register-btn {
+            background: #3b82f6 !important;
+            border: none !important;
+            box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2) !important;
+        }
+        :global(.dark-mode) .empty-action-btn:hover,
+        :global(.dark-mode) .register-btn:hover {
+            background: #2563eb !important;
+            box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3) !important;
+        }
+        :global(.dark-mode) .download-btn {
+            background: #1a1a1a !important;
+            border: 1px solid #333333 !important;
+            color: #10b981 !important;
+        }
+        :global(.dark-mode) .download-btn:hover {
+            background: #2a2a2a !important;
+            border-color: #ffffff !important;
+        }
+        :global(.dark-mode) .action-card.blue .action-icon { background: rgba(59, 130, 246, 0.3); }
+        :global(.dark-mode) .action-card.green .action-icon { background: rgba(34, 197, 94, 0.3); }
+        :global(.dark-mode) .action-card.purple .action-icon { background: rgba(139, 92, 246, 0.3); }
+
+        :global(.dark-mode) .tenant-form-section { background: #1a1a1a !important; }
+        :global(.dark-mode) .form-header { border-bottom-color: #333333 !important; }
+        :global(.dark-mode) .form-input {
+          background: #1a1a1a !important;
+          border-color: #4b5563 !important;
+          color: #d1d5db !important;
+        }
+        :global(.dark-mode) .form-input:focus { border-color: #3b82f6 !important; }
+        :global(.dark-mode) .form-actions { border-top-color: #333333 !important; }
       `}</style>
     </DashboardLayout>
   );

@@ -351,12 +351,12 @@ function Applications() {
 
         {/* Main Content */}
         <div className="main-content">
-          {/* Filters & Actions Section */}
-          <div className="filters-section">
+          {/* Pending Applications Section */}
+          <div className="pending-section">
             <div className="section-header">
               <div>
-                <h2 className="section-title">Filters & Actions</h2>
-                <p className="section-subtitle">Filter applications and manage data</p>
+                <h2 className="section-title">Pending Applications ({pendingApplications.length})</h2>
+                <p className="section-subtitle">These applications are waiting for your decision. Quick decisions help fill vacant rooms faster.</p>
               </div>
               <div className="section-actions">
                 <button onClick={fetchData} className="refresh-btn">
@@ -401,16 +401,6 @@ function Applications() {
                     </option>
                   ))}
                 </select>
-              </div>
-            </div>
-          </div>
-
-          {/* Pending Applications Section */}
-          <div className="pending-section">
-            <div className="section-header">
-              <div>
-                <h2 className="section-title">Pending Applications ({pendingApplications.length})</h2>
-                <p className="section-subtitle">These applications are waiting for your decision. Quick decisions help fill vacant rooms faster.</p>
               </div>
             </div>
 
@@ -740,7 +730,6 @@ function Applications() {
         }
 
         /* Section Styling */
-        .filters-section,
         .pending-section,
         .processed-section {
           background: white;

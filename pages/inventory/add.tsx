@@ -157,172 +157,178 @@ export default function AddInventoryItem() {
 
           {error && <div className="alert alert-error"><strong>Error:</strong> {error}</div>}
 
-          {/* Item Details Form */}
-          <div className="form-section">
-            <div className="section-header">
-              <div>
-                <h2 className="section-title">Item Details</h2>
-                <p className="section-subtitle">Enter the basic information for your new inventory item</p>
+          <div className="main-content-grid">
+            <div className="left-column">
+              {/* Item Details Form */}
+              <div className="form-section">
+                <div className="section-header">
+                  <div>
+                    <h2 className="section-title">Item Details</h2>
+                    <p className="section-subtitle">Enter the basic information for your new inventory item</p>
+                  </div>
+                </div>
+                
+                <form onSubmit={handleSubmit}>
+                  <div className="form-grid">
+                    <div className="form-group full-width">
+                      <label className="form-label">Item Name*</label>
+                      <input
+                        name="name"
+                        type="text"
+                        value={formData.name}
+                        onChange={handleChange}
+                        required
+                        placeholder="e.g., Office Chair, Desk Lamp, Bed Frame"
+                        className="form-input"
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label className="form-label">Quantity*</label>
+                      <input
+                        name="qty"
+                        type="number"
+                        min={1}
+                        value={formData.qty}
+                        onChange={handleChange}
+                        required
+                        className="form-input"
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label className="form-label">Property*</label>
+                      <select
+                        name="property_ref"
+                        value={formData.property_ref}
+                        onChange={handleChange}
+                        required
+                        className="form-input"
+                      >
+                        <option value="">Select Property</option>
+                        {properties.map(p => (
+                          <option key={p.id} value={p.id}>{p.name}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="form-group">
+                      <label className="form-label">Room (Optional)</label>
+                      <select
+                        name="room"
+                        value={formData.room}
+                        onChange={handleChange}
+                        className="form-input"
+                        disabled={!formData.property_ref}
+                      >
+                        <option value="">Select Room (or leave empty for common area)</option>
+                        {rooms.map(room => (
+                          <option key={room.id} value={room.id}>
+                            {room.name} {room.room_type ? `(${room.room_type})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                      {!formData.property_ref && (
+                        <small className="form-help">Please select a property first to see available rooms</small>
+                      )}
+                    </div>
+
+                    <div className="form-group">
+                      <label className="form-label">Condition*</label>
+                      <select
+                        name="condition_status"
+                        value={formData.condition_status}
+                        onChange={handleChange}
+                        className="form-input"
+                      >
+                        <option value="new">New</option>
+                        <option value="good">Good</option>
+                        <option value="used">Used</option>
+                        <option value="broken">Broken</option>
+                      </select>
+                    </div>
+
+                    <div className="form-group">
+                      <label className="form-label">Cost (USD)</label>
+                      <input
+                        name="cost"
+                        type="number"
+                        step="0.01"
+                        value={formData.cost}
+                        onChange={handleChange}
+                        placeholder="0.00"
+                        className="form-input"
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label className="form-label">Purchase Date</label>
+                      <input
+                        name="purchase_date"
+                        type="date"
+                        value={formData.purchase_date}
+                        onChange={handleChange}
+                        className="form-input"
+                      />
+                    </div>
+
+                    <div className="form-group full-width">
+                      <label className="form-checkbox">
+                        <input
+                          name="needs_maintenance"
+                          type="checkbox"
+                          checked={formData.needs_maintenance}
+                          onChange={handleChange}
+                        />
+                        <span className="checkmark"></span>
+                        Needs Maintenance Immediately
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="form-actions">
+                    <button
+                      type="submit"
+                      disabled={saving}
+                      className="btn btn-primary"
+                    >
+                      {saving ? 'Saving...' : 'Save Item'}
+                    </button>
+                    <Link href="/inventory" className="btn btn-secondary">
+                      Cancel
+                    </Link>
+                  </div>
+                </form>
               </div>
             </div>
-            
-            <form onSubmit={handleSubmit}>
-              <div className="form-grid">
-                <div className="form-group full-width">
-                  <label className="form-label">Item Name*</label>
-                  <input
-                    name="name"
-                    type="text"
-                    value={formData.name}
-                    onChange={handleChange}
-                    required
-                    placeholder="e.g., Office Chair, Desk Lamp, Bed Frame"
-                    className="form-input"
-                  />
+
+            <div className="right-column">
+              {/* Quick Tips */}
+              <div className="tips-section">
+                <div className="section-header">
+                  <div>
+                    <h2 className="section-title">Quick Tips</h2>
+                    <p className="section-subtitle">Best practices for inventory management</p>
+                  </div>
                 </div>
-
-                <div className="form-group">
-                  <label className="form-label">Quantity*</label>
-                  <input
-                    name="qty"
-                    type="number"
-                    min={1}
-                    value={formData.qty}
-                    onChange={handleChange}
-                    required
-                    className="form-input"
-                  />
+                <div className="info-grid">
+                  <div className="info-item">
+                    <h4>Item Names</h4>
+                    <p>Use descriptive names that include brand/model when relevant (e.g., "IKEA Malm Bed Frame" vs "Bed")</p>
+                  </div>
+                  <div className="info-item">
+                    <h4>Property Assignment</h4>
+                    <p>Always assign items to properties. Room assignment is optional but helps with organization.</p>
+                  </div>
+                  <div className="info-item">
+                    <h4>Cost Tracking</h4>
+                    <p>Recording purchase costs helps with budgeting and insurance claims.</p>
+                  </div>
+                  <div className="info-item">
+                    <h4>Maintenance Flags</h4>
+                    <p>Check "Needs Maintenance" for items requiring immediate attention or repair.</p>
+                  </div>
                 </div>
-
-                <div className="form-group">
-                  <label className="form-label">Property*</label>
-                  <select
-                    name="property_ref"
-                    value={formData.property_ref}
-                    onChange={handleChange}
-                    required
-                    className="form-input"
-                  >
-                    <option value="">Select Property</option>
-                    {properties.map(p => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Room (Optional)</label>
-                  <select
-                    name="room"
-                    value={formData.room}
-                    onChange={handleChange}
-                    className="form-input"
-                    disabled={!formData.property_ref}
-                  >
-                    <option value="">Select Room (or leave empty for common area)</option>
-                    {rooms.map(room => (
-                      <option key={room.id} value={room.id}>
-                        {room.name} {room.room_type ? `(${room.room_type})` : ''}
-                      </option>
-                    ))}
-                  </select>
-                  {!formData.property_ref && (
-                    <small className="form-help">Please select a property first to see available rooms</small>
-                  )}
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Condition*</label>
-                  <select
-                    name="condition_status"
-                    value={formData.condition_status}
-                    onChange={handleChange}
-                    className="form-input"
-                  >
-                    <option value="new">New</option>
-                    <option value="good">Good</option>
-                    <option value="used">Used</option>
-                    <option value="broken">Broken</option>
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Cost (USD)</label>
-                  <input
-                    name="cost"
-                    type="number"
-                    step="0.01"
-                    value={formData.cost}
-                    onChange={handleChange}
-                    placeholder="0.00"
-                    className="form-input"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Purchase Date</label>
-                  <input
-                    name="purchase_date"
-                    type="date"
-                    value={formData.purchase_date}
-                    onChange={handleChange}
-                    className="form-input"
-                  />
-                </div>
-
-                <div className="form-group full-width">
-                  <label className="form-checkbox">
-                    <input
-                      name="needs_maintenance"
-                      type="checkbox"
-                      checked={formData.needs_maintenance}
-                      onChange={handleChange}
-                    />
-                    <span className="checkmark"></span>
-                    Needs Maintenance Immediately
-                  </label>
-                </div>
-              </div>
-
-              <div className="form-actions">
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="btn btn-primary"
-                >
-                  {saving ? 'Saving...' : 'Save Item'}
-                </button>
-                <Link href="/inventory" className="btn btn-secondary">
-                  Cancel
-                </Link>
-              </div>
-            </form>
-          </div>
-
-          {/* Quick Tips */}
-          <div className="tips-section">
-            <div className="section-header">
-              <div>
-                <h2 className="section-title">Quick Tips</h2>
-                <p className="section-subtitle">Best practices for inventory management</p>
-              </div>
-            </div>
-            <div className="info-grid">
-              <div className="info-item">
-                <h4>Item Names</h4>
-                <p>Use descriptive names that include brand/model when relevant (e.g., "IKEA Malm Bed Frame" vs "Bed")</p>
-              </div>
-              <div className="info-item">
-                <h4>Property Assignment</h4>
-                <p>Always assign items to properties. Room assignment is optional but helps with organization.</p>
-              </div>
-              <div className="info-item">
-                <h4>Cost Tracking</h4>
-                <p>Recording purchase costs helps with budgeting and insurance claims.</p>
-              </div>
-              <div className="info-item">
-                <h4>Maintenance Flags</h4>
-                <p>Check "Needs Maintenance" for items requiring immediate attention or repair.</p>
               </div>
             </div>
           </div>
@@ -378,9 +384,9 @@ export default function AddInventoryItem() {
         }
 
         .back-btn {
-          background: #6366f1;
-          color: white;
-          border: none;
+          background: #f8fafc;
+          color: #64748b;
+          border: 1px solid #e2e8f0;
           padding: 10px 14px;
           border-radius: 6px;
           font-size: 12px;
@@ -394,8 +400,22 @@ export default function AddInventoryItem() {
         }
 
         .back-btn:hover {
-          background: #4f46e5;
+          background: #e2e8f0;
           transform: translateY(-1px);
+        }
+        
+        /* Main Layout Grid */
+        .main-content-grid {
+          display: grid;
+          grid-template-columns: 2fr 1fr;
+          gap: 24px;
+          align-items: flex-start;
+        }
+
+        .left-column, .right-column {
+          display: flex;
+          flex-direction: column;
+          gap: 24px;
         }
 
         /* Section Styling */
@@ -403,28 +423,26 @@ export default function AddInventoryItem() {
         .tips-section {
           background: white;
           border-radius: 6px;
-          padding: 18px;
+          padding: 24px;
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
           border: 1px solid #e2e8f0;
-          margin-bottom: 20px;
         }
 
         .section-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          margin-bottom: 16px;
+          padding-bottom: 12px;
+          border-bottom: 1px solid #f1f5f9;
+          margin-bottom: 20px;
         }
 
         .section-title {
-          font-size: 14px;
-          font-weight: 700;
+          font-size: 16px;
+          font-weight: 600;
           color: #1e293b;
           margin: 0 0 3px 0;
         }
 
         .section-subtitle {
-          font-size: 12px;
+          font-size: 13px;
           color: #64748b;
           margin: 0;
         }
@@ -432,9 +450,8 @@ export default function AddInventoryItem() {
         /* Form Styling */
         .form-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-          gap: 16px;
-          margin-bottom: 24px;
+          grid-template-columns: 1fr 1fr;
+          gap: 20px;
         }
 
         .form-group {
@@ -477,9 +494,9 @@ export default function AddInventoryItem() {
         }
 
         .form-help {
-          font-size: 11px;
+          font-size: 12px;
           color: #6b7280;
-          font-style: italic;
+          margin-top: 4px;
         }
 
         .form-checkbox {
@@ -489,6 +506,7 @@ export default function AddInventoryItem() {
           cursor: pointer;
           font-size: 14px;
           color: #374151;
+          padding: 10px 0;
         }
 
         .form-checkbox input[type="checkbox"] {
@@ -501,13 +519,14 @@ export default function AddInventoryItem() {
           display: flex;
           gap: 12px;
           justify-content: flex-start;
-          padding-top: 16px;
+          padding-top: 24px;
+          margin-top: 12px;
           border-top: 1px solid #e2e8f0;
         }
 
         /* Button Styling */
         .btn {
-          padding: 12px 16px;
+          padding: 12px 20px;
           border-radius: 6px;
           font-size: 14px;
           font-weight: 600;
@@ -548,101 +567,57 @@ export default function AddInventoryItem() {
           transform: translateY(-1px);
         }
 
-        /* Info Grid for Tips */
+        /* Tips Section */
         .info-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+          display: flex;
+          flex-direction: column;
           gap: 16px;
         }
 
         .info-item {
-          padding: 14px;
+          padding: 16px;
           background: #f8fafc;
           border-radius: 6px;
           border: 1px solid #e2e8f0;
           transition: all 0.2s ease;
         }
-
+        
         .info-item:hover {
-          transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.05);
         }
 
         .info-item h4 {
-          font-size: 13px;
+          font-size: 14px;
           font-weight: 600;
           color: #1e293b;
           margin: 0 0 6px 0;
         }
 
         .info-item p {
-          font-size: 12px;
+          font-size: 13px;
           color: #64748b;
           margin: 0;
-          line-height: 1.4;
+          line-height: 1.5;
         }
 
-        /* Alert Styling */
-        .alert {
-          padding: 12px 16px;
-          border-radius: 6px;
-          margin-bottom: 20px;
-          font-size: 14px;
-        }
-        
-        .alert-error {
-          background-color: #fef2f2;
-          border: 1px solid #fecaca;
-          color: #dc2626;
-        }
-
-        /* Loading Indicator */
-        .loading-indicator {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          padding: 48px 24px;
-          text-align: center;
-        }
-        
-        .loading-spinner {
-          width: 40px;
-          height: 40px;
-          border: 4px solid #e2e8f0;
-          border-top-color: #6366f1;
-          border-radius: 50%;
-          animation: spin 1s linear infinite;
-          margin-bottom: 16px;
-        }
-        
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
+        /* Alert Styling & Loading */
+        .alert { padding: 12px 16px; border-radius: 6px; margin-bottom: 20px; font-size: 14px; }
+        .alert-error { background-color: #fef2f2; border: 1px solid #fecaca; color: #dc2626; }
+        .loading-indicator { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 48px 24px; text-align: center; }
+        .loading-spinner { width: 40px; height: 40px; border: 4px solid #e2e8f0; border-top-color: #6366f1; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 16px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
         /* Responsive Design */
+        @media (max-width: 900px) {
+          .main-content-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+        
         @media (max-width: 768px) {
-          .dashboard-container {
-            padding: 16px;
-          }
-
-          .header-content {
-            flex-direction: column;
-            gap: 16px;
-          }
-
           .form-grid {
             grid-template-columns: 1fr;
-            gap: 12px;
-          }
-
-          .form-actions {
-            flex-direction: column;
-          }
-
-          .info-grid {
-            grid-template-columns: 1fr;
-            gap: 12px;
           }
         }
       `}</style>

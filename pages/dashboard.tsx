@@ -912,7 +912,7 @@ function Dashboard() {
         /* Main Content */
         .main-content {
           display: grid;
-          grid-template-columns: 2fr 1fr;
+          grid-template-columns: 3fr 1fr;
           gap: 20px; /* Reduced gap */
         }
 
@@ -1142,7 +1142,7 @@ function Dashboard() {
           padding: 18px; /* Reduced padding */
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
           border: 1px solid #e2e8f0;
-          height: fit-content;
+          height: 400px;
         }
 
         .actions-grid {
@@ -1391,7 +1391,7 @@ function Dashboard() {
 
         .applications-grid {
           display: grid;
-          grid-template-columns: repeat(3, 1fr);
+          grid-template-columns: repeat(4, 1fr);
           gap: 16px; /* Reduced gap */
         }
 
@@ -1494,7 +1494,7 @@ function Dashboard() {
           }
           
           .applications-grid {
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(3, 1fr);
           }
         }
 
@@ -1553,7 +1553,7 @@ function Dashboard() {
           }
 
           .applications-grid {
-            grid-template-columns: 1fr;
+            grid-template-columns: repeat(2, 1fr);
           }
 
           .properties-table-container {

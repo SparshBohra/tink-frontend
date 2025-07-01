@@ -123,7 +123,7 @@ export default function PropertyRooms() {
             <div className="loading-spinner"></div>
             <p>Fetching property and room information...</p>
           </div>
-        </div>
+          </div>
         
         <style jsx>{`
           .loading-indicator {
@@ -181,8 +181,8 @@ export default function PropertyRooms() {
               Back to Properties
             </Link>
           </div>
-        </div>
-      </DashboardLayout>
+          </div>
+        </DashboardLayout>
     );
   }
 
@@ -325,146 +325,253 @@ export default function PropertyRooms() {
                 </div>
               </div>
               <div className="header-right">
-                <button 
-                  onClick={() => router.back()}
+          <button 
+            onClick={() => router.back()}
                   className="back-btn"
-                >
+          >
                   ← Back
-                </button>
+          </button>
               </div>
             </div>
-          </div>
+        </div>
 
           {error && <div className="alert alert-error">{error}</div>}
 
-          {/* Metrics Cards */}
-          <div className="metrics-row">
-            <div className="metric-card">
-              <div className="metric-content">
-                <div className="metric-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-                    <polyline points="9,22 9,12 15,12 15,22"/>
-                  </svg>
+          {/* Main Content Layout */}
+          <div className="main-content-grid">
+            <div className="left-column">
+              {/* Metrics Cards */}
+        <div className="metrics-grid">
+                <div className="metric-card">
+                  <div className="metric-header">
+                    <div className="metric-info">
+                      <h3 className="metric-title">Total Rooms</h3>
+                      <div className="metric-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                          <polyline points="9,22 9,12 15,12 15,22"/>
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="metric-content">
+                    <div className="metric-value">{stats.totalRooms}</div>
+                    <div className="metric-subtitle">Rooms in property</div>
+                    <div className="metric-progress">
+                      <span className="metric-label">Total units</span>
+                      <span className="metric-change positive">+{stats.totalRooms > 0 ? '1' : '0'}</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="metric-info">
-                  <h3 className="metric-title">Total Rooms</h3>
-                  <div className="metric-value">{stats.totalRooms}</div>
-                  <p className="metric-subtitle">Rooms in property</p>
-                </div>
-              </div>
-            </div>
 
-            <div className="metric-card">
-              <div className="metric-content">
-                <div className="metric-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                    <circle cx="9" cy="7" r="4"/>
-                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                  </svg>
+                <div className="metric-card">
+                  <div className="metric-header">
+                    <div className="metric-info">
+                      <h3 className="metric-title">Current Occupancy</h3>
+                      <div className="metric-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                          <circle cx="9" cy="7" r="4"/>
+                          <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                          <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="metric-content">
+                    <div className="metric-value">{stats.occupiedRooms}</div>
+                    <div className="metric-subtitle">{stats.occupancyRate}% occupied</div>
+                    <div className="metric-progress">
+                      <span className="metric-label">Occupancy rate</span>
+                      <span className="metric-change positive">+2</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="metric-info">
-                  <h3 className="metric-title">Current Occupancy</h3>
-                  <div className="metric-value">{stats.occupiedRooms}</div>
-                  <p className="metric-subtitle">{stats.occupancyRate}% occupied</p>
-                </div>
-              </div>
-            </div>
 
-            <div className="metric-card">
-              <div className="metric-content">
-                <div className="metric-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <line x1="12" y1="1" x2="12" y2="23"/>
-                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-                  </svg>
-                </div>
-                <div className="metric-info">
-                  <h3 className="metric-title">Monthly Revenue</h3>
-                  <div className="metric-value">{formatCurrency(totalRevenue)}</div>
-                  <p className="metric-subtitle">From all rooms</p>
+                <div className="metric-card">
+                  <div className="metric-header">
+                    <div className="metric-info">
+                      <h3 className="metric-title">Monthly Revenue</h3>
+                      <div className="metric-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <line x1="12" y1="1" x2="12" y2="23"/>
+                          <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="metric-content">
+                    <div className="metric-value">{formatCurrency(totalRevenue)}</div>
+                    <div className="metric-subtitle">From all rooms</div>
+                    <div className="metric-progress">
+                      <span className="metric-label">Monthly income</span>
+                      <span className="metric-change positive">+1</span>
+                    </div>
+                  </div>
                 </div>
               </div>
+
+              {/* Rooms List */}
+              <div className="rooms-section">
+                <div className="section-header">
+                  <div>
+                    <h2 className="section-title">Room Details ({rooms.length})</h2>
+                    <p className="section-subtitle">Overview of all rooms in this property</p>
+                  </div>
+                  <div className="section-actions">
+                    <button 
+                      onClick={() => fetchPropertyData()}
+                      className="refresh-btn"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="23 4 23 10 17 10"/>
+                        <polyline points="1 20 1 14 7 14"/>
+                        <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>
+                      </svg>
+                      Refresh
+                    </button>
+                  </div>
+                </div>
+                {rooms.length > 0 ? (
+                  <div className="rooms-scroll-container">
+                    <div className="rooms-table-container">
+                      <table className="rooms-table">
+                        <thead>
+                          <tr>
+                            <th className="table-left">Room</th>
+                            <th className="table-center">Status</th>
+                            <th className="table-left">Current Tenant</th>
+                            <th className="table-center">Monthly Rent</th>
+                            <th className="table-center">Room Type</th>
+                            <th className="table-center">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {roomsTableData.map((rowData, index) => (
+                            <tr key={rowData.id}>
+                              <td className="table-left">{rowData.room}</td>
+                              <td className="table-center">{rowData.status}</td>
+                              <td className="table-left">{rowData.tenant}</td>
+                              <td className="table-center">{rowData.rent}</td>
+                              <td className="table-center">{rowData.type}</td>
+                              <td className="table-center">{rowData.actions}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="empty-state">
+                    <div className="empty-icon">
+                      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                        <polyline points="9,22 9,12 15,12 15,22"/>
+                      </svg>
+                    </div>
+                    <h3>No Rooms Found</h3>
+                    <p>No rooms have been added to this property yet.</p>
+                    <Link href={`/properties/${id}/add-room`} className="empty-action-btn">
+                      Add New Room
+                    </Link>
+                  </div>
+                )}
+              </div>
+        </div>
+
+            <div className="right-column">
+        {/* Property Information */}
+              <div className="property-info-section">
+                <div className="section-header">
+                  <div>
+                    <h2 className="section-title">Property Information</h2>
+                    <p className="section-subtitle">Basic property details and overview</p>
+                  </div>
+                </div>
+          <div className="property-info-grid">
+            <div className="info-item">
+              <strong>Address:</strong><br />
+              {property.full_address}
+            </div>
+            <div className="info-item">
+              <strong>Property Type:</strong><br />
+              {property.property_type || 'Not specified'}
+            </div>
+            <div className="info-item">
+              <strong>Landlord:</strong><br />
+              {property.landlord_name || 'Not specified'}
             </div>
           </div>
+              </div>
 
-          {/* Property Information */}
-          <div className="property-info-section">
-            <div className="section-header">
-              <div>
-                <h2 className="section-title">Property Information</h2>
-                <p className="section-subtitle">Basic property details and overview</p>
-              </div>
-            </div>
-            <div className="property-info-grid">
-              <div className="info-item">
-                <strong>Address:</strong><br />
-                {property.full_address}
-              </div>
-              <div className="info-item">
-                <strong>Property Type:</strong><br />
-                {property.property_type || 'Not specified'}
-              </div>
-              <div className="info-item">
-                <strong>Landlord:</strong><br />
-                {property.landlord_name || 'Not specified'}
-              </div>
-            </div>
+        {/* Quick Actions */}
+              <div className="quick-actions-section">
+                <div className="section-header">
+                  <div>
+                    <h2 className="section-title">Quick Actions</h2>
+                    <p className="section-subtitle">Common property management tasks</p>
+                  </div>
+                </div>
+                
+          <div className="actions-grid">
+                  <div className="action-card blue" onClick={() => window.location.href = `/properties/${id}/add-room`}>
+                    <div className="action-icon">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <line x1="12" y1="5" x2="12" y2="19"/>
+                        <line x1="5" y1="12" x2="19" y2="12"/>
+                      </svg>
           </div>
+                    <div className="action-content">
+                      <h3 className="action-title">Add New Room</h3>
+                      <p className="action-subtitle">Create a new room in this property</p>
+                    </div>
+                  </div>
 
-          {/* Rooms List */}
-          <div className="rooms-section">
-            <div className="section-header">
-              <div>
-                <h2 className="section-title">Room Details ({rooms.length})</h2>
-                <p className="section-subtitle">Overview of all rooms in this property</p>
-              </div>
-            </div>
-            {rooms.length > 0 ? (
-              <DataTable 
-                columns={roomsTableColumns}
-                data={roomsTableData}
-                renderRow={renderRoomRow}
-              />
-            ) : (
-              <EmptyState 
-                title="No Rooms Found"
-                description="No rooms have been added to this property yet."
-                action={
-                  <Link href={`/properties/${id}/add-room`} className="btn btn-primary">
-                    Add New Room
-                  </Link>
-                }
-              />
-            )}
-          </div>
+                  <div className="action-card green" onClick={() => window.location.href = `/applications?property=${id}`}>
+                    <div className="action-icon">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14,2 14,8 20,8"/>
+                        <line x1="16" y1="13" x2="8" y2="13"/>
+                        <line x1="16" y1="17" x2="8" y2="17"/>
+                      </svg>
+                    </div>
+                    <div className="action-content">
+                      <h3 className="action-title">Review Applications</h3>
+                      <p className="action-subtitle">Check pending applications</p>
+                    </div>
+                  </div>
 
-          {/* Quick Actions */}
-          <div className="quick-actions-section">
-            <div className="section-header">
-              <div>
-                <h2 className="section-title">Quick Actions</h2>
-                <p className="section-subtitle">Common property management tasks</p>
+                  <div className="action-card purple" onClick={() => window.location.href = '/inventory'}>
+                    <div className="action-icon">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                        <polyline points="3.27,6.96 12,12.01 20.73,6.96"/>
+                        <line x1="12" y1="22.08" x2="12" y2="12"/>
+                      </svg>
+                    </div>
+                    <div className="action-content">
+                      <h3 className="action-title">Manage Inventory</h3>
+                      <p className="action-subtitle">Track property items</p>
+                    </div>
+                  </div>
+
+                  <div className="action-card blue" onClick={() => window.location.href = '/leases'}>
+                    <div className="action-icon">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14,2 14,8 20,8"/>
+                        <line x1="16" y1="13" x2="8" y2="13"/>
+                        <line x1="16" y1="17" x2="8" y2="17"/>
+                      </svg>
+                    </div>
+                    <div className="action-content">
+                      <h3 className="action-title">View Leases</h3>
+                      <p className="action-subtitle">Manage lease agreements</p>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="actions-grid">
-              <Link href={`/properties/${id}/add-room`} className="btn btn-primary">
-                Add New Room
-              </Link>
-              <Link href={`/applications?property=${id}`} className="btn btn-secondary">
-                Review Applications
-              </Link>
-              <Link href="/inventory" className="btn btn-secondary">
-                Manage Inventory
-              </Link>
-              <Link href="/leases" className="btn btn-secondary">
-                View Leases
-              </Link>
-              <Link href="/properties" className="btn btn-secondary">
-                All Properties
-              </Link>
             </div>
           </div>
         </div>
@@ -549,6 +656,106 @@ export default function PropertyRooms() {
           transform: translateY(-1px);
         }
 
+        /* Main Layout Grid */
+        .main-content-grid {
+          display: grid;
+          grid-template-columns: 2.5fr 1fr;
+          gap: 24px;
+          align-items: flex-start;
+        }
+
+        .left-column, .right-column {
+          display: flex;
+          flex-direction: column;
+          gap: 24px;
+        }
+
+        /* Metrics Grid */
+        .metrics-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 16px;
+        }
+
+        .metric-card {
+          background: white;
+          border-radius: 6px;
+          padding: 14px;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+          border: 1px solid #e2e8f0;
+          transition: all 0.2s ease;
+        }
+
+        .metric-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .metric-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          margin-bottom: 12px;
+        }
+
+        .metric-info {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          width: 100%;
+        }
+
+        .metric-title {
+          font-size: 11px;
+          font-weight: 600;
+          color: #64748b;
+          margin: 0;
+        }
+
+        .metric-icon {
+          width: 20px;
+          height: 20px;
+          color: #64748b;
+        }
+
+        .metric-content {
+          margin-top: 8px;
+        }
+
+        .metric-value {
+          font-size: 20px;
+          font-weight: 700;
+          color: #1e293b;
+          margin-bottom: 3px;
+          line-height: 1;
+        }
+
+        .metric-subtitle {
+          font-size: 11px;
+          color: #64748b;
+          margin-bottom: 10px;
+        }
+
+        .metric-progress {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+
+        .metric-label {
+          font-size: 12px;
+          color: #64748b;
+        }
+
+        .metric-change {
+          font-size: 12px;
+          font-weight: 600;
+        }
+
+        .metric-change.positive {
+          color: #10b981;
+        }
+
         /* Section Styling */
         .property-info-section,
         .rooms-section,
@@ -558,7 +765,7 @@ export default function PropertyRooms() {
           padding: 18px;
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
           border: 1px solid #e2e8f0;
-          margin-bottom: 20px;
+          height: fit-content;
         }
 
         .section-header {
@@ -579,6 +786,12 @@ export default function PropertyRooms() {
           font-size: 12px;
           color: #64748b;
           margin: 0;
+        }
+
+        .section-actions {
+          display: flex;
+          gap: 12px;
+          align-items: center;
         }
         
         /* Property Info Grid */
@@ -609,11 +822,215 @@ export default function PropertyRooms() {
           letter-spacing: 0.5px;
         }
         
+        /* Refresh Button */
+        .refresh-btn {
+          background: #f8fafc;
+          color: #64748b;
+          border: 1px solid #e2e8f0;
+          padding: 10px 14px;
+          border-radius: 6px;
+          font-size: 12px;
+          font-weight: 600;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          transition: all 0.2s ease;
+        }
+
+        .refresh-btn:hover {
+          background: #e2e8f0;
+          transform: translateY(-1px);
+        }
+
+        /* Table Styling */
+        .rooms-scroll-container {
+          overflow-y: auto;
+          max-height: 600px;
+        }
+
+        .rooms-scroll-container::-webkit-scrollbar {
+          width: 6px;
+        }
+
+        .rooms-scroll-container::-webkit-scrollbar-track {
+          background: rgba(226, 232, 240, 0.3);
+          border-radius: 3px;
+        }
+
+        .rooms-scroll-container::-webkit-scrollbar-thumb {
+          background: rgba(156, 163, 175, 0.5);
+          border-radius: 3px;
+        }
+
+        .rooms-table-container {
+          width: 100%;
+          overflow-x: auto;
+          border-radius: 8px;
+          background: white;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        }
+
+        .rooms-table {
+          width: 100%;
+          border-collapse: separate;
+          border-spacing: 0;
+        }
+
+        .rooms-table th {
+          position: sticky;
+          top: 0;
+          background: #f8fafc;
+          z-index: 2;
+          font-size: 13px;
+          font-weight: 700;
+          color: #1e293b;
+          padding: 12px 10px;
+          border-bottom: 2px solid #e2e8f0;
+        }
+
+        .rooms-table td {
+          font-size: 14px;
+          padding: 16px 10px;
+          border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .rooms-table tr:last-child td {
+          border-bottom: none;
+        }
+
+        .table-left {
+          text-align: left !important;
+        }
+
+        .table-center {
+          text-align: center !important;
+        }
+
+        /* Empty State */
+        .empty-state {
+          text-align: center;
+          padding: 40px 20px;
+          color: #64748b;
+        }
+
+        .empty-icon {
+          width: 48px;
+          height: 48px;
+          margin: 0 auto 16px;
+          color: #cbd5e1;
+        }
+
+        .empty-state h3 {
+          font-size: 18px;
+          font-weight: 600;
+          color: #1e293b;
+          margin: 0 0 8px 0;
+        }
+
+        .empty-state p {
+          font-size: 14px;
+          margin: 0 0 20px 0;
+        }
+
+        .empty-action-btn {
+          background: #6366f1;
+          color: white;
+          border: none;
+          padding: 12px 20px;
+          border-radius: 6px;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          text-decoration: none;
+          display: inline-block;
+          transition: all 0.2s ease;
+        }
+
+        .empty-action-btn:hover {
+          background: #4f46e5;
+          transform: translateY(-1px);
+        }
+
         /* Actions Grid */
         .actions-grid {
           display: flex;
+          flex-direction: column;
           gap: 12px;
-          flex-wrap: wrap;
+        }
+
+        .action-card {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 12px;
+          border-radius: 5px;
+          border: 1px solid #e2e8f0;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          text-decoration: none;
+        }
+
+        .action-card:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .action-card.blue {
+          background: #eff6ff;
+          border-color: #dbeafe;
+        }
+
+        .action-card.green {
+          background: #f0fdf4;
+          border-color: #dcfce7;
+        }
+
+        .action-card.purple {
+          background: #faf5ff;
+          border-color: #e9d5ff;
+        }
+
+        .action-icon {
+          width: 40px;
+          height: 40px;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+
+        .action-card.blue .action-icon {
+          background: #3b82f6;
+          color: white;
+        }
+
+        .action-card.green .action-icon {
+          background: #10b981;
+          color: white;
+        }
+
+        .action-card.purple .action-icon {
+          background: #8b5cf6;
+          color: white;
+        }
+
+        .action-content {
+          flex: 1;
+        }
+
+        .action-title {
+          font-size: 14px;
+          font-weight: 600;
+          color: #1e293b;
+          margin: 0 0 3px 0;
+        }
+
+        .action-subtitle {
+          font-size: 12px;
+          color: #64748b;
+          margin: 0;
         }
 
         /* Button Styling */
@@ -682,7 +1099,7 @@ export default function PropertyRooms() {
           background: #d97706;
           transform: translateY(-1px);
         }
-
+        
         .btn-sm {
           padding: 8px 12px;
           font-size: 12px;
@@ -731,127 +1148,92 @@ export default function PropertyRooms() {
         }
 
         /* Responsive Design */
+        @media (max-width: 1200px) {
+          .main-content-grid {
+            grid-template-columns: 1fr;
+            gap: 24px;
+          }
+        }
+
         @media (max-width: 768px) {
+          .metrics-grid {
+            grid-template-columns: 1fr;
+            gap: 16px;
+          }
+
           .dashboard-container {
-            padding: 16px;
+            padding: 24px 16px;
           }
 
           .header-content {
             flex-direction: column;
             gap: 16px;
           }
-
-          .metrics-row {
-            grid-template-columns: 1fr;
-            gap: 16px;
-            margin-bottom: 20px;
+          
+          .dashboard-title {
+            font-size: 28px;
           }
-
+          
+          .welcome-message {
+            font-size: 14px;
+          }
+          
           .metric-card {
             padding: 16px;
           }
-
-          .metric-content {
-            gap: 12px;
-          }
-
-          .metric-icon {
-            width: 36px;
-            height: 36px;
-          }
-
-          .metric-icon svg {
-            width: 18px;
-            height: 18px;
-          }
-
+          
           .metric-value {
-            font-size: 20px;
+            font-size: 24px;
+          }
+          
+          .property-info-section,
+          .rooms-section,
+          .quick-actions-section {
+            padding: 16px;
+          }
+
+          .rooms-table-container {
+            overflow-x: scroll;
+          }
+
+          .rooms-table th,
+          .rooms-table td {
+            padding: 12px 8px;
+            font-size: 12px;
+          }
+
+          .section-actions {
+            flex-direction: column;
+            gap: 8px;
           }
 
           .property-info-grid {
             grid-template-columns: 1fr;
             gap: 12px;
           }
+        }
 
-          .actions-grid {
+        @media (max-width: 480px) {
+          .dashboard-container {
+            padding: 16px;
+          }
+
+          .dashboard-title {
+            font-size: 24px;
+          }
+
+          .welcome-message {
+            font-size: 13px;
+          }
+
+          .section-header {
             flex-direction: column;
+            gap: 12px;
+            align-items: stretch;
           }
         }
 
-        /* Metrics Cards */
-        .metrics-row {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-          gap: 20px;
-          margin-bottom: 24px;
-        }
 
-        .metric-card {
-          background: white;
-          border-radius: 8px;
-          padding: 18px;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-          border: 1px solid #e2e8f0;
-          transition: all 0.3s ease;
-        }
-
-        .metric-card:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-        }
-
-        .metric-content {
-          display: flex;
-          align-items: flex-start;
-          gap: 14px;
-        }
-
-        .metric-icon {
-          flex-shrink: 0;
-          width: 40px;
-          height: 40px;
-          background: #f3f4f6;
-          border-radius: 8px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: #6366f1;
-        }
-
-        .metric-icon svg {
-          width: 20px;
-          height: 20px;
-        }
-
-        .metric-info {
-          flex: 1;
-          min-width: 0;
-        }
-
-        .metric-title {
-          font-size: 12px;
-          font-weight: 600;
-          color: #6b7280;
-          margin: 0 0 4px 0;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-        }
-
-        .metric-value {
-          font-size: 24px;
-          font-weight: 700;
-          color: #1f2937;
-          margin: 0 0 4px 0;
-          line-height: 1.1;
-        }
-
-        .metric-subtitle {
-          font-size: 12px;
-          color: #9ca3af;
-          margin: 0;
-          line-height: 1.3;
-        }
       `}</style>
     </>
   );

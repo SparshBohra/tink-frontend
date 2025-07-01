@@ -261,8 +261,8 @@ function Properties() {
                   </svg>
                   Refresh
                 </button>
-                <Link href="/properties/add" className="add-property-btn">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <Link href="/properties/add" className="create-property-btn">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                     <line x1="12" y1="5" x2="12" y2="19"/>
                     <line x1="5" y1="12" x2="19" y2="12"/>
                   </svg>
@@ -348,38 +348,25 @@ function Properties() {
             <div className="section-header">
               <div>
                 <h2 className="section-title">Quick Actions</h2>
-                <p className="section-subtitle">Common property management tasks</p>
+                <p className="section-subtitle">Frequently used actions</p>
               </div>
             </div>
             
             <div className="actions-grid">
-              <Link href="/tenants" className="action-card blue">
+              <div className="action-card blue" onClick={() => window.location.href = '/properties/add'}>
                 <div className="action-icon">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                    <circle cx="12" cy="7" r="4"/>
+                    <line x1="12" y1="5" x2="12" y2="19"/>
+                    <line x1="5" y1="12" x2="19" y2="12"/>
                   </svg>
                 </div>
                 <div className="action-content">
-                  <h3 className="action-title">Manage Tenants</h3>
-                  <p className="action-subtitle">View and manage all tenants</p>
+                  <h3 className="action-title">Add Property</h3>
+                  <p className="action-subtitle">Register New Property</p>
                 </div>
-              </Link>
+              </div>
 
-              <Link href="/leases" className="action-card green">
-                <div className="action-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                    <polyline points="14,2 14,8 20,8"/>
-                  </svg>
-                </div>
-                <div className="action-content">
-                  <h3 className="action-title">View Leases</h3>
-                  <p className="action-subtitle">Manage lease agreements</p>
-                </div>
-              </Link>
-
-              <Link href="/applications" className="action-card purple">
+              <div className="action-card blue" onClick={() => window.location.href = '/applications'}>
                 <div className="action-icon">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -390,21 +377,36 @@ function Properties() {
                 </div>
                 <div className="action-content">
                   <h3 className="action-title">Review Applications</h3>
-                  <p className="action-subtitle">Process tenant applications</p>
+                  <p className="action-subtitle">Process Tenant Applications</p>
                 </div>
-              </Link>
+              </div>
 
-              <Link href="/inventory" className="action-card blue">
+              <div className="action-card green" onClick={() => window.location.href = '/tenants'}>
                 <div className="action-icon">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                    <circle cx="12" cy="7" r="4"/>
                   </svg>
                 </div>
                 <div className="action-content">
-                  <h3 className="action-title">Check Inventory</h3>
-                  <p className="action-subtitle">Manage property inventory</p>
+                  <h3 className="action-title">Manage Tenants</h3>
+                  <p className="action-subtitle">View and Manage Tenants</p>
                 </div>
-              </Link>
+              </div>
+
+              <div className="action-card purple" onClick={downloadPropertiesReport}>
+                <div className="action-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <line x1="18" y1="20" x2="18" y2="10"/>
+                    <line x1="12" y1="20" x2="12" y2="4"/>
+                    <line x1="6" y1="20" x2="6" y2="14"/>
+                  </svg>
+                </div>
+                <div className="action-content">
+                  <h3 className="action-title">Generate Reports</h3>
+                  <p className="action-subtitle">Create Financial Reports</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -559,7 +561,7 @@ function Properties() {
         /* Main Content */
         .main-content {
           display: grid;
-          grid-template-columns: 2fr 1fr;
+          grid-template-columns: 2.5fr 0.8fr;
           gap: 20px;
         }
 
@@ -620,25 +622,37 @@ function Properties() {
           transform: translateY(-1px);
         }
 
-        .add-property-btn {
-          background: #6366f1;
+        .create-property-btn {
+          background: linear-gradient(180deg, #0073e6 0%, #0052cc 100%);
           color: white;
-          border: none;
-          padding: 10px 14px;
+          border: 1px solid #0052cc;
+          padding: 10px 18px;
           border-radius: 6px;
-          font-size: 12px;
+          font-size: 14px;
           font-weight: 600;
           cursor: pointer;
-          display: flex;
+          display: inline-flex;
           align-items: center;
-          gap: 6px;
-          transition: all 0.2s ease;
+          gap: 8px;
+          transition: all 0.15s ease;
           text-decoration: none;
+          box-shadow: 0 2px 4px rgba(0, 82, 204, 0.2);
+          white-space: nowrap;
+          line-height: 1;
         }
 
-        .add-property-btn:hover {
-          background: #4f46e5;
+        .create-property-btn:hover {
+          background: linear-gradient(180deg, #0084ff 0%, #0065ff 100%);
+          border-color: #0065ff;
+          box-shadow: 0 3px 6px rgba(0, 82, 204, 0.3);
           transform: translateY(-1px);
+        }
+
+        .create-property-btn:active {
+          background: linear-gradient(180deg, #0052cc 0%, #003884 100%);
+          border-color: #003884;
+          box-shadow: 0 1px 2px rgba(0, 82, 204, 0.15);
+          transform: translateY(0);
         }
 
         /* Empty State */
@@ -841,6 +855,8 @@ function Properties() {
           cursor: pointer;
           transition: all 0.2s ease;
           text-decoration: none;
+          width: 100%;
+          box-sizing: border-box;
         }
 
         .action-card:hover {
@@ -1028,15 +1044,16 @@ function Properties() {
             background: #2a2a2a !important;
             border-color: #ffffff !important;
         }
-        :global(.dark-mode) .add-property-btn,
+        :global(.dark-mode) .create-property-btn,
         :global(.dark-mode) .empty-action-btn {
-            background: #1a1a1a !important;
-            border: 1px solid #333333 !important;
+            background: #3b82f6 !important;
+            border: none !important;
+            box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2) !important;
         }
-        :global(.dark-mode) .add-property-btn:hover,
+        :global(.dark-mode) .create-property-btn:hover,
         :global(.dark-mode) .empty-action-btn:hover {
-            background: #2a2a2a !important;
-            border-color: #ffffff !important;
+            background: #2563eb !important;
+            box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3) !important;
         }
         :global(.dark-mode) .status-badge {
             color: #ffffff !important;

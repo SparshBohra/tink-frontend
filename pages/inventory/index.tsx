@@ -184,6 +184,10 @@ export default function Inventory() {
     return filteredItems.filter(item => item.needs_maintenance);
   };
 
+  const getTotalValue = () => {
+    return inventoryItems.reduce((total, item) => total + (item.cost ? Number(item.cost) : 0), 0);
+  };
+
   const handleEditItem = (item: InventoryItem) => {
     router.push(`/inventory/edit/${item.id}`);
   };
@@ -221,9 +225,9 @@ export default function Inventory() {
               </div>
             </div>
             
-            <div className="loading-indicator">
-              <div className="loading-spinner" />
-              <p>Fetching inventory data from the server...</p>
+          <div className="loading-indicator">
+            <div className="loading-spinner" />
+            <p>Fetching inventory data from the server...</p>
             </div>
           </div>
         </DashboardLayout>
@@ -242,7 +246,7 @@ export default function Inventory() {
           <div className="dashboard-header">
             <div className="header-content">
               <div className="header-left">
-                <h1 className="dashboard-title">Property Inventory Management</h1>
+                <h1 className="dashboard-title">Property Inventory</h1>
                 <div className="subtitle-container">
                   <p className="welcome-message">
                     Track, maintain, and manage inventory across all properties
@@ -252,210 +256,314 @@ export default function Inventory() {
             </div>
           </div>
 
-          {error && <div className="alert alert-error"><strong>Error:</strong> {error}</div>}
-          
-          {/* Quick Actions */}
-          <div className="quick-actions-section">
-            <div className="section-header">
-              <div>
-                <h2 className="section-title">Quick Actions</h2>
-                <p className="section-subtitle">Manage your inventory efficiently</p>
-              </div>
-            </div>
-            <div className="actions-container">
-              <Link href="/inventory/add" className="btn btn-primary">
-                Add Inventory
-              </Link>
-              <button className="btn btn-secondary" onClick={fetchData}>
-                View Inventory
-              </button>
-              <button className="btn btn-secondary" onClick={downloadInventoryCSV}>
-                Download CSV
-              </button>
-            </div>
-          </div>
-          
-          {/* Filter Inventory */}
-          <div className="filter-section">
-            <div className="section-header">
-              <div>
-                <h2 className="section-title">Filter Inventory</h2>
-                <p className="section-subtitle">Search and filter inventory items</p>
-              </div>
-              <div className="section-actions">
-                <button className="btn btn-sm btn-secondary" onClick={clearFilters}>Clear Filters</button>
-                <button className="btn btn-sm btn-primary" onClick={fetchData}>Refresh</button>
-              </div>
-            </div>
-            
-            <div className="form-grid">
-              <div className="form-group">
-                <label className="form-label">Property</label>
-                <select
-                  value={selectedProperty || ''}
-                  onChange={(e) => setSelectedProperty(e.target.value ? parseInt(e.target.value) : null)}
-                  className="form-input"
-                >
-                  <option value="">All Properties</option>
-                  {properties.map(property => (
-                    <option key={property.id} value={property.id}>
-                      {property.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              
-              <div className="form-group">
-                <label className="form-label">Room</label>
-                <select
-                  value={selectedRoom || ''}
-                  onChange={(e) => setSelectedRoom(e.target.value ? parseInt(e.target.value) : null)}
-                  className="form-input"
-                >
-                  <option value="">All Rooms</option>
-                  {(selectedProperty ? rooms.filter(r => r.property_ref === selectedProperty) : rooms).map(room => (
-                    <option key={room.id} value={room.id}>{room.name}</option>
-                  ))}
-                </select>
-              </div>
-              
-              <div className="form-group">
-                <label className="form-label">Condition</label>
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="form-input"
-                >
-                  <option value="all">All Conditions</option>
-                  <option value="new">New</option>
-                  <option value="good">Good</option>
-                  <option value="used">Used</option>
-                  <option value="broken">Broken</option>
-                </select>
-              </div>
-              
-              <div className="form-group">
-                <label className="form-label">Search</label>
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search by name, property, etc."
-                  className="form-input"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Complete Inventory */}
-          <div className="inventory-section">
-            <div className="section-header">
-              <div>
-                <h2 className="section-title">Complete Inventory ({filteredItems.length})</h2>
-                <p className="section-subtitle">All inventory items across properties</p>
-              </div>
-            </div>
-            {filteredItems.length === 0 ? (
-              <div className="empty-state">
-                <p>No inventory items found matching your filters. Try changing your filter criteria or add new items.</p>
-              </div>
-            ) : (
-              <div className="table-container">
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th>Item</th>
-                      <th>Property & Room</th>
-                      <th>Condition</th>
-                      <th>Quantity</th>
-                      <th>Cost</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredItems.map(item => (
-                      <tr key={item.id}>
-                        <td>
-                          <strong>{item.name}</strong>
-                        </td>
-                        <td>
-                          <strong>{item.property_name || `Property ${item.property_ref}`}</strong>
-                          <br />
-                          <small>{item.room_name || 'Not assigned to a room'}</small>
-                        </td>
-                        <td>
-                          <span className={`status-badge ${item.condition_status}`}>
-                            {item.condition_status.toUpperCase()}
-                          </span>
-                        </td>
-                        <td>{item.qty}</td>
-                        <td>${item.cost || '0'}</td>
-                        <td>
-                          <button 
-                            className="btn btn-sm btn-secondary"
-                            onClick={() => handleEditItem(item)}
-                          >
-                            Edit
-                          </button>
-                          <button 
-                            className="btn btn-sm btn-danger"
-                            onClick={() => handleDeleteItem(item.id)}
-                            style={{ marginLeft: '8px' }}
-                          >
-                            Delete
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-
-          {/* Bulk Purchase Planning */}
-          {getMaintenanceItems().length > 0 && (
-            <div className="bulk-purchase-section">
-              <div className="section-header">
-                <div>
-                  <h2 className="section-title">Bulk Purchase Planning</h2>
-                  <p className="section-subtitle">Items commonly needed for co-living setups</p>
+        {error && <div className="alert alert-error"><strong>Error:</strong> {error}</div>}
+        
+          <div className="main-content-grid">
+            <div className="left-column">
+              {/* Top Metrics Row */}
+              <div className="metrics-grid">
+                <div className="metric-card">
+                  <div className="metric-header">
+                    <div className="metric-info">
+                      <h3 className="metric-title">Total Items</h3>
+                      <div className="metric-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                          <polyline points="3.27,6.96 12,12.01 20.73,6.96"/>
+                          <line x1="12" y1="22.08" x2="12" y2="12"/>
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="metric-content">
+                    <div className="metric-value">{inventoryItems.length}</div>
+                    <div className="metric-subtitle">Total items tracked</div>
+                    <div className="metric-progress">
+                      <span className="metric-label">All properties</span>
+                      <span className="metric-change positive">+{inventoryItems.length > 0 ? '1' : '0'}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="metric-card">
+                  <div className="metric-header">
+                    <div className="metric-info">
+                      <h3 className="metric-title">Maintenance</h3>
+                      <div className="metric-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="metric-content">
+                    <div className="metric-value">{getMaintenanceItems().length}</div>
+                    <div className="metric-subtitle">Items needing maintenance</div>
+                    <div className="metric-progress">
+                      <span className="metric-label">Needs review</span>
+                      <span className="metric-change positive">+{getMaintenanceItems().length > 0 ? '1' : '0'}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="metric-card">
+                  <div className="metric-header">
+                    <div className="metric-info">
+                      <h3 className="metric-title">Total Value</h3>
+                      <div className="metric-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <line x1="12" y1="1" x2="12" y2="23"/>
+                          <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="metric-content">
+                    <div className="metric-value">${getTotalValue().toFixed(2)}</div>
+                    <div className="metric-subtitle">Estimated total cost</div>
+                    <div className="metric-progress">
+                      <span className="metric-label">All items</span>
+                      <span className="metric-change positive">+1</span>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div className="table-container">
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th>Category</th>
-                      <th>Common Items</th>
-                      <th>Estimated Cost</th>
-                      <th>Quick Buy</th>
+
+              {/* Inventory List Section */}
+              <div className="inventory-section">
+                <div className="section-header">
+                  <div>
+                    <h2 className="section-title">Inventory List ({filteredItems.length})</h2>
+                    <p className="section-subtitle">All inventory items across properties</p>
+                  </div>
+                  <div className="section-actions">
+                    <button onClick={fetchData} className="refresh-btn">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="23 4 23 10 17 10"/>
+                        <polyline points="1 20 1 14 7 14"/>
+                        <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>
+                      </svg>
+                      Refresh
+            </button>
+          </div>
+          </div>
+          
+                {/* Filters */}
+                <div className="filters-container">
+          <div className="form-grid">
+            <div className="form-group">
+              <label className="form-label">Property</label>
+              <select
+                value={selectedProperty || ''}
+                onChange={(e) => setSelectedProperty(e.target.value ? parseInt(e.target.value) : null)}
+                className="form-input"
+              >
+                <option value="">All Properties</option>
+                {properties.map(property => (
+                  <option key={property.id} value={property.id}>
+                    {property.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            <div className="form-group">
+              <label className="form-label">Room</label>
+              <select
+                value={selectedRoom || ''}
+                onChange={(e) => setSelectedRoom(e.target.value ? parseInt(e.target.value) : null)}
+                className="form-input"
+              >
+                <option value="">All Rooms</option>
+                {(selectedProperty ? rooms.filter(r => r.property_ref === selectedProperty) : rooms).map(room => (
+                  <option key={room.id} value={room.id}>{room.name}</option>
+                ))}
+              </select>
+            </div>
+            
+            <div className="form-group">
+              <label className="form-label">Condition</label>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="form-input"
+              >
+                <option value="all">All Conditions</option>
+                <option value="new">New</option>
+                <option value="good">Good</option>
+                <option value="used">Used</option>
+                <option value="broken">Broken</option>
+              </select>
+            </div>
+            
+            <div className="form-group">
+              <label className="form-label">Search</label>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search by name, property, etc."
+                className="form-input"
+              />
+                    </div>
+                    
+                    <div className="form-group">
+                      <button className="btn btn-secondary" onClick={clearFilters} style={{ alignSelf: 'flex-end' }}>Clear</button>
+                    </div>
+            </div>
+          </div>
+
+          {filteredItems.length === 0 ? (
+            <div className="empty-state">
+                    <h3>No Inventory Found</h3>
+              <p>No inventory items found matching your filters. Try changing your filter criteria or add new items.</p>
+            </div>
+          ) : (
+            <div className="table-container">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Item</th>
+                    <th>Property & Room</th>
+                    <th>Condition</th>
+                    <th>Quantity</th>
+                    <th>Cost</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredItems.map(item => (
+                    <tr key={item.id}>
+                      <td>
+                        <strong>{item.name}</strong>
+                      </td>
+                      <td>
+                        <strong>{item.property_name || `Property ${item.property_ref}`}</strong>
+                        <br />
+                        <small>{item.room_name || 'Not assigned to a room'}</small>
+                      </td>
+                      <td>
+                        <span className={`status-badge ${item.condition_status}`}>
+                          {item.condition_status.toUpperCase()}
+                        </span>
+                      </td>
+                      <td>{item.qty}</td>
+                      <td>${item.cost || '0'}</td>
+                      <td>
+                              <div className="action-buttons">
+                        <button 
+                          className="btn btn-sm btn-secondary"
+                          onClick={() => handleEditItem(item)}
+                        >
+                          Edit
+                        </button>
+                        <button 
+                          className="btn btn-sm btn-danger"
+                          onClick={() => handleDeleteItem(item.id)}
+                        >
+                          Delete
+                        </button>
+                              </div>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>Bedroom Essentials</td>
-                      <td>Bed frame, mattress, desk, chair</td>
-                      <td>$800-1,200</td>
-                      <td><button className="btn btn-sm btn-primary">Browse Sets</button></td>
-                    </tr>
-                    <tr>
-                      <td>Kitchen Basics</td>
-                      <td>Table, chairs, appliances</td>
-                      <td>$400-800</td>
-                      <td><button className="btn btn-sm btn-primary">Browse Kitchen</button></td>
-                    </tr>
-                    <tr>
-                      <td>Storage Solutions</td>
-                      <td>Wardrobes, shelving, storage bins</td>
-                      <td>$200-500</td>
-                      <td><button className="btn btn-sm btn-primary">Browse Storage</button></td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
+              </div>
+            </div>
+
+            <div className="right-column">
+              {/* Quick Actions */}
+              <div className="quick-actions-section">
+                <div className="section-header">
+                  <div>
+                    <h2 className="section-title">Quick Actions</h2>
+                    <p className="section-subtitle">Manage your inventory efficiently</p>
+                  </div>
+                </div>
+                <div className="actions-grid">
+                  <div className="action-card blue" onClick={() => router.push('/inventory/add')}>
+                    <div className="action-icon">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <line x1="12" y1="5" x2="12" y2="19"/>
+                        <line x1="5" y1="12" x2="19" y2="12"/>
+                      </svg>
+                    </div>
+                    <div className="action-content">
+                      <h3 className="action-title">Add Inventory</h3>
+                      <p className="action-subtitle">Add a new item to the inventory</p>
+                    </div>
+                  </div>
+                  
+                  <div className="action-card green" onClick={downloadInventoryCSV}>
+                    <div className="action-icon">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="7,10 12,15 17,10"/>
+                        <line x1="12" y1="15" x2="12" y2="3"/>
+                      </svg>
+                    </div>
+                    <div className="action-content">
+                      <h3 className="action-title">Download Report</h3>
+                      <p className="action-subtitle">Export full inventory as CSV</p>
+                    </div>
+                  </div>
+
+                  <div className="action-card purple" onClick={downloadMaintenanceCSV}>
+                    <div className="action-icon">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                      </svg>
+                    </div>
+                    <div className="action-content">
+                      <h3 className="action-title">Maintenance Report</h3>
+                      <p className="action-subtitle">Export items needing maintenance</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bulk Purchase Planning */}
+              <div className="bulk-purchase-section">
+                <div className="section-header">
+                  <div>
+                    <h2 className="section-title">Bulk Purchase Planning</h2>
+                    <p className="section-subtitle">Items commonly needed for co-living</p>
+                  </div>
+                </div>
+            <div className="table-container">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Category</th>
+                    <th>Common Items</th>
+                    <th>Estimated Cost</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Bedroom Essentials</td>
+                    <td>Bed frame, mattress, desk, chair</td>
+                    <td>$800-1,200</td>
+                  </tr>
+                  <tr>
+                    <td>Kitchen Basics</td>
+                    <td>Table, chairs, appliances</td>
+                    <td>$400-800</td>
+                  </tr>
+                  <tr>
+                    <td>Storage Solutions</td>
+                    <td>Wardrobes, shelving, storage bins</td>
+                    <td>$200-500</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+              </div>
+            </div>
+          </div>
         </div>
       </DashboardLayout>
       
@@ -502,18 +610,117 @@ export default function Inventory() {
           margin: 0;
           line-height: 1.45;
         }
+        
+        /* Main Layout Grid */
+        .main-content-grid {
+          display: grid;
+          grid-template-columns: 2.5fr 1fr;
+          gap: 24px;
+          align-items: flex-start;
+        }
+
+        .left-column, .right-column {
+          display: flex;
+          flex-direction: column;
+          gap: 24px;
+        }
+
+        /* Metrics Grid */
+        .metrics-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 16px;
+        }
+
+        .metric-card {
+          background: white;
+          border-radius: 6px;
+          padding: 14px;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+          border: 1px solid #e2e8f0;
+          transition: all 0.2s ease;
+        }
+
+        .metric-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .metric-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          margin-bottom: 12px;
+        }
+
+        .metric-info {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          width: 100%;
+        }
+
+        .metric-title {
+          font-size: 11px;
+          font-weight: 600;
+          color: #64748b;
+          margin: 0;
+        }
+
+        .metric-icon {
+          width: 20px;
+          height: 20px;
+          color: #64748b;
+        }
+
+        .metric-content {
+          margin-top: 8px;
+        }
+
+        .metric-value {
+          font-size: 20px;
+          font-weight: 700;
+          color: #1e293b;
+          margin-bottom: 3px;
+          line-height: 1;
+        }
+
+        .metric-subtitle {
+          font-size: 11px;
+          color: #64748b;
+          margin-bottom: 10px;
+        }
+
+        .metric-progress {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+
+        .metric-label {
+          font-size: 12px;
+          color: #64748b;
+        }
+
+        .metric-change {
+          font-size: 12px;
+          font-weight: 600;
+        }
+
+        .metric-change.positive {
+          color: #10b981;
+        }
 
         /* Section Styling */
-        .quick-actions-section,
-        .filter-section,
         .inventory-section,
+        .quick-actions-section,
         .bulk-purchase-section {
           background: white;
           border-radius: 6px;
           padding: 18px;
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
           border: 1px solid #e2e8f0;
-          margin-bottom: 20px;
+          height: fit-content;
         }
 
         .section-header {
@@ -538,22 +745,44 @@ export default function Inventory() {
 
         .section-actions {
           display: flex;
-          gap: 8px;
-        }
-
-        /* Actions Container */
-        .actions-container {
-          display: flex;
           gap: 12px;
-          flex-wrap: wrap;
+          align-items: center;
         }
 
-        /* Form Styling */
+        /* Refresh Button */
+        .refresh-btn {
+          background: #f8fafc;
+          color: #64748b;
+          border: 1px solid #e2e8f0;
+          padding: 10px 14px;
+          border-radius: 6px;
+          font-size: 12px;
+          font-weight: 600;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          transition: all 0.2s ease;
+        }
+
+        .refresh-btn:hover {
+          background: #e2e8f0;
+          transform: translateY(-1px);
+        }
+
+        /* Filters */
+        .filters-container {
+          margin-bottom: 24px;
+          padding: 16px;
+          background: #f8fafc;
+          border-radius: 6px;
+          border: 1px solid #e2e8f0;
+        }
+
         .form-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
           gap: 16px;
-          margin-top: 16px;
         }
 
         .form-group {
@@ -588,51 +817,48 @@ export default function Inventory() {
         /* Table Styling */
         .table-container {
           overflow-x: auto;
-          border-radius: 6px;
-          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          border: none;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
         }
 
         .data-table {
           width: 100%;
-          border-collapse: collapse;
+          border-collapse: separate;
+          border-spacing: 0;
           background: white;
         }
 
         .data-table th {
+          position: sticky;
+          top: 0;
           background: #f8fafc;
-          padding: 12px;
-          text-align: left;
-          font-size: 12px;
-          font-weight: 600;
-          color: #374151;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-          border-bottom: 1px solid #e2e8f0;
+          z-index: 2;
+          font-size: 13px;
+          font-weight: 700;
+          color: #1e293b;
+          padding: 12px 10px;
+          border-bottom: 2px solid #e2e8f0;
         }
 
         .data-table td {
-          padding: 12px;
-          border-bottom: 1px solid #f1f5f9;
+          padding: 16px 10px;
+          border-bottom: 1px solid #e2e8f0;
           font-size: 14px;
           color: #374151;
         }
-
-        .data-table tr:hover {
-          background: #f8fafc;
-        }
-
+        
         .data-table tr:last-child td {
           border-bottom: none;
         }
 
         /* Status Badge */
         .status-badge {
-          padding: 4px 8px;
-          border-radius: 4px;
-          font-size: 11px;
+          padding: 4px 10px;
+          border-radius: 20px;
+          font-size: 12px;
           font-weight: 600;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
+          text-transform: capitalize;
         }
 
         .status-badge.new {
@@ -655,9 +881,90 @@ export default function Inventory() {
           color: #dc2626;
         }
 
-        /* Button Styling */
+        /* Quick Actions Grid */
+        .actions-grid {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        .action-card {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 12px;
+          border-radius: 5px;
+          border: 1px solid #e2e8f0;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          text-decoration: none;
+        }
+
+        .action-card:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .action-card.blue {
+          background: #eff6ff;
+          border-color: #dbeafe;
+        }
+
+        .action-card.green {
+          background: #f0fdf4;
+          border-color: #dcfce7;
+        }
+
+        .action-card.purple {
+          background: #faf5ff;
+          border-color: #e9d5ff;
+        }
+
+        .action-icon {
+          width: 40px;
+          height: 40px;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+
+        .action-card.blue .action-icon {
+          background: #3b82f6;
+          color: white;
+        }
+
+        .action-card.green .action-icon {
+          background: #10b981;
+          color: white;
+        }
+
+        .action-card.purple .action-icon {
+          background: #8b5cf6;
+          color: white;
+        }
+
+        .action-content {
+          flex: 1;
+        }
+
+        .action-title {
+          font-size: 14px;
+          font-weight: 600;
+          color: #1e293b;
+          margin: 0 0 3px 0;
+        }
+
+        .action-subtitle {
+          font-size: 12px;
+          color: #64748b;
+          margin: 0;
+        }
+
+        /* General Button Styling */
         .btn {
-          padding: 12px 16px;
+          padding: 10px 16px;
           border-radius: 6px;
           font-size: 14px;
           font-weight: 600;
@@ -671,16 +978,6 @@ export default function Inventory() {
           border: none;
         }
 
-        .btn-primary {
-          background: #6366f1;
-          color: white;
-        }
-
-        .btn-primary:hover {
-          background: #4f46e5;
-          transform: translateY(-1px);
-        }
-
         .btn-secondary {
           background: #f8fafc;
           color: #1e293b;
@@ -692,19 +989,25 @@ export default function Inventory() {
           transform: translateY(-1px);
         }
 
-        .btn-danger {
-          background: #dc2626;
-          color: white;
-        }
-
-        .btn-danger:hover {
-          background: #b91c1c;
-          transform: translateY(-1px);
-        }
-
         .btn-sm {
           padding: 8px 12px;
           font-size: 12px;
+        }
+        
+        .action-buttons {
+          display: flex;
+          gap: 8px;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .action-buttons .btn-danger {
+          background: #fee2e2;
+          color: #dc2626;
+        }
+        
+        .action-buttons .btn-danger:hover {
+          background: #fecaca;
         }
 
         /* Empty State */
@@ -715,80 +1018,34 @@ export default function Inventory() {
           font-size: 14px;
         }
 
-        /* Alert Styling */
-        .alert {
-          padding: 12px 16px;
-          border-radius: 6px;
-          margin-bottom: 20px;
-          font-size: 14px;
-        }
-        
-        .alert-error {
-          background-color: #fef2f2;
-          border: 1px solid #fecaca;
-          color: #dc2626;
+        .empty-state h3 {
+          font-size: 18px;
+          font-weight: 600;
+          color: #1e293b;
+          margin: 0 0 8px 0;
         }
 
-        /* Loading Indicator */
-        .loading-indicator {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          padding: 48px 24px;
-          text-align: center;
+        .empty-state p {
+          font-size: 14px;
+          margin: 0 0 20px 0;
         }
-        
-        .loading-spinner {
-          width: 40px;
-          height: 40px;
-          border: 4px solid #e2e8f0;
-          border-top-color: #6366f1;
-          border-radius: 50%;
-          animation: spin 1s linear infinite;
-          margin-bottom: 16px;
-        }
-        
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
+
+        /* Loading Indicator & Alerts */
+        .alert { padding: 12px 16px; border-radius: 6px; margin-bottom: 20px; font-size: 14px; }
+        .alert-error { background-color: #fef2f2; border: 1px solid #fecaca; color: #dc2626; }
+        .loading-indicator { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 48px 24px; text-align: center; }
+        .loading-spinner { width: 40px; height: 40px; border: 4px solid #e2e8f0; border-top-color: #6366f1; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 16px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
         /* Responsive Design */
-        @media (max-width: 768px) {
-          .dashboard-container {
-            padding: 16px;
-          }
-
-          .header-content {
-            flex-direction: column;
-            gap: 16px;
-          }
-
-          .section-header {
-            flex-direction: column;
-            gap: 12px;
-          }
-
-          .section-actions {
-            align-self: flex-start;
-          }
-
-          .form-grid {
+        @media (max-width: 1200px) {
+          .main-content-grid {
             grid-template-columns: 1fr;
-            gap: 12px;
           }
-
-          .actions-container {
-            flex-direction: column;
-          }
-
-          .table-container {
-            font-size: 12px;
-          }
-
-          .data-table th,
-          .data-table td {
-            padding: 8px;
+        }
+        @media (max-width: 768px) {
+          .metrics-grid, .form-grid {
+            grid-template-columns: 1fr;
           }
         }
       `}</style>

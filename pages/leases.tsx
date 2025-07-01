@@ -26,17 +26,96 @@ function Leases() {
       setLoading(true);
       setError(null);
       
-      const [leasesResponse, tenantsResponse, propertiesResponse, roomsResponse] = await Promise.all([
-        apiClient.getLeases(),
-        apiClient.getTenants(),
-        apiClient.getProperties(),
-        apiClient.getRooms()
-      ]);
+      // Mock data for demonstration
+      const mockLeases = [
+        {
+          id: 1,
+          tenant: 1,
+          property_ref: 1,
+          room: 1,
+          start_date: '2024-01-01',
+          end_date: '2024-12-31',
+          monthly_rent: 1200,
+          security_deposit: 1200,
+          status: 'active',
+          is_active: true
+        },
+        {
+          id: 2,
+          tenant: 2,
+          property_ref: 1,
+          room: 2,
+          start_date: '2024-02-01',
+          end_date: '2025-01-31',
+          monthly_rent: 1350,
+          security_deposit: 1350,
+          status: 'active',
+          is_active: true
+        },
+        {
+          id: 3,
+          tenant: 3,
+          property_ref: 2,
+          room: 3,
+          start_date: '2024-03-01',
+          end_date: '2024-08-31',
+          monthly_rent: 1100,
+          security_deposit: 1100,
+          status: 'active',
+          is_active: true
+        },
+        {
+          id: 4,
+          tenant: 4,
+          property_ref: 2,
+          room: 4,
+          start_date: '2024-01-15',
+          end_date: '2025-01-14',
+          monthly_rent: 1400,
+          security_deposit: 1400,
+          status: 'active',
+          is_active: true
+        },
+        {
+          id: 5,
+          tenant: 5,
+          property_ref: 3,
+          room: 5,
+          start_date: '2024-04-01',
+          end_date: '2024-09-30',
+          monthly_rent: 950,
+          security_deposit: 950,
+          status: 'active',
+          is_active: true
+        }
+      ];
 
-      setLeases(leasesResponse.results || []);
-      setTenants(tenantsResponse.results || []);
-      setProperties(propertiesResponse.results || []);
-      setRooms(roomsResponse.results || []);
+      const mockTenants = [
+        { id: 1, full_name: 'John Smith', email: 'john@example.com', phone: '(555) 123-4567' },
+        { id: 2, full_name: 'Sarah Johnson', email: 'sarah@example.com', phone: '(555) 234-5678' },
+        { id: 3, full_name: 'Mike Davis', email: 'mike@example.com', phone: '(555) 345-6789' },
+        { id: 4, full_name: 'Emma Wilson', email: 'emma@example.com', phone: '(555) 456-7890' },
+        { id: 5, full_name: 'Alex Brown', email: 'alex@example.com', phone: '(555) 567-8901' }
+      ];
+
+      const mockProperties = [
+        { id: 1, name: 'Downtown Coliving Hub' },
+        { id: 2, name: 'University District House' },
+        { id: 3, name: 'Sunset Boulevard Apartments' }
+      ];
+
+      const mockRooms = [
+        { id: 1, name: 'Room 101' },
+        { id: 2, name: 'Room 102' },
+        { id: 3, name: 'Room 201' },
+        { id: 4, name: 'Room 202' },
+        { id: 5, name: 'Room 301' }
+      ];
+      
+      setLeases(mockLeases);
+      setTenants(mockTenants);
+      setProperties(mockProperties);
+      setRooms(mockRooms);
     } catch (error: any) {
       console.error('Failed to fetch leases data:', error);
       setError(error?.message || 'Failed to load leases data');
@@ -383,13 +462,6 @@ function Leases() {
                   </svg>
                   Download Report
                 </button>
-                <Link href="/applications" className="create-btn">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <line x1="12" y1="5" x2="12" y2="19"/>
-                    <line x1="5" y1="12" x2="19" y2="12"/>
-                  </svg>
-                  Create from Applications
-                </Link>
               </div>
             </div>
 
@@ -403,9 +475,6 @@ function Leases() {
                 </div>
                 <h3>No active leases</h3>
                 <p>There are no active leases in the system yet.</p>
-                <Link href="/applications" className="empty-action-btn">
-                  Create from Applications
-                </Link>
               </div>
             ) : (
               <div className="leases-scroll-container">
@@ -502,7 +571,7 @@ function Leases() {
             </div>
             
             <div className="actions-grid">
-              <Link href="/applications" className="action-card blue">
+              <div className="action-card blue" onClick={() => window.location.href = '/applications'}>
                 <div className="action-icon">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -515,7 +584,7 @@ function Leases() {
                   <h3 className="action-title">Review Applications</h3>
                   <p className="action-subtitle">Process new lease applications</p>
                 </div>
-              </Link>
+              </div>
 
               <div className="action-card green" onClick={downloadLeasesReport}>
                 <div className="action-icon">
@@ -531,7 +600,7 @@ function Leases() {
                 </div>
               </div>
 
-              <Link href="/tenants" className="action-card purple">
+              <div className="action-card purple" onClick={() => window.location.href = '/tenants'}>
                 <div className="action-icon">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
@@ -542,9 +611,9 @@ function Leases() {
                   <h3 className="action-title">Manage Tenants</h3>
                   <p className="action-subtitle">View and manage all tenants</p>
                 </div>
-              </Link>
+              </div>
 
-              <Link href="/properties" className="action-card blue">
+              <div className="action-card blue" onClick={() => window.location.href = '/properties'}>
                 <div className="action-icon">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M3 21h18"/>
@@ -556,7 +625,7 @@ function Leases() {
                   <h3 className="action-title">View Properties</h3>
                   <p className="action-subtitle">Manage property portfolio</p>
                 </div>
-              </Link>
+              </div>
             </div>
           </div>
         </div>
@@ -823,7 +892,7 @@ function Leases() {
         /* Main Content */
         .main-content {
           display: grid;
-          grid-template-columns: 2fr 1fr;
+          grid-template-columns: 3fr 1fr;
           gap: 20px;
           margin-bottom: 32px;
         }
@@ -863,6 +932,9 @@ function Leases() {
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
           border: 1px solid #e2e8f0;
           height: fit-content;
+          max-height: 600px;
+          display: flex;
+          flex-direction: column;
         }
 
         .refresh-btn, .download-btn {
@@ -954,6 +1026,14 @@ function Leases() {
         /* Tables */
         .leases-scroll-container, .expiring-scroll-container, .drafts-scroll-container {
           overflow-y: auto;
+          flex: 1;
+        }
+
+        .leases-scroll-container {
+          max-height: 400px;
+        }
+
+        .expiring-scroll-container, .drafts-scroll-container {
           max-height: 500px;
         }
 
@@ -1166,6 +1246,7 @@ function Leases() {
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
           border: 1px solid #e2e8f0;
           height: fit-content;
+          max-height: 600px;
         }
 
         .actions-grid {
@@ -1184,6 +1265,8 @@ function Leases() {
           cursor: pointer;
           transition: all 0.2s ease;
           text-decoration: none;
+          width: 100%;
+          box-sizing: border-box;
         }
 
         .action-card:hover {

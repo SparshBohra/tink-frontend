@@ -543,475 +543,287 @@ function ManagersPage() {
 
           {error && <div className="alert alert-error">{error}</div>}
           
-          {/* Team Metrics */}
-          <div className="metrics-grid">
-            <div className="metric-card">
-              <div className="metric-header">
-                <div className="metric-info">
-                  <h3 className="metric-title">Total Managers</h3>
-                  <div className="metric-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M16 7C16 9.20914 14.2091 11 12 11C9.79086 11 8 9.20914 8 7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M12 14C8.13401 14 5 17.134 5 21H19C19 17.134 15.866 14 12 14Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </div>
-                </div>
-              </div>
-              <div className="metric-content">
-                <div className="metric-value">{managers.length}</div>
-                <div className="metric-subtitle">Active team members</div>
-              </div>
-            </div>
-
-            <div className="metric-card">
-              <div className="metric-header">
-                <div className="metric-info">
-                  <h3 className="metric-title">Active Managers</h3>
-                  <div className="metric-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </div>
-                </div>
-              </div>
-              <div className="metric-content">
-                <div className="metric-value">{managers.filter(m => m.is_active).length}</div>
-                <div className="metric-subtitle">Currently active</div>
-              </div>
-            </div>
-
-            <div className="metric-card">
-              <div className="metric-header">
-                <div className="metric-info">
-                  <h3 className="metric-title">Full Access</h3>
-                  <div className="metric-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M12 15L8 11L16 11L12 15Z" fill="currentColor"/>
-                      <path d="M17 8L12 3L7 8H17Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M21 12H3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </div>
-                </div>
-              </div>
-              <div className="metric-content">
-                <div className="metric-value">{managers.filter(m => m.access_level === 'full' || m.role === 'admin' || m.role === 'owner').length}</div>
-                <div className="metric-subtitle">With full access</div>
-              </div>
-            </div>
-
-            <div className="metric-card">
-              <div className="metric-header">
-                <div className="metric-info">
-                  <h3 className="metric-title">Properties Covered</h3>
-                  <div className="metric-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M9 22V12H15V22" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </div>
-                </div>
-              </div>
-              <div className="metric-content">
-                <div className="metric-value">{properties.length}</div>
-                <div className="metric-subtitle">Total properties</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Actions */}
-          <div className="action-cards-grid">
-            <div className="action-card" onClick={() => setShowForm(true)}>
-              <div className="action-icon">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 5V19M5 12H19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </div>
-              <div className="action-content">
-                <h3 className="action-title">{isAdmin() ? 'Create Manager' : 'Add Manager'}</h3>
-                <p className="action-description">Add a new team member</p>
-              </div>
-            </div>
-
-            <div className="action-card" onClick={fetchManagers}>
-              <div className="action-icon">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M1 4V10H7M23 20V14H17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M22.99 14A9 9 0 0 1 18.36 18.36L23 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </div>
-              <div className="action-content">
-                <h3 className="action-title">Refresh Data</h3>
-                <p className="action-description">Update team information</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Filters Section */}
-          <div className="section-card">
-            <h2 className="section-title">Filters & Sorting</h2>
-            <div className="filters-container">
-              <div className="filter-group">
-                <label htmlFor="propertyFilter">Filter by Property:</label>
-                <select 
-                  id="propertyFilter"
-                  value={filterByProperty || ''} 
-                  onChange={(e) => setFilterByProperty(e.target.value ? Number(e.target.value) : null)}
-                  className="filter-select"
-                >
-                  <option value="">All Properties</option>
-                  {properties.map(property => (
-                    <option key={property.id} value={property.id}>
-                      {property.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {isAdmin() && (
-                <div className="filter-group">
-                  <label htmlFor="landlordFilter">Filter by Landlord:</label>
-                  <select 
-                    id="landlordFilter"
-                    value={filterByLandlord || ''} 
-                    onChange={(e) => setFilterByLandlord(e.target.value ? Number(e.target.value) : null)}
-                    className="filter-select"
-                  >
-                    <option value="">All Landlords</option>
-                    {landlords.map(landlord => (
-                      <option key={landlord.id} value={landlord.id}>
-                        {landlord.full_name} ({landlord.org_name})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              <div className="filter-group">
-                <label htmlFor="sortBy">Sort by:</label>
-                <select 
-                  id="sortBy"
-                  value={sortBy} 
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="filter-select"
-                >
-                  <option value="full_name">Name</option>
-                  <option value="email">Email</option>
-                  {isAdmin() && <option value="landlord">Landlord</option>}
-                  <option value="access_level">Access Level</option>
-                  <option value="properties">Property Count</option>
-                  <option value="status">Status</option>
-                </select>
-              </div>
-
-              <div className="filter-group">
-                <label htmlFor="sortOrder">Order:</label>
-                <select 
-                  id="sortOrder"
-                  value={sortOrder} 
-                  onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
-                  className="filter-select"
-                >
-                  <option value="asc">Ascending</option>
-                  <option value="desc">Descending</option>
-                </select>
-              </div>
-
-              <div className="filter-actions">
-                <button 
-                  className="action-button secondary" 
-                  onClick={clearFilters}
-                  disabled={!filterByProperty && !filterByLandlord}
-                >
-                  Clear Filters
-                </button>
-                <span className="filter-count">
+          {/* Manager List Section */}
+          <div className="managers-section">
+            <div className="section-header">
+              <div>
+                <h2 className="section-title">Manager List ({filteredAndSortedManagers.length})</h2>
+                <p className="section-subtitle">
                   Showing {filteredAndSortedManagers.length} of {managers.length} managers
-                  {(filterByProperty || filterByLandlord) && ' (filtered)'}
-                  {sortBy !== 'full_name' && ` (sorted by ${sortBy})`}
-                </span>
-                {(router.query.landlord || router.query.property || router.query.action) && (
-                  <div className="url-filter-notice">
-                    <span className="notice-icon">🔗</span>
-                    <span className="notice-text">
-                      {router.query.action === 'assign' && 'Ready to assign manager to landlord'}
-                      {router.query.landlord && !router.query.action && (() => {
-                        const landlordId = parseInt(router.query.landlord as string);
-                        const landlord = landlords.find(l => l.id === landlordId);
-                        return `Filtered by landlord: ${landlord ? `${landlord.full_name} (${landlord.org_name})` : `ID ${landlordId}`}`;
-                      })()}
-                      {router.query.property && (() => {
-                        const propertyId = parseInt(router.query.property as string);
-                        const property = properties.find(p => p.id === propertyId);
-                        return `Filtered by property: ${property ? property.name : `ID ${propertyId}`}`;
-                      })()}
-                    </span>
+                </p>
+              </div>
+              <div className="section-actions">
+                <button 
+                  onClick={() => setShowForm(true)} 
+                  className="btn btn-primary add-manager-btn"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <line x1="19" y1="8" x2="19" y2="14"/>
+                    <line x1="22" y1="11" x2="16" y2="11"/>
+                  </svg>
+                  Add Manager
+                </button>
+                <button onClick={fetchManagers} className="refresh-btn">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="23 4 23 10 17 10"/>
+                    <polyline points="1 20 1 14 7 14"/>
+                    <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>
+                  </svg>
+                  Refresh
+                </button>
+              </div>
+            </div>
+                
+                {/* Filters */}
+                <div className="filters-container">
+                  <div className="form-grid">
+                    <div className="form-group">
+                      <label htmlFor="propertyFilter">Filter by Property:</label>
+                      <select 
+                        id="propertyFilter"
+                        value={filterByProperty || ''} 
+                        onChange={(e) => setFilterByProperty(e.target.value ? Number(e.target.value) : null)}
+                        className="form-input"
+                      >
+                        <option value="">All Properties</option>
+                        {properties.map(property => (
+                          <option key={property.id} value={property.id}>
+                            {property.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {isAdmin() && (
+                      <div className="form-group">
+                        <label htmlFor="landlordFilter">Filter by Landlord:</label>
+                        <select 
+                          id="landlordFilter"
+                          value={filterByLandlord || ''} 
+                          onChange={(e) => setFilterByLandlord(e.target.value ? Number(e.target.value) : null)}
+                          className="form-input"
+                        >
+                          <option value="">All Landlords</option>
+                          {landlords.map(landlord => (
+                            <option key={landlord.id} value={landlord.id}>
+                              {landlord.full_name} ({landlord.org_name})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                    
+                    <div className="form-group">
+                      <button className="btn btn-secondary" onClick={clearFilters} style={{ alignSelf: 'flex-end' }}>Clear</button>
+                    </div>
+                  </div>
+                </div>
+                
+                {filteredAndSortedManagers.length > 0 ? (
+                  <div className="table-container">
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th className="table-left" onClick={() => handleSort('full_name')}>Name {sortBy === 'full_name' && (sortOrder === 'asc' ? '▲' : '▼')}</th>
+                          <th className="table-left" onClick={() => handleSort('email')}>Email {sortBy === 'email' && (sortOrder === 'asc' ? '▲' : '▼')}</th>
+                          {isAdmin() && <th className="table-left" onClick={() => handleSort('landlord')}>Works Under {sortBy === 'landlord' && (sortOrder === 'asc' ? '▲' : '▼')}</th>}
+                          <th className="table-center" onClick={() => handleSort('access_level')}>Access Level {sortBy === 'access_level' && (sortOrder === 'asc' ? '▲' : '▼')}</th>
+                          <th className="table-left" onClick={() => handleSort('properties')}>Assigned Properties {sortBy === 'properties' && (sortOrder === 'asc' ? '▲' : '▼')}</th>
+                          <th className="table-center" onClick={() => handleSort('status')}>Status {sortBy === 'status' && (sortOrder === 'asc' ? '▲' : '▼')}</th>
+                          <th className="table-center">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredAndSortedManagers.map((manager) => (
+                          <tr key={manager.id}>
+                            <td className="table-left">
+                              <strong>{manager.full_name}</strong>
+                            </td>
+                            <td className="table-left">{manager.email}</td>
+                            {isAdmin() && (
+                              <td className="table-left">
+                                {manager.role === 'owner' || manager.role === 'admin' ? (
+                                  <span className="text-secondary">Platform Role</span>
+                                ) : (
+                                  <div>
+                                    {manager.landlord_name ? (
+                                      <>
+                                        <strong>{manager.landlord_name}</strong>
+                                        {manager.landlord_org_name && (
+                                          <div className="text-small text-secondary">
+                                            {manager.landlord_org_name}
+                                          </div>
+                                        )}
+                                      </>
+                                    ) : (
+                                      <span className="text-warning">No Landlord Assigned</span>
+                                    )}
+                                  </div>
+                                )}
+                              </td>
+                            )}
+                            <td className="table-center">
+                              {getAccessLevelBadge(manager)}
+                            </td>
+                            <td className="table-left" style={{ maxWidth: '200px' }}>
+                              {getPropertyList(manager)}
+                            </td>
+                            <td className="table-center">
+                              <span className={`status-badge ${manager.is_active ? 'status-success' : 'status-error'}`}>
+                                {manager.is_active ? 'Active' : 'Inactive'}
+                              </span>
+                            </td>
+                            <td className="table-center">
+                              <div className="table-actions">
+                                <button 
+                                  className="action-button warning small"
+                                  onClick={() => handleEditManager(manager)}
+                                >
+                                  Edit
+                                </button>
+                                {manager.role === 'manager' && (
+                                  <button 
+                                    className="action-button info small"
+                                    onClick={() => handleEditAssignments(manager)}
+                                    title="Edit Property Assignments"
+                                  >
+                                    Assignments
+                                  </button>
+                                )}
+                                <button 
+                                  className="action-button danger small" 
+                                  onClick={() => handleDeleteManager(manager.id, manager.full_name)}
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="empty-state">
+                    <h3>No Managers Found</h3>
+                    <p>
+                      {isAdmin() 
+                        ? "No managers are registered on the platform." 
+                        : "No managers have been assigned to your organization. Create your first manager to get started with team management."}
+                    </p>
                   </div>
                 )}
               </div>
-            </div>
-          </div>
-
+          
+          {/* Add/Edit Manager Form Modal */}
           {showForm && (
-            <div className="section-card">
-              <h2 className="section-title">{editingManager ? 'Edit Manager' : 'Add New Manager'}</h2>
-              <form onSubmit={handleCreateManager} className="manager-form">
-                <div className="form-group">
-                  <label htmlFor="full_name">Full Name</label>
-                  <input
-                    type="text"
-                    id="full_name"
-                    value={formData.full_name}
-                    onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                    required
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label htmlFor="email">Email</label>
-                  <input
-                    type="email"
-                    id="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    required
-                  />
-                </div>
-                
-                {!editingManager && (
-                  <>
-                    <div className="form-group">
-                      <label htmlFor="username">Username</label>
-                      <input
-                        type="text"
-                        id="username"
-                        value={formData.username}
-                        onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                        required
-                      />
-                    </div>
-                    
-                    <div className="form-group">
-                      <label htmlFor="password">Password</label>
-                      <input
-                        type="password"
-                        id="password"
-                        value={formData.password}
-                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                        required
-                      />
-                    </div>
-                    
-                    <div className="form-group">
-                      <label htmlFor="password_confirm">Confirm Password</label>
-                      <input
-                        type="password"
-                        id="password_confirm"
-                        value={formData.password_confirm || ''}
-                        onChange={(e) => setFormData({ ...formData, password_confirm: e.target.value })}
-                        required
-                      />
-                    </div>
-
-                    {/* Property Access Selection */}
-                    <div className="form-group">
-                      <label className="access-main-label">
-                        <span className="label-icon">🏢</span>
-                        Property Access
-                      </label>
-                      <div className="property-access-section">
-                        <div className="access-option-card">
-                          <label className="access-toggle">
-                            <input
-                              type="checkbox"
-                              checked={formData.access_all_properties}
-                              onChange={handleSelectAllProperties}
-                            />
-                            <div className="toggle-content">
-                              <div className="toggle-header">
-                                <span className="toggle-icon">🌟</span>
-                                <span className="toggle-title">Full Access</span>
-                              </div>
-                              <p className="toggle-description">Manager can access all properties in your portfolio</p>
-                            </div>
-                          </label>
-                        </div>
-                        
-                        {!formData.access_all_properties && (
-                          <div className="property-selection">
-                            <div className="selection-header">
-                              <span className="selection-icon">🎯</span>
-                              <h4>Select Specific Properties</h4>
-                              <p className="selection-subtitle">Choose which properties this manager can access</p>
-                            </div>
-                            <div className="property-grid">
-                              {properties.map(property => (
-                                <div key={property.id} className="property-card">
-                                  <label className="property-checkbox">
-                                    <input
-                                      type="checkbox"
-                                      checked={formData.property_ids?.includes(property.id) || false}
-                                      onChange={() => handlePropertySelection(property.id)}
-                                    />
-                                    <div className="property-info">
-                                      <div className="property-name">{property.name}</div>
-                                      <div className="property-address">{property.full_address || property.address}</div>
-                                      <div className="property-stats">
-                                        <span className="room-count">{property.total_rooms} rooms</span>
-                                        {property.vacant_rooms > 0 && (
-                                          <span className="vacant-badge">{property.vacant_rooms} vacant</span>
-                                        )}
-                                      </div>
-                                    </div>
-                                  </label>
-                                </div>
-                              ))}
-                            </div>
-                            {properties.length === 0 && (
-                              <div className="empty-properties">
-                                <span className="empty-icon">🏠</span>
-                                <p>No properties available. Create properties first to assign them to managers.</p>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </>
-                )}
-                
-                <div className="form-actions">
-                  <button type="submit" className="action-button primary" disabled={formLoading}>
-                    {formLoading ? 'Saving...' : (editingManager ? 'Update Manager' : 'Create Manager')}
-                  </button>
+            <div className="modal-overlay" onClick={() => setShowForm(false)}>
+              <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                <div className="modal-header">
+                  <h2 className="modal-title">{editingManager ? 'Edit Manager' : 'Add New Manager'}</h2>
                   <button 
-                    type="button" 
-                    className="action-button secondary" 
+                    className="modal-close" 
                     onClick={() => {
                       setShowForm(false);
-                      setShowPropertySelection(false);
                       setEditingManager(null);
                       resetForm();
                     }}
                   >
-                    Cancel
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <line x1="18" y1="6" x2="6" y2="18"/>
+                      <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
                   </button>
                 </div>
-              </form>
+                <form onSubmit={handleCreateManager} className="manager-form">
+                  <div className="form-group">
+                    <label htmlFor="full_name">Full Name</label>
+                    <input
+                      type="text"
+                      id="full_name"
+                      value={formData.full_name}
+                      onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                      required
+                    />
+                  </div>
+                  
+                  <div className="form-group">
+                    <label htmlFor="email">Email</label>
+                    <input
+                      type="email"
+                      id="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      required
+                    />
+                  </div>
+                  
+                  {!editingManager && (
+                    <>
+                      <div className="form-group">
+                        <label htmlFor="username">Username</label>
+                        <input
+                          type="text"
+                          id="username"
+                          value={formData.username}
+                          onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                          required
+                        />
+                      </div>
+                      
+                      <div className="form-group">
+                        <label htmlFor="password">Password</label>
+                        <input
+                          type="password"
+                          id="password"
+                          value={formData.password}
+                          onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                          required
+                        />
+                      </div>
+                      
+                      <div className="form-group">
+                        <label htmlFor="password_confirm">Confirm Password</label>
+                        <input
+                          type="password"
+                          id="password_confirm"
+                          value={formData.password_confirm || ''}
+                          onChange={(e) => setFormData({ ...formData, password_confirm: e.target.value })}
+                          required
+                        />
+                      </div>
+                    </>
+                  )}
+                  
+                  <div className="form-actions">
+                    <button type="submit" className="btn btn-primary" disabled={formLoading}>
+                      {formLoading ? 'Saving...' : (editingManager ? 'Update Manager' : 'Create Manager')}
+                    </button>
+                    <button 
+                      type="button" 
+                      className="btn btn-secondary" 
+                      onClick={() => {
+                        setShowForm(false);
+                        setEditingManager(null);
+                        resetForm();
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
           )}
-
-          <div className="section-card">
-            <h2 className="section-title">Manager List</h2>
-            {filteredAndSortedManagers.length > 0 ? (
-              <div className="table-container">
-                <div className="table-scroll">
-                  <table className="data-table">
-                    <thead>
-                      <tr>
-                        <th>Name</th>
-                        <th>Email</th>
-                        {isAdmin() && <th>Works Under</th>}
-                        <th>Access Level</th>
-                        <th>Assigned Properties</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredAndSortedManagers.map((manager) => (
-                        <tr key={manager.id}>
-                          <td>
-                            <strong>{manager.full_name}</strong>
-                          </td>
-                          <td>{manager.email}</td>
-                          {isAdmin() && (
-                            <td>
-                              {manager.role === 'owner' || manager.role === 'admin' ? (
-                                <span className="text-secondary">Platform Role</span>
-                              ) : (
-                                <div>
-                                  {manager.landlord_name ? (
-                                    <>
-                                      <strong>{manager.landlord_name}</strong>
-                                      {manager.landlord_org_name && (
-                                        <div className="text-small text-secondary">
-                                          {manager.landlord_org_name}
-                                        </div>
-                                      )}
-                                    </>
-                                  ) : (
-                                    <span className="text-warning">No Landlord Assigned</span>
-                                  )}
-                                </div>
-                              )}
-                            </td>
-                          )}
-                          <td>
-                            {getAccessLevelBadge(manager)}
-                          </td>
-                          <td style={{ maxWidth: '200px' }}>
-                            {getPropertyList(manager)}
-                          </td>
-                          <td>
-                            <span className={`status-badge ${manager.is_active ? 'status-success' : 'status-error'}`}>
-                              {manager.is_active ? 'Active' : 'Inactive'}
-                            </span>
-                          </td>
-                          <td>
-                            <div className="table-actions">
-                              <button 
-                                className="action-button warning small"
-                                onClick={() => handleEditManager(manager)}
-                              >
-                                Edit
-                              </button>
-                              {manager.role === 'manager' && (
-                                <button 
-                                  className="action-button info small"
-                                  onClick={() => handleEditAssignments(manager)}
-                                  title="Edit Property Assignments"
-                                >
-                                  Assignments
-                                </button>
-                              )}
-                              <button 
-                                className="action-button danger small" 
-                                onClick={() => handleDeleteManager(manager.id, manager.full_name)}
-                              >
-                                Delete
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            ) : (
-              <div className="empty-state">
-                <div className="empty-icon">
-                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M16 7C16 9.20914 14.2091 11 12 11C9.79086 11 8 9.20914 8 7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    <path d="M12 14C8.13401 14 5 17.134 5 21H19C19 17.134 15.866 14 12 14Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </div>
-                <h3 className="empty-title">No Managers Found</h3>
-                <p className="empty-description">
-                  {isAdmin() 
-                    ? "No managers are registered on the platform." 
-                    : "No managers have been assigned to your organization. Create your first manager to get started with team management."}
-                </p>
-              </div>
-            )}
-          </div>
         </div>
       </DashboardLayout>
       
       {/* Property Assignment Modal */}
-      {selectedManagerForAssignment && (
+      {selectedManagerForAssignment && assignmentModalOpen && (
         <PropertyAssignmentModal
-          manager={selectedManagerForAssignment}
+          manager={selectedManagerForAssignment!}
           isOpen={assignmentModalOpen}
           onClose={handleAssignmentModalClose}
           onSave={handleAssignmentModalSave}
@@ -1061,764 +873,386 @@ function ManagersPage() {
           margin: 0;
           line-height: 1.45;
         }
-
-        .metrics-grid {
-          display: grid;
-          grid-template-columns: repeat(4, 1fr);
-          gap: 16px;
-          margin-bottom: 24px;
-        }
-
-        @media (max-width: 1200px) {
-          .metrics-grid {
-            grid-template-columns: repeat(2, 1fr);
-          }
-        }
-
-        @media (max-width: 768px) {
-          .metrics-grid {
-            grid-template-columns: 1fr;
-          }
-        }
-
-        .metric-card {
+        
+        /* Section Styling */
+        .managers-section {
           background: white;
           border-radius: 6px;
-          padding: 14px;
-          border: 1px solid #e5e7eb;
-          transition: all 0.2s ease;
+          padding: 18px;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+          border: 1px solid #e2e8f0;
+          height: fit-content;
         }
 
-        .metric-card:hover {
-          transform: translateY(-1px);
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        }
-
-        .metric-header {
+        .section-header {
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
-          margin-bottom: 12px;
-        }
-
-        .metric-info {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          width: 100%;
-        }
-
-        .metric-title {
-          font-size: 14px;
-          font-weight: 500;
-          color: #6b7280;
-          margin: 0;
-        }
-
-        .metric-icon {
-          color: #9ca3af;
-          opacity: 0.7;
-        }
-
-        .metric-content {
-          text-align: left;
-        }
-
-        .metric-value {
-          font-size: 28px;
-          font-weight: 700;
-          color: #111827;
-          line-height: 1;
-          margin-bottom: 4px;
-        }
-
-        .metric-subtitle {
-          font-size: 12px;
-          color: #9ca3af;
-          margin: 0;
-        }
-
-        .action-cards-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-          gap: 16px;
-          margin-bottom: 24px;
-        }
-
-        .action-card {
-          background: white;
-          border-radius: 6px;
-          padding: 16px;
-          border: 1px solid #e5e7eb;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          display: flex;
-          align-items: center;
-          gap: 12px;
-        }
-
-        .action-card:hover {
-          transform: translateY(-1px);
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-          border-color: #d1d5db;
-        }
-
-        .action-icon {
-          width: 32px;
-          height: 32px;
-          background: #f3f4f6;
-          border-radius: 4px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: #6b7280;
-          flex-shrink: 0;
-        }
-
-        .action-content {
-          flex: 1;
-        }
-
-        .action-title {
-          font-size: 14px;
-          font-weight: 600;
-          color: #111827;
-          margin: 0 0 2px 0;
-        }
-
-        .action-description {
-          font-size: 12px;
-          color: #6b7280;
-          margin: 0;
-        }
-
-        .section-card {
-          background: white;
-          border-radius: 6px;
-          padding: 20px;
-          border: 1px solid #e5e7eb;
-          margin-bottom: 24px;
+          margin-bottom: 16px;
         }
 
         .section-title {
-          font-size: 18px;
-          font-weight: 600;
-          color: #111827;
-          margin: 0 0 16px 0;
-        }
-        
-        .manager-form { 
-          max-width: 600px;
-        }
-        
-        .form-group {
-          margin-bottom: 1rem;
-        }
-        
-        .form-group label {
-          display: block;
-          margin-bottom: 0.5rem;
-          font-weight: 600;
-          color: #374151;
-        }
-        
-        .form-group input {
-          width: 100%;
-          padding: 0.75rem;
-          border: 1px solid #d1d5db;
-          border-radius: 0.375rem;
-          font-size: 1rem;
-        }
-        
-        .form-group input:focus {
-          outline: none;
-          border-color: #3b82f6;
-          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+          font-size: 14px;
+          font-weight: 700;
+          color: #1e293b;
+          margin: 0 0 3px 0;
         }
 
-        .property-access-section {
-          background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-          border: 2px solid #e2e8f0;
-          border-radius: 12px;
-          padding: 1.5rem;
-          margin-top: 0.5rem;
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+        .section-subtitle {
+          font-size: 12px;
+          color: #64748b;
+          margin: 0;
         }
 
-        /* Professional Property Access Styling */
-        .access-main-label {
+        .section-actions {
+          display: flex;
+          gap: 12px;
+          align-items: center;
+        }
+
+        /* Refresh Button */
+        .refresh-btn {
+          background: #f8fafc;
+          color: #64748b;
+          border: 1px solid #e2e8f0;
+          padding: 10px 14px;
+          border-radius: 6px;
+          font-size: 12px;
+          font-weight: 600;
+          cursor: pointer;
           display: flex;
           align-items: center;
-          gap: 0.5rem;
-          font-size: 1.1rem;
-          font-weight: 600;
-          color: #1f2937;
-          margin-bottom: 1rem;
+          gap: 6px;
+          transition: all 0.2s ease;
         }
 
-        .label-icon {
-          font-size: 1.2rem;
-        }
-
-        .access-option-card {
-          background: white;
-          border: 2px solid #e2e8f0;
-          border-radius: 10px;
-          padding: 1.25rem;
-          margin-bottom: 1.5rem;
-          transition: all 0.3s ease;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        }
-
-        .access-option-card:hover {
-          border-color: #3b82f6;
-          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+        .refresh-btn:hover {
+          background: #e2e8f0;
           transform: translateY(-1px);
         }
 
-        .access-toggle {
-          display: flex;
-          align-items: flex-start;
-          gap: 0.75rem;
+        /* Add Manager Button */
+        .add-manager-btn {
+          background: #6366f1;
+          color: white;
+          border: none;
+          padding: 10px 16px;
+          border-radius: 6px;
+          font-size: 14px;
+          font-weight: 600;
           cursor: pointer;
-          width: 100%;
-        }
-
-        .access-toggle input[type="checkbox"] {
-          width: 18px;
-          height: 18px;
-          margin-top: 2px;
-          cursor: pointer;
-          accent-color: #3b82f6;
-        }
-
-        .toggle-content {
-          flex: 1;
-        }
-
-        .toggle-header {
           display: flex;
           align-items: center;
-          gap: 0.5rem;
-          margin-bottom: 0.25rem;
-        }
-
-        .toggle-icon {
-          font-size: 1.1rem;
-        }
-
-        .toggle-title {
-          font-size: 1.1rem;
-          font-weight: 600;
-          color: #1f2937;
-        }
-
-        .toggle-description {
-          color: #6b7280;
-          font-size: 0.9rem;
-          margin: 0;
-          line-height: 1.4;
-        }
-
-        .property-selection {
-          background: white;
-          border: 2px dashed #cbd5e1;
-          border-radius: 10px;
-          padding: 1.5rem;
-        }
-
-        .selection-header {
-          text-align: center;
-          margin-bottom: 1.5rem;
-        }
-
-        .selection-icon {
-          font-size: 2rem;
-          display: block;
-          margin-bottom: 0.5rem;
-        }
-
-        .selection-header h4 {
-          margin: 0 0 0.5rem 0;
-          color: #1f2937;
-          font-size: 1.1rem;
-          font-weight: 600;
-        }
-
-        .selection-subtitle {
-          color: #6b7280;
-          font-size: 0.9rem;
-          margin: 0;
-        }
-
-        .property-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-          gap: 1rem;
-          max-height: 300px;
-          overflow-y: auto;
-          padding: 0.5rem;
-        }
-
-        .property-card {
-          background: white;
-          border: 2px solid #f1f5f9;
-          border-radius: 8px;
-          transition: all 0.3s ease;
-          overflow: hidden;
-        }
-
-        .property-card:hover {
-          border-color: #3b82f6;
-          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
-          transform: translateY(-2px);
-        }
-
-        .property-checkbox {
-          display: flex;
-          align-items: flex-start;
-          gap: 0.75rem;
-          padding: 1rem;
-          cursor: pointer;
-          width: 100%;
-        }
-
-        .property-checkbox input[type="checkbox"] {
-          width: 16px;
-          height: 16px;
-          margin-top: 2px;
-          cursor: pointer;
-          accent-color: #3b82f6;
-        }
-
-        .property-info {
-          flex: 1;
-        }
-
-        .property-name {
-          font-weight: 600;
-          color: #1f2937;
-          font-size: 0.95rem;
-          margin-bottom: 0.25rem;
-        }
-
-        .property-address {
-          color: #6b7280;
-          font-size: 0.85rem;
-          line-height: 1.3;
-          margin-bottom: 0.5rem;
-        }
-
-        .property-stats {
-          display: flex;
-          gap: 0.5rem;
-          flex-wrap: wrap;
-        }
-
-        .room-count {
-          background: #f3f4f6;
-          color: #374151;
-          padding: 0.125rem 0.5rem;
-          border-radius: 12px;
-          font-size: 0.75rem;
-          font-weight: 500;
-        }
-
-        .vacant-badge {
-          background: #fef3c7;
-          color: #d97706;
-          padding: 0.125rem 0.5rem;
-          border-radius: 12px;
-          font-size: 0.75rem;
-          font-weight: 500;
-        }
-
-        .empty-properties {
-          text-align: center;
-          padding: 2rem;
-          color: #6b7280;
-        }
-
-        .empty-icon {
-          font-size: 3rem;
-          display: block;
-          margin-bottom: 0.5rem;
-          opacity: 0.7;
-        }
-
-        .text-muted {
-          color: #6b7280;
-          font-size: 0.875rem;
-        }
-
-        .property-display {
-          max-width: 200px;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-        
-        .form-actions { 
-          display: flex; 
-          gap: 1rem; 
-          margin-top: 1.5rem; 
-          padding-top: 1rem;
-          border-top: 1px solid #e5e7eb;
-        }
-        
-        .table-actions { 
-          display: flex; 
           gap: 8px;
-          justify-content: center; 
+          transition: all 0.2s ease;
         }
 
-        .table-container {
-          border: 1px solid #e5e7eb;
-          border-radius: 6px;
-          overflow: hidden;
+        .add-manager-btn:hover {
+          background: #4f46e5;
+          transform: translateY(-1px);
         }
 
-        .table-scroll {
-          overflow-x: auto;
-          max-height: 600px;
+        /* Modal Styles */
+        .modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.5);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 1000;
+          padding: 20px;
+        }
+
+        .modal-content {
+          background: white;
+          border-radius: 8px;
+          width: 100%;
+          max-width: 500px;
+          max-height: 90vh;
           overflow-y: auto;
+          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 20px 24px 16px 24px;
+          border-bottom: 1px solid #e2e8f0;
+        }
+
+        .modal-title {
+          font-size: 18px;
+          font-weight: 700;
+          color: #1e293b;
+          margin: 0;
+        }
+
+        .modal-close {
+          background: none;
+          border: none;
+          cursor: pointer;
+          padding: 4px;
+          color: #64748b;
+          border-radius: 4px;
+          transition: all 0.2s ease;
+        }
+
+        .modal-close:hover {
+          background: #f1f5f9;
+          color: #1e293b;
+        }
+
+        .manager-form {
+          padding: 20px 24px 24px 24px;
+        }
+
+        /* Filters */
+        .filters-container {
+          margin-bottom: 24px;
+          padding: 16px;
+          background: #f8fafc;
+          border-radius: 6px;
+          border: 1px solid #e2e8f0;
+        }
+
+        .form-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+          gap: 16px;
+        }
+
+        .form-group {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+
+        .form-label {
+          font-size: 12px;
+          font-weight: 600;
+          color: #374151;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        .form-input {
+          padding: 10px 12px;
+          border: 1px solid #d1d5db;
+          border-radius: 6px;
+          font-size: 14px;
+          transition: all 0.2s ease;
+          background: white;
+        }
+
+        .form-input:focus {
+          outline: none;
+          border-color: #6366f1;
+          box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        /* Table Styling */
+        .table-container {
+          overflow-x: auto;
+          border-radius: 8px;
+          border: none;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
         }
 
         .data-table {
           width: 100%;
-          border-collapse: collapse;
-          font-size: 14px;
-        }
-
-        .data-table thead {
-          background: #f9fafb;
-          position: sticky;
-          top: 0;
-          z-index: 10;
+          border-collapse: separate;
+          border-spacing: 0;
+          background: white;
         }
 
         .data-table th {
-          padding: 12px 16px;
-          text-align: left;
-          font-weight: 600;
-          color: #374151;
-          border-bottom: 1px solid #e5e7eb;
-          white-space: nowrap;
+          position: sticky;
+          top: 0;
+          background: #f8fafc;
+          z-index: 2;
+          font-size: 13px;
+          font-weight: 700;
+          color: #1e293b;
+          padding: 12px 10px;
+          border-bottom: 2px solid #e2e8f0;
+          cursor: pointer;
+        }
+        
+        .data-table th:hover {
+          background: #f1f5f9;
         }
 
         .data-table td {
-          padding: 12px 16px;
-          border-bottom: 1px solid #f3f4f6;
-          vertical-align: middle;
-        }
-
-        .data-table tr:hover {
-          background: #f9fafb;
-        }
-
-        .empty-state {
-          text-align: center;
-          padding: 48px 24px;
-          color: #6b7280;
-        }
-
-        .empty-icon {
-          margin: 0 auto 16px;
-          opacity: 0.5;
-        }
-
-        .empty-title {
-          font-size: 18px;
-          font-weight: 600;
-          color: #374151;
-          margin: 0 0 8px 0;
-        }
-
-        .empty-description {
+          padding: 16px 10px;
+          border-bottom: 1px solid #e2e8f0;
           font-size: 14px;
-          color: #6b7280;
-          margin: 0;
-          max-width: 400px;
-          margin-left: auto;
-          margin-right: auto;
+          color: #374151;
+        }
+        
+        .data-table tr:last-child td {
+          border-bottom: none;
+        }
+        
+        .table-left {
+          text-align: left !important;
+        }
+        
+        .table-center {
+          text-align: center !important;
         }
 
-        .text-small {
-          font-size: 0.875rem;
-        }
-
-        .text-secondary {
-          color: #6b7280;
-        }
-
-        .text-warning {
-          color: #d97706;
-          font-weight: 500;
-          font-style: italic;
-        }
-
+        /* Status Badge */
         .status-badge {
-          display: inline-block;
-          padding: 4px 8px;
-          border-radius: 4px;
+          padding: 4px 10px;
+          border-radius: 20px;
           font-size: 12px;
-          font-weight: 500;
-          text-transform: uppercase;
-          letter-spacing: 0.025em;
+          font-weight: 600;
+          text-transform: capitalize;
         }
 
-        .status-success {
-          background: #d1fae5;
-          color: #065f46;
+        .status-badge.status-success {
+          background: #dcfce7;
+          color: #166534;
         }
-
-        .status-error {
-          background: #fee2e2;
-          color: #991b1b;
-        }
-
-        .status-warning {
+        
+        .status-badge.status-warning {
           background: #fef3c7;
           color: #92400e;
         }
 
-        .status-info {
+        .status-badge.status-error {
+          background: #fee2e2;
+          color: #dc2626;
+        }
+        
+        .status-badge.status-info {
           background: #dbeafe;
           color: #1e40af;
         }
 
-        .filters-container {
-          display: flex;
-          gap: 16px;
-          align-items: end;
-          flex-wrap: wrap;
-        }
-
-        .filter-group {
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-          min-width: 200px;
-        }
-
-        .filter-group label {
-          font-weight: 600;
-          color: #374151;
-          font-size: 0.9rem;
-        }
-
-        .filter-select {
-          padding: 8px;
-          border: 1px solid #d1d5db;
-          border-radius: 4px;
-          font-size: 0.9rem;
-          background: white;
-        }
-
-        .filter-select:focus {
-          outline: none;
-          border-color: #3b82f6;
-          box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
-        }
-
-        .filter-actions {
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-          align-items: flex-start;
-        }
-
-        .filter-count {
-          font-size: 0.85rem;
-          color: #6b7280;
-          font-style: italic;
-        }
-
-        .action-button {
-          padding: 10px 14px;
-          border: none;
-          border-radius: 4px;
-          font-weight: 500;
+        /* General Button Styling */
+        .btn {
+          padding: 10px 16px;
+          border-radius: 6px;
           font-size: 14px;
+          font-weight: 600;
           cursor: pointer;
-          transition: all 0.2s ease;
-          text-decoration: none;
-          display: inline-flex;
+          display: flex;
           align-items: center;
           justify-content: center;
-          gap: 6px;
+          gap: 8px;
+          transition: all 0.2s ease;
+          text-decoration: none;
+          border: none;
+        }
+        
+        .btn-primary {
+          background: #6366f1;
+          color: white;
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+          background: #4f46e5;
         }
 
+        .btn-secondary {
+          background: #f8fafc;
+          color: #1e293b;
+          border: 1px solid #e2e8f0;
+        }
+
+        .btn-secondary:hover {
+          background: #f1f5f9;
+          transform: translateY(-1px);
+        }
+
+        .btn:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+        
+        .form-actions {
+          display: flex;
+          gap: 12px;
+          margin-top: 16px;
+          padding-top: 16px;
+          border-top: 1px solid #e2e8f0;
+        }
+
+        .table-actions {
+          display: flex;
+          gap: 8px;
+          justify-content: center;
+        }
+        
         .action-button.small {
           padding: 6px 10px;
           font-size: 12px;
         }
-
-        .action-button.primary {
-          background: #3b82f6;
-          color: white;
-        }
-
-        .action-button.primary:hover:not(:disabled) {
-          background: #2563eb;
-          transform: translateY(-1px);
-        }
-
-        .action-button.secondary {
-          background: #6b7280;
-          color: white;
-        }
-
-        .action-button.secondary:hover:not(:disabled) {
-          background: #4b5563;
-          transform: translateY(-1px);
-        }
-
+        
         .action-button.warning {
-          background: #f59e0b;
-          color: white;
-        }
-
-        .action-button.warning:hover:not(:disabled) {
-          background: #d97706;
-          transform: translateY(-1px);
-        }
-
-        .action-button.info {
-          background: #06b6d4;
-          color: white;
-        }
-
-        .action-button.info:hover:not(:disabled) {
-          background: #0891b2;
-          transform: translateY(-1px);
-        }
-
-        .action-button.danger {
-          background: #dc2626;
-          color: white;
-        }
-
-        .action-button.danger:hover:not(:disabled) {
-          background: #b91c1c;
-          transform: translateY(-1px);
-        }
-
-        .action-button:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-        }
-        .alert {
-          padding: 1rem;
-          border-radius: 0.5rem;
-          margin-bottom: 1.5rem;
+          background: #fef3c7;
+          color: #92400e;
         }
         
-        .alert-error {
-          background-color: #fef2f2;
+        .action-button.info {
+          background: #dbeafe;
+          color: #1e40af;
+        }
+        
+        .action-button.danger {
+          background: #fee2e2;
           color: #dc2626;
-          border: 1px solid #fecaca;
         }
 
-        :global(.dark-mode) .dashboard-container {
-          color: #f3f4f6;
-        }
-
-        :global(.dark-mode) .metric-card {
-          background: #1f2937;
-          border-color: #374151;
-        }
-
-        :global(.dark-mode) .metric-title {
-          color: #d1d5db;
-        }
-
-        :global(.dark-mode) .metric-value {
-          color: #f9fafb;
-        }
-
-        :global(.dark-mode) .metric-subtitle {
-          color: #9ca3af;
-        }
-
-        :global(.dark-mode) .action-card {
-          background: #1f2937;
-          border-color: #374151;
-        }
-
-        :global(.dark-mode) .action-icon {
-          background: #374151;
-          color: #d1d5db;
-        }
-
-        :global(.dark-mode) .action-title {
-          color: #f9fafb;
-        }
-
-        :global(.dark-mode) .action-description {
-          color: #d1d5db;
-        }
-
-        :global(.dark-mode) .section-card {
-          background: #1f2937;
-          border-color: #374151;
-        }
-
-        :global(.dark-mode) .section-title {
-          color: #f9fafb;
-        }
-
-        :global(.dark-mode) .data-table {
-          color: #f3f4f6;
-        }
-
-        :global(.dark-mode) .data-table thead {
-          background: #374151;
-        }
-
-        :global(.dark-mode) .data-table th {
-          color: #f9fafb;
-          border-color: #4b5563;
-        }
-
-        :global(.dark-mode) .data-table td {
-          border-color: #374151;
-        }
-
-        :global(.dark-mode) .data-table tr:hover {
-          background: #374151;
-        }
-
-        :global(.dark-mode) .table-container {
-          border-color: #374151;
-        }
-
-        :global(.dark-mode) .empty-title {
-          color: #f9fafb;
-        }
-
-        :global(.dark-mode) .empty-description {
-          color: #d1d5db;
-        }
-
-        .url-filter-notice {
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-          padding: 0.5rem;
-          background-color: #fef3c7;
-          border-radius: 0.375rem;
-          margin-top: 1rem;
-        }
-
-        .notice-icon {
-          font-size: 1.2rem;
-          color: #d97706;
-        }
-
-        .notice-text {
-          font-size: 0.875rem;
+        /* Empty State */
+        .empty-state {
+          text-align: center;
+          padding: 40px 20px;
           color: #6b7280;
+          font-size: 14px;
+        }
+
+        .empty-state h3 {
+          font-size: 18px;
+          font-weight: 600;
+          color: #1e293b;
+          margin: 0 0 8px 0;
+        }
+
+        .empty-state p {
+          font-size: 14px;
+          margin: 0 0 20px 0;
+        }
+
+        /* Loading Indicator & Alerts */
+        .alert { padding: 12px 16px; border-radius: 6px; margin-bottom: 20px; font-size: 14px; }
+        .alert-error { background-color: #fef2f2; border: 1px solid #fecaca; color: #dc2626; }
+        .loading-indicator { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 48px 24px; text-align: center; }
+        .loading-spinner { width: 40px; height: 40px; border: 4px solid #e2e8f0; border-top-color: #6366f1; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 16px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+          .form-grid {
+            grid-template-columns: 1fr;
+          }
+          
+          .section-actions {
+            flex-direction: column;
+            gap: 8px;
+          }
+          
+          .add-manager-btn,
+          .refresh-btn {
+            width: 100%;
+            justify-content: center;
+          }
         }
       `}</style>
     </>
