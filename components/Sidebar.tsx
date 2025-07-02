@@ -153,7 +153,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
 
   const getNavigationItems = (): NavigationItem[] => {
     const baseItems: NavigationItem[] = [
-      { path: isAdmin() ? '/admin-dashboard' : isLandlord() ? '/landlord-dashboard' : '/dashboard', label: 'Dashboard', icon: <DashboardIcon /> },
+      { path: isAdmin() ? '/admin-dashboard' : isLandlord() ? '/landlord-dashboard' : '/manager-dashboard', label: 'Dashboard', icon: <DashboardIcon /> },
     ];
 
     if (isAdmin()) {
@@ -291,6 +291,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
           display: flex;
           flex-direction: column;
           overflow: hidden;
+          pointer-events: auto;
         }
 
         .sidebar.collapsed {
@@ -355,6 +356,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
           flex: 1;
           padding: 16px 12px;
           overflow-y: auto;
+          pointer-events: auto;
         }
 
         .sidebar-nav::-webkit-scrollbar {
@@ -387,6 +389,8 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
           font-weight: 400;
           position: relative;
           gap: 12px;
+          z-index: 10;
+          pointer-events: auto;
         }
 
         .sidebar.collapsed .nav-item {
@@ -409,6 +413,17 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
           color: #ffffff;
           transform: translateX(2px);
           box-shadow: none;
+        }
+
+        .nav-item:focus {
+          outline: none;
+          background: rgba(255, 255, 255, 0.15);
+          color: #ffffff;
+        }
+
+        .nav-item:active {
+          transform: translateX(1px);
+          background: rgba(255, 255, 255, 0.2);
         }
 
         .nav-icon {

@@ -69,7 +69,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         router.push('/manager-dashboard');
         break;
       default:
-        router.push('/dashboard');
+        router.push('/manager-dashboard');
     }
   };
 

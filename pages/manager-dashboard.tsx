@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
+import Link from 'next/link';
 import DashboardLayout from '../components/DashboardLayout';
 import { withAuth } from '../lib/auth-context';
 import { useAuth } from '../lib/auth-context';
@@ -590,7 +591,9 @@ function Dashboard() {
               <h2 className="section-title">My Properties</h2>
               <p className="section-subtitle">Manage and monitor your property portfolio</p>
               </div>
-            <button className="view-all-btn">View All</button>
+            <Link href="/properties">
+              <button className="view-all-btn">View All</button>
+            </Link>
           </div>
 
           <div className="properties-container">
@@ -618,7 +621,7 @@ function Dashboard() {
                     <th className="table-left">Status</th>
                     <th className="table-center">Occupancy</th>
                     <th className="table-center">Monthly Revenue</th>
-                    <th className="table-left">Tasks</th>
+                    <th className="table-center">Tasks</th>
                     <th className="table-center">Actions</th>
                   </tr>
                 </thead>
@@ -649,7 +652,7 @@ function Dashboard() {
                           <div className="revenue-change">{property.revenueChange} vs last month</div>
                         </div>
                       </td>
-                      <td className="table-left">
+                      <td className="table-center">
                         <div className="tasks-cell">
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2">
                             <path d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -912,7 +915,7 @@ function Dashboard() {
         /* Main Content */
         .main-content {
           display: grid;
-          grid-template-columns: 2fr 1fr;
+          grid-template-columns: 3fr 1fr;
           gap: 20px; /* Reduced gap */
         }
 
@@ -952,7 +955,7 @@ function Dashboard() {
         .tasks-scroll-container {
           flex: 1;
           overflow-y: auto;
-          margin-top: 16px;
+          margin-top: 0;
         }
 
         .tasks-scroll-container::-webkit-scrollbar {
@@ -970,22 +973,24 @@ function Dashboard() {
         }
 
         .add-task-btn {
-          background: #6366f1;
+          background: #4f46e5;
           color: white;
           border: none;
-          padding: 10px 14px; /* Reduced padding */
-          border-radius: 6px; /* Reduced radius */
-          font-size: 12px; /* Reduced font size */
+          padding: 10px 14px;
+          border-radius: 6px;
+          font-size: 12px;
           font-weight: 600;
           cursor: pointer;
           display: flex;
           align-items: center;
-          gap: 6px; /* Reduced gap */
+          gap: 6px;
           transition: all 0.2s ease;
+          margin-right: 4px;
+          margin-top: 2px;
         }
 
         .add-task-btn:hover {
-          background: #4f46e5;
+          background: #3730a3;
           transform: translateY(-1px);
         }
 
@@ -999,6 +1004,7 @@ function Dashboard() {
         .tasks-table {
           width: 100%;
           border-collapse: collapse;
+          table-layout: fixed;
         }
 
         .tasks-table thead {
@@ -1033,48 +1039,78 @@ function Dashboard() {
           table-layout: fixed;
         }
 
-        /* Center align all table headers and cell values for both tables */
-        .tasks-table th, .tasks-table td, .properties-table th, .properties-table td {
-          text-align: center !important;
-          font-size: 15px;
-          padding: 16px 16px;
+        /* Add hover effect for table rows */
+        .tasks-table tbody tr {
+          transition: background-color 0.2s ease;
+        }
+
+        .tasks-table tbody tr:hover {
+          background-color: #f9fafb;
+        }
+
+        /* Set column widths for proper spacing */
+        .tasks-table th:nth-child(1), .tasks-table td:nth-child(1) { width: 30%; }
+        .tasks-table th:nth-child(2), .tasks-table td:nth-child(2) { width: 25%; }
+        .tasks-table th:nth-child(3), .tasks-table td:nth-child(3) { width: 15%; }
+        .tasks-table th:nth-child(4), .tasks-table td:nth-child(4) { width: 15%; }
+        .tasks-table th:nth-child(5), .tasks-table td:nth-child(5) { width: 15%; }
+
+        /* Table header and cell styling for both tables */
+        .tasks-table th, .tasks-table td {
+          text-align: left !important;
+          font-size: 14px;
+          padding: 12px 16px;
           vertical-align: middle;
-          height: 56px;
+          height: 48px;
           box-sizing: border-box;
+          border-bottom: 1px solid #f1f5f9;
         }
 
-        .tasks-table th, .properties-table th {
-          font-weight: 700;
-          color: #1e293b;
-          background: #f8fafc;
+        .tasks-table th {
+          font-weight: 600;
+          color: #9ca3af;
+          background: #ffffff;
+          font-size: 12px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          border-bottom: 1px solid #e5e7eb;
         }
 
-        .tasks-table td, .properties-table td {
+        .tasks-table td {
           font-weight: 400;
-          color: #1e293b;
+          color: #374151;
           background: #fff;
         }
 
+        /* Center align priority and status columns */
+        .tasks-table th:nth-child(3), 
+        .tasks-table th:nth-child(5),
+        .tasks-table td:nth-child(3), 
+        .tasks-table td:nth-child(5) {
+          text-align: center !important;
+        }
+
         .priority-badge {
-          padding: 4px 12px;
-          border-radius: 20px;
+          padding: 4px 8px;
+          border-radius: 4px;
           font-size: 12px;
-          font-weight: 600;
+          font-weight: 500;
           text-transform: capitalize;
+          display: inline-block;
         }
 
         .priority-badge.high {
-          background: #fef2f2;
+          background: #fee2e2;
           color: #dc2626;
         }
 
         .priority-badge.medium {
-          background: #fffbeb;
+          background: #fef3c7;
           color: #d97706;
         }
 
         .priority-badge.low {
-          background: #f0fdf4;
+          background: #dcfce7;
           color: #16a34a;
         }
 
@@ -1094,15 +1130,16 @@ function Dashboard() {
         }
 
         .status-badge {
-          padding: 6px 12px;
-          border-radius: 20px;
+          padding: 4px 8px;
+          border-radius: 4px;
           font-size: 12px;
-          font-weight: 600;
+          font-weight: 500;
+          display: inline-block;
         }
 
         .status-badge.pending {
-          background: #fef3c7;
-          color: #d97706;
+          background: #fed7aa;
+          color: #ea580c;
         }
 
         .status-badge.in-progress {
@@ -1117,22 +1154,24 @@ function Dashboard() {
 
         .status-badge.active {
           background: #dcfce7;
-          color: #059669;
-          padding: 6px 16px;
-          border-radius: 20px;
-          font-size: 14px;
-          font-weight: 600;
+          color: #16a34a;
+          padding: 4px 8px;
+          border-radius: 4px;
+          font-size: 12px;
+          font-weight: 500;
           text-transform: capitalize;
+          display: inline-block;
         }
 
         .status-badge.maintenance {
           background: #fef3c7;
           color: #d97706;
-          padding: 6px 16px;
-          border-radius: 20px;
-          font-size: 14px;
-          font-weight: 600;
+          padding: 4px 8px;
+          border-radius: 4px;
+          font-size: 12px;
+          font-weight: 500;
           text-transform: capitalize;
+          display: inline-block;
         }
 
         /* Quick Actions Section */
@@ -1142,13 +1181,17 @@ function Dashboard() {
           padding: 18px; /* Reduced padding */
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
           border: 1px solid #e2e8f0;
-          height: fit-content;
+          height: 400px; /* Match tasks section height */
+          display: flex;
+          flex-direction: column;
         }
 
         .actions-grid {
           display: flex;
           flex-direction: column;
           gap: 12px; /* Reduced gap */
+          flex: 1;
+          justify-content: flex-start;
         }
 
         .action-card {
@@ -1226,22 +1269,24 @@ function Dashboard() {
 
         /* View All Button */
         .view-all-btn {
-          background: #6366f1;
+          background: #4f46e5;
           color: white;
           border: none;
-          padding: 10px 14px; /* Reduced padding */
-          border-radius: 6px; /* Reduced radius */
-          font-size: 12px; /* Reduced font size */
+          padding: 12px 18px;
+          border-radius: 6px;
+          font-size: 14px;
           font-weight: 600;
           cursor: pointer;
           display: flex;
           align-items: center;
-          gap: 6px; /* Reduced gap */
+          gap: 6px;
           transition: all 0.2s ease;
+          margin-top: 4px;
+          margin-right: 4px;
         }
 
         .view-all-btn:hover {
-          background: #4f46e5;
+          background: #3730a3;
           transform: translateY(-1px);
         }
 
@@ -1293,20 +1338,70 @@ function Dashboard() {
 
         .properties-table {
           width: 100%;
-          border-collapse: separate;
-          border-spacing: 0;
+          border-collapse: collapse;
+          table-layout: fixed;
         }
 
+        /* Add hover effect for properties table rows */
+        .properties-table tbody tr {
+          transition: background-color 0.2s ease;
+        }
+
+        .properties-table tbody tr:hover {
+          background-color: #f9fafb;
+        }
+
+        /* Set column widths for properties table */
+        .properties-table th:nth-child(1), .properties-table td:nth-child(1) { width: 25%; }
+        .properties-table th:nth-child(2), .properties-table td:nth-child(2) { width: 15%; }
+        .properties-table th:nth-child(3), .properties-table td:nth-child(3) { width: 20%; }
+        .properties-table th:nth-child(4), .properties-table td:nth-child(4) { width: 20%; }
+        .properties-table th:nth-child(5), .properties-table td:nth-child(5) { width: 15%; }
+        .properties-table th:nth-child(6), .properties-table td:nth-child(6) { width: 15%; }
+
+        /* Center align specific columns for properties table */
+        .properties-table th:nth-child(2),
+        .properties-table th:nth-child(3), 
+        .properties-table th:nth-child(4),
+        .properties-table th:nth-child(5),
+        .properties-table th:nth-child(6),
+        .properties-table td:nth-child(2),
+        .properties-table td:nth-child(3), 
+        .properties-table td:nth-child(4),
+        .properties-table td:nth-child(5),
+        .properties-table td:nth-child(6) {
+          text-align: center !important;
+        }
+
+        /* Fix actions column cell positioning */
+        .properties-table td:nth-child(6) {
+          position: relative;
+          overflow: hidden;
+        }
+
+        /* Properties table header and cell styling */
         .properties-table th {
           position: sticky;
           top: 0;
-          background: #f8fafc;
+          background: #ffffff;
           z-index: 2;
-          font-size: 13px; /* Reduced font size */
-          font-weight: 700;
-          color: #1e293b;
-          padding: 12px 10px; /* Reduced padding */
-          border-bottom: 2px solid #e2e8f0;
+          font-size: 12px;
+          font-weight: 600;
+          color: #9ca3af;
+          padding: 12px 16px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          border-bottom: 1px solid #e5e7eb;
+          text-align: left;
+        }
+
+        .properties-table td {
+          padding: 12px 16px;
+          vertical-align: middle;
+          height: 48px;
+          border-bottom: 1px solid #f1f5f9;
+          font-size: 14px;
+          color: #374151;
         }
 
         .property-info-cell {
@@ -1344,10 +1439,9 @@ function Dashboard() {
           font-weight: 500;
         }
 
-        .occupancy-cell, .revenue-cell, .tasks-cell {
+        .occupancy-cell {
           display: flex;
           align-items: center;
-          justify-content: center;
           gap: 6px;
         }
 
@@ -1357,27 +1451,64 @@ function Dashboard() {
           gap: 6px;
         }
 
+        .occupancy-text {
+          font-weight: 500;
+          color: #374151;
+        }
+
+        .occupancy-percent {
+          color: #6b7280;
+          font-size: 13px;
+        }
+
         .revenue-cell {
+          display: flex;
           flex-direction: column;
           align-items: center;
-          text-align: center;
         }
 
         .revenue-amount {
           font-weight: 600;
-          font-size: 16px;
-          color: #1e293b;
-          margin-bottom: 2px;
+          color: #111827;
+          font-size: 14px;
         }
 
         .revenue-change {
+          color: #16a34a;
           font-size: 12px;
-          color: #10b981;
           font-weight: 500;
         }
 
+        .tasks-cell {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          justify-content: center;
+        }
+
+        .tasks-count {
+          color: #6b7280;
+          font-size: 13px;
+        }
+
         .manage-btn {
+          background: #6366f1;
+          color: white;
+          border: none;
+          padding: 6px 12px;
+          border-radius: 4px;
+          font-size: 12px;
+          font-weight: 500;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          transition: all 0.2s ease;
           margin: 0 auto;
+        }
+
+        .manage-btn:hover {
+          background: #4f46e5;
         }
 
         /* Applications Section */

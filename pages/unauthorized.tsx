@@ -88,7 +88,7 @@ export default function Unauthorized() {
           </button>
         </Link>
         
-        <Link href="/dashboard">
+        <Link href="/manager-dashboard">
           <button style={{
             backgroundColor: '#28a745',
             color: 'white',

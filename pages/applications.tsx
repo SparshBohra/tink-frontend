@@ -1081,6 +1081,184 @@ function Applications() {
             padding: 8px 12px;
           }
         }
+
+        /* Dark Mode Styles */
+        :global(.dark-mode) .dashboard-container {
+          background: transparent;
+        }
+
+        :global(.dark-mode) .dashboard-title,
+        :global(.dark-mode) .welcome-message,
+        :global(.dark-mode) .section-title,
+        :global(.dark-mode) .empty-state h3 {
+          color: #ffffff !important;
+        }
+
+        :global(.dark-mode) .section-subtitle,
+        :global(.dark-mode) .empty-state p {
+          color: #a1a1aa !important;
+        }
+
+        :global(.dark-mode) .metric-card,
+        :global(.dark-mode) .applications-container,
+        :global(.dark-mode) .pending-section,
+        :global(.dark-mode) .processed-section,
+        :global(.dark-mode) .filters-container {
+          background: #111111 !important;
+          border: 1px solid #333333 !important;
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4) !important;
+        }
+
+        :global(.dark-mode) .metric-card:hover {
+          background: #222222 !important;
+          border-color: #555555 !important;
+        }
+
+        :global(.dark-mode) .metric-title {
+          color: #a1a1aa !important;
+        }
+
+        :global(.dark-mode) .metric-value {
+          color: #ffffff !important;
+        }
+
+        :global(.dark-mode) .metric-subtitle {
+          color: #71717a !important;
+        }
+
+        :global(.dark-mode) .applications-table {
+          background: #111111 !important;
+        }
+
+        :global(.dark-mode) .applications-table th {
+          background: #1a1a1a !important;
+          color: #a1a1aa !important;
+          border-bottom: 1px solid #333333 !important;
+        }
+
+        :global(.dark-mode) .applications-table td {
+          background: #111111 !important;
+          border-bottom: 1px solid #333333 !important;
+        }
+
+        :global(.dark-mode) .applications-table tbody tr:hover {
+          background: #222222 !important;
+        }
+
+        :global(.dark-mode) .applicant-name,
+        :global(.dark-mode) .property-name {
+          color: #ffffff !important;
+        }
+
+        :global(.dark-mode) .applicant-email,
+        :global(.dark-mode) .property-vacancy,
+        :global(.dark-mode) .app-details,
+        :global(.dark-mode) .decision-notes {
+          color: #a1a1aa !important;
+        }
+
+        :global(.dark-mode) .error-banner {
+          background: rgba(239, 68, 68, 0.1) !important;
+          border-color: rgba(239, 68, 68, 0.3) !important;
+          color: #f87171 !important;
+        }
+
+        :global(.dark-mode) .refresh-btn {
+          background: #1a1a1a !important;
+          color: #a1a1aa !important;
+          border-color: #333333 !important;
+        }
+
+        :global(.dark-mode) .refresh-btn:hover {
+          background: #2a2a2a !important;
+          border-color: #555555 !important;
+        }
+
+        :global(.dark-mode) .download-btn {
+          background: rgba(34, 197, 94, 0.1) !important;
+          color: #22c55e !important;
+          border-color: rgba(34, 197, 94, 0.3) !important;
+        }
+
+        :global(.dark-mode) .download-btn:hover {
+          background: rgba(34, 197, 94, 0.2) !important;
+        }
+
+        :global(.dark-mode) .view-tenants-btn {
+          background: #3b82f6 !important;
+          border-color: #3b82f6 !important;
+        }
+
+        :global(.dark-mode) .view-tenants-btn:hover {
+          background: #2563eb !important;
+          border-color: #2563eb !important;
+        }
+
+        :global(.dark-mode) .approve-btn {
+          background: rgba(34, 197, 94, 0.1) !important;
+          color: #22c55e !important;
+          border-color: rgba(34, 197, 94, 0.3) !important;
+        }
+
+        :global(.dark-mode) .approve-btn:hover {
+          background: rgba(34, 197, 94, 0.2) !important;
+        }
+
+        :global(.dark-mode) .reject-btn {
+          background: rgba(239, 68, 68, 0.1) !important;
+          color: #ef4444 !important;
+          border-color: rgba(239, 68, 68, 0.3) !important;
+        }
+
+        :global(.dark-mode) .reject-btn:hover {
+          background: rgba(239, 68, 68, 0.2) !important;
+        }
+
+        :global(.dark-mode) .view-tenant-btn {
+          background: #1a1a1a !important;
+          color: #a1a1aa !important;
+          border-color: #333333 !important;
+        }
+
+        :global(.dark-mode) .view-tenant-btn:hover {
+          background: #2a2a2a !important;
+          border-color: #555555 !important;
+        }
+
+        :global(.dark-mode) .status-badge.status-pending {
+          background: rgba(249, 115, 22, 0.2) !important;
+          color: #fb923c !important;
+        }
+
+        :global(.dark-mode) .status-badge.status-approved {
+          background: rgba(34, 197, 94, 0.2) !important;
+          color: #4ade80 !important;
+        }
+
+        :global(.dark-mode) .status-badge.status-rejected {
+          background: rgba(239, 68, 68, 0.2) !important;
+          color: #f87171 !important;
+        }
+
+        :global(.dark-mode) .empty-icon {
+          color: #525252 !important;
+        }
+
+        :global(.dark-mode) .pending-days {
+          color: #fb923c !important;
+        }
+
+        :global(.dark-mode) .form-select,
+        :global(.dark-mode) .filter-label {
+          background: #1a1a1a !important;
+          color: #ffffff !important;
+          border: 1px solid #333333 !important;
+        }
+
+        :global(.dark-mode) .form-select:focus {
+          border-color: #555555 !important;
+          outline: none !important;
+        }
       `}</style>
     </DashboardLayout>
   );
