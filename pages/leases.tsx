@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import DashboardLayout from '../components/DashboardLayout';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import { withAuth } from '../lib/auth-context';
 import { apiClient } from '../lib/api';
 import { Lease, Tenant, Property, Room } from '../lib/types';
 import { formatCurrency } from '../lib/utils';
 
 function Leases() {
+  const router = useRouter();
   const [leases, setLeases] = useState<Lease[]>([]);
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [properties, setProperties] = useState<Property[]>([]);
@@ -26,96 +28,17 @@ function Leases() {
       setLoading(true);
       setError(null);
       
-      // Mock data for demonstration
-      const mockLeases = [
-        {
-          id: 1,
-          tenant: 1,
-          property_ref: 1,
-          room: 1,
-          start_date: '2024-01-01',
-          end_date: '2024-12-31',
-          monthly_rent: 1200,
-          security_deposit: 1200,
-          status: 'active',
-          is_active: true
-        },
-        {
-          id: 2,
-          tenant: 2,
-          property_ref: 1,
-          room: 2,
-          start_date: '2024-02-01',
-          end_date: '2025-01-31',
-          monthly_rent: 1350,
-          security_deposit: 1350,
-          status: 'active',
-          is_active: true
-        },
-        {
-          id: 3,
-          tenant: 3,
-          property_ref: 2,
-          room: 3,
-          start_date: '2024-03-01',
-          end_date: '2024-08-31',
-          monthly_rent: 1100,
-          security_deposit: 1100,
-          status: 'active',
-          is_active: true
-        },
-        {
-          id: 4,
-          tenant: 4,
-          property_ref: 2,
-          room: 4,
-          start_date: '2024-01-15',
-          end_date: '2025-01-14',
-          monthly_rent: 1400,
-          security_deposit: 1400,
-          status: 'active',
-          is_active: true
-        },
-        {
-          id: 5,
-          tenant: 5,
-          property_ref: 3,
-          room: 5,
-          start_date: '2024-04-01',
-          end_date: '2024-09-30',
-          monthly_rent: 950,
-          security_deposit: 950,
-          status: 'active',
-          is_active: true
-        }
-      ];
+      const [leasesResponse, tenantsResponse, propertiesResponse, roomsResponse] = await Promise.all([
+        apiClient.getLeases(),
+        apiClient.getTenants(),
+        apiClient.getProperties(),
+        apiClient.getRooms()
+      ]);
 
-      const mockTenants = [
-        { id: 1, full_name: 'John Smith', email: 'john@example.com', phone: '(555) 123-4567' },
-        { id: 2, full_name: 'Sarah Johnson', email: 'sarah@example.com', phone: '(555) 234-5678' },
-        { id: 3, full_name: 'Mike Davis', email: 'mike@example.com', phone: '(555) 345-6789' },
-        { id: 4, full_name: 'Emma Wilson', email: 'emma@example.com', phone: '(555) 456-7890' },
-        { id: 5, full_name: 'Alex Brown', email: 'alex@example.com', phone: '(555) 567-8901' }
-      ];
-
-      const mockProperties = [
-        { id: 1, name: 'Downtown Coliving Hub' },
-        { id: 2, name: 'University District House' },
-        { id: 3, name: 'Sunset Boulevard Apartments' }
-      ];
-
-      const mockRooms = [
-        { id: 1, name: 'Room 101' },
-        { id: 2, name: 'Room 102' },
-        { id: 3, name: 'Room 201' },
-        { id: 4, name: 'Room 202' },
-        { id: 5, name: 'Room 301' }
-      ];
-      
-      setLeases(mockLeases);
-      setTenants(mockTenants);
-      setProperties(mockProperties);
-      setRooms(mockRooms);
+      setLeases(leasesResponse.results || []);
+      setTenants(tenantsResponse.results || []);
+      setProperties(propertiesResponse.results || []);
+      setRooms(roomsResponse.results || []);
     } catch (error: any) {
       console.error('Failed to fetch leases data:', error);
       setError(error?.message || 'Failed to load leases data');
@@ -152,6 +75,17 @@ function Leases() {
     return diffDays;
   };
 
+  const formatDate = (dateString: string) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      timeZone: 'UTC',
+    });
+  };
+
   const handleRenewLease = async (leaseId: number) => {
     try {
       // In a real implementation, this would open a renewal form
@@ -176,20 +110,17 @@ function Leases() {
           newEndDate.setFullYear(newEndDate.getFullYear() + 1);
           
           const renewalData = {
+            tenant: lease.tenant,
+            room: lease.room,
             start_date: lease.end_date, // New lease starts when old one ends
             end_date: newEndDate.toISOString().split('T')[0],
             monthly_rent: lease.monthly_rent, // Keep same rent for now
             security_deposit: lease.security_deposit
           };
           
-          const newLease = await apiClient.createLease({
-            tenant: lease.tenant,
-            property_ref: lease.property_ref,
-            room: lease.room,
-            ...renewalData
-          });
+          await apiClient.createLease(renewalData);
           
-          alert(`Lease renewed successfully! New lease ID: ${newLease.id}`);
+          alert(`Lease renewed successfully!`);
           fetchData(); // Refresh data
         }
       }
@@ -511,7 +442,7 @@ function Leases() {
                             </td>
                             <td className="table-left">
                               <div className="lease-details">
-                                <div className="lease-term">Term: {lease.start_date} to {lease.end_date}</div>
+                                <div className="lease-term">Term: <span className="date-highlight">{formatDate(lease.start_date)}</span> to <span className="date-highlight">{formatDate(lease.end_date)}</span></div>
                                 <div className="lease-rent">Rent: ${lease.monthly_rent}/month</div>
                                 <div className="lease-deposit">Deposit: ${lease.security_deposit}</div>
                               </div>
@@ -571,7 +502,7 @@ function Leases() {
             </div>
             
             <div className="actions-grid">
-              <div className="action-card blue" onClick={() => window.location.href = '/applications'}>
+              <div className="action-card blue" onClick={() => router.push('/applications')}>
                 <div className="action-icon">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -600,7 +531,7 @@ function Leases() {
                 </div>
               </div>
 
-              <div className="action-card purple" onClick={() => window.location.href = '/tenants'}>
+              <div className="action-card purple" onClick={() => router.push('/tenants')}>
                 <div className="action-icon">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
@@ -613,7 +544,7 @@ function Leases() {
                 </div>
               </div>
 
-              <div className="action-card blue" onClick={() => window.location.href = '/properties'}>
+              <div className="action-card blue" onClick={() => router.push('/properties')}>
                 <div className="action-icon">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M3 21h18"/>
@@ -663,7 +594,7 @@ function Leases() {
                             <div className="room-name">{getRoomName(lease.room)}</div>
                           </td>
                           <td className="table-center">
-                            <div className="expiry-date">{lease.end_date}</div>
+                            <div className="expiry-date"><span className="date-highlight">{formatDate(lease.end_date)}</span></div>
                             <div className="expiry-days">{daysToExpiry} days left</div>
                           </td>
                           <td className="table-center">
@@ -719,7 +650,7 @@ function Leases() {
                         </td>
                         <td className="table-left">
                           <div className="lease-details">
-                            <div className="lease-term">Term: {lease.start_date} to {lease.end_date}</div>
+                            <div className="lease-term">Term: <span className="date-highlight">{formatDate(lease.start_date)}</span> to <span className="date-highlight">{formatDate(lease.end_date)}</span></div>
                             <div className="lease-rent">Rent: ${lease.monthly_rent}/month</div>
                           </div>
                         </td>
@@ -931,13 +862,12 @@ function Leases() {
           padding: 18px;
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
           border: 1px solid #e2e8f0;
-          height: fit-content;
-          max-height: 600px;
+          height: 420px;
           display: flex;
           flex-direction: column;
         }
 
-        .refresh-btn, .download-btn {
+        .refresh-btn {
           background: #f8fafc;
           color: #64748b;
           border: 1px solid #e2e8f0;
@@ -951,14 +881,34 @@ function Leases() {
           gap: 6px;
           transition: all 0.2s ease;
         }
-
-        .refresh-btn:hover, .download-btn:hover {
+        
+        .refresh-btn:hover {
           background: #e2e8f0;
           transform: translateY(-1px);
         }
 
+        .download-btn {
+          background: #4f46e5;
+          color: white;
+          border: none;
+          padding: 10px 16px;
+          border-radius: 6px;
+          font-size: 13px;
+          font-weight: 600;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          transition: all 0.2s ease;
+        }
+        
+        .download-btn:hover {
+          background: #3730a3;
+          transform: translateY(-1px);
+        }
+
         .create-btn {
-          background: #6366f1;
+          background: #4f46e5;
           color: white;
           border: none;
           padding: 10px 14px;
@@ -974,7 +924,7 @@ function Leases() {
         }
 
         .create-btn:hover {
-          background: #4f46e5;
+          background: #3730a3;
           transform: translateY(-1px);
         }
 
@@ -1030,7 +980,6 @@ function Leases() {
         }
 
         .leases-scroll-container {
-          max-height: 400px;
         }
 
         .expiring-scroll-container, .drafts-scroll-container {
@@ -1067,30 +1016,43 @@ function Leases() {
 
         .leases-table, .expiring-table, .drafts-table {
           width: 100%;
-          border-collapse: separate;
-          border-spacing: 0;
+          border-collapse: collapse;
+          table-layout: fixed;
+        }
+        
+        .leases-table tbody tr, .expiring-table tbody tr, .drafts-table tbody tr {
+          transition: background-color 0.2s ease;
+        }
+
+        .leases-table tbody tr:hover, .expiring-table tbody tr:hover, .drafts-table tbody tr:hover {
+          background-color: #f9fafb;
         }
 
         .leases-table th, .expiring-table th, .drafts-table th {
           position: sticky;
           top: 0;
-          background: #f8fafc;
+          background: #ffffff;
           z-index: 2;
-          font-size: 13px;
-          font-weight: 700;
-          color: #1e293b;
-          padding: 12px 10px;
-          border-bottom: 2px solid #e2e8f0;
+          font-size: 12px;
+          font-weight: 600;
+          color: #9ca3af;
+          padding: 12px 16px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          border-bottom: 1px solid #e5e7eb;
+          text-align: left;
         }
 
         .leases-table td, .expiring-table td, .drafts-table td {
+          padding: 12px 16px;
+          vertical-align: middle;
+          height: 48px;
+          border-bottom: 1px solid #f1f5f9;
           font-size: 14px;
-          padding: 16px 10px;
-          border-bottom: 1px solid #e2e8f0;
+          color: #374151;
         }
 
         .tenant-name {
-          font-weight: 600;
           color: #1e293b;
           margin-bottom: 4px;
         }
@@ -1101,7 +1063,6 @@ function Leases() {
         }
 
         .property-name {
-          font-weight: 600;
           color: #1e293b;
           margin-bottom: 4px;
         }
@@ -1126,7 +1087,6 @@ function Leases() {
         }
 
         .expiry-date {
-          font-weight: 600;
           color: #1e293b;
           margin-bottom: 4px;
         }
@@ -1136,26 +1096,36 @@ function Leases() {
           color: #64748b;
         }
 
-        .status-badge {
-          padding: 4px 12px;
-          border-radius: 20px;
-          font-size: 12px;
+        .date-highlight {
           font-weight: 600;
+          color: #374151;
+          background-color: #f3f4f6;
+          padding: 2px 6px;
+          border-radius: 4px;
+        }
+
+        .status-badge {
+          padding: 4px 8px;
+          border-radius: 4px;
+          font-size: 12px;
+          font-weight: 500;
           text-align: center;
+          display: inline-block;
+          min-width: 95px;
         }
 
         .status-badge.active {
-          background: #f0fdf4;
+          background: #dcfce7;
           color: #16a34a;
         }
 
         .status-badge.warning {
-          background: #fffbeb;
+          background: #fef3c7;
           color: #d97706;
         }
 
         .status-badge.critical {
-          background: #fef2f2;
+          background: #fee2e2;
           color: #dc2626;
         }
 
@@ -1166,37 +1136,49 @@ function Leases() {
           align-items: center;
         }
 
-        .renew-btn, .moveout-btn, .renew-now-btn {
-          padding: 8px 12px;
-          border-radius: 6px;
+        .renew-btn, .moveout-btn {
+          border: none;
+          padding: 6px 12px;
+          border-radius: 5px;
           font-size: 12px;
-          font-weight: 600;
+          font-weight: 500;
           cursor: pointer;
           display: flex;
           align-items: center;
           gap: 6px;
           transition: all 0.2s ease;
-          border: 1px solid #e2e8f0;
+        }
+        
+        .renew-now-btn {
+          border: none;
+          padding: 6px 12px;
+          border-radius: 5px;
+          font-size: 12px;
+          font-weight: 500;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          transition: all 0.2s ease;
         }
 
         .renew-btn, .renew-now-btn {
-          background: #6366f1;
+          background: #4f46e5;
           color: white;
-          border-color: #6366f1;
         }
 
         .renew-btn:hover, .renew-now-btn:hover {
-          background: #4f46e5;
+          background: #3730a3;
           transform: translateY(-1px);
         }
 
         .moveout-btn {
-          background: #f8fafc;
-          color: #64748b;
+          background: #4f46e5;
+          color: white;
         }
 
         .moveout-btn:hover {
-          background: #e2e8f0;
+          background: #3730a3;
           transform: translateY(-1px);
         }
 
@@ -1245,14 +1227,16 @@ function Leases() {
           padding: 18px;
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
           border: 1px solid #e2e8f0;
-          height: fit-content;
-          max-height: 600px;
+          height: 420px;
+          display: flex;
+          flex-direction: column;
         }
 
         .actions-grid {
           display: flex;
           flex-direction: column;
           gap: 12px;
+          flex: 1;
         }
 
         .action-card {
