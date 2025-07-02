@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import DashboardLayout from '../components/DashboardLayout';
-import Link from 'next/link';
 import { withAuth } from '../lib/auth-context';
 import { apiClient } from '../lib/api';
 import { Application, Property, Room } from '../lib/types';
@@ -154,13 +153,22 @@ function Applications() {
   };
 
   const getStatusBadge = (status: string) => {
-    const badges = {
-      pending: { className: 'status-pending', text: 'Pending' },
-      approved: { className: 'status-approved', text: 'Approved' },
-      rejected: { className: 'status-rejected', text: 'Rejected' }
+    const badges: { [key: string]: { style: React.CSSProperties; text: string } } = {
+      pending: { 
+        style: { background: '#fef3c7', color: '#d97706', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 500, textTransform: 'capitalize', display: 'inline-block' },
+        text: 'Pending' 
+      },
+      approved: { 
+        style: { background: '#dcfce7', color: '#16a34a', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 500, textTransform: 'capitalize', display: 'inline-block' },
+        text: 'Approved' 
+      },
+      rejected: { 
+        style: { background: '#fee2e2', color: '#dc2626', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 500, textTransform: 'capitalize', display: 'inline-block' },
+        text: 'Rejected' 
+      }
     };
-    const badge = badges[status as keyof typeof badges] || badges.pending;
-    return <span className={`status-badge ${badge.className}`}>{badge.text}</span>;
+    const badge = badges[status] || badges.pending;
+    return <span style={badge.style}>{badge.text}</span>;
   };
 
   const pendingApplications = filteredApplications.filter(app => app.status === 'pending');
@@ -365,9 +373,9 @@ function Applications() {
                     <polyline points="1 20 1 14 7 14"/>
                     <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>
                   </svg>
-                  Refresh Data
+                  Refresh
                 </button>
-                <button onClick={downloadApplicationsReport} className="download-btn">
+                <button onClick={downloadApplicationsReport} className="view-all-btn">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                     <polyline points="7,10 12,15 17,10"/>
@@ -375,33 +383,32 @@ function Applications() {
                   </svg>
                   Download Report
                 </button>
-                <Link href="/tenants" className="view-tenants-btn">
+                <button onClick={() => router.push('/tenants')} className="view-all-btn">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
                     <circle cx="12" cy="7" r="4"/>
                   </svg>
                   View All Tenants
-                </Link>
+                </button>
               </div>
             </div>
             
-            <div className="filters-container">
-              <div className="filter-group">
-                <label htmlFor="property-filter" className="filter-label">Filter by Property:</label>
-                <select 
-                  id="property-filter"
-                  value={selectedProperty || ''}
-                  onChange={handlePropertyFilterChange}
-                  className="form-select"
-                >
-                  <option value="">All Properties</option>
-                  {properties.map(property => (
-                    <option key={property.id} value={property.id}>
-                      {property.name} ({getPropertyDetails(property.id).vacantRooms} vacant rooms)
-                    </option>
-                  ))}
-                </select>
-              </div>
+            {/* Filter Dropdown */}
+            <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8, padding: '0 18px' }}>
+              <label htmlFor="property-filter" style={{ fontSize: 14, color: '#64748b', fontWeight: 500 }}>Filter:</label>
+              <select
+                id="property-filter"
+                value={selectedProperty || ''}
+                onChange={handlePropertyFilterChange}
+                style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: 14 }}
+              >
+                <option value="">All Properties</option>
+                {properties.map(property => (
+                  <option key={property.id} value={property.id}>
+                    {property.name} ({getPropertyDetails(property.id).vacantRooms} vacant rooms)
+                  </option>
+                ))}
+              </select>
             </div>
 
             {pendingApplications.length === 0 ? (
@@ -462,17 +469,17 @@ function Applications() {
                             <div className="action-buttons">
                               <button 
                                 onClick={() => handleQuickApprove(app.id, app.property_ref)}
-                                className="approve-btn"
+                                className="manage-btn approve-btn"
                                 disabled={getPropertyDetails(app.property_ref).vacantRooms === 0}
                               >
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                   <polyline points="20,6 9,17 4,12"/>
                                 </svg>
-                                Quick Approve
+                                Approve
                               </button>
                               <button 
                                 onClick={() => handleReject(app.id)}
-                                className="reject-btn"
+                                className="manage-btn reject-btn"
                               >
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                   <circle cx="12" cy="12" r="10"/>
@@ -481,13 +488,13 @@ function Applications() {
                                 </svg>
                                 Reject
                               </button>
-                              <Link href={`/tenants/${app.tenant}`} className="view-tenant-btn">
+                              <button onClick={() => router.push(`/tenants/${app.tenant}`)} className="manage-btn view-btn">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                   <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
                                   <circle cx="12" cy="12" r="3"/>
                                 </svg>
-                                View Tenant
-                              </Link>
+                                View
+                              </button>
                             </div>
                           </td>
                         </tr>
@@ -555,13 +562,15 @@ function Applications() {
                             {getStatusBadge(app.status)}
                           </td>
                           <td className="table-center">
-                            <Link href={`/tenants/${app.tenant}`} className="view-tenant-btn">
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                                <circle cx="12" cy="12" r="3"/>
-                              </svg>
-                              View Tenant
-                            </Link>
+                            <div className="action-buttons">
+                              <button onClick={() => router.push(`/tenants/${app.tenant}`)} className="manage-btn view-btn">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                  <circle cx="12" cy="12" r="3"/>
+                                </svg>
+                                View
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -630,6 +639,7 @@ function Applications() {
           align-items: center;
           gap: 8px;
           font-size: 14px;
+          font-weight: 500;
         }
 
         /* Metrics Grid */
@@ -712,14 +722,11 @@ function Applications() {
 
         .metric-change {
           font-size: 12px;
-          font-weight: 500;
-          padding: 2px 6px;
-          border-radius: 4px;
+          font-weight: 600;
         }
 
         .metric-change.positive {
-          background: #dcfce7;
-          color: #16a34a;
+          color: #10b981;
         }
 
         /* Main Content */
@@ -734,229 +741,178 @@ function Applications() {
         .processed-section {
           background: white;
           border-radius: 6px;
+          padding: 18px;
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
           border: 1px solid #e2e8f0;
-          overflow: hidden;
+          margin-bottom: 20px;
         }
 
         .section-header {
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
-          padding: 16px 20px;
-          border-bottom: 1px solid #f1f5f9;
-          background: white;
+          margin-bottom: 16px;
         }
 
         .section-title {
-          font-size: 16px;
-          font-weight: 600;
+          font-size: 14px;
+          font-weight: 700;
           color: #1e293b;
-          margin: 0 0 2px 0;
+          margin: 0 0 3px 0;
         }
 
         .section-subtitle {
-          font-size: 13px;
+          font-size: 12px;
           color: #64748b;
           margin: 0;
         }
 
         .section-actions {
           display: flex;
-          gap: 8px;
-          flex-wrap: wrap;
+          gap: 12px;
+          align-items: center;
         }
 
         /* Button Styles */
-        .refresh-btn,
-        .download-btn,
-        .view-tenants-btn,
-        .approve-btn,
-        .reject-btn,
-        .view-tenant-btn {
+        .refresh-btn {
+          background: #f8fafc;
+          color: #64748b;
+          border: 1px solid #e2e8f0;
+          padding: 10px 14px;
+          border-radius: 6px;
+          font-size: 12px;
+          font-weight: 600;
+          cursor: pointer;
           display: flex;
           align-items: center;
           gap: 6px;
-          padding: 6px 12px;
-          border-radius: 6px;
-          font-size: 13px;
-          font-weight: 500;
           transition: all 0.2s ease;
-          cursor: pointer;
-          border: 1px solid transparent;
-          text-decoration: none;
-        }
-
-        .refresh-btn {
-          background: #f8fafc;
-          color: #475569;
-          border-color: #e2e8f0;
         }
 
         .refresh-btn:hover {
-          background: #f1f5f9;
-          border-color: #cbd5e1;
+          background: #e2e8f0;
+          transform: translateY(-1px);
         }
 
-        .download-btn {
-          background: #ecfdf5;
-          color: #059669;
-          border-color: #a7f3d0;
-        }
-
-        .download-btn:hover {
-          background: #d1fae5;
-        }
-
-        .view-tenants-btn {
-          background: #3b82f6;
+        /* Primary action button from manager-dashboard */
+        .view-all-btn {
+          background: #4f46e5;
           color: white;
-          border-color: #3b82f6;
-        }
-
-        .view-tenants-btn:hover {
-          background: #2563eb;
-          border-color: #2563eb;
-        }
-
-        .approve-btn {
-          background: #d1fae5;
-          color: #059669;
-          border-color: #a7f3d0;
-          font-size: 12px;
-          padding: 4px 8px;
-        }
-
-        .approve-btn:hover {
-          background: #bbf7d0;
-        }
-
-        .approve-btn:disabled {
-          background: #f3f4f6;
-          color: #9ca3af;
-          border-color: #e5e7eb;
-          cursor: not-allowed;
-        }
-
-        .reject-btn {
-          background: #fee2e2;
-          color: #dc2626;
-          border-color: #fca5a5;
-          font-size: 12px;
-          padding: 4px 8px;
-        }
-
-        .reject-btn:hover {
-          background: #fecaca;
-        }
-
-        .view-tenant-btn {
-          background: #dbeafe;
-          color: #2563eb;
-          border-color: #93c5fd;
-          font-size: 12px;
-          padding: 4px 8px;
-        }
-
-        .view-tenant-btn:hover {
-          background: #bfdbfe;
-        }
-
-        /* Filters */
-        .filters-container {
-          padding: 20px;
-        }
-
-        .filter-group {
+          border: none;
+          padding: 10px 16px;
+          border-radius: 6px;
+          font-size: 13px;
+          font-weight: 600;
+          cursor: pointer;
           display: flex;
           align-items: center;
-          gap: 12px;
+          gap: 6px;
+          transition: all 0.2s ease;
+          text-decoration: none;
         }
 
-        .filter-label {
-          font-size: 13px;
-          font-weight: 500;
-          color: #374151;
+        .view-all-btn:hover {
+          background: #3730a3;
+          transform: translateY(-1px);
         }
 
-        .form-select {
-          padding: 8px 12px;
-          border: 1px solid #d1d5db;
-          border-radius: 4px;
-          font-size: 14px;
-          min-width: 250px;
-          background: white;
-          transition: border-color 0.2s ease;
-        }
-
-        .form-select:focus {
-          outline: none;
-          border-color: #3b82f6;
-          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-        }
-
-        /* Table Styling */
+        /* Table Styling - Manager Dashboard Standard */
         .applications-scroll-container {
-          overflow-x: auto;
+          overflow-y: auto;
+          max-height: 500px;
+        }
+
+        .applications-scroll-container::-webkit-scrollbar {
+          width: 6px;
+        }
+
+        .applications-scroll-container::-webkit-scrollbar-track {
+          background: rgba(226, 232, 240, 0.3);
+          border-radius: 3px;
+        }
+
+        .applications-scroll-container::-webkit-scrollbar-thumb {
+          background: rgba(156, 163, 175, 0.5);
+          border-radius: 3px;
         }
 
         .applications-table-container {
-          min-width: 1000px;
+          width: 100%;
+          overflow-x: auto;
+          border-radius: 8px;
+          background: white;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
         }
 
         .applications-table {
           width: 100%;
           border-collapse: collapse;
-          font-size: 13px;
+          table-layout: fixed;
         }
 
-        .applications-table th {
-          background: #f8fafc;
-          color: #475569;
-          font-weight: 600;
-          padding: 12px 16px;
-          text-align: left;
-          border-bottom: 1px solid #e2e8f0;
-          font-size: 12px;
-        }
-
-        .applications-table td {
-          padding: 12px 16px;
-          border-bottom: 1px solid #f1f5f9;
-          vertical-align: middle;
+        /* Add hover effect for table rows */
+        .applications-table tbody tr {
+          transition: background-color 0.2s ease;
         }
 
         .applications-table tbody tr:hover {
-          background: #f8fafc;
+          background-color: #f9fafb;
         }
 
-        .table-left {
+        /* Table headers - Manager Dashboard Standard */
+        .applications-table th {
+          position: sticky;
+          top: 0;
+          background: #ffffff;
+          z-index: 2;
+          font-size: 12px;
+          font-weight: 600;
+          color: #9ca3af;
+          padding: 12px 16px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          border-bottom: 1px solid #e5e7eb;
           text-align: left;
         }
 
-        .table-center {
-          text-align: center;
+        /* Table cells - Manager Dashboard Standard */
+        .applications-table td {
+          padding: 12px 16px;
+          vertical-align: middle;
+          height: 48px;
+          border-bottom: 1px solid #f1f5f9;
+          font-size: 14px;
+          color: #374151;
+        }
+
+        /* Center align specific columns */
+        .applications-table th.table-center,
+        .applications-table td.table-center {
+          text-align: center !important;
+        }
+
+        .applications-table th.table-left,
+        .applications-table td.table-left {
+          text-align: left !important;
         }
 
         .applicant-name {
-          font-weight: 500;
           color: #1e293b;
-          margin-bottom: 2px;
+          margin-bottom: 4px;
         }
 
         .applicant-email {
-          font-size: 11px;
+          font-size: 12px;
           color: #64748b;
         }
 
         .property-name {
-          font-weight: 500;
           color: #1e293b;
-          margin-bottom: 2px;
+          margin-bottom: 4px;
         }
 
         .property-vacancy {
-          font-size: 11px;
+          font-size: 12px;
           color: #64748b;
         }
 
@@ -964,7 +920,7 @@ function Applications() {
           display: flex;
           flex-direction: column;
           gap: 2px;
-          font-size: 11px;
+          font-size: 12px;
           color: #64748b;
         }
 
@@ -972,11 +928,11 @@ function Applications() {
           font-style: italic;
           color: #64748b;
           margin-top: 4px;
-          font-size: 11px;
+          font-size: 12px;
         }
 
         .pending-days {
-          font-size: 11px;
+          font-size: 12px;
           color: #d97706;
           font-weight: 500;
           margin-top: 4px;
@@ -989,33 +945,75 @@ function Applications() {
           justify-content: center;
         }
 
-        /* Status Badges */
+        /* Status Badges - Manager Dashboard Standard */
         .status-badge {
-          padding: 2px 6px;
-          border-radius: 4px;
-          font-size: 11px;
+        }
+
+        .status-badge.status-pending {
+        }
+
+        .status-badge.status-approved {
+        }
+
+        .status-badge.status-rejected {
+        }
+
+        /* Manager Dashboard Button Standard */
+        .manage-btn {
+          background: #4f46e5;
+          color: white;
+          border: none;
+          padding: 6px 12px;
+          border-radius: 5px;
+          font-size: 12px;
           font-weight: 500;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          transition: all 0.2s ease;
+          text-decoration: none;
         }
 
-        .status-pending {
-          background: #fef3c7;
-          color: #d97706;
+        .manage-btn:hover {
+          background: #3730a3;
+          transform: translateY(-1px);
         }
 
-        .status-approved {
-          background: #d1fae5;
-          color: #059669;
+        .manage-btn.approve-btn {
+          background: #10b981;
         }
 
-        .status-rejected {
-          background: #fee2e2;
-          color: #dc2626;
+        .manage-btn.approve-btn:hover {
+          background: #059669;
+        }
+
+        .manage-btn.approve-btn:disabled {
+          background: #9ca3af;
+          cursor: not-allowed;
+        }
+
+        .manage-btn.reject-btn {
+          background: #ef4444;
+        }
+
+        .manage-btn.reject-btn:hover {
+          background: #dc2626;
+        }
+
+        .manage-btn.view-btn {
+          background: #4f46e5;
+        }
+
+        .manage-btn.view-btn:hover {
+          background: #3730a3;
         }
 
         /* Empty State */
         .empty-state {
           text-align: center;
-          padding: 48px 24px;
+          padding: 40px 20px;
+          color: #64748b;
         }
 
         .empty-icon {
@@ -1026,15 +1024,14 @@ function Applications() {
         }
 
         .empty-state h3 {
-          font-size: 16px;
+          font-size: 18px;
           font-weight: 600;
           color: #1e293b;
           margin: 0 0 8px 0;
         }
 
         .empty-state p {
-          font-size: 13px;
-          color: #64748b;
+          font-size: 14px;
           margin: 0 0 20px 0;
         }
 
@@ -1042,226 +1039,143 @@ function Applications() {
         @media (max-width: 1200px) {
           .metrics-grid {
             grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
           }
         }
 
         @media (max-width: 768px) {
           .dashboard-container {
-            padding: 12px 16px;
+            padding: 24px 16px;
           }
 
-          .metrics-grid {
-            grid-template-columns: 1fr;
-            gap: 8px;
-          }
-
-          .section-actions {
+          .header-content {
             flex-direction: column;
-            align-items: stretch;
+            gap: 16px;
+          }
+          
+          .dashboard-title {
+            font-size: 28px;
+          }
+          
+          .welcome-message {
+            font-size: 14px;
+          }
+          
+          .metric-card {
+            padding: 16px;
+          }
+          
+          .metric-value {
+            font-size: 24px;
+          }
+          
+          .pending-section,
+          .processed-section {
+            padding: 16px;
           }
 
-          .action-buttons {
-            flex-direction: column;
-            gap: 4px;
-          }
-
-          .filter-group {
-            flex-direction: column;
-            align-items: stretch;
-          }
-        }
-
-        @media (max-width: 480px) {
-          .section-header {
-            padding: 12px 16px;
+          .applications-table-container {
+            overflow-x: scroll;
           }
 
           .applications-table th,
           .applications-table td {
-            padding: 8px 12px;
+            padding: 12px 8px;
+            font-size: 12px;
+          }
+
+          .section-actions {
+            flex-direction: column;
+            gap: 8px;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .dashboard-container {
+            padding: 16px;
+          }
+
+          .dashboard-title {
+            font-size: 24px;
+          }
+
+          .welcome-message {
+            font-size: 13px;
+          }
+
+          .metrics-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .section-header {
+            flex-direction: column;
+            gap: 12px;
+            align-items: stretch;
           }
         }
 
         /* Dark Mode Styles */
-        :global(.dark-mode) .dashboard-container {
-          background: transparent;
-        }
-
-        :global(.dark-mode) .dashboard-title,
-        :global(.dark-mode) .welcome-message,
-        :global(.dark-mode) .section-title,
-        :global(.dark-mode) .empty-state h3 {
-          color: #ffffff !important;
-        }
-
-        :global(.dark-mode) .section-subtitle,
-        :global(.dark-mode) .empty-state p {
-          color: #a1a1aa !important;
-        }
-
-        :global(.dark-mode) .metric-card,
-        :global(.dark-mode) .applications-container,
-        :global(.dark-mode) .pending-section,
-        :global(.dark-mode) .processed-section,
-        :global(.dark-mode) .filters-container {
+        :global(.dark-mode) .dashboard-container { background: transparent; }
+        :global(.dark-mode) .metric-card, 
+        :global(.dark-mode) .pending-section, 
+        :global(.dark-mode) .processed-section {
           background: #111111 !important;
           border: 1px solid #333333 !important;
           box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4) !important;
         }
-
         :global(.dark-mode) .metric-card:hover {
           background: #222222 !important;
-          border-color: #555555 !important;
+          border-color: #ffffff !important;
         }
-
-        :global(.dark-mode) .metric-title {
-          color: #a1a1aa !important;
-        }
-
-        :global(.dark-mode) .metric-value {
-          color: #ffffff !important;
-        }
-
-        :global(.dark-mode) .metric-subtitle {
-          color: #71717a !important;
-        }
-
-        :global(.dark-mode) .applications-table {
-          background: #111111 !important;
-        }
-
         :global(.dark-mode) .applications-table th {
-          background: #1a1a1a !important;
-          color: #a1a1aa !important;
+          background-color: #1a1a1a !important;
           border-bottom: 1px solid #333333 !important;
         }
-
         :global(.dark-mode) .applications-table td {
-          background: #111111 !important;
+          background-color: #111111 !important;
           border-bottom: 1px solid #333333 !important;
         }
-
         :global(.dark-mode) .applications-table tbody tr:hover {
-          background: #222222 !important;
+          background-color: #222222 !important;
         }
-
-        :global(.dark-mode) .applicant-name,
-        :global(.dark-mode) .property-name {
+        :global(.dark-mode) .refresh-btn {
+            background: #1a1a1a !important;
+            border: 1px solid #333333 !important;
+        }
+        :global(.dark-mode) .refresh-btn:hover {
+            background: #2a2a2a !important;
+            border-color: #ffffff !important;
+        }
+        :global(.dark-mode) .view-all-btn {
+            background: #3b82f6 !important;
+            border: none !important;
+        }
+        :global(.dark-mode) .view-all-btn:hover {
+            background: #2563eb !important;
+        }
+        :global(.dark-mode) .status-badge.status-pending { 
+          background: rgba(249, 115, 22, 0.3); 
           color: #ffffff !important;
         }
-
-        :global(.dark-mode) .applicant-email,
-        :global(.dark-mode) .property-vacancy,
-        :global(.dark-mode) .app-details,
-        :global(.dark-mode) .decision-notes {
-          color: #a1a1aa !important;
+        :global(.dark-mode) .status-badge.status-approved { 
+          background: rgba(34, 197, 94, 0.3); 
+          color: #ffffff !important;
         }
-
+        :global(.dark-mode) .status-badge.status-rejected { 
+          background: rgba(239, 68, 68, 0.3); 
+          color: #ffffff !important;
+        }
+        :global(.dark-mode) .manage-btn {
+            color: #ffffff !important;
+        }
         :global(.dark-mode) .error-banner {
           background: rgba(239, 68, 68, 0.1) !important;
           border-color: rgba(239, 68, 68, 0.3) !important;
-          color: #f87171 !important;
-        }
-
-        :global(.dark-mode) .refresh-btn {
-          background: #1a1a1a !important;
-          color: #a1a1aa !important;
-          border-color: #333333 !important;
-        }
-
-        :global(.dark-mode) .refresh-btn:hover {
-          background: #2a2a2a !important;
-          border-color: #555555 !important;
-        }
-
-        :global(.dark-mode) .download-btn {
-          background: rgba(34, 197, 94, 0.1) !important;
-          color: #22c55e !important;
-          border-color: rgba(34, 197, 94, 0.3) !important;
-        }
-
-        :global(.dark-mode) .download-btn:hover {
-          background: rgba(34, 197, 94, 0.2) !important;
-        }
-
-        :global(.dark-mode) .view-tenants-btn {
-          background: #3b82f6 !important;
-          border-color: #3b82f6 !important;
-        }
-
-        :global(.dark-mode) .view-tenants-btn:hover {
-          background: #2563eb !important;
-          border-color: #2563eb !important;
-        }
-
-        :global(.dark-mode) .approve-btn {
-          background: rgba(34, 197, 94, 0.1) !important;
-          color: #22c55e !important;
-          border-color: rgba(34, 197, 94, 0.3) !important;
-        }
-
-        :global(.dark-mode) .approve-btn:hover {
-          background: rgba(34, 197, 94, 0.2) !important;
-        }
-
-        :global(.dark-mode) .reject-btn {
-          background: rgba(239, 68, 68, 0.1) !important;
           color: #ef4444 !important;
-          border-color: rgba(239, 68, 68, 0.3) !important;
-        }
-
-        :global(.dark-mode) .reject-btn:hover {
-          background: rgba(239, 68, 68, 0.2) !important;
-        }
-
-        :global(.dark-mode) .view-tenant-btn {
-          background: #1a1a1a !important;
-          color: #a1a1aa !important;
-          border-color: #333333 !important;
-        }
-
-        :global(.dark-mode) .view-tenant-btn:hover {
-          background: #2a2a2a !important;
-          border-color: #555555 !important;
-        }
-
-        :global(.dark-mode) .status-badge.status-pending {
-          background: rgba(249, 115, 22, 0.2) !important;
-          color: #fb923c !important;
-        }
-
-        :global(.dark-mode) .status-badge.status-approved {
-          background: rgba(34, 197, 94, 0.2) !important;
-          color: #4ade80 !important;
-        }
-
-        :global(.dark-mode) .status-badge.status-rejected {
-          background: rgba(239, 68, 68, 0.2) !important;
-          color: #f87171 !important;
-        }
-
-        :global(.dark-mode) .empty-icon {
-          color: #525252 !important;
-        }
-
-        :global(.dark-mode) .pending-days {
-          color: #fb923c !important;
-        }
-
-        :global(.dark-mode) .form-select,
-        :global(.dark-mode) .filter-label {
-          background: #1a1a1a !important;
-          color: #ffffff !important;
-          border: 1px solid #333333 !important;
-        }
-
-        :global(.dark-mode) .form-select:focus {
-          border-color: #555555 !important;
-          outline: none !important;
         }
       `}</style>
     </DashboardLayout>
   );
-} 
+}
 
-export default withAuth(Applications);
+export default withAuth(Applications, ['admin', 'owner', 'manager']);

@@ -142,12 +142,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setUser(null);
       setError(null);
       
-      // Clear localStorage
+      // Clear localStorage (including user-specific theme data)
       if (typeof window !== 'undefined') {
+        const userId = localStorage.getItem('userId');
+        
+        // Clear user data
         localStorage.removeItem('userRole');
         localStorage.removeItem('userId');
         localStorage.removeItem('userName');
         localStorage.removeItem('userEmail');
+        
+        // Clear global dark mode if it exists (legacy cleanup)
+        localStorage.removeItem('darkMode');
+        
+        // Force reset to light mode on logout
+        document.documentElement.classList.remove('dark-mode');
       }
       
       setLoading(false);

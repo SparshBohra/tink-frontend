@@ -126,49 +126,45 @@ function AdminDashboard() {
         <div className="metrics-grid">
           {stats && (
             <>
-              <div className="analytics-card">
-                  <div className="analytics-header">
-                      <h3 className="analytics-title">Total Landlords</h3>
-                      <div className="analytics-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+              <div className="metric-card metric-card-landlords">
+                <div className="metric-highlight"></div>
+                <div className="metric-content-wrapper">
+                  <div className="metric-header">
+                      <h3 className="metric-title">Total Landlords</h3>
+                      <div className="metric-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
                   </div>
-                  <p className="analytics-value">{stats.landlords.total}</p>
-                  <div className="analytics-footer">
-                      <span className="analytics-subtitle">{stats.landlords.active} active</span>
-                      <span className="analytics-change positive"></span>
-                  </div>
+                  <div className="metric-content"><div className="metric-value">{stats.landlords.total}</div><div className="metric-subtitle">{stats.landlords.active} active</div></div>
+                </div>
               </div>
-              <div className="analytics-card">
-                  <div className="analytics-header">
-                      <h3 className="analytics-title">Total Managers</h3>
-                      <div className="analytics-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+              <div className="metric-card metric-card-managers">
+                 <div className="metric-highlight"></div>
+                 <div className="metric-content-wrapper">
+                  <div className="metric-header">
+                      <h3 className="metric-title">Total Managers</h3>
+                      <div className="metric-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
                   </div>
-                  <p className="analytics-value">{stats.managers.total}</p>
-                  <div className="analytics-footer">
-                      <span className="analytics-subtitle">{stats.managers.active} active</span>
-                      <span className="analytics-change positive"></span>
-                  </div>
+                  <div className="metric-content"><div className="metric-value">{stats.managers.total}</div><div className="metric-subtitle">{stats.managers.active} active</div></div>
+                </div>
               </div>
-              <div className="analytics-card">
-                  <div className="analytics-header">
-                      <h3 className="analytics-title">Total Properties</h3>
-                      <div className="analytics-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
+              <div className="metric-card metric-card-properties">
+                <div className="metric-highlight"></div>
+                <div className="metric-content-wrapper">
+                  <div className="metric-header">
+                      <h3 className="metric-title">Total Properties</h3>
+                      <div className="metric-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
                   </div>
-                  <p className="analytics-value">{stats.properties.total}</p>
-                  <div className="analytics-footer">
-                      <span className="analytics-subtitle">across all landlords</span>
-                      <span className="analytics-change positive"></span>
-                  </div>
+                  <div className="metric-content"><div className="metric-value">{stats.properties.total}</div><div className="metric-subtitle">across all landlords</div></div>
+                </div>
               </div>
-              <div className="analytics-card">
-                  <div className="analytics-header">
-                      <h3 className="analytics-title">Monthly Revenue</h3>
-                      <div className="analytics-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 1v22m5-18H9.5a3.5 3.5 0 1 0 0 7h5a3.5 3.5 0 1 1 0 7H6" /></svg></div>
+              <div className="metric-card metric-card-revenue">
+                <div className="metric-highlight"></div>
+                <div className="metric-content-wrapper">
+                  <div className="metric-header">
+                      <h3 className="metric-title">Monthly Revenue</h3>
+                      <div className="metric-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 1v22m5-18H9.5a3.5 3.5 0 1 0 0 7h5a3.5 3.5 0 1 1 0 7H6" /></svg></div>
                   </div>
-                  <p className="analytics-value">${stats.revenue.monthly.toLocaleString()}</p>
-                  <div className="analytics-footer">
-                      <span className="analytics-subtitle">Total: ${stats.revenue.total.toLocaleString()}</span>
-                      <span className="analytics-change positive"></span>
-                  </div>
+                  <div className="metric-content"><div className="metric-value">${stats.revenue.monthly.toLocaleString()}</div><div className="metric-subtitle">Total: ${stats.revenue.total.toLocaleString()}</div></div>
+                </div>
               </div>
             </>
           )}
@@ -303,61 +299,77 @@ function AdminDashboard() {
         .metrics-grid {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
-          gap: 20px;
+          gap: 12px;
           margin-bottom: 20px;
         }
 
-        .analytics-card {
+        .metric-card {
           background: white;
           border-radius: 8px;
-          padding: 16px;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+          box-shadow: 0 2px 4px rgba(0,0,0,0.05);
           border: 1px solid #e2e8f0;
-          display: flex;
-          flex-direction: column;
-          justify-content: space-between;
           transition: all 0.2s ease;
+          display: flex;
+          overflow: hidden;
+          padding: 0;
         }
-        .analytics-card:hover {
+
+        .metric-highlight {
+          width: 5px;
+          flex-shrink: 0;
+        }
+
+        .metric-card-landlords .metric-highlight { background-color: #3b82f6; }
+        .metric-card-managers .metric-highlight { background-color: #10b981; }
+        .metric-card-properties .metric-highlight { background-color: #f97316; }
+        .metric-card-revenue .metric-highlight { background-color: #8b5cf6; }
+
+        .metric-content-wrapper {
+          padding: 14px;
+          width: 100%;
+        }
+
+        .metric-card:hover {
           transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
-        .analytics-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 24px;
+
+        .metric-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          margin-bottom: 12px;
         }
-        .analytics-title {
-            font-size: 14px;
-            color: #4b5563;
-            font-weight: 500;
-            margin: 0;
+
+        .metric-title {
+          font-size: 11px;
+          font-weight: 600;
+          color: #64748b;
+          margin: 0;
         }
-        .analytics-icon svg {
-            color: #64748b;
+
+        .metric-icon {
+          width: 20px;
+          height: 20px;
+          color: #64748b;
         }
-        .analytics-value {
-            font-size: 32px;
-            font-weight: 700;
-            color: #1e293b;
-            margin: 0;
-            line-height: 1;
+
+        .metric-content {
+          margin-top: 8px;
         }
-        .analytics-footer {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 16px;
-            font-size: 13px;
-            color: #64748b;
+
+        .metric-value {
+          font-size: 20px;
+          font-weight: 700;
+          color: #1e293b;
+          margin-bottom: 3px;
+          line-height: 1;
         }
-        .analytics-subtitle {
-            margin: 0;
-        }
-        .analytics-change.positive {
-            color: #10b981;
-            font-weight: 600;
+
+        .metric-subtitle {
+          font-size: 11px;
+          color: #64748b;
+          margin-bottom: 10px;
         }
         
         .properties-section {
@@ -470,27 +482,15 @@ function AdminDashboard() {
         /* Dark Mode Styles */
         :global(.dark-mode) .dashboard-container { background: transparent; }
         :global(.dark-mode) .header-right span { color: #a1a1aa !important; }
-        :global(.dark-mode) .analytics-card,
+        :global(.dark-mode) .metric-card, 
         :global(.dark-mode) .properties-section {
           background: #111111 !important;
           border: 1px solid #333333 !important;
           box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4) !important;
         }
-        :global(.dark-mode) .analytics-card:hover {
+        :global(.dark-mode) .metric-card:hover {
           background: #222222 !important;
-          border-color: #555555 !important;
-        }
-        :global(.dark-mode) .analytics-title,
-        :global(.dark-mode) .analytics-icon svg,
-        :global(.dark-mode) .analytics-subtitle,
-        :global(.dark-mode) .analytics-footer {
-          color: #a1a1aa !important;
-        }
-        :global(.dark-mode) .analytics-value {
-          color: #ffffff !important;
-        }
-        :global(.dark-mode) .analytics-change.positive {
-          color: #4ade80 !important;
+          border-color: #ffffff !important;
         }
         :global(.dark-mode) .properties-table th {
           background-color: #1a1a1a !important;

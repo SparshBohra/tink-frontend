@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import DashboardLayout from '../components/DashboardLayout';
-import Link from 'next/link';
+import { useRouter } from 'next/router';
 import { withAuth } from '../lib/auth-context';
 import { apiClient } from '../lib/api';
 import { Property } from '../lib/types';
 
 function Properties() {
+  const router = useRouter();
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -261,13 +262,13 @@ function Properties() {
                   </svg>
                   Refresh
                 </button>
-                <Link href="/properties/add" className="create-property-btn">
+                <button onClick={() => router.push('/properties/add')} className="create-property-btn">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                     <line x1="12" y1="5" x2="12" y2="19"/>
                     <line x1="5" y1="12" x2="19" y2="12"/>
                   </svg>
                   Add Property
-                </Link>
+                </button>
               </div>
             </div>
 
@@ -282,9 +283,9 @@ function Properties() {
                 </div>
                 <h3>No properties found</h3>
                 <p>Start by adding your first property to manage tenants and rooms.</p>
-                <Link href="/properties/add" className="empty-action-btn">
+                <button onClick={() => router.push('/properties/add')} className="empty-action-btn">
                   Add Your First Property
-                </Link>
+                </button>
               </div>
             ) : (
               <div className="properties-scroll-container">
@@ -325,13 +326,13 @@ function Properties() {
                               </span>
                             </td>
                             <td className="table-center">
-                              <Link href={`/properties/${property.id}/rooms`} className="manage-btn">
+                              <button onClick={() => router.push(`/properties/${property.id}/rooms`)} className="manage-btn">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                   <path d="M12 20h9"/>
                                   <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
                                 </svg>
                                 Manage
-                              </Link>
+                              </button>
                             </td>
                           </tr>
                         );
@@ -353,7 +354,7 @@ function Properties() {
             </div>
             
             <div className="actions-grid">
-              <div className="action-card blue" onClick={() => window.location.href = '/properties/add'}>
+              <div className="action-card blue" onClick={() => router.push('/properties/add')}>
                 <div className="action-icon">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <line x1="12" y1="5" x2="12" y2="19"/>
@@ -366,7 +367,7 @@ function Properties() {
                 </div>
               </div>
 
-              <div className="action-card blue" onClick={() => window.location.href = '/applications'}>
+              <div className="action-card blue" onClick={() => router.push('/applications')}>
                 <div className="action-icon">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -381,7 +382,7 @@ function Properties() {
                 </div>
               </div>
 
-              <div className="action-card green" onClick={() => window.location.href = '/tenants'}>
+              <div className="action-card green" onClick={() => router.push('/tenants')}>
                 <div className="action-icon">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
@@ -623,36 +624,23 @@ function Properties() {
         }
 
         .create-property-btn {
-          background: linear-gradient(180deg, #0073e6 0%, #0052cc 100%);
+          background: #4f46e5;
           color: white;
-          border: 1px solid #0052cc;
-          padding: 10px 18px;
+          border: none;
+          padding: 10px 16px;
           border-radius: 6px;
-          font-size: 14px;
+          font-size: 13px;
           font-weight: 600;
           cursor: pointer;
-          display: inline-flex;
+          display: flex;
           align-items: center;
           gap: 8px;
-          transition: all 0.15s ease;
-          text-decoration: none;
-          box-shadow: 0 2px 4px rgba(0, 82, 204, 0.2);
-          white-space: nowrap;
-          line-height: 1;
+          transition: all 0.2s ease;
         }
 
         .create-property-btn:hover {
-          background: linear-gradient(180deg, #0084ff 0%, #0065ff 100%);
-          border-color: #0065ff;
-          box-shadow: 0 3px 6px rgba(0, 82, 204, 0.3);
+          background: #3730a3;
           transform: translateY(-1px);
-        }
-
-        .create-property-btn:active {
-          background: linear-gradient(180deg, #0052cc 0%, #003884 100%);
-          border-color: #003884;
-          box-shadow: 0 1px 2px rgba(0, 82, 204, 0.15);
-          transform: translateY(0);
         }
 
         /* Empty State */
@@ -682,7 +670,7 @@ function Properties() {
         }
 
         .empty-action-btn {
-          background: #6366f1;
+          background: #4f46e5;
           color: white;
           border: none;
           padding: 12px 20px;
@@ -690,13 +678,12 @@ function Properties() {
           font-size: 14px;
           font-weight: 600;
           cursor: pointer;
-          text-decoration: none;
           display: inline-block;
           transition: all 0.2s ease;
         }
 
         .empty-action-btn:hover {
-          background: #4f46e5;
+          background: #3730a3;
           transform: translateY(-1px);
         }
 
@@ -730,30 +717,43 @@ function Properties() {
 
         .properties-table {
           width: 100%;
-          border-collapse: separate;
-          border-spacing: 0;
+          border-collapse: collapse;
+          table-layout: fixed;
+        }
+        
+        .properties-table tbody tr {
+          transition: background-color 0.2s ease;
+        }
+
+        .properties-table tbody tr:hover {
+          background-color: #f9fafb;
         }
 
         .properties-table th {
           position: sticky;
           top: 0;
-          background: #f8fafc;
+          background: #ffffff;
           z-index: 2;
-          font-size: 13px;
-          font-weight: 700;
-          color: #1e293b;
-          padding: 12px 10px;
-          border-bottom: 2px solid #e2e8f0;
+          font-size: 12px;
+          font-weight: 600;
+          color: #9ca3af;
+          padding: 12px 16px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          border-bottom: 1px solid #e5e7eb;
+          text-align: left;
         }
 
         .properties-table td {
+          padding: 12px 16px;
+          vertical-align: middle;
+          height: 48px;
+          border-bottom: 1px solid #f1f5f9;
           font-size: 14px;
-          padding: 16px 10px;
-          border-bottom: 1px solid #e2e8f0;
+          color: #374151;
         }
 
         .property-name {
-          font-weight: 600;
           color: #1e293b;
           margin-bottom: 4px;
         }
@@ -769,7 +769,7 @@ function Properties() {
         }
 
         .rooms-total {
-          font-weight: 600;
+          font-weight: 500;
           color: #1e293b;
           margin-bottom: 2px;
         }
@@ -780,36 +780,40 @@ function Properties() {
         }
 
         .status-badge {
-          padding: 4px 12px;
-          border-radius: 20px;
+          padding: 6px 8px;
+          border-radius: 5px;
           font-size: 12px;
-          font-weight: 600;
+          font-weight: 500;
           text-align: center;
+          display: inline-block;
         }
 
         .status-badge.low {
-          background: #fef2f2;
+          background: #fee2e2;
           color: #dc2626;
+          min-width: 85px;
         }
 
         .status-badge.good {
-          background: #fffbeb;
+          background: #fef3c7;
           color: #d97706;
+          min-width: 85px;
         }
 
         .status-badge.excellent {
-          background: #f0fdf4;
+          background: #dcfce7;
           color: #16a34a;
+          min-width: 120px;
         }
 
         .manage-btn {
-          background: #f0f0f0;
-          color: #000000;
-          border: 1px solid #e2e8f0;
-          padding: 8px 12px;
-          border-radius: 6px;
+          background: #4f46e5;
+          color: white;
+          border: none;
+          padding: 6px 12px;
+          border-radius: 5px;
           font-size: 12px;
-          font-weight: 600;
+          font-weight: 500;
           cursor: pointer;
           display: flex;
           align-items: center;
@@ -821,12 +825,12 @@ function Properties() {
         }
 
         .manage-btn:hover {
-          background: #e2e8f0;
+          background: #3730a3;
           transform: translateY(-1px);
         }
 
         .manage-btn svg {
-          stroke: #000000;
+          stroke: white;
         }
 
         /* Quick Actions Section */
