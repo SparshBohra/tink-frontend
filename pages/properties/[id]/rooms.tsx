@@ -195,65 +195,17 @@ export default function PropertyRooms() {
     
     return {
       id: room.id,
-      room: (
-        <div>
-          <strong>{room.name}</strong>
-          {room.floor && (
-            <>
-              <br />
-              <small style={{ color: 'var(--gray-600)' }}>Floor {room.floor}</small>
-            </>
-          )}
-        </div>
-      ),
-      status: (
-        <StatusBadge 
-          status={isOccupied ? 'active' : 'pending'} 
-          text={isOccupied ? 'Occupied' : 'Vacant'}
-        />
-      ),
-      tenant: lease ? (
-        <div>
-          <Link href={{ pathname: '/tenants/[id]', query: { id: lease.tenant } }}>
-            <strong style={{ color: 'var(--primary-blue)', cursor: 'pointer' }}>
-              {getTenantName(lease.tenant)}
-            </strong>
-          </Link>
-          <br />
-          <small style={{ color: 'var(--gray-600)' }}>
-            Lease: {lease.start_date} to {lease.end_date}
-          </small>
-        </div>
-      ) : (
-        <em style={{ color: 'var(--gray-600)' }}>Available for rent</em>
-      ),
-      rent: room.monthly_rent ? (
-        <div>
-          <strong>{formatCurrency(Number(room.monthly_rent))}</strong>
-          {lease && lease.monthly_rent !== Number(room.monthly_rent) && (
-            <>
-              <br />
-              <small style={{ color: 'var(--gray-600)' }}>
-                Lease: {formatCurrency(lease.monthly_rent)}
-              </small>
-            </>
-          )}
-        </div>
-      ) : lease ? (
-        <strong>{formatCurrency(lease.monthly_rent)}</strong>
-      ) : (
-        <span style={{ color: 'var(--gray-600)' }}>Not set</span>
-      ),
-      type: room.room_type || 'Standard',
-      actions: (
-        <button onClick={() => router.push(`/properties/${property.id}/edit-room/${room.id}`)} className="manage-btn">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M12 20h9"/>
-            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
-          </svg>
-          Manage
-        </button>
-      )
+      name: room.name,
+      floor: room.floor,
+      status: isOccupied ? 'occupied' : 'vacant',
+      tenantName: lease ? getTenantName(lease.tenant) : null,
+      tenantId: lease ? lease.tenant : null,
+      leaseStart: lease ? lease.start_date : null,
+      leaseEnd: lease ? lease.end_date : null,
+      baseRent: room.monthly_rent,
+      leaseRent: lease ? lease.monthly_rent : null,
+      roomType: room.room_type || 'Standard',
+      roomId: room.id
     };
   });
 
@@ -405,9 +357,9 @@ export default function PropertyRooms() {
                   </div>
                 </div>
                 {rooms.length > 0 ? (
-                  <div className="rooms-scroll-container">
-                    <div className="rooms-table-container">
-                      <table className="rooms-table">
+                  <div className="applications-scroll-container">
+                    <div className="applications-table-container">
+                      <table className="applications-table">
                         <thead>
                           <tr>
                             <th className="table-left">Room</th>
@@ -421,12 +373,78 @@ export default function PropertyRooms() {
                         <tbody>
                           {roomsTableData.map((rowData, index) => (
                             <tr key={rowData.id}>
-                              <td className="table-left">{rowData.room}</td>
-                              <td className="table-center">{rowData.status}</td>
-                              <td className="table-left">{rowData.tenant}</td>
-                              <td className="table-center">{rowData.rent}</td>
-                              <td className="table-center">{rowData.type}</td>
-                              <td className="table-center">{rowData.actions}</td>
+                              <td className="table-left">
+                                <div className="applicant-name">{rowData.name}</div>
+                                {rowData.floor && (
+                                  <div className="applicant-email">Floor {rowData.floor}</div>
+                                )}
+                              </td>
+                              <td className="table-center">
+                                <span style={{
+                                  background: rowData.status === 'occupied' ? '#dcfce7' : '#fef3c7',
+                                  color: rowData.status === 'occupied' ? '#16a34a' : '#d97706',
+                                  padding: '4px 8px',
+                                  borderRadius: '4px',
+                                  fontSize: '12px',
+                                  fontWeight: 500,
+                                  textTransform: 'capitalize',
+                                  display: 'inline-block'
+                                }}>
+                                  {rowData.status === 'occupied' ? 'Occupied' : 'Vacant'}
+                                </span>
+                              </td>
+                              <td className="table-left">
+                                {rowData.tenantName ? (
+                                  <div>
+                                    <div className="property-name">{rowData.tenantName}</div>
+                                    <div className="property-vacancy">{rowData.leaseEnd ? `Lease ends: ${rowData.leaseEnd}` : ''}</div>
+                                  </div>
+                                ) : (
+                                  <div className="property-vacancy">Available for rent</div>
+                                )}
+                              </td>
+                              <td className="table-center">
+                                <div className="app-details">
+                                  {rowData.baseRent ? (
+                                    <>
+                                      <div><span className="detail-label">Base:</span> {formatCurrency(Number(rowData.baseRent))}</div>
+                                      {rowData.leaseRent && (
+                                        <div className="property-vacancy">{formatCurrency(Number(rowData.leaseRent))}</div>
+                                      )}
+                                    </>
+                                  ) : (
+                                    <div className="property-vacancy">Not set</div>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="table-center">
+                                <span style={{
+                                  background: '#f1f5f9',
+                                  color: '#334155',
+                                  padding: '4px 8px',
+                                  borderRadius: '4px',
+                                  fontSize: '12px',
+                                  fontWeight: 500,
+                                  textTransform: 'capitalize',
+                                  display: 'inline-block'
+                                }}>
+                                  {rowData.roomType}
+                                </span>
+                              </td>
+                              <td className="table-center">
+                                <div className="action-buttons">
+                                  <button 
+                                    onClick={() => router.push(`/properties/${property.id}/edit-room/${rowData.roomId}`)} 
+                                    className="manage-btn view-btn"
+                                  >
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                      <path d="M12 20h9"/>
+                                      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                                    </svg>
+                                    Manage
+                                  </button>
+                                </div>
+                              </td>
                             </tr>
                           ))}
                         </tbody>
@@ -462,16 +480,16 @@ export default function PropertyRooms() {
                 </div>
           <div className="property-info-grid">
             <div className="info-item">
-              <strong>Address:</strong><br />
-              {property.full_address}
+              <strong>Address:</strong>
+              <div className="info-value">{property.full_address}</div>
             </div>
             <div className="info-item">
-              <strong>Property Type:</strong><br />
-              {property.property_type || 'Not specified'}
+              <strong>Property Type:</strong>
+              <div className="info-value">{property.property_type || 'Not specified'}</div>
             </div>
             <div className="info-item">
-              <strong>Landlord:</strong><br />
-              {property.landlord_name || 'Not specified'}
+              <strong>Landlord:</strong>
+              <div className="info-value">{property.landlord_name || 'Not specified'}</div>
             </div>
           </div>
               </div>
@@ -769,29 +787,59 @@ export default function PropertyRooms() {
         /* Property Info Grid */
         .property-info-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-          gap: 16px;
+          grid-template-columns: 1fr;
+          gap: 12px;
         }
         
         .info-item {
-          padding: 14px;
-          background: #f8fafc;
-          border-radius: 6px;
-          border: 1px solid #e2e8f0;
+          padding: 16px 18px;
+          background: #ffffff;
+          border-radius: 8px;
+          border: 1px solid #e5e7eb;
           transition: all 0.2s ease;
+          position: relative;
+          overflow: hidden;
         }
 
         .info-item:hover {
           transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+          border-color: #d1d5db;
         }
         
         .info-item strong {
-          color: #1e293b;
-          font-size: 12px;
+          display: block;
+          color: #6b7280;
+          font-size: 11px;
           font-weight: 600;
           text-transform: uppercase;
-          letter-spacing: 0.5px;
+          letter-spacing: 0.8px;
+          margin-bottom: 8px;
+          line-height: 1;
+        }
+
+        .info-item .info-value {
+          color: #1f2937;
+          font-size: 15px;
+          font-weight: 500;
+          line-height: 1.4;
+          margin: 0;
+        }
+
+        .info-item::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 4px;
+          height: 100%;
+          background: linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%);
+          opacity: 0;
+          transition: opacity 0.2s ease;
+        }
+
+        .info-item:hover::before {
+          opacity: 1;
         }
         
         /* Refresh Button */
@@ -816,26 +864,26 @@ export default function PropertyRooms() {
         }
 
         /* Table Styling */
-        .rooms-scroll-container {
+        .applications-scroll-container {
           overflow-y: auto;
           max-height: 600px;
         }
 
-        .rooms-scroll-container::-webkit-scrollbar {
+        .applications-scroll-container::-webkit-scrollbar {
           width: 6px;
         }
 
-        .rooms-scroll-container::-webkit-scrollbar-track {
+        .applications-scroll-container::-webkit-scrollbar-track {
           background: rgba(226, 232, 240, 0.3);
           border-radius: 3px;
         }
 
-        .rooms-scroll-container::-webkit-scrollbar-thumb {
+        .applications-scroll-container::-webkit-scrollbar-thumb {
           background: rgba(156, 163, 175, 0.5);
           border-radius: 3px;
         }
 
-        .rooms-table-container {
+        .applications-table-container {
           width: 100%;
           overflow-x: auto;
           border-radius: 8px;
@@ -843,40 +891,130 @@ export default function PropertyRooms() {
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
         }
 
-        .rooms-table {
+        .applications-table {
           width: 100%;
           border-collapse: separate;
           border-spacing: 0;
         }
 
-        .rooms-table th {
+        /* Add hover effect for table rows */
+        .applications-table tbody tr {
+          transition: background-color 0.2s ease;
+        }
+
+        .applications-table tbody tr:hover {
+          background-color: #f9fafb;
+        }
+
+        /* Table headers - Applications Page Standard */
+        .applications-table th {
           position: sticky;
           top: 0;
-          background: #f8fafc;
+          background: #ffffff;
           z-index: 2;
-          font-size: 13px;
-          font-weight: 700;
-          color: #1e293b;
-          padding: 12px 10px;
-          border-bottom: 2px solid #e2e8f0;
+          font-size: 12px;
+          font-weight: 600;
+          color: #9ca3af;
+          padding: 12px 16px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          border-bottom: 1px solid #e5e7eb;
+          text-align: left;
         }
 
-        .rooms-table td {
+        /* Table cells - Applications Page Standard */
+        .applications-table td {
+          padding: 12px 16px;
+          vertical-align: middle;
+          height: 48px;
+          border-bottom: 1px solid #f1f5f9;
           font-size: 14px;
-          padding: 16px 10px;
-          border-bottom: 1px solid #e2e8f0;
-        }
-        
-        .rooms-table tr:last-child td {
-          border-bottom: none;
+          color: #374151;
         }
 
-        .table-left {
+        /* Center align specific columns */
+        .applications-table th.table-center,
+        .applications-table td.table-center {
+          text-align: center !important;
+        }
+
+        .applications-table th.table-left,
+        .applications-table td.table-left {
           text-align: left !important;
         }
 
-        .table-center {
-          text-align: center !important;
+        .applicant-name {
+          color: #1e293b;
+          margin-bottom: 4px;
+        }
+
+        .applicant-email {
+          font-size: 12px;
+          color: #64748b;
+        }
+
+        .property-name {
+          color: #1e293b;
+          margin-bottom: 4px;
+        }
+
+        .property-vacancy {
+          font-size: 12px;
+          color: #64748b;
+        }
+
+        .app-details {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          font-size: 12px;
+        }
+
+        .app-details > div {
+          color: #64748b;
+        }
+
+        .detail-label {
+          font-weight: 600;
+          color: #374151;
+          margin-right: 4px;
+        }
+
+        .action-buttons {
+          display: flex;
+          gap: 4px;
+          flex-wrap: wrap;
+          justify-content: center;
+        }
+
+        /* Applications Page Button Standard */
+        .manage-btn {
+          background: #4f46e5;
+          color: white;
+          border: none;
+          padding: 6px 12px;
+          border-radius: 5px;
+          font-size: 12px;
+          font-weight: 500;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          transition: all 0.2s ease;
+          text-decoration: none;
+        }
+
+        .manage-btn:hover {
+          background: #3730a3;
+          transform: translateY(-1px);
+        }
+
+        .manage-btn.view-btn {
+          background: #4f46e5;
+        }
+
+        .manage-btn.view-btn:hover {
+          background: #3730a3;
         }
 
         /* Empty State */
@@ -1164,12 +1302,12 @@ export default function PropertyRooms() {
             padding: 16px;
           }
 
-          .rooms-table-container {
+          .applications-table-container {
             overflow-x: scroll;
           }
 
-          .rooms-table th,
-          .rooms-table td {
+          .applications-table th,
+          .applications-table td {
             padding: 12px 8px;
             font-size: 12px;
           }
@@ -1311,17 +1449,17 @@ export default function PropertyRooms() {
           background: #222222 !important;
         }
 
-        :global(.dark-mode) .rooms-table-container {
+        :global(.dark-mode) .applications-table-container {
           background: #1a1a1a !important;
         }
 
-        :global(.dark-mode) .rooms-table th {
+        :global(.dark-mode) .applications-table th {
           background: #111111 !important;
           color: #ffffff !important;
           border-bottom: 2px solid #333333 !important;
         }
 
-        :global(.dark-mode) .rooms-table td {
+        :global(.dark-mode) .applications-table td {
           color: #e2e8f0 !important;
           border-bottom: 1px solid #333333 !important;
         }

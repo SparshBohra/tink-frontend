@@ -437,66 +437,66 @@ export default function AddRoom() {
 
       <style jsx>{`
         .dashboard-container {
-          padding: 32px 24px;
-          max-width: 1400px;
-          margin: 0 auto;
+          width: 100%;
+          padding: 16px 20px 20px 20px;
           background: #f8fafc;
-          min-height: 100vh;
+          min-height: calc(100vh - 72px);
+          box-sizing: border-box;
         }
 
-        /* Dashboard Header */
+        /* Custom Header */
         .dashboard-header {
-          margin-bottom: 32px;
+          margin-bottom: 24px;
         }
 
         .header-content {
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
+          gap: 20px;
         }
 
         .header-left {
           flex: 1;
         }
 
-        .dashboard-title {
-          font-size: 32px;
-          font-weight: 700;
-          color: #1e293b;
-          margin: 0 0 8px 0;
-          line-height: 1.2;
-        }
-
-        .welcome-message {
-          font-size: 16px;
-          color: #64748b;
-          margin: 0;
-          font-weight: 500;
-        }
-
         .header-right {
           flex-shrink: 0;
         }
 
+        .dashboard-title {
+          font-size: 22px;
+          font-weight: 700;
+          color: #1e293b;
+          margin: 0 0 4px 0;
+          line-height: 1.15;
+        }
+
+        .welcome-message {
+          font-size: 14px;
+          color: #4b5563;
+          margin: 0;
+          line-height: 1.45;
+        }
+
         .back-btn {
+          background: #4f46e5;
+          color: white;
+          border: none;
+          padding: 10px 14px;
+          border-radius: 6px;
+          font-size: 12px;
+          font-weight: 600;
+          cursor: pointer;
           display: flex;
           align-items: center;
-          gap: 8px;
-          background: white;
-          color: #64748b;
-          border: 1px solid #e2e8f0;
-          padding: 12px 16px;
-          border-radius: 6px;
-          font-size: 14px;
-          font-weight: 500;
-          text-decoration: none;
+          gap: 6px;
           transition: all 0.2s ease;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+          text-decoration: none;
         }
 
         .back-btn:hover {
-          background: #f1f5f9;
-          border-color: #cbd5e1;
+          background: #3730a3;
           transform: translateY(-1px);
         }
 
@@ -505,13 +505,13 @@ export default function AddRoom() {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
           gap: 12px;
-          margin-bottom: 32px;
+          margin-bottom: 20px;
         }
 
         .metric-card {
           background: white;
           border-radius: 6px;
-          padding: 18px;
+          padding: 14px;
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
           border: 1px solid #e2e8f0;
           transition: all 0.2s ease;
@@ -541,8 +541,6 @@ export default function AddRoom() {
           font-weight: 600;
           color: #64748b;
           margin: 0;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
         }
 
         .metric-icon {
@@ -559,7 +557,7 @@ export default function AddRoom() {
           font-size: 20px;
           font-weight: 700;
           color: #1e293b;
-          margin-bottom: 4px;
+          margin-bottom: 3px;
           line-height: 1;
         }
 
@@ -586,35 +584,37 @@ export default function AddRoom() {
         .main-content {
           display: grid;
           grid-template-columns: 2fr 1fr;
-          gap: 24px;
-          margin-bottom: 32px;
+          gap: 20px;
+          margin-bottom: 20px;
         }
 
         /* Form Section */
-        .form-section {
+        .form-section,
+        .quick-actions-section {
           background: white;
           border-radius: 6px;
-          padding: 24px;
+          padding: 18px;
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
           border: 1px solid #e2e8f0;
+          height: fit-content;
         }
 
         .section-header {
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
-          margin-bottom: 24px;
+          margin-bottom: 16px;
         }
 
         .section-title {
-          font-size: 18px;
+          font-size: 14px;
           font-weight: 700;
           color: #1e293b;
-          margin: 0 0 4px 0;
+          margin: 0 0 3px 0;
         }
 
         .section-subtitle {
-          font-size: 14px;
+          font-size: 12px;
           color: #64748b;
           margin: 0;
         }
@@ -622,14 +622,14 @@ export default function AddRoom() {
         .form-grid {
           display: grid;
           grid-template-columns: repeat(2, 1fr);
-          gap: 20px;
-          margin-bottom: 24px;
+          gap: 16px;
+          margin-bottom: 20px;
         }
 
         .form-group {
           display: flex;
           flex-direction: column;
-          gap: 8px;
+          gap: 6px;
         }
 
         .form-label {
@@ -639,11 +639,12 @@ export default function AddRoom() {
         }
 
         .form-input {
-          padding: 12px 16px;
+          padding: 10px 12px;
           border: 1px solid #d1d5db;
           border-radius: 6px;
           font-size: 14px;
-          transition: border-color 0.2s ease;
+          transition: all 0.2s ease;
+          box-sizing: border-box;
         }
 
         .form-input:focus {
@@ -655,12 +656,14 @@ export default function AddRoom() {
         .form-actions {
           display: flex;
           gap: 12px;
-          padding-top: 24px;
-          border-top: 1px solid #e5e7eb;
+          justify-content: flex-end;
+          margin-top: 20px;
+          padding-top: 16px;
+          border-top: 1px solid #e2e8f0;
         }
 
         .btn {
-          padding: 12px 24px;
+          padding: 10px 16px;
           border-radius: 6px;
           font-size: 14px;
           font-weight: 600;
@@ -669,7 +672,7 @@ export default function AddRoom() {
           text-decoration: none;
           display: inline-flex;
           align-items: center;
-          gap: 8px;
+          gap: 6px;
           border: none;
         }
 
@@ -680,44 +683,28 @@ export default function AddRoom() {
 
         .btn-primary:hover {
           background: #3730a3;
-          transform: translateY(-1px);
         }
 
         .btn-primary:disabled {
           background: #9ca3af;
           cursor: not-allowed;
-          transform: none;
         }
 
         .btn-secondary {
-          background: #f3f4f6;
-          color: #374151;
-          border: 1px solid #d1d5db;
+          background: #f8fafc;
+          color: #64748b;
+          border: 1px solid #e2e8f0;
         }
 
         .btn-secondary:hover {
-          background: #e5e7eb;
-          transform: translateY(-1px);
+          background: #e2e8f0;
         }
 
-        /* Quick Actions Section */
-        .quick-actions-section {
-          background: white;
-          border-radius: 6px;
-          padding: 18px;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-          border: 1px solid #e2e8f0;
-          height: 400px;
-          display: flex;
-          flex-direction: column;
-        }
-
+        /* Actions Grid */
         .actions-grid {
           display: flex;
           flex-direction: column;
           gap: 12px;
-          flex: 1;
-          justify-content: flex-start;
         }
 
         .action-card {
@@ -729,6 +716,7 @@ export default function AddRoom() {
           border: 1px solid #e2e8f0;
           cursor: pointer;
           transition: all 0.2s ease;
+          text-decoration: none;
         }
 
         .action-card:hover {
@@ -795,69 +783,94 @@ export default function AddRoom() {
 
         /* Alerts */
         .alert {
-          padding: 16px;
+          padding: 12px 16px;
           border-radius: 6px;
-          margin-bottom: 24px;
+          margin-bottom: 20px;
           font-size: 14px;
+          font-weight: 500;
+          display: flex;
+          align-items: center;
+          gap: 8px;
         }
 
         .alert-error {
           background: #fef2f2;
-          color: #dc2626;
           border: 1px solid #fecaca;
+          color: #dc2626;
         }
 
         .alert-success {
           background: #f0fdf4;
-          color: #16a34a;
           border: 1px solid #bbf7d0;
+          color: #16a34a;
         }
 
-        /* Loading */
+        /* Error Section */
         .error-section {
           display: flex;
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          padding: 48px;
+          padding: 40px 20px;
+          text-align: center;
         }
 
         .actions-container {
-          margin-top: 24px;
+          margin-top: 20px;
         }
 
         /* Responsive Design */
         @media (max-width: 1200px) {
-          .main-content {
-            grid-template-columns: 1fr;
-            gap: 24px;
+          .metrics-grid {
+            grid-template-columns: repeat(2, 1fr);
           }
         }
 
         @media (max-width: 768px) {
           .dashboard-container {
-            padding: 16px;
-          }
-
-          .metrics-grid {
-            grid-template-columns: repeat(2, 1fr);
-          }
-
-          .form-grid {
-            grid-template-columns: 1fr;
+            padding: 24px 16px;
           }
 
           .header-content {
             flex-direction: column;
             gap: 16px;
           }
-
+          
           .dashboard-title {
-            font-size: 24px;
+            font-size: 28px;
+          }
+          
+          .welcome-message {
+            font-size: 14px;
+          }
+
+          .main-content {
+            grid-template-columns: 1fr;
+            gap: 20px;
+          }
+
+          .form-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .metrics-grid {
+            grid-template-columns: repeat(2, 1fr);
           }
         }
 
         @media (max-width: 480px) {
+          .dashboard-container {
+            padding: 16px;
+          }
+
+          .dashboard-title {
+            font-size: 24px;
+          }
+
+          .welcome-message {
+            font-size: 13px;
+          }
+
           .metrics-grid {
             grid-template-columns: 1fr;
           }
