@@ -5,14 +5,12 @@ import Link from 'next/link';
 import { apiClient } from '../../../../lib/api';
 import { Property, Room, RoomFormData } from '../../../../lib/types';
 import DashboardLayout from '../../../../components/DashboardLayout';
-import SectionCard from '../../../../components/SectionCard';
-import MetricCard from '../../../../components/MetricCard';
 
 export default function EditRoom() {
   const router = useRouter();
   const { id, roomId } = router.query;
-  const propertyId = id ? parseInt(id as string) : null;
-  const roomIdNum = roomId ? parseInt(roomId as string) : null;
+  const propertyId = id ? parseInt(Array.isArray(id) ? id[0] : String(id), 10) : null;
+  const roomIdNum = roomId ? parseInt(Array.isArray(roomId) ? roomId[0] : String(roomId), 10) : null;
   
   const [property, setProperty] = useState<Property | null>(null);
   const [room, setRoom] = useState<Room | null>(null);
@@ -116,10 +114,18 @@ export default function EditRoom() {
         <Head>
           <title>Edit Room - Invalid Parameters - Tink Property Management</title>
         </Head>
-        <DashboardLayout
-          title="Invalid Parameters"
-          subtitle="Unable to edit room without proper selection"
-        >
+        <DashboardLayout title="">
+          <div className="dashboard-container">
+            <div className="dashboard-header">
+              <div className="header-content">
+                <div className="header-left">
+                  <h1 className="dashboard-title">Invalid Parameters</h1>
+                  <p className="welcome-message">Unable to edit room without proper selection</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="error-section">
           <div className="alert alert-error">
             <strong>Error:</strong> Please select a valid property and room.
           </div>
@@ -127,6 +133,8 @@ export default function EditRoom() {
             <Link href="/properties" className="btn btn-primary">
               View All Properties
             </Link>
+              </div>
+            </div>
           </div>
         </DashboardLayout>
       </>
@@ -139,41 +147,25 @@ export default function EditRoom() {
         <Head>
           <title>Edit Room - Loading - Tink Property Management</title>
         </Head>
-        <DashboardLayout
-          title="Loading Room Details"
-          subtitle="Fetching room information..."
-        >
+        <DashboardLayout title="">
+          <div className="dashboard-container">
+            <div className="dashboard-header">
+              <div className="header-content">
+                <div className="header-left">
+                  <h1 className="dashboard-title">Loading Room Details</h1>
+                  <p className="welcome-message">Fetching room information...</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="loading-section">
           <div className="loading-indicator">
             <div className="loading-spinner"></div>
             <p>Loading room details...</p>
+              </div>
+            </div>
           </div>
         </DashboardLayout>
-        
-        <style jsx>{`
-          .loading-indicator {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: var(--spacing-xl);
-          }
-          
-          .loading-spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid var(--gray-200);
-            border-top-color: var(--primary-blue);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-bottom: var(--spacing-md);
-          }
-          
-          @keyframes spin {
-            to {
-              transform: rotate(360deg);
-            }
-          }
-        `}</style>
       </>
     );
   }
@@ -183,39 +175,109 @@ export default function EditRoom() {
       <Head>
         <title>Edit Room - {room?.name || 'Room'} - {property?.name || 'Property'} - Tink Property Management</title>
       </Head>
-      <DashboardLayout
-        title="✏️ Edit Room"
-        subtitle={property && room ? `Editing ${room.name} in ${property.name}` : 'Edit room details'}
-      >
-        <div className="actions-container">
-          <Link href={`/properties/${propertyId}/rooms`} className="btn btn-secondary">
-            ← Back to Rooms
+      <DashboardLayout title="">
+        <div className="dashboard-container">
+          {/* Custom Header */}
+          <div className="dashboard-header">
+            <div className="header-content">
+              <div className="header-left">
+                <h1 className="dashboard-title">Edit Room</h1>
+                <p className="welcome-message">
+                  {property && room ? `Editing ${room.name} in ${property.name}` : 'Edit room details'}
+                </p>
+              </div>
+              <div className="header-right">
+                <Link href={`/properties/${propertyId}/rooms`} className="back-btn">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M19 12H5"/>
+                    <path d="M12 19l-7-7 7-7"/>
+                  </svg>
+                  Back to Rooms
           </Link>
+              </div>
+            </div>
         </div>
 
         {/* Current Room Overview */}
         {property && room && (
           <div className="metrics-grid">
-            <MetricCard 
-              title="Property" 
-              value={property.name}
-              color="blue"
-            />
-            <MetricCard 
-              title="Room" 
-              value={room.name}
-              color="purple"
-            />
-            <MetricCard 
-              title="Current Occupancy" 
-              value={`${room.current_occupancy}/${room.max_capacity}`}
-              color={room.is_vacant ? "amber" : "green"}
-            />
-            <MetricCard 
-              title="Status" 
-              value={room.is_vacant ? "Vacant" : "Occupied"}
-              color={room.is_vacant ? "amber" : "green"}
-            />
+              <div className="metric-card">
+                <div className="metric-header">
+                  <div className="metric-info">
+                    <h3 className="metric-title">Property</h3>
+                    <div className="metric-icon">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M3 21h18"/>
+                        <path d="M5 21V7l8-4v18"/>
+                        <path d="M19 21V11l-6-4"/>
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+                <div className="metric-content">
+                  <div className="metric-value">{property.name}</div>
+                  <div className="metric-subtitle">Current property</div>
+                </div>
+              </div>
+              
+              <div className="metric-card">
+                <div className="metric-header">
+                  <div className="metric-info">
+                    <h3 className="metric-title">Room</h3>
+                    <div className="metric-icon">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                        <line x1="8" y1="21" x2="16" y2="21"/>
+                        <line x1="12" y1="17" x2="12" y2="21"/>
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+                <div className="metric-content">
+                  <div className="metric-value">{room.name}</div>
+                  <div className="metric-subtitle">Room #{room.id}</div>
+                </div>
+              </div>
+              
+              <div className="metric-card">
+                <div className="metric-header">
+                  <div className="metric-info">
+                    <h3 className="metric-title">Occupancy</h3>
+                    <div className="metric-icon">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                        <circle cx="12" cy="7" r="4"/>
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+                <div className="metric-content">
+                  <div className="metric-value">{room.current_occupancy}/{room.max_capacity}</div>
+                  <div className="metric-subtitle">{room.occupancy_rate.toFixed(1)}% occupied</div>
+                </div>
+              </div>
+              
+              <div className="metric-card">
+                <div className="metric-header">
+                  <div className="metric-info">
+                    <h3 className="metric-title">Status</h3>
+                    <div className="metric-icon">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <path d="M9 12l2 2 4-4"/>
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+                <div className="metric-content">
+                  <div className="metric-value">
+                    <span className={`status-badge ${room.is_vacant ? 'vacant' : 'occupied'}`}>
+                      {room.is_vacant ? 'Vacant' : 'Occupied'}
+                    </span>
+                  </div>
+                  <div className="metric-subtitle">Current status</div>
+                </div>
+              </div>
           </div>
         )}
 
@@ -232,14 +294,21 @@ export default function EditRoom() {
           </div>
         )}
 
+          {/* Main Content */}
+          <div className="main-content">
         {/* Edit Room Form */}
-        <SectionCard title="Edit Room Details" subtitle="Update the room information">
+            <div className="form-section">
+              <div className="section-header">
+                <div>
+                  <h2 className="section-title">Room Details</h2>
+                  <p className="section-subtitle">Update the room information</p>
+                </div>
+              </div>
+              
           <form onSubmit={handleSubmit}>
             <div className="form-grid">
               <div className="form-group">
-                <label className="form-label">
-                  Room Number/Name*
-                </label>
+                    <label className="form-label">Room Number/Name*</label>
                 <input
                   type="text"
                   name="name"
@@ -249,15 +318,11 @@ export default function EditRoom() {
                   placeholder="e.g., Room 101, Suite A, etc."
                   className="form-input"
                 />
-                <small className="form-help">
-                  This will be displayed as the room identifier
-                </small>
+                    <small className="form-help">This will be displayed as the room identifier</small>
               </div>
 
               <div className="form-group">
-                <label className="form-label">
-                  Room Type*
-                </label>
+                    <label className="form-label">Room Type*</label>
                 <select
                   name="room_type"
                   value={formData.room_type}
@@ -276,9 +341,7 @@ export default function EditRoom() {
               </div>
 
               <div className="form-group">
-                <label className="form-label">
-                  Floor
-                </label>
+                    <label className="form-label">Floor</label>
                 <input
                   type="text"
                   name="floor"
@@ -287,15 +350,11 @@ export default function EditRoom() {
                   placeholder="e.g., 1st Floor, Ground, etc."
                   className="form-input"
                 />
-                <small className="form-help">
-                  Optional floor information
-                </small>
+                    <small className="form-help">Optional floor information</small>
               </div>
 
               <div className="form-group">
-                <label className="form-label">
-                  Max Capacity*
-                </label>
+                    <label className="form-label">Max Capacity*</label>
                 <input
                   type="number"
                   name="max_capacity"
@@ -306,15 +365,11 @@ export default function EditRoom() {
                   max="10"
                   className="form-input"
                 />
-                <small className="form-help">
-                  Maximum number of tenants for this room
-                </small>
+                    <small className="form-help">Maximum number of tenants for this room</small>
               </div>
 
               <div className="form-group">
-                <label className="form-label">
-                  Monthly Rent ($)*
-                </label>
+                    <label className="form-label">Monthly Rent ($)*</label>
                 <input
                   type="number"
                   name="monthly_rent"
@@ -326,15 +381,11 @@ export default function EditRoom() {
                   placeholder="0.00"
                   className="form-input"
                 />
-                <small className="form-help">
-                  Current rent: ${room?.monthly_rent || 'Not set'}
-                </small>
+                    <small className="form-help">Current rent: ${room?.monthly_rent || 'Not set'}</small>
               </div>
 
               <div className="form-group">
-                <label className="form-label">
-                  Security Deposit ($)*
-                </label>
+                    <label className="form-label">Security Deposit ($)*</label>
                 <input
                   type="number"
                   name="security_deposit"
@@ -346,9 +397,7 @@ export default function EditRoom() {
                   placeholder="0.00"
                   className="form-input"
                 />
-                <small className="form-help">
-                  Current deposit: ${room?.security_deposit || 'Not set'}
-                </small>
+                    <small className="form-help">Current deposit: ${room?.security_deposit || 'Not set'}</small>
               </div>
             </div>
 
@@ -358,159 +407,633 @@ export default function EditRoom() {
                 disabled={loading}
                 className="btn btn-primary"
               >
-                {loading ? 'Updating...' : '💾 Update Room'}
+                    {loading ? 'Updating...' : 'Update Room'}
               </button>
               <Link href={`/properties/${propertyId}/rooms`} className="btn btn-secondary">
                 Cancel
               </Link>
             </div>
           </form>
-        </SectionCard>
+            </div>
 
-        {/* Room Information */}
-        {room && (
-          <SectionCard title="Current Room Information" subtitle="Current details for reference">
-            <div className="info-grid">
-              <div className="info-item">
-                <strong>Room ID:</strong><br />
-                #{room.id}
+            {/* Quick Actions */}
+            <div className="quick-actions-section">
+              <div className="section-header">
+                <div>
+                  <h2 className="section-title">Quick Actions</h2>
+                  <p className="section-subtitle">Frequently used actions</p>
+                </div>
               </div>
-              <div className="info-item">
-                <strong>Property:</strong><br />
-                {property?.name || 'Unknown'}
-              </div>
-              <div className="info-item">
-                <strong>Max Capacity:</strong><br />
-                {room.max_capacity} tenant(s)
-              </div>
-              <div className="info-item">
-                <strong>Floor:</strong><br />
-                {room.floor || 'Not specified'}
-              </div>
-              <div className="info-item">
-                <strong>Occupancy Rate:</strong><br />
-                {room.occupancy_rate.toFixed(1)}%
-              </div>
-              <div className="info-item">
-                <strong>Created:</strong><br />
-                {new Date(room.created_at).toLocaleDateString()}
+              
+              <div className="actions-grid">
+                <div className="action-card blue" onClick={() => router.push(`/properties/${propertyId}/rooms`)}>
+                  <div className="action-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M3 21h18"/>
+                      <path d="M5 21V7l8-4v18"/>
+                      <path d="M19 21V11l-6-4"/>
+                    </svg>
+                  </div>
+                  <div className="action-content">
+                    <h3 className="action-title">View All Rooms</h3>
+                    <p className="action-subtitle">Back to rooms list</p>
+                  </div>
+                </div>
+                
+                <div className="action-card green" onClick={() => router.push(`/inventory?room=${roomIdNum}`)}>
+                  <div className="action-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+                      <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
+                    </svg>
+                  </div>
+                  <div className="action-content">
+                    <h3 className="action-title">Room Inventory</h3>
+                    <p className="action-subtitle">Manage room items</p>
+                  </div>
+                </div>
+                
+                <div className="action-card purple" onClick={() => router.push('/applications')}>
+                  <div className="action-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                      <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                  </div>
+                  <div className="action-content">
+                    <h3 className="action-title">Find Tenant</h3>
+                    <p className="action-subtitle">Review applications</p>
+                  </div>
+                </div>
+                
+                {property && (
+                  <div className="action-card blue" onClick={() => router.push(`/properties/${propertyId}`)}>
+                    <div className="action-icon">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M3 21h18"/>
+                        <path d="M5 21V7l8-4v18"/>
+                        <path d="M19 21V11l-6-4"/>
+                      </svg>
+                    </div>
+                    <div className="action-content">
+                      <h3 className="action-title">Property Details</h3>
+                      <p className="action-subtitle">View property info</p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
-          </SectionCard>
-        )}
+          </div>
 
-        {/* Quick Actions */}
-        <SectionCard title="Quick Actions" subtitle="Other room management tasks">
-          <div className="actions-grid">
-            <Link href={`/properties/${propertyId}/rooms`} className="btn btn-secondary">
-              View All Rooms
-            </Link>
-            <Link href={`/inventory?room=${roomIdNum}`} className="btn btn-secondary">
-              Room Inventory
-            </Link>
-            <Link href="/applications" className="btn btn-secondary">
-              Find Tenant
-            </Link>
-            {property && (
-              <Link href={`/properties/${propertyId}`} className="btn btn-secondary">
-                Property Details
-              </Link>
+          {/* Room Information */}
+          {room && (
+            <div className="info-section">
+              <div className="section-header">
+                <div>
+                  <h2 className="section-title">Current Room Information</h2>
+                  <p className="section-subtitle">Current details for reference</p>
+                </div>
+              </div>
+              
+              <div className="info-grid">
+                <div className="info-card">
+                  <div className="info-label">Room ID</div>
+                  <div className="info-value">#{room.id}</div>
+                </div>
+                <div className="info-card">
+                  <div className="info-label">Property</div>
+                  <div className="info-value">{property?.name || 'Unknown'}</div>
+                </div>
+                <div className="info-card">
+                  <div className="info-label">Max Capacity</div>
+                  <div className="info-value">{room.max_capacity} tenant(s)</div>
+                </div>
+                <div className="info-card">
+                  <div className="info-label">Floor</div>
+                  <div className="info-value">{room.floor || 'Not specified'}</div>
+                </div>
+                <div className="info-card">
+                  <div className="info-label">Occupancy Rate</div>
+                  <div className="info-value">{room.occupancy_rate.toFixed(1)}%</div>
+              </div>
+                <div className="info-card">
+                  <div className="info-label">Created</div>
+                  <div className="info-value">{new Date(room.created_at).toLocaleDateString()}</div>
+              </div>
+              </div>
+            </div>
             )}
           </div>
-        </SectionCard>
       </DashboardLayout>
       
       <style jsx>{`
+        .dashboard-container {
+          padding: 32px 24px;
+          max-width: 1400px;
+          margin: 0 auto;
+          background: #f8fafc;
+          min-height: 100vh;
+        }
+
+        /* Dashboard Header */
+        .dashboard-header {
+          margin-bottom: 32px;
+        }
+
+        .header-content {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+        }
+
+        .header-left {
+          flex: 1;
+        }
+
+        .dashboard-title {
+          font-size: 32px;
+          font-weight: 700;
+          color: #1e293b;
+          margin: 0 0 8px 0;
+          line-height: 1.2;
+        }
+
+        .welcome-message {
+          font-size: 16px;
+          color: #64748b;
+          margin: 0;
+          font-weight: 500;
+        }
+
+        .header-right {
+          flex-shrink: 0;
+        }
+
+        .back-btn {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          background: white;
+          color: #64748b;
+          border: 1px solid #e2e8f0;
+          padding: 12px 16px;
+          border-radius: 6px;
+          font-size: 14px;
+          font-weight: 500;
+          text-decoration: none;
+          transition: all 0.2s ease;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .back-btn:hover {
+          background: #f1f5f9;
+          border-color: #cbd5e1;
+          transform: translateY(-1px);
+        }
+
+        /* Metrics Grid */
         .metrics-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-          gap: var(--spacing-lg);
-          margin-bottom: var(--spacing-xl);
+          grid-template-columns: repeat(4, 1fr);
+          gap: 12px;
+          margin-bottom: 32px;
+        }
+
+        .metric-card {
+          background: white;
+          border-radius: 6px;
+          padding: 18px;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+          border: 1px solid #e2e8f0;
+          transition: all 0.2s ease;
+        }
+
+        .metric-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .metric-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          margin-bottom: 12px;
+        }
+
+        .metric-info {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          width: 100%;
+        }
+
+        .metric-title {
+          font-size: 11px;
+          font-weight: 600;
+          color: #64748b;
+          margin: 0;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        .metric-icon {
+          width: 20px;
+          height: 20px;
+          color: #64748b;
+        }
+
+        .metric-content {
+          margin-top: 8px;
+        }
+
+        .metric-value {
+          font-size: 20px;
+          font-weight: 700;
+          color: #1e293b;
+          margin-bottom: 4px;
+          line-height: 1;
+        }
+
+        .metric-subtitle {
+          font-size: 11px;
+          color: #64748b;
+          margin-bottom: 10px;
+        }
+
+        .status-badge {
+          padding: 4px 8px;
+          border-radius: 4px;
+          font-size: 12px;
+          font-weight: 500;
+          display: inline-block;
+        }
+
+        .status-badge.vacant {
+          background: #fef3c7;
+          color: #d97706;
+        }
+
+        .status-badge.occupied {
+          background: #dcfce7;
+          color: #16a34a;
+        }
+
+        /* Main Content */
+        .main-content {
+          display: grid;
+          grid-template-columns: 2fr 1fr;
+          gap: 24px;
+          margin-bottom: 32px;
+        }
+
+        /* Form Section */
+        .form-section {
+          background: white;
+          border-radius: 6px;
+          padding: 24px;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+          border: 1px solid #e2e8f0;
+        }
+
+        .section-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          margin-bottom: 24px;
+        }
+
+        .section-title {
+          font-size: 18px;
+          font-weight: 700;
+          color: #1e293b;
+          margin: 0 0 4px 0;
+        }
+
+        .section-subtitle {
+          font-size: 14px;
+          color: #64748b;
+          margin: 0;
         }
         
         .form-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-          gap: var(--spacing-lg);
-          margin-bottom: var(--spacing-xl);
+          grid-template-columns: repeat(2, 1fr);
+          gap: 20px;
+          margin-bottom: 24px;
         }
         
         .form-group {
           display: flex;
           flex-direction: column;
-          gap: var(--spacing-xs);
+          gap: 8px;
         }
         
         .form-label {
-          font-weight: 500;
-          color: var(--gray-900);
+          font-weight: 600;
+          color: #374151;
+          font-size: 14px;
         }
         
         .form-input {
-          padding: var(--spacing-sm);
-          border: 1px solid var(--gray-300);
-          border-radius: var(--border-radius);
-          font-size: var(--text-base);
+          padding: 12px 16px;
+          border: 1px solid #d1d5db;
+          border-radius: 6px;
+          font-size: 14px;
+          transition: border-color 0.2s ease;
         }
         
         .form-input:focus {
           outline: none;
-          border-color: var(--primary-blue);
-          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+          border-color: #4f46e5;
+          box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
         }
         
         .form-help {
-          color: var(--gray-600);
-          font-size: var(--text-small);
+          color: #6b7280;
+          font-size: 12px;
         }
         
         .form-actions {
           display: flex;
-          gap: var(--spacing-md);
-          padding-top: var(--spacing-lg);
-          border-top: 1px solid var(--gray-200);
+          gap: 12px;
+          padding-top: 24px;
+          border-top: 1px solid #e5e7eb;
+        }
+
+        .btn {
+          padding: 12px 24px;
+          border-radius: 6px;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          text-decoration: none;
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          border: none;
+        }
+
+        .btn-primary {
+          background: #4f46e5;
+          color: white;
+        }
+
+        .btn-primary:hover {
+          background: #3730a3;
+          transform: translateY(-1px);
+        }
+
+        .btn-primary:disabled {
+          background: #9ca3af;
+          cursor: not-allowed;
+          transform: none;
+        }
+
+        .btn-secondary {
+          background: #f3f4f6;
+          color: #374151;
+          border: 1px solid #d1d5db;
+        }
+
+        .btn-secondary:hover {
+          background: #e5e7eb;
+          transform: translateY(-1px);
         }
         
-        .actions-container {
+                /* Quick Actions Section */
+        .quick-actions-section {
+          background: white;
+          border-radius: 6px;
+          padding: 18px;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+          border: 1px solid #e2e8f0;
+          height: 400px;
           display: flex;
-          gap: var(--spacing-md);
-          margin-bottom: var(--spacing-lg);
+          flex-direction: column;
         }
         
         .actions-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-          gap: var(--spacing-md);
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          flex: 1;
+          justify-content: flex-start;
+        }
+
+        .action-card {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 12px;
+          border-radius: 5px;
+          border: 1px solid #e2e8f0;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .action-card:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .action-card.blue {
+          background: #eff6ff;
+          border-color: #dbeafe;
+        }
+
+        .action-card.green {
+          background: #f0fdf4;
+          border-color: #dcfce7;
+        }
+
+        .action-card.purple {
+          background: #faf5ff;
+          border-color: #e9d5ff;
+        }
+
+        .action-icon {
+          width: 40px;
+          height: 40px;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+
+        .action-card.blue .action-icon {
+          background: #3b82f6;
+          color: white;
+        }
+
+        .action-card.green .action-icon {
+          background: #10b981;
+          color: white;
+        }
+
+        .action-card.purple .action-icon {
+          background: #8b5cf6;
+          color: white;
+        }
+
+        .action-content {
+          flex: 1;
+        }
+
+        .action-title {
+          font-size: 14px;
+          font-weight: 600;
+          color: #1e293b;
+          margin: 0 0 3px 0;
+        }
+
+        .action-subtitle {
+          font-size: 12px;
+          color: #64748b;
+          margin: 0;
+        }
+
+        /* Info Section */
+        .info-section {
+          background: white;
+          border-radius: 6px;
+          padding: 24px;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+          border: 1px solid #e2e8f0;
         }
         
         .info-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-          gap: var(--spacing-lg);
+          grid-template-columns: repeat(3, 1fr);
+          gap: 16px;
         }
         
-        .info-item {
-          padding: var(--spacing-md);
-          background-color: var(--gray-50);
-          border-radius: var(--border-radius);
+        .info-card {
+          padding: 16px;
+          background: #f8fafc;
+          border-radius: 6px;
+          border: 1px solid #e2e8f0;
+        }
+
+        .info-label {
+          font-size: 12px;
+          font-weight: 600;
+          color: #64748b;
+          margin-bottom: 4px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        .info-value {
+          font-size: 14px;
+          font-weight: 600;
+          color: #1e293b;
         }
         
+        /* Alerts */
         .alert {
-          padding: var(--spacing-md);
-          border-radius: var(--border-radius);
-          margin-bottom: var(--spacing-lg);
+          padding: 16px;
+          border-radius: 6px;
+          margin-bottom: 24px;
+          font-size: 14px;
         }
         
         .alert-error {
-          background-color: #fef2f2;
-          border: 1px solid #fecaca;
+          background: #fef2f2;
           color: #dc2626;
+          border: 1px solid #fecaca;
         }
         
         .alert-success {
-          background-color: #f0fdf4;
-          border: 1px solid #bbf7d0;
+          background: #f0fdf4;
           color: #16a34a;
+          border: 1px solid #bbf7d0;
+        }
+
+        /* Loading */
+        .loading-section,
+        .error-section {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 48px;
+        }
+
+        .loading-indicator {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 16px;
+        }
+
+        .loading-spinner {
+          width: 40px;
+          height: 40px;
+          border: 4px solid #e5e7eb;
+          border-top-color: #4f46e5;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+          to {
+            transform: rotate(360deg);
+          }
+        }
+
+        .actions-container {
+          margin-top: 24px;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+          .main-content {
+            grid-template-columns: 1fr;
+            gap: 24px;
+          }
+        }
+
+        @media (max-width: 768px) {
+          .dashboard-container {
+            padding: 16px;
+          }
+
+          .metrics-grid {
+            grid-template-columns: repeat(2, 1fr);
+          }
+
+          .form-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .info-grid {
+            grid-template-columns: repeat(2, 1fr);
+          }
+
+          .header-content {
+            flex-direction: column;
+            gap: 16px;
+          }
+
+          .dashboard-title {
+            font-size: 24px;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .metrics-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .info-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .form-actions {
+            flex-direction: column;
+          }
         }
       `}</style>
     </>

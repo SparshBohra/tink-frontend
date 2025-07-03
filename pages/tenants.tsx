@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Head from 'next/head';
 import DashboardLayout from '../components/DashboardLayout';
@@ -7,6 +8,7 @@ import { apiClient } from '../lib/api';
 import { Tenant, TenantFormData, Application, Lease } from '../lib/types';
 
 function Tenants() {
+  const router = useRouter();
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -622,53 +624,13 @@ function Tenants() {
                             </td>
                               
                             <td className="table-center">
-                              <div className="action-buttons">
-                                <button 
-                                  onClick={() => handleEdit(tenant)} 
-                                  className="edit-btn"
-                                >
-                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <path d="M12 20h9"/>
-                                    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
-                                  </svg>
-                                  Edit
-                                </button>
-                                
-                                <button 
-                                  onClick={() => handleViewApplications(tenant.id)}
-                                  className="applications-btn"
-                                >
-                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                                    <polyline points="14,2 14,8 20,8"/>
-                                  </svg>
-                                  Applications
-                                </button>
-                              
-                                <button
-                                  onClick={() => handleViewCurrentLease(tenant.id)}
-                                  className="lease-btn"
-                                >
-                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                                    <polyline points="14,2 14,8 20,8"/>
-                                    <line x1="16" y1="13" x2="8" y2="13"/>
-                                    <line x1="16" y1="17" x2="8" y2="17"/>
-                                  </svg>
-                                  Lease
-                                </button>
-                              
-                                <button 
-                                  onClick={() => handleDelete(tenant.id)}
-                                  className="delete-btn"
-                                >
-                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <polyline points="3,6 5,6 21,6"/>
-                                    <path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2V6"/>
-                                  </svg>
-                                  Delete
-                                </button>
-                              </div>
+                              <button onClick={() => router.push(`/tenants/${tenant.id}`)} className="manage-btn">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <path d="M12 20h9"/>
+                                  <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                                </svg>
+                                Manage
+                              </button>
                             </td>
                           </tr>
                         ))}
@@ -1406,6 +1368,33 @@ function Tenants() {
           gap: 4px;
           flex-wrap: wrap;
           justify-content: center;
+        }
+
+        .manage-btn {
+          background: #4f46e5;
+          color: white;
+          border: none;
+          padding: 6px 12px;
+          border-radius: 5px;
+          font-size: 12px;
+          font-weight: 500;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          transition: all 0.2s ease;
+          text-decoration: none;
+          margin: 0 auto;
+        }
+
+        .manage-btn:hover {
+          background: #3730a3;
+          transform: translateY(-1px);
+        }
+
+        .manage-btn svg {
+          stroke: white;
         }
 
         /* Empty State */

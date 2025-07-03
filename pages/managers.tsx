@@ -1237,6 +1237,118 @@ function ManagersPage() {
         .loading-spinner { width: 40px; height: 40px; border: 4px solid #e2e8f0; border-top-color: #6366f1; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 16px; }
         @keyframes spin { to { transform: rotate(360deg); } }
 
+        /* Dark Mode Styles */
+        :global(.dark-mode) .dashboard-container {
+          background: #0a0a0a !important;
+        }
+
+        :global(.dark-mode) .dashboard-title,
+        :global(.dark-mode) .welcome-message,
+        :global(.dark-mode) .section-title,
+        :global(.dark-mode) .modal-title {
+          color: #ffffff !important;
+        }
+
+        :global(.dark-mode) .section-subtitle {
+          color: #94a3b8 !important;
+        }
+
+        :global(.dark-mode) .managers-section,
+        :global(.dark-mode) .modal-content {
+          background: #1a1a1a !important;
+          border: 1px solid #333333 !important;
+        }
+
+        :global(.dark-mode) .filters-container {
+          background: #111111 !important;
+          border: 1px solid #333333 !important;
+        }
+
+        :global(.dark-mode) .form-input {
+          background: #1a1a1a !important;
+          border: 1px solid #333333 !important;
+          color: #ffffff !important;
+        }
+
+        :global(.dark-mode) .form-input:focus {
+          border-color: #6366f1 !important;
+          box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2) !important;
+        }
+
+        :global(.dark-mode) .data-table {
+          background: #1a1a1a !important;
+        }
+
+        :global(.dark-mode) .data-table th {
+          background: #111111 !important;
+          color: #ffffff !important;
+          border-bottom: 2px solid #333333 !important;
+        }
+
+        :global(.dark-mode) .data-table th:hover {
+          background: #222222 !important;
+        }
+
+        :global(.dark-mode) .data-table td {
+          color: #e2e8f0 !important;
+          border-bottom: 1px solid #333333 !important;
+        }
+
+        :global(.dark-mode) .empty-state h3 {
+          color: #ffffff !important;
+        }
+
+        :global(.dark-mode) .empty-state {
+          color: #94a3b8 !important;
+        }
+
+        :global(.dark-mode) .refresh-btn {
+          background: #1a1a1a !important;
+          color: #e2e8f0 !important;
+          border: 1px solid #333333 !important;
+        }
+
+        :global(.dark-mode) .refresh-btn:hover {
+          background: #222222 !important;
+        }
+
+        :global(.dark-mode) .btn-secondary {
+          background: #1a1a1a !important;
+          color: #e2e8f0 !important;
+          border: 1px solid #333333 !important;
+        }
+
+        :global(.dark-mode) .btn-secondary:hover {
+          background: #222222 !important;
+        }
+
+        :global(.dark-mode) .modal-header {
+          border-bottom: 1px solid #333333 !important;
+        }
+
+        :global(.dark-mode) .modal-close {
+          color: #94a3b8 !important;
+        }
+
+        :global(.dark-mode) .modal-close:hover {
+          background: #222222 !important;
+          color: #ffffff !important;
+        }
+
+        :global(.dark-mode) .form-group label {
+          color: #e2e8f0 !important;
+        }
+
+        :global(.dark-mode) .form-actions {
+          border-top: 1px solid #333333 !important;
+        }
+
+        :global(.dark-mode) .alert-error {
+          background: rgba(239, 68, 68, 0.1) !important;
+          border: 1px solid rgba(239, 68, 68, 0.3) !important;
+          color: #ef4444 !important;
+        }
+
         /* Responsive Design */
         @media (max-width: 768px) {
           .form-grid {

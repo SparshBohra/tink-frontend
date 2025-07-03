@@ -246,41 +246,13 @@ export default function PropertyRooms() {
       ),
       type: room.room_type || 'Standard',
       actions: (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-xs)', alignItems: 'center' }}>
-          {lease ? (
-            <>
-              <Link href={{ pathname: '/tenants/[id]', query: { id: lease.tenant } }}>
-                <button className="btn btn-primary btn-sm">
-                  View Tenant
-                </button>
-              </Link>
-              <Link href={`/inventory?room=${room.id}`}>
-                <button className="btn btn-secondary btn-sm">
-                  Inventory
-                </button>
-              </Link>
-            </>
-          ) : (
-            <>
-              <button 
-                className="btn btn-success btn-sm"
-                onClick={() => handleAssignTenant(room)}
-              >
-                Assign Tenant
-              </button>
-              <Link href="/applications">
-                <button className="btn btn-info btn-sm">
-                  View Applications
-                </button>
-              </Link>
-              <Link href={`/properties/${property.id}/edit-room/${room.id}`}>
-                <button className="btn btn-warning btn-sm">
-                  Edit Room
-                </button>
-              </Link>
-            </>
-          )}
-        </div>
+        <button onClick={() => router.push(`/properties/${property.id}/edit-room/${room.id}`)} className="manage-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M12 20h9"/>
+            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+          </svg>
+          Manage
+        </button>
       )
     };
   });
@@ -1233,6 +1205,158 @@ export default function PropertyRooms() {
           }
         }
 
+        .manage-btn {
+          background: #4f46e5;
+          color: white;
+          border: none;
+          padding: 6px 12px;
+          border-radius: 5px;
+          font-size: 12px;
+          font-weight: 500;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          transition: all 0.2s ease;
+          text-decoration: none;
+          margin: 0 auto;
+        }
+
+        .manage-btn:hover {
+          background: #3730a3;
+          transform: translateY(-1px);
+        }
+
+        .manage-btn svg {
+          stroke: white;
+        }
+
+        /* Dark Mode Styles */
+        :global(.dark-mode) .dashboard-container {
+          background: #0a0a0a !important;
+        }
+
+        :global(.dark-mode) .dashboard-title,
+        :global(.dark-mode) .welcome-message,
+        :global(.dark-mode) .section-title {
+          color: #ffffff !important;
+        }
+
+        :global(.dark-mode) .section-subtitle {
+          color: #94a3b8 !important;
+        }
+
+        :global(.dark-mode) .metric-card,
+        :global(.dark-mode) .property-info-section,
+        :global(.dark-mode) .rooms-section,
+        :global(.dark-mode) .quick-actions-section {
+          background: #1a1a1a !important;
+          border: 1px solid #333333 !important;
+        }
+
+        :global(.dark-mode) .metric-title,
+        :global(.dark-mode) .metric-icon {
+          color: #94a3b8 !important;
+        }
+
+        :global(.dark-mode) .metric-value {
+          color: #ffffff !important;
+        }
+
+        :global(.dark-mode) .metric-subtitle,
+        :global(.dark-mode) .metric-label {
+          color: #94a3b8 !important;
+        }
+
+        :global(.dark-mode) .info-item {
+          background: #111111 !important;
+          border: 1px solid #333333 !important;
+        }
+
+        :global(.dark-mode) .info-item strong {
+          color: #ffffff !important;
+        }
+
+        :global(.dark-mode) .action-card.blue {
+          background: rgba(59, 130, 246, 0.1) !important;
+          border-color: rgba(59, 130, 246, 0.3) !important;
+        }
+
+        :global(.dark-mode) .action-card.green {
+          background: rgba(16, 185, 129, 0.1) !important;
+          border-color: rgba(16, 185, 129, 0.3) !important;
+        }
+
+        :global(.dark-mode) .action-card.purple {
+          background: rgba(139, 92, 246, 0.1) !important;
+          border-color: rgba(139, 92, 246, 0.3) !important;
+        }
+
+        :global(.dark-mode) .action-title {
+          color: #ffffff !important;
+        }
+
+        :global(.dark-mode) .action-subtitle {
+          color: #94a3b8 !important;
+        }
+
+        :global(.dark-mode) .refresh-btn {
+          background: #1a1a1a !important;
+          color: #e2e8f0 !important;
+          border: 1px solid #333333 !important;
+        }
+
+        :global(.dark-mode) .refresh-btn:hover {
+          background: #222222 !important;
+        }
+
+        :global(.dark-mode) .rooms-table-container {
+          background: #1a1a1a !important;
+        }
+
+        :global(.dark-mode) .rooms-table th {
+          background: #111111 !important;
+          color: #ffffff !important;
+          border-bottom: 2px solid #333333 !important;
+        }
+
+        :global(.dark-mode) .rooms-table td {
+          color: #e2e8f0 !important;
+          border-bottom: 1px solid #333333 !important;
+        }
+
+        :global(.dark-mode) .empty-state h3 {
+          color: #ffffff !important;
+        }
+
+        :global(.dark-mode) .empty-state {
+          color: #94a3b8 !important;
+        }
+
+        :global(.dark-mode) .empty-icon {
+          color: #4b5563 !important;
+        }
+
+        :global(.dark-mode) .btn-secondary {
+          background: #1a1a1a !important;
+          color: #e2e8f0 !important;
+          border: 1px solid #333333 !important;
+        }
+
+        :global(.dark-mode) .btn-secondary:hover {
+          background: #222222 !important;
+        }
+
+        :global(.dark-mode) .alert-error {
+          background: rgba(239, 68, 68, 0.1) !important;
+          border: 1px solid rgba(239, 68, 68, 0.3) !important;
+          color: #ef4444 !important;
+        }
+
+        :global(.dark-mode) .loading-indicator {
+          color: #e2e8f0 !important;
+        }
 
       `}</style>
     </>

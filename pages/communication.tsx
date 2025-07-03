@@ -109,7 +109,22 @@ function CommunicationPage() {
   };
 
   const getStatusBadge = (status: string) => {
-    return status;
+    const badges: { [key: string]: { style: React.CSSProperties; text: string } } = {
+      sent: { 
+        style: { background: '#fef3c7', color: '#d97706', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 500, textTransform: 'capitalize', display: 'inline-block' },
+        text: 'Sent' 
+      },
+      delivered: { 
+        style: { background: '#dbeafe', color: '#1e40af', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 500, textTransform: 'capitalize', display: 'inline-block' },
+        text: 'Delivered' 
+      },
+      read: { 
+        style: { background: '#dcfce7', color: '#16a34a', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 500, textTransform: 'capitalize', display: 'inline-block' },
+        text: 'Read' 
+      }
+    };
+    const badge = badges[status.toLowerCase()] || badges.sent;
+    return <span style={badge.style}>{badge.text}</span>;
   };
 
   if (loading) {
@@ -936,8 +951,8 @@ function CommunicationPage() {
         .template-card {
           display: flex;
           align-items: center;
-          gap: 16px;
-          padding: 16px;
+          gap: 12px;
+          padding: 10px 12px;
           border-radius: 6px;
           border: 1px solid #e2e8f0;
           transition: all 0.2s ease;
@@ -945,15 +960,15 @@ function CommunicationPage() {
         }
         
         .template-card:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
           border-color: #cbd5e1;
         }
         
         .template-icon {
-          width: 40px;
-          height: 40px;
-          border-radius: 8px;
+          width: 32px;
+          height: 32px;
+          border-radius: 6px;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -967,16 +982,16 @@ function CommunicationPage() {
         }
         
         .template-title {
-          font-size: 14px;
+          font-size: 13px;
           font-weight: 600;
           color: #1e293b;
-          margin: 0 0 3px 0;
+          margin: 0 0 2px 0;
         }
         
         .template-description {
-          font-size: 12px;
+          font-size: 11px;
           color: #64748b;
-          margin: 0 0: 8px 0;
+          margin: 0;
         }
         
         /*

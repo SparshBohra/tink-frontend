@@ -818,11 +818,16 @@ function LandlordDashboard() {
           background: #f8fafc;
           min-height: calc(100vh - 72px); /* Updated for new topbar height */
           box-sizing: border-box;
+          position: relative;
+          z-index: 1;
         }
 
         /* Custom Header */
         .dashboard-header {
           margin-bottom: 24px; /* Reduced margin */
+          position: relative;
+          z-index: 1;
+          pointer-events: auto;
         }
 
         .header-content {
@@ -856,6 +861,9 @@ function LandlordDashboard() {
           display: inline-flex;
           align-items: center; 
           gap: 8px; /* Reduced gap */
+          pointer-events: none;
+          position: relative;
+          z-index: 1;
         }
 
         .welcome-message.notification {

@@ -62,7 +62,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
 
   // SVG Icons
   const MenuIcon = () => (
-    <svg width="28" height="28" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="32" height="32" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <polygon points="10,1 19,7 10,13 1,7"/>
       <polyline points="1,14 10,20 19,14"/>
       <polyline points="1,10.5 10,16.5 19,10.5"/>
@@ -322,8 +322,8 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         }
 
         .menu-toggle {
-          width: 40px;
-          height: 40px;
+          width: 50px;
+          height: 50px;
           background: rgba(255, 255, 255, 0.1);
           border: 1px solid rgba(255, 255, 255, 0.2);
           border-radius: 12px;
@@ -404,7 +404,6 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         .nav-item.active {
           background: rgba(255, 255, 255, 0.08);
           color: #ffffff;
-          border-left: 4px solid #8b5cf6;
           box-shadow: none;
         }
 
