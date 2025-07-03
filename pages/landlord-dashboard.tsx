@@ -1542,7 +1542,7 @@ function LandlordDashboard() {
         }
 
         .manage-btn {
-          background: #6366f1;
+          background: #4f46e5;
           color: white;
           border: none;
           padding: 6px 12px;
@@ -1558,7 +1558,7 @@ function LandlordDashboard() {
         }
 
         .manage-btn:hover {
-          background: #4f46e5;
+          background: #3730a3;
         }
 
         /* Applications and Teams Section */

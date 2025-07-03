@@ -130,6 +130,18 @@ function Dashboard() {
     return () => clearTimeout(rotationTimeout);
   }, [currentMessage, isTyping, messageIndex, notificationMessages, welcomeMessage]);
   
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'Invalid date';
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      timeZone: 'UTC',
+    });
+  };
+  
   // Counter animations for metrics
   const propertiesCount = useCounterAnimation(5, 1500);
   const roomsCount = useCounterAnimation(87, 2000);
@@ -540,12 +552,11 @@ function Dashboard() {
                           {task.priority}
                         </span>
                           </td>
-                      <td className="table-left"><span className="due-date-cell"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                            <line x1="16" y1="2" x2="16" y2="6"/>
-                            <line x1="8" y1="2" x2="8" y2="6"/>
-                            <line x1="3" y1="10" x2="21" y2="10"/>
-                          </svg>{task.dueDate}</span></td>
+                      <td className="table-left">
+                        <span className="date-highlight">
+                          {formatDate(task.dueDate)}
+                        </span>
+                      </td>
                       <td className="table-center">
                         <span className={`status-badge ${task.status.toLowerCase().replace(' ', '-')}`}>
                           {task.status === 'In Progress' ? 'In Progress' : task.status}
@@ -903,6 +914,14 @@ function Dashboard() {
 
         .metric-change.positive {
           color: #10b981;
+        }
+
+        .date-highlight {
+          background-color: #f1f5f9;
+          padding: 4px 8px;
+          border-radius: 4px;
+          font-weight: 600;
+          color: #334155;
         }
 
         /* Main Content */
@@ -1485,7 +1504,7 @@ function Dashboard() {
         }
 
         .manage-btn {
-          background: #6366f1;
+          background: #4f46e5;
           color: white;
           border: none;
           padding: 6px 12px;
@@ -1501,7 +1520,7 @@ function Dashboard() {
         }
 
         .manage-btn:hover {
-          background: #4f46e5;
+          background: #3730a3;
         }
 
         /* Applications Section */
@@ -1880,6 +1899,11 @@ function Dashboard() {
         :global(.dark-mode) .status-badge.pending-review {
             background-color: #fef9c3 !important;
             color: #000000 !important;
+        }
+
+        :global(.dark-mode) .date-highlight {
+          background-color: #334155;
+          color: #e2e8f0;
         }
       `}</style>
     </DashboardLayout>
