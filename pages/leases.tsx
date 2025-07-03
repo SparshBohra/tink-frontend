@@ -881,7 +881,7 @@ function Leases() {
           gap: 6px;
           transition: all 0.2s ease;
         }
-        
+
         .refresh-btn:hover {
           background: #e2e8f0;
           transform: translateY(-1px);

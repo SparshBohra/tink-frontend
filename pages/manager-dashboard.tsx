@@ -707,18 +707,11 @@ function Dashboard() {
                       Applied {application.appliedDate}
               </div>
                     <div className="application-property">
-                      <strong>Property:</strong> {application.property}
+                      <span className="detail-label">Property:</span> {application.property}
                   </div>
               </div>
 
                   <button className="review-btn">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                      <polyline points="14,2 14,8 20,8"/>
-                      <line x1="16" y1="13" x2="8" y2="13"/>
-                      <line x1="16" y1="17" x2="8" y2="17"/>
-                      <polyline points="10,9 9,9 8,9"/>
-                    </svg>
                     Review
                   </button>
                 </div>
@@ -1521,119 +1514,113 @@ function Dashboard() {
         }
 
         .applications-scroll-container {
-          height: 320px; /* Reduced height */
+          flex: 1;
           overflow-y: auto;
-          margin-top: 16px; /* Reduced margin */
-        }
-
-        .applications-scroll-container::-webkit-scrollbar {
-          width: 6px;
-        }
-
-        .applications-scroll-container::-webkit-scrollbar-track {
-          background: rgba(226, 232, 240, 0.3);
-          border-radius: 3px;
-        }
-
-        .applications-scroll-container::-webkit-scrollbar-thumb {
-          background: rgba(156, 163, 175, 0.5);
-          border-radius: 3px;
+          margin-top: 0;
         }
 
         .applications-grid {
           display: grid;
-          grid-template-columns: repeat(4, 1fr);
-          gap: 16px; /* Better gap for 4 columns */
+          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+          gap: 16px;
         }
 
         .application-card {
-          background: white;
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          padding: 16px;
           border-radius: 6px;
-          padding: 16px; /* Increased padding for 4-column layout */
           border: 1px solid #e2e8f0;
+          background: white;
           transition: all 0.2s ease;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         }
 
         .application-card:hover {
+          background: #f9fafb;
+          border-color: #cbd5e1;
           transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
         }
 
         .application-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 14px; /* Reduced margin */
         }
 
         .applicant-avatar {
-          width: 46px;
-          height: 46px;
-          border-radius: 50%;
-          background: #64748b;
-          color: white;
+          width: 36px;
+          height: 36px;
+          border-radius: 8px;
+          background: #eef2ff;
+          color: #4f46e5;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-weight: 700;
-          font-size: 15px;
+          font-weight: 600;
+          font-size: 12px;
         }
 
         .status-badge.pending-review {
           background: #fef3c7;
           color: #d97706;
-          padding: 6px 12px;
-          border-radius: 16px;
+          padding: 4px 8px;
+          border-radius: 6px;
           font-size: 12px;
           font-weight: 600;
         }
 
         .application-content {
-          margin-bottom: 18px;
+          flex: 1;
         }
 
         .applicant-name {
-          font-size: 16px;
-          font-weight: 700;
+          font-size: 14px;
+          font-weight: 600;
           color: #1e293b;
-          margin: 0 0 12px 0;
+          margin-bottom: 8px;
         }
-
+        
         .application-time {
           display: flex;
           align-items: center;
-          gap: 8px;
-          font-size: 14px;
+          gap: 6px;
+          font-size: 12px;
           color: #64748b;
-          margin-bottom: 8px;
+          margin-bottom: 4px;
         }
-
+        
         .application-property {
-          font-size: 14px;
+          font-size: 12px;
           color: #64748b;
-          line-height: 1.5;
+        }
+        
+        .detail-label {
+          font-weight: 600;
+          color: #374151;
         }
 
         .review-btn {
-          width: 100%;
-          background: #6366f1;
+          background: #4f46e5;
           color: white;
           border: none;
-          padding: 14px 16px;
-          border-radius: 8px;
-          font-size: 14px;
+          padding: 10px 16px;
+          border-radius: 6px;
+          font-size: 13px;
           font-weight: 600;
           cursor: pointer;
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: 8px;
+          gap: 6px;
           transition: all 0.2s ease;
+          width: 100%;
+          margin-top: auto;
         }
 
         .review-btn:hover {
-          background: #4f46e5;
+          background: #3730a3;
           transform: translateY(-1px);
         }
 
@@ -1842,7 +1829,7 @@ function Dashboard() {
         :global(.dark-mode) .priority-badge.high,
         :global(.dark-mode) .status-badge.maintenance { background: rgba(239, 68, 68, 0.3); }
         :global(.dark-mode) .priority-badge.medium,
-        :global(.dark-mode) .status-badge.pending { background: rgba(249, 115, 22, 0.3); }
+        :global(.dark-mode) .status-badge.pending { background: rgba(245, 158, 11, 0.3); }
         :global(.dark-mode) .priority-badge.low,
         :global(.dark-mode) .status-badge.completed,
         :global(.dark-mode) .status-badge.active { background: rgba(34, 197, 94, 0.3); }

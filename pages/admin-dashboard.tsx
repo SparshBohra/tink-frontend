@@ -29,7 +29,7 @@ interface Manager {
 }
 
 // Reusable Icon component for metrics
-const MetricIcon = ({ path, ...props }) => (
+const MetricIcon = ({ path, ...props }: { path: React.ReactNode;[key: string]: any }) => (
   <svg
     width="20" height="20" viewBox="0 0 24 24"
     fill="none" stroke="currentColor" strokeWidth="2"
@@ -403,13 +403,13 @@ function AdminDashboard() {
         }
 
         .view-all-btn {
-          background: #3b82f6;
+          background: #4f46e5;
           color: white;
           border: none;
-          padding: 8px 16px;
+          padding: 10px 16px;
           border-radius: 6px;
           font-size: 13px;
-          font-weight: 500;
+          font-weight: 600;
           cursor: pointer;
           display: flex;
           align-items: center;
@@ -419,7 +419,7 @@ function AdminDashboard() {
         }
 
         .view-all-btn:hover {
-          background: #2563eb;
+          background: #3730a3;
           transform: translateY(-1px);
         }
 
@@ -434,49 +434,60 @@ function AdminDashboard() {
 
         .properties-table {
           width: 100%;
-          border-collapse: separate;
-          border-spacing: 0;
-        }
-        
-        .properties-table th, .properties-table td {
-          padding: 12px 16px;
-          text-align: center;
-          border-bottom: 1px solid #e2e8f0;
-          vertical-align: middle;
+          border-collapse: collapse;
+          table-layout: fixed;
         }
 
+        .properties-table tbody tr {
+          transition: background-color 0.2s ease;
+        }
+
+        .properties-table tbody tr:hover {
+          background-color: #f9fafb;
+        }
+        
         .properties-table th {
           position: sticky;
           top: 0;
-          background: #f8fafc;
+          background: #ffffff;
           z-index: 2;
-          font-size: 13px;
-          font-weight: 700;
-          color: #1e293b;
-          border-bottom: 2px solid #e2e8f0;
+          font-size: 12px;
+          font-weight: 600;
+          color: #9ca3af;
+          padding: 12px 16px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          border-bottom: 1px solid #e5e7eb;
+          text-align: left;
         }
 
         .properties-table td {
+          padding: 12px 16px;
+          vertical-align: middle;
+          height: 48px;
+          border-bottom: 1px solid #f1f5f9;
           font-size: 14px;
-          color: #334155;
+          color: #374151;
         }
         
         .manage-btn {
-          background-color: #f1f5f9;
-          border: 1px solid #e2e8f0;
-          color: #334155;
-          padding: 8px 14px;
-          border-radius: 6px;
-          font-size: 13px;
+          background: #4f46e5;
+          color: white;
+          border: none;
+          padding: 6px 12px;
+          border-radius: 5px;
+          font-size: 12px;
           font-weight: 500;
           cursor: pointer;
-          transition: background-color 0.2s;
           display: inline-flex;
           align-items: center;
           justify-content: center;
+          gap: 4px;
+          transition: all 0.2s ease;
         }
         .manage-btn:hover {
-            background-color: #e2e8f0;
+            background: #3730a3;
+            transform: translateY(-1px);
         }
 
         /* Dark Mode Styles */
@@ -515,15 +526,14 @@ function AdminDashboard() {
             border-color: #2563eb !important;
         }
         :global(.dark-mode) .manage-btn {
-            background-color: #374151 !important;
-            border-color: #4b5563 !important;
-            color: #f3f4f6 !important;
+          background: #4f46e5;
+          color: white;
         }
         :global(.dark-mode) .manage-btn svg {
-            stroke: #f3f4f6 !important;
+            stroke: white !important;
         }
         :global(.dark-mode) .manage-btn:hover {
-            background-color: #4b5563 !important;
+            background: #3730a3;
         }
       `}</style>
     </DashboardLayout>

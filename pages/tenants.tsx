@@ -167,6 +167,17 @@ function Tenants() {
     }
   };
 
+  const formatDate = (dateString: string) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      timeZone: 'UTC',
+    });
+  };
+
   const downloadTenantsReport = () => {
     const csvData = [
       ['ID', 'Full Name', 'Email', 'Phone', 'Emergency Contact', 'Emergency Phone', 'Created At'],
@@ -177,7 +188,7 @@ function Tenants() {
         tenant.phone,
         tenant.emergency_contact_name || '',
         tenant.emergency_contact_phone || '',
-        tenant.created_at
+        formatDate(tenant.created_at)
       ])
     ];
     const csvContent = csvData.map(row => row.join(',')).join('\n');
@@ -604,7 +615,9 @@ function Tenants() {
 
                             <td className="table-center">
                               <div className="tenant-date">
-                                {new Date(tenant.created_at).toLocaleDateString()}
+                                <span className="date-highlight">
+                                  {formatDate(tenant.created_at)}
+                                </span>
                               </div>
                             </td>
                               
@@ -1008,12 +1021,12 @@ function Tenants() {
         }
 
         .download-btn {
-          background: #ecfdf5;
-          color: #059669;
-          border: 1px solid #a7f3d0;
-          padding: 10px 14px;
+          background: #4f46e5;
+          color: white;
+          border: none;
+          padding: 10px 16px;
           border-radius: 6px;
-          font-size: 12px;
+          font-size: 13px;
           font-weight: 600;
           cursor: pointer;
           display: flex;
@@ -1023,12 +1036,12 @@ function Tenants() {
         }
 
         .download-btn:hover {
-          background: #d1fae5;
+          background: #3730a3;
           transform: translateY(-1px);
         }
 
         .register-btn {
-          background: #6366f1;
+          background: #4f46e5;
           color: white;
           border: none;
           padding: 10px 14px;
@@ -1041,9 +1054,9 @@ function Tenants() {
           gap: 6px;
           transition: all 0.2s ease;
         }
-
+        
         .register-btn:hover {
-          background: #4f46e5;
+          background: #3730a3;
           transform: translateY(-1px);
         }
 
@@ -1051,6 +1064,15 @@ function Tenants() {
           background: #10b981;
           color: white;
           border-color: #10b981;
+          padding: 8px 16px;
+          border-radius: 6px;
+          font-size: 13px;
+          font-weight: 600;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          transition: all 0.2s ease;
         }
 
         .save-btn:hover {
@@ -1060,7 +1082,16 @@ function Tenants() {
         .cancel-btn {
           background: #f8fafc;
           color: #475569;
-          border-color: #e2e8f0;
+          border: 1px solid #e2e8f0;
+          padding: 8px 16px;
+          border-radius: 6px;
+          font-size: 13px;
+          font-weight: 600;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          transition: all 0.2s ease;
         }
 
         .cancel-btn:hover {
@@ -1068,13 +1099,13 @@ function Tenants() {
         }
 
         .edit-btn {
-          background: #fef3c7;
-          color: #d97706;
-          border: 1px solid #fed7aa;
-          padding: 8px 12px;
-          border-radius: 6px;
+          background: #4f46e5;
+          color: white;
+          border: none;
+          padding: 6px 12px;
+          border-radius: 5px;
           font-size: 12px;
-          font-weight: 600;
+          font-weight: 500;
           cursor: pointer;
           display: flex;
           align-items: center;
@@ -1085,18 +1116,18 @@ function Tenants() {
         }
 
         .edit-btn:hover {
-          background: #fde68a;
+          background: #3730a3;
           transform: translateY(-1px);
         }
 
         .applications-btn {
-          background: #dbeafe;
-          color: #2563eb;
-          border: 1px solid #93c5fd;
-          padding: 8px 12px;
-          border-radius: 6px;
+          background: #10b981;
+          color: white;
+          border: none;
+          padding: 6px 12px;
+          border-radius: 5px;
           font-size: 12px;
-          font-weight: 600;
+          font-weight: 500;
           cursor: pointer;
           display: flex;
           align-items: center;
@@ -1107,18 +1138,18 @@ function Tenants() {
         }
 
         .applications-btn:hover {
-          background: #bfdbfe;
+          background: #059669;
           transform: translateY(-1px);
         }
 
         .lease-btn {
-          background: #f3e8ff;
-          color: #7c3aed;
-          border: 1px solid #c4b5fd;
-          padding: 8px 12px;
-          border-radius: 6px;
+          background: #475569;
+          color: white;
+          border: none;
+          padding: 6px 12px;
+          border-radius: 5px;
           font-size: 12px;
-          font-weight: 600;
+          font-weight: 500;
           cursor: pointer;
           display: flex;
           align-items: center;
@@ -1129,18 +1160,18 @@ function Tenants() {
         }
 
         .lease-btn:hover {
-          background: #e9d5ff;
+          background: #1e293b;
           transform: translateY(-1px);
         }
 
         .delete-btn {
-          background: #fee2e2;
-          color: #dc2626;
-          border: 1px solid #fca5a5;
-          padding: 8px 12px;
-          border-radius: 6px;
+          background: #ef4444;
+          color: white;
+          border: none;
+          padding: 6px 12px;
+          border-radius: 5px;
           font-size: 12px;
-          font-weight: 600;
+          font-weight: 500;
           cursor: pointer;
           display: flex;
           align-items: center;
@@ -1151,12 +1182,12 @@ function Tenants() {
         }
 
         .delete-btn:hover {
-          background: #fecaca;
+          background: #dc2626;
           transform: translateY(-1px);
         }
 
         .empty-action-btn {
-          background: #6366f1;
+          background: #4f46e5;
           color: white;
           border: none;
           padding: 12px 20px;
@@ -1170,7 +1201,7 @@ function Tenants() {
         }
 
         .empty-action-btn:hover {
-          background: #4f46e5;
+          background: #3730a3;
           transform: translateY(-1px);
         }
 
@@ -1270,42 +1301,51 @@ function Tenants() {
 
         .tenants-table {
           width: 100%;
-          border-collapse: separate;
-          border-spacing: 0;
+          border-collapse: collapse;
+          table-layout: fixed;
+        }
+        
+        .tenants-table tbody tr {
+          transition: background-color 0.2s ease;
+        }
+
+        .tenants-table tbody tr:hover {
+          background-color: #f9fafb;
         }
 
         .tenants-table th {
           position: sticky;
           top: 0;
-          background: #f8fafc;
+          background: #ffffff;
           z-index: 2;
-          font-size: 13px;
-          font-weight: 700;
-          color: #1e293b;
-          padding: 12px 10px;
-          border-bottom: 2px solid #e2e8f0;
-        }
-
-        .tenants-table td {
-          font-size: 14px;
-          padding: 16px 10px;
-          border-bottom: 1px solid #e2e8f0;
-        }
-        
-        .tenants-table tr:last-child td {
-          border-bottom: none;
-        }
-
-        .table-left {
+          font-size: 12px;
+          font-weight: 600;
+          color: #9ca3af;
+          padding: 12px 16px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          border-bottom: 1px solid #e5e7eb;
           text-align: left;
         }
 
+        .tenants-table td {
+          padding: 12px 16px;
+          vertical-align: middle;
+          height: 48px;
+          border-bottom: 1px solid #f1f5f9;
+          font-size: 14px;
+          color: #374151;
+        }
+        
+        .table-left {
+          text-align: left !important;
+        }
+
         .table-center {
-          text-align: center;
+          text-align: center !important;
         }
 
         .tenant-name {
-          font-weight: 500;
           color: #1e293b;
           margin-bottom: 2px;
         }
@@ -1335,7 +1375,6 @@ function Tenants() {
         }
 
         .emergency-name {
-          font-weight: 500;
           color: #1e293b;
         }
 
@@ -1350,8 +1389,16 @@ function Tenants() {
         }
 
         .tenant-date {
-          font-size: 11px;
+          font-size: 12px;
           color: #64748b;
+        }
+
+        .date-highlight {
+          background-color: #f1f5f9;
+          padding: 4px 8px;
+          border-radius: 4px;
+          font-weight: 600;
+          color: #334155;
         }
 
         .action-buttons {
@@ -1619,6 +1666,10 @@ function Tenants() {
         }
         :global(.dark-mode) .form-input:focus { border-color: #3b82f6 !important; }
         :global(.dark-mode) .form-actions { border-top-color: #333333 !important; }
+        :global(.dark-mode) .date-highlight {
+          background-color: #334155;
+          color: #e2e8f0;
+        }
       `}</style>
     </DashboardLayout>
   );

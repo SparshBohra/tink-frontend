@@ -130,6 +130,18 @@ function LandlordDashboard() {
     return () => clearTimeout(rotationTimeout);
   }, [currentMessage, isTyping, messageIndex, notificationMessages, welcomeMessage]);
   
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'Invalid date';
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      timeZone: 'UTC',
+    });
+  };
+
   // Counter animations for metrics
   const propertiesCount = useCounterAnimation(12, 1500);
   const occupancyRate = useCounterAnimation(92, 2000);
@@ -579,12 +591,11 @@ function LandlordDashboard() {
                             {task.priority}
                           </span>
                         </td>
-                        <td className="table-left"><span className="due-date-cell"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                          <line x1="16" y1="2" x2="16" y2="6"/>
-                          <line x1="8" y1="2" x2="8" y2="6"/>
-                          <line x1="3" y1="10" x2="21" y2="10"/>
-                        </svg>{task.dueDate}</span></td>
+                        <td className="table-left">
+                          <span className="date-highlight">
+                            {formatDate(task.dueDate)}
+                          </span>
+                        </td>
                         <td className="table-center">
                           <span className={`status-badge ${task.status.toLowerCase().replace(' ', '-')}`}>
                             {task.status === 'In Progress' ? 'In Progress' : task.status}
@@ -735,7 +746,7 @@ function LandlordDashboard() {
                   <div key={application.id} className="application-card">
                     <div className="application-header">
                       <div className="applicant-avatar">{application.initials}</div>
-                      <span className="status-badge pending-review">{application.status}</span>
+                      <span className="status-badge pending">{application.status}</span>
                     </div>
                     
                     <div className="application-content">
@@ -748,18 +759,11 @@ function LandlordDashboard() {
                         Applied {application.appliedDate}
                       </div>
                       <div className="application-property">
-                        <strong>Property:</strong> {application.property}
+                        <span className="detail-label">Property:</span> {application.property}
                       </div>
                     </div>
 
                     <button className="review-btn">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                        <polyline points="14,2 14,8 20,8"/>
-                        <line x1="16" y1="13" x2="8" y2="13"/>
-                        <line x1="16" y1="17" x2="8" y2="17"/>
-                        <polyline points="10,9 9,9 8,9"/>
-                      </svg>
                       Review
                     </button>
                   </div>
@@ -789,6 +793,7 @@ function LandlordDashboard() {
                       <div className="member-properties">
                         {member.properties.length === 1 && member.properties[0] === 'All Properties' ? 'All Properties' : `${member.properties.length} properties`}
                       </div>
+                      <div className="member-joined">Joined: <span className="date-highlight">{formatDate(member.joinedDate)}</span></div>
                     </div>
                     <div className="member-status">
                       <span className={`status-badge-small ${member.status.toLowerCase()}`}>{member.status}</span>
@@ -1054,16 +1059,15 @@ function LandlordDashboard() {
           background: #4f46e5;
           color: white;
           border: none;
-          padding: 8px 16px;
+          padding: 10px 16px;
           border-radius: 6px;
-          font-size: 14px;
+          font-size: 13px;
           font-weight: 600;
           cursor: pointer;
           display: flex;
           align-items: center;
-          gap: 8px;
+          gap: 6px;
           transition: all 0.2s ease;
-          margin-right: 16px;
         }
 
         .add-task-btn:hover {
@@ -1154,6 +1158,14 @@ function LandlordDashboard() {
           gap: 6px;
           font-weight: 500;
           color: #1e293b;
+        }
+
+        .date-highlight {
+          background-color: #f1f5f9;
+          padding: 4px 8px;
+          border-radius: 4px;
+          font-weight: 600;
+          color: #334155;
         }
 
         .due-date-cell svg {
@@ -1300,24 +1312,23 @@ function LandlordDashboard() {
 
         /* View All Button */
         .view-all-btn {
-          background: #4b5563;
+          background: #4f46e5;
           color: white;
           border: none;
-          padding: 12px 18px;
+          padding: 10px 16px;
           border-radius: 6px;
-          font-size: 14px;
+          font-size: 13px;
           font-weight: 600;
           cursor: pointer;
           display: flex;
           align-items: center;
-          gap: 8px;
+          gap: 6px;
           transition: all 0.2s ease;
-          margin-left: 16px;
           text-decoration: none;
         }
 
         .view-all-btn:hover {
-          background: #374151;
+          background: #3730a3;
           transform: translateY(-1px);
         }
 
@@ -1592,93 +1603,101 @@ function LandlordDashboard() {
         }
 
         .application-card {
-          background: white;
-          border-radius: 6px; /* Reduced radius */
-          padding: 16px; /* Reduced padding */
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          padding: 16px;
+          border-radius: 6px;
           border: 1px solid #e2e8f0;
+          background: white;
           transition: all 0.2s ease;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         }
 
         .application-card:hover {
+          background: #f9fafb;
+          border-color: #cbd5e1;
           transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
         }
 
         .application-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 14px; /* Reduced margin */
         }
 
         .applicant-avatar {
-          width: 48px;
-          height: 48px;
-          border-radius: 50%;
-          background: #64748b;
-          color: white;
+          width: 36px;
+          height: 36px;
+          border-radius: 8px;
+          background: #eef2ff;
+          color: #4f46e5;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-weight: 700;
-          font-size: 16px;
+          font-weight: 600;
+          font-size: 12px;
         }
 
         .status-badge.pending-review {
           background: #fef3c7;
           color: #d97706;
-          padding: 6px 12px; 
-          border-radius: 16px;
-          font-size: 12px; 
+          padding: 4px 8px;
+          border-radius: 6px;
+          font-size: 12px;
           font-weight: 600;
         }
 
         .application-content {
-          margin-bottom: 24px;
+          flex: 1;
         }
 
         .applicant-name {
-          font-size: 20px;
-          font-weight: 700;
+          font-size: 14px;
+          font-weight: 600;
           color: #1e293b;
-          margin: 0 0 16px 0;
+          margin-bottom: 8px;
         }
-
+        
         .application-time {
           display: flex;
           align-items: center;
-          gap: 8px;
-          font-size: 14px;
+          gap: 6px;
+          font-size: 12px;
           color: #64748b;
-          margin-bottom: 8px;
+          margin-bottom: 4px;
         }
-
+        
         .application-property {
-          font-size: 14px;
+          font-size: 12px;
           color: #64748b;
-          line-height: 1.5;
+        }
+        
+        .detail-label {
+          font-weight: 600;
+          color: #374151;
         }
 
         .review-btn {
-          width: 100%;
-          background: #6366f1;
+          background: #4f46e5;
           color: white;
           border: none;
-          padding: 14px 16px;
-          border-radius: 8px;
-          font-size: 14px;
+          padding: 10px 16px;
+          border-radius: 6px;
+          font-size: 13px;
           font-weight: 600;
           cursor: pointer;
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: 8px;
+          gap: 6px;
           transition: all 0.2s ease;
+          width: 100%;
+          margin-top: auto;
         }
 
         .review-btn:hover {
-          background: #4f46e5;
+          background: #3730a3;
           transform: translateY(-1px);
         }
 
@@ -1711,95 +1730,96 @@ function LandlordDashboard() {
         .team-member-row {
           display: flex;
           align-items: center;
-          gap: 12px;
+          gap: 16px;
           padding: 12px;
           border-radius: 6px;
-          border: 1px solid #e2e8f0;
-          background: #f8fafc;
           transition: all 0.2s ease;
+          border: 1px solid transparent;
         }
 
         .team-member-row:hover {
-          background: #f1f5f9;
-          border-color: #cbd5e1;
+          background-color: #f9fafb;
+          border-color: #e2e8f0;
         }
 
         .member-avatar {
           width: 40px;
           height: 40px;
-          border-radius: 50%;
-          background: #64748b;
-          color: white;
+          border-radius: 8px;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-weight: 700;
-          font-size: 14px;
+          background-color: #eef2ff;
+          color: #4f46e5;
+          font-weight: 600;
           flex-shrink: 0;
         }
 
         .member-info {
           flex: 1;
-          min-width: 0;
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
         }
 
         .member-name {
-          font-size: 14px;
           font-weight: 600;
           color: #1e293b;
-          margin: 0 0 2px 0;
+          font-size: 14px;
         }
 
         .member-role {
+          font-size: 13px;
+          color: #64748b;
+        }
+        
+        .member-properties {
           font-size: 12px;
           color: #64748b;
-          font-weight: 500;
-          margin: 0 0 2px 0;
         }
-
-        .member-properties {
-          font-size: 11px;
-          color: #94a3b8;
-          font-weight: 400;
-          margin: 0;
+        
+        .member-joined {
+          font-size: 12px;
+          color: #64748b;
+          margin-top: 2px;
         }
 
         .member-status {
+          margin-left: auto;
           display: flex;
           align-items: center;
-          flex-shrink: 0;
         }
 
         .status-badge-small {
-          font-size: 10px;
+          padding: 4px 10px;
+          border-radius: 6px;
+          font-size: 12px;
           font-weight: 600;
-          padding: 3px 8px;
-          border-radius: 12px;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
+          text-transform: capitalize;
         }
-
+        
         .status-badge-small.active {
-          background: #dcfce7;
-          color: #166534;
+          background-color: #dcfce7;
+          color: #16a34a;
         }
 
         .contact-btn-small {
-          background: #6366f1;
+          background-color: #4f46e5;
           color: white;
           border: none;
-          padding: 8px;
+          width: 36px;
+          height: 36px;
           border-radius: 6px;
-          cursor: pointer;
           display: flex;
           align-items: center;
           justify-content: center;
+          cursor: pointer;
           transition: all 0.2s ease;
-          flex-shrink: 0;
+          margin-left: 8px;
         }
 
         .contact-btn-small:hover {
-          background: #4f46e5;
+          background-color: #3730a3;
           transform: translateY(-1px);
         }
 
@@ -2063,6 +2083,38 @@ function LandlordDashboard() {
         :global(.dark-mode) .status-badge-small.active {
             background: rgba(34, 197, 94, 0.3) !important;
             color: #ffffff !important;
+        }
+
+        :global(.dark-mode) .view-all-btn {
+            background: #3b82f6 !important;
+            border: none !important;
+        }
+        :global(.dark-mode) .date-highlight {
+          background-color: #334155;
+          color: #e2e8f0;
+        }
+        :global(.dark-mode) .priority-badge.high { background: rgba(239, 68, 68, 0.3); color: #fecaca !important; }
+        :global(.dark-mode) .priority-badge.medium { background: rgba(245, 158, 11, 0.3); color: #fde68a !important; }
+        :global(.dark-mode) .priority-badge.low { background: rgba(34, 197, 94, 0.3); color: #bbf7d0 !important; }
+        
+        :global(.dark-mode) .status-badge.pending { background: rgba(245, 158, 11, 0.3); color: #fde68a !important; }
+        :global(.dark-mode) .contact-btn-small {
+          background-color: #3b82f6;
+        }
+        :global(.dark-mode) .contact-btn-small:hover {
+          background-color: #2563eb;
+        }
+        :global(.dark-mode) .status-badge-small.active {
+          background: rgba(34, 197, 94, 0.3);
+          color: #bbf7d0;
+        }
+        :global(.dark-mode) .member-avatar {
+          background-color: rgba(99, 102, 241, 0.2);
+          color: #a5b4fc;
+        }
+        :global(.dark-mode) .team-member-row:hover {
+          background-color: #1a1a1a;
+          border-color: #333333;
         }
       `}</style>
     </DashboardLayout>

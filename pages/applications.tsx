@@ -152,6 +152,18 @@ function Applications() {
     }
   };
 
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'Invalid date';
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      timeZone: 'UTC',
+    });
+  };
+
   const getStatusBadge = (status: string) => {
     const badges: { [key: string]: { style: React.CSSProperties; text: string } } = {
       pending: { 
@@ -452,9 +464,9 @@ function Applications() {
                           </td>
                           <td className="table-left">
                             <div className="app-details">
-                              <div>Applied: {app.created_at.split('T')[0]}</div>
-                              <div>Budget: ${app.rent_budget || 'Not specified'}/mo</div>
-                              <div>Move-in: {app.desired_move_in_date || 'Flexible'}</div>
+                              <div><span className="detail-label">Applied:</span> <span className="date-highlight">{formatDate(app.created_at)}</span></div>
+                              <div><span className="detail-label">Budget:</span> ${app.rent_budget || 'Not specified'}/mo</div>
+                              <div><span className="detail-label">Move-in:</span> <span className="date-highlight">{formatDate(app.desired_move_in_date || null)}</span></div>
                             </div>
                           </td>
                           <td className="table-center">
@@ -553,9 +565,11 @@ function Applications() {
                           </td>
                           <td className="table-left">
                             <div className="app-details">
-                              <div>Applied: {app.created_at.split('T')[0]}</div>
-                              <div>Decided: {app.decision_date?.split('T')[0] || 'N/A'}</div>
-                              <div className="decision-notes">{app.decision_notes || 'No notes'}</div>
+                              <div><span className="detail-label">Applied:</span> <span className="date-highlight">{formatDate(app.created_at)}</span></div>
+                              <div><span className="detail-label">Decided:</span> <span className="date-highlight">{formatDate(app.decision_date || null)}</span></div>
+                              <div className="decision-notes">
+                                <span className="detail-label">Notes:</span> {app.decision_notes || 'No notes'}
+                              </div>
                             </div>
                           </td>
                           <td className="table-center">
@@ -919,16 +933,33 @@ function Applications() {
         .app-details {
           display: flex;
           flex-direction: column;
-          gap: 2px;
+          gap: 4px;
           font-size: 12px;
+        }
+
+        .app-details > div {
           color: #64748b;
         }
 
+        .detail-label {
+          font-weight: 600;
+          color: #374151;
+          margin-right: 4px;
+        }
+
         .decision-notes {
-          font-style: italic;
+          font-style: normal;
           color: #64748b;
-          margin-top: 4px;
+          margin-top: 0;
           font-size: 12px;
+        }
+
+        .date-highlight {
+          background-color: #f1f5f9;
+          padding: 4px 8px;
+          border-radius: 4px;
+          font-weight: 600;
+          color: #334155;
         }
 
         .pending-days {
@@ -1172,6 +1203,13 @@ function Applications() {
           background: rgba(239, 68, 68, 0.1) !important;
           border-color: rgba(239, 68, 68, 0.3) !important;
           color: #ef4444 !important;
+        }
+        :global(.dark-mode) .date-highlight {
+          background-color: #334155;
+          color: #e2e8f0;
+        }
+        :global(.dark-mode) .detail-label {
+          color: #d1d5db;
         }
       `}</style>
     </DashboardLayout>

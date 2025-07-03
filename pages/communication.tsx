@@ -97,14 +97,19 @@ function CommunicationPage() {
     }
   };
 
+  const formatDate = (dateString: string) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      timeZone: 'UTC',
+    });
+  };
+
   const getStatusBadge = (status: string) => {
-    const badges = {
-      sent: { className: 'status-sent', text: 'Sent' },
-      delivered: { className: 'status-delivered', text: 'Delivered' },
-      read: { className: 'status-read', text: 'Read' }
-    };
-    const badge = badges[status as keyof typeof badges] || badges.sent;
-    return <span className={`status-badge ${badge.className}`}>{badge.text}</span>;
+    return status;
   };
 
   if (loading) {
@@ -298,7 +303,9 @@ function CommunicationPage() {
                             </td>
                             <td className="table-center">
                               <div className="message-date">
-                                {new Date(message.sent_date).toLocaleDateString()}
+                                <span className="date-highlight">
+                                  {formatDate(message.sent_date)}
+                                </span>
                               </div>
                             </td>
                             <td className="table-center">
@@ -401,7 +408,6 @@ function CommunicationPage() {
                   <div className="template-content">
                     <h4 className="template-title">Rent Reminder</h4>
                     <p className="template-description">Gentle reminder about upcoming rent payment</p>
-                    <button className="template-btn">Use Template</button>
                   </div>
                 </div>
                 
@@ -414,7 +420,6 @@ function CommunicationPage() {
                   <div className="template-content">
                     <h4 className="template-title">Maintenance Notice</h4>
                     <p className="template-description">Notify tenants about scheduled maintenance</p>
-                    <button className="template-btn">Use Template</button>
                   </div>
                 </div>
 
@@ -430,7 +435,6 @@ function CommunicationPage() {
                   <div className="template-content">
                     <h4 className="template-title">Policy Update</h4>
                     <p className="template-description">Inform tenants about policy changes</p>
-                    <button className="template-btn">Use Template</button>
                   </div>
                 </div>
                 
@@ -444,7 +448,6 @@ function CommunicationPage() {
                   <div className="template-content">
                     <h4 className="template-title">Welcome Message</h4>
                     <p className="template-description">Welcome new tenants to the property</p>
-                    <button className="template-btn">Use Template</button>
                   </div>
                 </div>
               </div>
@@ -839,79 +842,71 @@ function CommunicationPage() {
 
         .messages-table {
           width: 100%;
-          border-collapse: separate;
-          border-spacing: 0;
+          border-collapse: collapse;
+          table-layout: fixed;
+        }
+
+        .messages-table tbody tr {
+          transition: background-color 0.2s ease;
+        }
+
+        .messages-table tbody tr:hover {
+          background-color: #f9fafb;
         }
 
         .messages-table th {
           position: sticky;
           top: 0;
-          background: #f8fafc;
+          background: #ffffff;
           z-index: 2;
-          font-size: 13px;
-          font-weight: 700;
-          color: #1e293b;
-          padding: 12px 10px;
-          border-bottom: 2px solid #e2e8f0;
+          font-size: 12px;
+          font-weight: 600;
+          color: #9ca3af;
+          padding: 12px 16px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          border-bottom: 1px solid #e5e7eb;
+          text-align: left;
         }
 
         .messages-table td {
+          padding: 12px 16px;
+          vertical-align: middle;
+          height: 48px;
+          border-bottom: 1px solid #f1f5f9;
           font-size: 14px;
-          padding: 16px 10px;
-          border-bottom: 1px solid #e2e8f0;
-        }
-        
-        .messages-table tr:last-child td {
-          border-bottom: none;
+          color: #374151;
         }
 
         .recipient-name {
-          font-weight: 600;
           color: #1e293b;
         }
 
         .message-subject {
-          font-weight: 500;
           color: #374151;
         }
         
         .message-date {
           font-size: 13px;
-          color: #64748b;
+          color: #334155;
         }
 
-        .status-badge {
-          display: inline-block;
-          padding: 4px 10px;
-          border-radius: 20px;
-          font-size: 12px;
+        .date-highlight {
+          background-color: #f1f5f9;
+          padding: 4px 8px;
+          border-radius: 4px;
           font-weight: 600;
-          text-transform: capitalize;
-        }
-        
-        .status-sent {
-          background: #e5e7eb;
-          color: #4b5563;
-        }
-
-        .status-delivered {
-          background: #dbeafe;
-          color: #1d4ed8;
-        }
-
-        .status-read {
-          background: #dcfce7;
-          color: #166534;
+          color: #334155;
         }
 
         .view-btn {
-          background: #f0f0f0;
-          color: #000000;
-          border: 1px solid #e2e8f0;
-          padding: 8px 12px;
-          border-radius: 6px;
+          background: #4f46e5;
+          color: white;
+          border: none;
+          padding: 6px 12px;
+          border-radius: 5px;
           font-size: 12px;
-          font-weight: 600;
+          font-weight: 500;
           cursor: pointer;
           display: flex;
           align-items: center;
@@ -923,12 +918,12 @@ function CommunicationPage() {
         }
 
         .view-btn:hover {
-          background: #e2e8f0;
+          background: #3730a3;
           transform: translateY(-1px);
         }
 
         .view-btn svg {
-          stroke: #000000;
+          stroke: white;
         }
 
         /* Templates Section */
@@ -940,30 +935,31 @@ function CommunicationPage() {
 
         .template-card {
           display: flex;
-          gap: 12px;
-          padding: 12px;
-          border-radius: 5px;
+          align-items: center;
+          gap: 16px;
+          padding: 16px;
+          border-radius: 6px;
           border: 1px solid #e2e8f0;
           transition: all 0.2s ease;
-          background: #f9fafb;
+          background: white;
         }
         
         .template-card:hover {
-          transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
           border-color: #cbd5e1;
         }
         
         .template-icon {
-          width: 36px;
-          height: 36px;
-          border-radius: 6px;
+          width: 40px;
+          height: 40px;
+          border-radius: 8px;
           display: flex;
           align-items: center;
           justify-content: center;
           flex-shrink: 0;
-          background: #e5e7eb;
-          color: #4b5563;
+          background: #eef2ff;
+          color: #4f46e5;
         }
         
         .template-content {
@@ -980,15 +976,16 @@ function CommunicationPage() {
         .template-description {
           font-size: 12px;
           color: #64748b;
-          margin: 0 0 8px 0;
+          margin: 0 0: 8px 0;
         }
         
+        /*
         .template-btn {
-          background: none;
-          border: 1px solid #d1d5db;
-          color: #374151;
-          padding: 4px 10px;
-          border-radius: 4px;
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          color: #475569;
+          padding: 6px 12px;
+          border-radius: 6px;
           font-size: 12px;
           font-weight: 600;
           cursor: pointer;
@@ -996,9 +993,9 @@ function CommunicationPage() {
         }
         
         .template-btn:hover {
-          background: #e5e7eb;
-          border-color: #9ca3af;
+          background: #f1f5f9;
         }
+        */
 
         /* Quick Actions Section */
         .actions-grid {
@@ -1011,8 +1008,8 @@ function CommunicationPage() {
           display: flex;
           align-items: center;
           gap: 12px;
-          padding: 12px;
-          border-radius: 5px;
+          padding: 10px 12px;
+          border-radius: 6px;
           border: 1px solid #e2e8f0;
           cursor: pointer;
           transition: all 0.2s ease;
@@ -1040,13 +1037,12 @@ function CommunicationPage() {
         }
 
         .action-icon {
-          width: 40px;
-          height: 40px;
-          border-radius: 8px;
+          width: 32px;
+          height: 32px;
+          border-radius: 6px;
           display: flex;
           align-items: center;
           justify-content: center;
-          flex-shrink: 0;
         }
 
         .action-card.blue .action-icon {
@@ -1069,14 +1065,14 @@ function CommunicationPage() {
         }
 
         .action-title {
-          font-size: 14px;
+          font-size: 13px;
           font-weight: 600;
           color: #1e293b;
-          margin: 0 0 3px 0;
+          margin: 0 0 2px 0;
         }
 
         .action-subtitle {
-          font-size: 12px;
+          font-size: 11px;
           color: #64748b;
           margin: 0;
         }
@@ -1354,10 +1350,6 @@ function CommunicationPage() {
             background: #1a1a1a !important;
             border: 1px solid #333333 !important;
         }
-        :global(.dark-mode) .refresh-btn:hover {
-            background: #2a2a2a !important;
-            border-color: #ffffff !important;
-        }
         :global(.dark-mode) .empty-action-btn,
         :global(.dark-mode) .btn-primary {
             background: #3b82f6 !important;
@@ -1378,20 +1370,12 @@ function CommunicationPage() {
             background: #2a2a2a !important;
             border-color: #ffffff !important;
         }
-        :global(.dark-mode) .status-badge {
-            color: #ffffff !important;
-        }
-        :global(.dark-mode) .status-badge.sent { background: rgba(107, 114, 128, 0.3); }
-        :global(.dark-mode) .status-badge.delivered { background: rgba(59, 130, 246, 0.3); }
-        :global(.dark-mode) .status-badge.read { background: rgba(34, 197, 94, 0.3); }
         :global(.dark-mode) .action-card.blue .action-icon { background: rgba(59, 130, 246, 0.3); }
         :global(.dark-mode) .action-card.green .action-icon { background: rgba(34, 197, 94, 0.3); }
         :global(.dark-mode) .action-card.purple .action-icon { background: rgba(139, 92, 246, 0.3); }
-        :global(.dark-mode) .template-card { background: #1a1a1a !important; }
-        :global(.dark-mode) .template-card:hover { border-color: #4b5563 !important; }
-        :global(.dark-mode) .template-icon { background: #374151 !important; }
-        :global(.dark-mode) .template-btn { border-color: #4b5563 !important; color: #d1d5db !important; }
-        :global(.dark-mode) .template-btn:hover { background: #374151 !important; border-color: #6b7280 !important; }
+        :global(.dark-mode) .template-card { background: #1a1a1a !important; border-color: #333333 !important; }
+        :global(.dark-mode) .template-card:hover { border-color: #4b5563 !important; background: #222222 !important; }
+        :global(.dark-mode) .template-icon { background: rgba(99, 102, 241, 0.2) !important; color: #a5b4fc !important; }
         :global(.dark-mode) .message-form-section { background: #111111 !important; }
         :global(.dark-mode) .form-header { border-bottom-color: #333333 !important; }
         :global(.dark-mode) .close-btn { color: #6b7280 !important; }
@@ -1404,6 +1388,10 @@ function CommunicationPage() {
         :global(.dark-mode) .message-form .form-input:focus { border-color: #3b82f6 !important; }
         :global(.dark-mode) .message-form .form-input:disabled { background: #374151 !important; color: #6b7280 !important; }
         :global(.dark-mode) .message-form .form-actions { border-top-color: #333333 !important; }
+        :global(.dark-mode) .date-highlight {
+          background-color: #334155;
+          color: #e2e8f0;
+        }
       `}</style>
     </DashboardLayout>
   );
