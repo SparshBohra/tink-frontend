@@ -164,7 +164,7 @@ export default function AddInventoryItem() {
                 <div className="section-header">
                   <div>
                     <h2 className="section-title">Item Details</h2>
-                    <p className="section-subtitle">Enter the basic information for your new inventory item</p>
+                    <p className="section-subtitle">Enter the information for your new inventory item</p>
                   </div>
                 </div>
                 
@@ -213,7 +213,7 @@ export default function AddInventoryItem() {
                     </div>
 
                     <div className="form-group">
-                      <label className="form-label">Room (Optional)</label>
+                      <label className="form-label">Room</label>
                       <select
                         name="room"
                         value={formData.room}
@@ -221,16 +221,13 @@ export default function AddInventoryItem() {
                         className="form-input"
                         disabled={!formData.property_ref}
                       >
-                        <option value="">Select Room (or leave empty for common area)</option>
+                        <option value="">Select Room (or N/A)</option>
                         {rooms.map(room => (
                           <option key={room.id} value={room.id}>
                             {room.name} {room.room_type ? `(${room.room_type})` : ''}
                           </option>
                         ))}
                       </select>
-                      {!formData.property_ref && (
-                        <small className="form-help">Please select a property first to see available rooms</small>
-                      )}
                     </div>
 
                     <div className="form-group">
@@ -280,8 +277,7 @@ export default function AddInventoryItem() {
                           checked={formData.needs_maintenance}
                           onChange={handleChange}
                         />
-                        <span className="checkmark"></span>
-                        Needs Maintenance Immediately
+                        Needs Maintenance
                       </label>
                     </div>
                   </div>
@@ -311,21 +307,21 @@ export default function AddInventoryItem() {
                     <p className="section-subtitle">Best practices for inventory management</p>
                   </div>
                 </div>
-                <div className="info-grid">
-                  <div className="info-item">
-                    <h4>Item Names</h4>
-                    <p>Use descriptive names that include brand/model when relevant (e.g., "IKEA Malm Bed Frame" vs "Bed")</p>
+                <div className="tips-grid">
+                  <div className="tip-item">
+                    <strong>Item Names</strong>
+                    <p>Use descriptive names that include brand/model when relevant (e.g., "IKEA Malm Bed Frame" vs "Bed").</p>
                   </div>
-                  <div className="info-item">
-                    <h4>Property Assignment</h4>
+                  <div className="tip-item">
+                    <strong>Property Assignment</strong>
                     <p>Always assign items to properties. Room assignment is optional but helps with organization.</p>
                   </div>
-                  <div className="info-item">
-                    <h4>Cost Tracking</h4>
+                  <div className="tip-item">
+                    <strong>Cost Tracking</strong>
                     <p>Recording purchase costs helps with budgeting and insurance claims.</p>
                   </div>
-                  <div className="info-item">
-                    <h4>Maintenance Flags</h4>
+                  <div className="tip-item">
+                    <strong>Maintenance Flags</strong>
                     <p>Check "Needs Maintenance" for items requiring immediate attention or repair.</p>
                   </div>
                 </div>
@@ -384,9 +380,9 @@ export default function AddInventoryItem() {
         }
 
         .back-btn {
-          background: #f8fafc;
-          color: #64748b;
-          border: 1px solid #e2e8f0;
+          background: #4f46e5;
+          color: white;
+          border: none;
           padding: 10px 14px;
           border-radius: 6px;
           font-size: 12px;
@@ -400,7 +396,7 @@ export default function AddInventoryItem() {
         }
 
         .back-btn:hover {
-          background: #e2e8f0;
+          background: #3730a3;
           transform: translateY(-1px);
         }
         
@@ -408,14 +404,14 @@ export default function AddInventoryItem() {
         .main-content-grid {
           display: grid;
           grid-template-columns: 2fr 1fr;
-          gap: 24px;
+          gap: 20px;
           align-items: flex-start;
         }
 
         .left-column, .right-column {
           display: flex;
           flex-direction: column;
-          gap: 24px;
+          gap: 20px;
         }
 
         /* Section Styling */
@@ -423,26 +419,25 @@ export default function AddInventoryItem() {
         .tips-section {
           background: white;
           border-radius: 6px;
-          padding: 24px;
+          padding: 18px;
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
           border: 1px solid #e2e8f0;
+          height: fit-content;
         }
 
         .section-header {
-          padding-bottom: 12px;
-          border-bottom: 1px solid #f1f5f9;
-          margin-bottom: 20px;
+          margin-bottom: 16px;
         }
 
         .section-title {
-          font-size: 16px;
-          font-weight: 600;
+          font-size: 14px;
+          font-weight: 700;
           color: #1e293b;
           margin: 0 0 3px 0;
         }
 
         .section-subtitle {
-          font-size: 13px;
+          font-size: 12px;
           color: #64748b;
           margin: 0;
         }
@@ -451,7 +446,8 @@ export default function AddInventoryItem() {
         .form-grid {
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 20px;
+          gap: 16px;
+          margin-bottom: 20px;
         }
 
         .form-group {
@@ -465,11 +461,9 @@ export default function AddInventoryItem() {
         }
 
         .form-label {
-          font-size: 12px;
           font-weight: 600;
           color: #374151;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
+          font-size: 14px;
         }
 
         .form-input {
@@ -479,54 +473,50 @@ export default function AddInventoryItem() {
           font-size: 14px;
           transition: all 0.2s ease;
           background: white;
+          box-sizing: border-box;
         }
 
         .form-input:focus {
           outline: none;
-          border-color: #6366f1;
-          box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+          border-color: #4f46e5;
+          box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
         }
 
         .form-input:disabled {
-          background: #f9fafb;
+          background: #f1f5f9;
           color: #9ca3af;
           cursor: not-allowed;
-        }
-
-        .form-help {
-          font-size: 12px;
-          color: #6b7280;
-          margin-top: 4px;
         }
 
         .form-checkbox {
           display: flex;
           align-items: center;
-          gap: 10px;
+          gap: 8px;
           cursor: pointer;
           font-size: 14px;
           color: #374151;
-          padding: 10px 0;
+          padding: 6px 0;
         }
 
         .form-checkbox input[type="checkbox"] {
           width: 16px;
           height: 16px;
-          accent-color: #6366f1;
+          accent-color: #4f46e5;
+          cursor: pointer;
         }
 
         .form-actions {
           display: flex;
           gap: 12px;
           justify-content: flex-start;
-          padding-top: 24px;
-          margin-top: 12px;
+          margin-top: 16px;
+          padding-top: 16px;
           border-top: 1px solid #e2e8f0;
         }
 
         /* Button Styling */
         .btn {
-          padding: 12px 20px;
+          padding: 10px 16px;
           border-radius: 6px;
           font-size: 14px;
           font-weight: 600;
@@ -534,7 +524,7 @@ export default function AddInventoryItem() {
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: 8px;
+          gap: 6px;
           transition: all 0.2s ease;
           text-decoration: none;
           border: none;
@@ -543,58 +533,50 @@ export default function AddInventoryItem() {
         .btn:disabled {
           opacity: 0.6;
           cursor: not-allowed;
-          transform: none !important;
         }
 
         .btn-primary {
-          background: #6366f1;
+          background: #4f46e5;
           color: white;
         }
 
         .btn-primary:hover:not(:disabled) {
-          background: #4f46e5;
-          transform: translateY(-1px);
+          background: #3730a3;
         }
 
         .btn-secondary {
           background: #f8fafc;
-          color: #1e293b;
+          color: #64748b;
           border: 1px solid #e2e8f0;
         }
 
         .btn-secondary:hover {
-          background: #f1f5f9;
-          transform: translateY(-1px);
+          background: #e2e8f0;
         }
 
         /* Tips Section */
-        .info-grid {
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
+        .tips-grid {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 12px;
         }
 
-        .info-item {
+        .tip-item {
           padding: 16px;
           background: #f8fafc;
           border-radius: 6px;
-          border: 1px solid #e2e8f0;
-          transition: all 0.2s ease;
+          border-left: 3px solid #4f46e5;
         }
         
-        .info-item:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-        }
-
-        .info-item h4 {
-          font-size: 14px;
+        .tip-item strong {
+          display: block;
+          font-size: 13px;
           font-weight: 600;
           color: #1e293b;
-          margin: 0 0 6px 0;
+          margin-bottom: 6px;
         }
 
-        .info-item p {
+        .tip-item p {
           font-size: 13px;
           color: #64748b;
           margin: 0;
@@ -602,10 +584,10 @@ export default function AddInventoryItem() {
         }
 
         /* Alert Styling & Loading */
-        .alert { padding: 12px 16px; border-radius: 6px; margin-bottom: 20px; font-size: 14px; }
+        .alert { padding: 12px 16px; border-radius: 6px; margin-bottom: 20px; font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 8px; }
         .alert-error { background-color: #fef2f2; border: 1px solid #fecaca; color: #dc2626; }
         .loading-indicator { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 48px 24px; text-align: center; }
-        .loading-spinner { width: 40px; height: 40px; border: 4px solid #e2e8f0; border-top-color: #6366f1; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 16px; }
+        .loading-spinner { width: 40px; height: 40px; border: 4px solid #e2e8f0; border-top-color: #4f46e5; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 16px; }
         @keyframes spin { to { transform: rotate(360deg); } }
 
         /* Responsive Design */

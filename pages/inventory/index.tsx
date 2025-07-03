@@ -344,133 +344,132 @@ export default function Inventory() {
                         <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>
                       </svg>
                       Refresh
-            </button>
-          </div>
-          </div>
-          
+                    </button>
+                  </div>
+                </div>
+
                 {/* Filters */}
                 <div className="filters-container">
-          <div className="form-grid">
-            <div className="form-group">
-              <label className="form-label">Property</label>
-              <select
-                value={selectedProperty || ''}
-                onChange={(e) => setSelectedProperty(e.target.value ? parseInt(e.target.value) : null)}
-                className="form-input"
-              >
-                <option value="">All Properties</option>
-                {properties.map(property => (
-                  <option key={property.id} value={property.id}>
-                    {property.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            
-            <div className="form-group">
-              <label className="form-label">Room</label>
-              <select
-                value={selectedRoom || ''}
-                onChange={(e) => setSelectedRoom(e.target.value ? parseInt(e.target.value) : null)}
-                className="form-input"
-              >
-                <option value="">All Rooms</option>
-                {(selectedProperty ? rooms.filter(r => r.property_ref === selectedProperty) : rooms).map(room => (
-                  <option key={room.id} value={room.id}>{room.name}</option>
-                ))}
-              </select>
-            </div>
-            
-            <div className="form-group">
-              <label className="form-label">Condition</label>
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="form-input"
-              >
-                <option value="all">All Conditions</option>
-                <option value="new">New</option>
-                <option value="good">Good</option>
-                <option value="used">Used</option>
-                <option value="broken">Broken</option>
-              </select>
-            </div>
-            
-            <div className="form-group">
-              <label className="form-label">Search</label>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search by name, property, etc."
-                className="form-input"
-              />
+                  <div className="form-grid">
+                    <div className="form-group">
+                      <label className="form-label">Property</label>
+                      <select
+                        value={selectedProperty || ''}
+                        onChange={(e) => setSelectedProperty(e.target.value ? parseInt(e.target.value) : null)}
+                        className="form-input"
+                      >
+                        <option value="">All Properties</option>
+                        {properties.map(property => (
+                          <option key={property.id} value={property.id}>
+                            {property.name}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                     
                     <div className="form-group">
-                      <button className="btn btn-secondary" onClick={clearFilters} style={{ alignSelf: 'flex-end' }}>Clear</button>
+                      <label className="form-label">Room</label>
+                      <select
+                        value={selectedRoom || ''}
+                        onChange={(e) => setSelectedRoom(e.target.value ? parseInt(e.target.value) : null)}
+                        className="form-input"
+                      >
+                        <option value="">All Rooms</option>
+                        {(selectedProperty ? rooms.filter(r => r.property_ref === selectedProperty) : rooms).map(room => (
+                          <option key={room.id} value={room.id}>{room.name}</option>
+                        ))}
+                      </select>
                     </div>
-            </div>
-          </div>
+                    
+                    <div className="form-group">
+                      <label className="form-label">Condition</label>
+                      <select
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value)}
+                        className="form-input"
+                      >
+                        <option value="all">All Conditions</option>
+                        <option value="new">New</option>
+                        <option value="good">Good</option>
+                        <option value="used">Used</option>
+                        <option value="broken">Broken</option>
+                      </select>
+                    </div>
+                    
+                    <div className="form-group">
+                      <label className="form-label">Search</label>
+                      <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Search by name, property, etc."
+                        className="form-input"
+                      />
+                    </div>
+                    
+                    <div className="form-group">
+                      <button className="btn btn-secondary" onClick={clearFilters} style={{ alignSelf: 'flex-end' }}>Clear Filters</button>
+                    </div>
+                  </div>
+                </div>
 
-          {filteredItems.length === 0 ? (
-            <div className="empty-state">
+                {filteredItems.length === 0 ? (
+                  <div className="empty-state">
                     <h3>No Inventory Found</h3>
-              <p>No inventory items found matching your filters. Try changing your filter criteria or add new items.</p>
-            </div>
-          ) : (
-            <div className="table-container">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Item</th>
-                    <th>Property & Room</th>
-                    <th>Condition</th>
-                    <th>Quantity</th>
-                    <th>Cost</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredItems.map(item => (
-                    <tr key={item.id}>
-                      <td>
-                        <strong>{item.name}</strong>
-                      </td>
-                      <td>
-                        <strong>{item.property_name || `Property ${item.property_ref}`}</strong>
-                        <br />
-                        <small>{item.room_name || 'Not assigned to a room'}</small>
-                      </td>
-                      <td>
-                        <span className={`status-badge ${item.condition_status}`}>
-                          {item.condition_status.toUpperCase()}
-                        </span>
-                      </td>
-                      <td>{item.qty}</td>
-                      <td>${item.cost || '0'}</td>
-                      <td>
+                    <p>No inventory items found matching your filters. Try changing your filter criteria or add new items.</p>
+                  </div>
+                ) : (
+                  <div className="applications-table-container">
+                    <table className="applications-table">
+                      <thead>
+                        <tr>
+                          <th className="table-left">Item</th>
+                          <th className="table-left">Property & Room</th>
+                          <th className="table-center">Condition</th>
+                          <th className="table-center">Quantity</th>
+                          <th className="table-center">Cost</th>
+                          <th className="table-center">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredItems.map(item => (
+                          <tr key={item.id}>
+                            <td className="table-left">
+                              <div className="applicant-name">{item.name}</div>
+                            </td>
+                            <td className="table-left">
+                              <div className="property-name">{item.property_name || `Property ${item.property_ref}`}</div>
+                              <div className="property-vacancy">{item.room_name || 'Not assigned to a room'}</div>
+                            </td>
+                            <td className="table-center">
+                              <span className={`status-badge ${item.condition_status}`}>
+                                {item.condition_status}
+                              </span>
+                            </td>
+                            <td className="table-center">{item.qty}</td>
+                            <td className="table-center">${item.cost || '0'}</td>
+                            <td className="table-center">
                               <div className="action-buttons">
-                        <button 
-                          className="btn btn-sm btn-secondary"
-                          onClick={() => handleEditItem(item)}
-                        >
-                          Edit
-                        </button>
-                        <button 
-                          className="btn btn-sm btn-danger"
-                          onClick={() => handleDeleteItem(item.id)}
-                        >
-                          Delete
-                        </button>
+                                <button 
+                                  className="manage-btn view-btn"
+                                  onClick={() => handleEditItem(item)}
+                                >
+                                  Edit
+                                </button>
+                                <button 
+                                  className="manage-btn reject-btn"
+                                  onClick={() => handleDeleteItem(item.id)}
+                                >
+                                  Delete
+                                </button>
                               </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -486,10 +485,7 @@ export default function Inventory() {
                 <div className="actions-grid">
                   <div className="action-card blue" onClick={() => router.push('/inventory/add')}>
                     <div className="action-icon">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <line x1="12" y1="5" x2="12" y2="19"/>
-                        <line x1="5" y1="12" x2="19" y2="12"/>
-                      </svg>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                     </div>
                     <div className="action-content">
                       <h3 className="action-title">Add Inventory</h3>
@@ -499,11 +495,7 @@ export default function Inventory() {
                   
                   <div className="action-card green" onClick={downloadInventoryCSV}>
                     <div className="action-icon">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                        <polyline points="7,10 12,15 17,10"/>
-                        <line x1="12" y1="15" x2="12" y2="3"/>
-                      </svg>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                     </div>
                     <div className="action-content">
                       <h3 className="action-title">Download Report</h3>
@@ -513,9 +505,7 @@ export default function Inventory() {
 
                   <div className="action-card purple" onClick={downloadMaintenanceCSV}>
                     <div className="action-icon">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
-                      </svg>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
                     </div>
                     <div className="action-content">
                       <h3 className="action-title">Maintenance Report</h3>
@@ -533,34 +523,34 @@ export default function Inventory() {
                     <p className="section-subtitle">Items commonly needed for co-living</p>
                   </div>
                 </div>
-            <div className="table-container">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Category</th>
-                    <th>Common Items</th>
-                    <th>Estimated Cost</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>Bedroom Essentials</td>
-                    <td>Bed frame, mattress, desk, chair</td>
-                    <td>$800-1,200</td>
-                  </tr>
-                  <tr>
-                    <td>Kitchen Basics</td>
-                    <td>Table, chairs, appliances</td>
-                    <td>$400-800</td>
-                  </tr>
-                  <tr>
-                    <td>Storage Solutions</td>
-                    <td>Wardrobes, shelving, storage bins</td>
-                    <td>$200-500</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+                <div className="applications-table-container">
+                  <table className="applications-table">
+                    <thead>
+                      <tr>
+                        <th className="table-left">Category</th>
+                        <th className="table-left">Common Items</th>
+                        <th className="table-center">Estimated Cost</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td className="table-left">Bedroom Essentials</td>
+                        <td className="table-left">Bed frame, mattress, desk, chair</td>
+                        <td className="table-center">$800-1,200</td>
+                      </tr>
+                      <tr>
+                        <td className="table-left">Kitchen Basics</td>
+                        <td className="table-left">Table, chairs, appliances</td>
+                        <td className="table-center">$400-800</td>
+                      </tr>
+                      <tr>
+                        <td className="table-left">Storage Solutions</td>
+                        <td className="table-left">Wardrobes, shelving, storage bins</td>
+                        <td className="table-center">$200-500</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           </div>
@@ -772,11 +762,9 @@ export default function Inventory() {
 
         /* Filters */
         .filters-container {
-          margin-bottom: 24px;
-          padding: 16px;
-          background: #f8fafc;
-          border-radius: 6px;
-          border: 1px solid #e2e8f0;
+          margin-bottom: 16px;
+          padding-bottom: 16px;
+          border-bottom: 1px solid #f1f5f9;
         }
 
         .form-grid {
@@ -795,8 +783,6 @@ export default function Inventory() {
           font-size: 12px;
           font-weight: 600;
           color: #374151;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
         }
 
         .form-input {
@@ -815,47 +801,121 @@ export default function Inventory() {
         }
 
         /* Table Styling */
-        .table-container {
+        .applications-table-container {
           overflow-x: auto;
-          border-radius: 8px;
-          border: none;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
         }
 
-        .data-table {
+        .applications-table {
           width: 100%;
-          border-collapse: separate;
-          border-spacing: 0;
-          background: white;
+          border-collapse: collapse;
+          table-layout: fixed;
         }
 
-        .data-table th {
+        .applications-table tbody tr {
+          transition: background-color 0.2s ease;
+        }
+
+        .applications-table tbody tr:hover {
+          background-color: #f9fafb;
+        }
+
+        .applications-table th {
           position: sticky;
           top: 0;
-          background: #f8fafc;
+          background: #ffffff;
           z-index: 2;
-          font-size: 13px;
-          font-weight: 700;
-          color: #1e293b;
-          padding: 12px 10px;
-          border-bottom: 2px solid #e2e8f0;
+          font-size: 12px;
+          font-weight: 600;
+          color: #9ca3af;
+          padding: 12px 16px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          border-bottom: 1px solid #e5e7eb;
+          text-align: left;
         }
 
-        .data-table td {
-          padding: 16px 10px;
-          border-bottom: 1px solid #e2e8f0;
+        .applications-table td {
+          padding: 12px 16px;
+          vertical-align: middle;
+          height: 48px;
+          border-bottom: 1px solid #f1f5f9;
           font-size: 14px;
           color: #374151;
         }
-        
-        .data-table tr:last-child td {
-          border-bottom: none;
+
+        .applications-table th.table-center,
+        .applications-table td.table-center {
+          text-align: center !important;
         }
 
+        .applications-table th.table-left,
+        .applications-table td.table-left {
+          text-align: left !important;
+        }
+
+        .applicant-name {
+          color: #1e293b;
+          margin-bottom: 4px;
+        }
+
+        .property-name {
+          color: #1e293b;
+          margin-bottom: 4px;
+        }
+
+        .property-vacancy {
+          font-size: 12px;
+          color: #64748b;
+        }
+
+        .action-buttons {
+          display: flex;
+          gap: 4px;
+          flex-wrap: wrap;
+          justify-content: center;
+        }
+
+        .manage-btn {
+          background: #4f46e5;
+          color: white;
+          border: none;
+          padding: 6px 12px;
+          border-radius: 5px;
+          font-size: 12px;
+          font-weight: 500;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          transition: all 0.2s ease;
+          text-decoration: none;
+        }
+
+        .manage-btn:hover {
+          background: #3730a3;
+          transform: translateY(-1px);
+        }
+
+        .manage-btn.view-btn {
+          background: #4f46e5;
+        }
+
+        .manage-btn.view-btn:hover {
+          background: #3730a3;
+        }
+
+        .manage-btn.reject-btn {
+          background: #ef4444;
+        }
+
+        .manage-btn.reject-btn:hover {
+          background: #dc2626;
+        }
+        
         /* Status Badge */
         .status-badge {
           padding: 4px 10px;
-          border-radius: 20px;
+          border-radius: 4px;
           font-size: 12px;
           font-weight: 600;
           text-transform: capitalize;
@@ -986,28 +1046,6 @@ export default function Inventory() {
 
         .btn-secondary:hover {
           background: #f1f5f9;
-          transform: translateY(-1px);
-        }
-
-        .btn-sm {
-          padding: 8px 12px;
-          font-size: 12px;
-        }
-        
-        .action-buttons {
-          display: flex;
-          gap: 8px;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .action-buttons .btn-danger {
-          background: #fee2e2;
-          color: #dc2626;
-        }
-        
-        .action-buttons .btn-danger:hover {
-          background: #fecaca;
         }
 
         /* Empty State */
