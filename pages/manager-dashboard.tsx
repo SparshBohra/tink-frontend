@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import DashboardLayout from '../components/DashboardLayout';
 import { withAuth } from '../lib/auth-context';
 import { useAuth } from '../lib/auth-context';
@@ -32,14 +33,14 @@ const TargetIcon = () => (
 );
 
 // Custom hook for counter animation
-const useCounterAnimation = (targetValue, duration = 2000, isRevenue = false) => {
+const useCounterAnimation = (targetValue: number, duration: number = 2000, isRevenue: boolean = false) => {
   const [currentValue, setCurrentValue] = useState(0);
 
   useEffect(() => {
-    let startTime;
-    let animationId;
+    let startTime: number | undefined;
+    let animationId: number | undefined;
 
-    const animate = (timestamp) => {
+    const animate = (timestamp: number) => {
       if (!startTime) startTime = timestamp;
       const progress = Math.min((timestamp - startTime) / duration, 1);
       
@@ -72,12 +73,63 @@ const useCounterAnimation = (targetValue, duration = 2000, isRevenue = false) =>
 
 function Dashboard() {
   const { user, isLandlord, isManager, isAdmin } = useAuth();
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [propertyFilter, setPropertyFilter] = useState('All');
   const [currentMessage, setCurrentMessage] = useState<{ text: string; icon: React.ReactElement | null }>({ text: '', icon: null });
   const [isFading, setIsFading] = useState(false);
   const [isTyping, setIsTyping] = useState(true);
   const [messageIndex, setMessageIndex] = useState(0);
+  const [showTaskModal, setShowTaskModal] = useState(false);
+  const [taskForm, setTaskForm] = useState({
+    task: '',
+    property: '',
+    priority: 'Medium',
+    dueDate: '',
+    status: 'Pending'
+  });
+  const [tasks, setTasks] = useState([
+    { 
+      id: 1, 
+      task: 'Room inspection', 
+      property: 'Downtown Coliving Hub', 
+      priority: 'High', 
+      dueDate: '2024-01-15', 
+      status: 'Pending' 
+    },
+    { 
+      id: 2, 
+      task: 'Maintenance request', 
+      property: 'University District House', 
+      priority: 'Medium', 
+      dueDate: '2024-01-16', 
+      status: 'In Progress' 
+    },
+    { 
+      id: 3, 
+      task: 'New tenant orientation', 
+      property: 'Downtown Coliving Hub', 
+      priority: 'High', 
+      dueDate: '2024-01-15', 
+      status: 'Pending' 
+    },
+    { 
+      id: 4, 
+      task: 'Inventory check', 
+      property: 'University District House', 
+      priority: 'Low', 
+      dueDate: '2024-01-17', 
+      status: 'Completed' 
+    },
+    { 
+      id: 5, 
+      task: 'Lease renewal discussion', 
+      property: 'Downtown Coliving Hub', 
+      priority: 'Medium', 
+      dueDate: '2024-01-18', 
+      status: 'Pending' 
+    }
+  ]);
   
   const welcomeMessage = `Welcome back, ${user?.full_name || 'User'}! Here's an overview of your property management operations.`;
   
@@ -156,64 +208,22 @@ function Dashboard() {
     revenue: { value: '$15,400', subtitle: 'From all properties', change: '+12%', changeType: 'positive' }
   };
 
-  const tasks = [
-    { 
-      id: 1, 
-      task: 'Room inspection', 
-      property: 'Downtown Coliving Hub', 
-      priority: 'High', 
-      dueDate: '2024-01-15', 
-      status: 'Pending' 
-    },
-    { 
-      id: 2, 
-      task: 'Maintenance request', 
-      property: 'University District House', 
-      priority: 'Medium', 
-      dueDate: '2024-01-16', 
-      status: 'In Progress' 
-    },
-    { 
-      id: 3, 
-      task: 'New tenant orientation', 
-      property: 'Downtown Coliving Hub', 
-      priority: 'High', 
-      dueDate: '2024-01-15', 
-      status: 'Pending' 
-    },
-    { 
-      id: 4, 
-      task: 'Inventory check', 
-      property: 'University District House', 
-      priority: 'Low', 
-      dueDate: '2024-01-17', 
-      status: 'Completed' 
-    },
-    { 
-      id: 5, 
-      task: 'Lease renewal discussion', 
-      property: 'Downtown Coliving Hub', 
-      priority: 'Medium', 
-      dueDate: '2024-01-18', 
-      status: 'Pending' 
-    }
-  ];
-
   const quickActions = [
     { 
-      title: 'Add Property',
-      subtitle: 'Register New Property',
+      title: 'View Properties',
+      subtitle: 'Manage your assigned properties',
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <line x1="12" y1="5" x2="12" y2="19"/>
-          <line x1="5" y1="12" x2="19" y2="12"/>
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+          <polyline points="9,22 9,12 15,12 15,22"/>
         </svg>
       ), 
-      color: 'blue' 
+      color: 'blue',
+      link: '/properties'
     },
     { 
       title: 'Review Applications',
-      subtitle: 'Process Tenant Applications',
+      subtitle: 'Process tenant applications',
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -223,30 +233,32 @@ function Dashboard() {
           <polyline points="10,9 9,9 8,9"/>
         </svg>
       ), 
-      color: 'blue' 
+      color: 'purple',
+      link: '/applications'
     },
     { 
       title: 'Manage Tenants',
-      subtitle: 'View and Manage Tenants',
+      subtitle: 'View and manage tenants',
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
           <circle cx="12" cy="7" r="4"/>
         </svg>
       ), 
-      color: 'green'
+      color: 'green',
+      link: '/tenants'
     },
     { 
-      title: 'Generate Reports',
-      subtitle: 'Create Financial Reports',
+      title: 'Add Property',
+      subtitle: 'Register new property',
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <line x1="18" y1="20" x2="18" y2="10"/>
-          <line x1="12" y1="20" x2="12" y2="4"/>
-          <line x1="6" y1="20" x2="6" y2="14"/>
+          <line x1="12" y1="5" x2="12" y2="19"/>
+          <line x1="5" y1="12" x2="19" y2="12"/>
         </svg>
       ), 
-      color: 'purple'
+      color: 'orange',
+      link: '/properties/add'
     }
   ];
 
@@ -380,6 +392,55 @@ function Dashboard() {
     ? properties
     : properties.filter((p) => p.status === propertyFilter);
 
+  const handleAddTask = () => {
+    setShowTaskModal(true);
+  };
+
+  const handleTaskFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setTaskForm(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSubmitTask = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!taskForm.task || !taskForm.property || !taskForm.dueDate) {
+      return;
+    }
+
+    const newTask = {
+      id: tasks.length + 1,
+      task: taskForm.task,
+      property: taskForm.property,
+      priority: taskForm.priority,
+      dueDate: taskForm.dueDate,
+      status: taskForm.status
+    };
+
+    setTasks(prev => [...prev, newTask]);
+    setTaskForm({
+      task: '',
+      property: '',
+      priority: 'Medium',
+      dueDate: '',
+      status: 'Pending'
+    });
+    setShowTaskModal(false);
+  };
+
+  const handleCancelTask = () => {
+    setTaskForm({
+      task: '',
+      property: '',
+      priority: 'Medium',
+      dueDate: '',
+      status: 'Pending'
+    });
+    setShowTaskModal(false);
+  };
+
   return (
     <DashboardLayout title="">
       <Head>
@@ -425,13 +486,13 @@ function Dashboard() {
             <div className="metric-header">
               <div className="metric-info">
                 <h3 className="metric-title">My Properties</h3>
-              <div className="metric-icon">
+                <div className="metric-icon">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M3 21h18"/>
-                  <path d="M5 21V7l8-4v18"/>
-                  <path d="M19 21V11l-6-4"/>
-                </svg>
-          </div>
+                    <path d="M3 21h18"/>
+                    <path d="M5 21V7l8-4v18"/>
+                    <path d="M19 21V11l-6-4"/>
+                  </svg>
+                </div>
               </div>
               </div>
               <div className="metric-content">
@@ -448,12 +509,12 @@ function Dashboard() {
             <div className="metric-header">
               <div className="metric-info">
                 <h3 className="metric-title">Total Rooms</h3>
-              <div className="metric-icon">
+                <div className="metric-icon">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M3 21h18"/>
                     <path d="M5 21V7l8-4v18"/>
                     <path d="M19 21V11l-6-4"/>
-                </svg>
+                  </svg>
                 </div>
               </div>
               </div>
@@ -471,11 +532,11 @@ function Dashboard() {
             <div className="metric-header">
               <div className="metric-info">
                 <h3 className="metric-title">Active Tenants</h3>
-              <div className="metric-icon">
+                <div className="metric-icon">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
                     <circle cx="12" cy="7" r="4"/>
-                </svg>
+                  </svg>
                 </div>
               </div>
               </div>
@@ -493,11 +554,11 @@ function Dashboard() {
             <div className="metric-header">
               <div className="metric-info">
                 <h3 className="metric-title">Monthly Revenue</h3>
-              <div className="metric-icon">
+                <div className="metric-icon">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <line x1="12" y1="1" x2="12" y2="23"/>
-                  <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-                </svg>
+                    <line x1="12" y1="1" x2="12" y2="23"/>
+                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                  </svg>
                 </div>
               </div>
               </div>
@@ -521,7 +582,7 @@ function Dashboard() {
                   <h2 className="section-title">Pending Tasks</h2>
                   <p className="section-subtitle">Tasks requiring your attention</p>
                 </div>
-                <button className="add-task-btn">
+                <button className="add-task-btn" onClick={handleAddTask}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <line x1="12" y1="5" x2="12" y2="19"/>
                     <line x1="5" y1="12" x2="19" y2="12"/>
@@ -581,113 +642,242 @@ function Dashboard() {
               
                 <div className="actions-grid">
                   {quickActions.map((action, index) => (
-                <div key={index} className={`action-card ${action.color}`}>
-                  <div className="action-icon">
-                    {action.icon}
-                  </div>
+                    <div 
+                      key={index} 
+                      className={`action-card ${action.color}`}
+                      onClick={() => router.push(action.link)}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <div className="action-icon">
+                        {action.icon}
+                      </div>
                       <div className="action-content">
-                    <h3 className="action-title">{action.title}</h3>
-                    <p className="action-subtitle">{action.subtitle}</p>
-                </div>
-                </div>
+                        <h3 className="action-title">{action.title}</h3>
+                        <p className="action-subtitle">{action.subtitle}</p>
+                      </div>
+                    </div>
                   ))}
               </div>
             </div>
           </div>
 
-        {/* My Properties Section */}
-          <div className="properties-section">
+        {/* Rent History Section */}
+        <div className="rent-history-section">
           <div className="section-header">
             <div>
-              <h2 className="section-title">My Properties</h2>
-              <p className="section-subtitle">Manage and monitor your property portfolio</p>
-              </div>
-            <Link href="/properties">
+              <h2 className="section-title">Rent History</h2>
+              <p className="section-subtitle">Recent rent collection logs and payment history</p>
+            </div>
+            <Link href="/accounting">
               <button className="view-all-btn">View All</button>
             </Link>
           </div>
+          
+          <div className="rent-history-content">
+            <div className="rent-summary-cards">
+              <div className="summary-card collected">
+                <div className="summary-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                  </svg>
+                </div>
+                <div className="summary-content">
+                  <div className="summary-value">$38,400</div>
+                  <div className="summary-label">Collected This Month</div>
+                </div>
+              </div>
 
-          <div className="properties-container">
-            {/* Filter Dropdown */}
-            <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <label htmlFor="property-filter" style={{ fontSize: 14, color: '#64748b', fontWeight: 500 }}>Filter:</label>
-              <select
-                id="property-filter"
-                value={propertyFilter}
-                onChange={e => setPropertyFilter(e.target.value)}
-                style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: 14 }}
-              >
-                <option value="All">All</option>
-                <option value="Active">Active</option>
-                <option value="Maintenance">Maintenance</option>
-              </select>
+              <div className="summary-card pending">
+                <div className="summary-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <polyline points="12,6 12,12 16,14"/>
+                  </svg>
+                </div>
+                <div className="summary-content">
+                  <div className="summary-value">$7,200</div>
+                  <div className="summary-label">Pending Collection</div>
+                </div>
+              </div>
+
+              <div className="summary-card overdue">
+                <div className="summary-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="15" y1="9" x2="9" y2="15"/>
+                    <line x1="9" y1="9" x2="15" y2="15"/>
+                  </svg>
+                </div>
+                <div className="summary-content">
+                  <div className="summary-value">$2,800</div>
+                  <div className="summary-label">Overdue</div>
+                </div>
+              </div>
             </div>
-            {/* Remove tabs, keep table always visible */}
-            <div className="properties-scroll-container">
-              <div className="properties-table-container">
-                <table className="properties-table">
-                <thead>
-                  <tr>
-                    <th className="table-left">Property</th>
-                    <th className="table-left">Status</th>
-                    <th className="table-center">Occupancy</th>
-                    <th className="table-center">Monthly Revenue</th>
-                    <th className="table-center">Tasks</th>
-                    <th className="table-center">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                    {filteredProperties.map((property) => (
-                    <tr key={property.id}>
-                      <td className="table-left">{property.name}</td>
-                      <td className="table-left">
-                        <span className={`status-badge ${property.status.toLowerCase()}`}>
-                          {property.status}
-                        </span>
-                      </td>
-                      <td className="table-center">
-                        <div className="occupancy-cell">
-                          <div className="occupancy-info">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                              <circle cx="12" cy="7" r="4"/>
-                            </svg>
-                            <span className="occupancy-text">{property.occupancy}</span>
-                            <span className="occupancy-percent">{property.occupancyPercent}%</span>
-                      </div>
-                        </div>
-                      </td>
-                      <td className="table-center">
-                        <div className="revenue-cell">
-                          <div className="revenue-amount">$ {property.revenue.toLocaleString()}</div>
-                          <div className="revenue-change">{property.revenueChange} vs last month</div>
-                        </div>
-                      </td>
-                      <td className="table-center">
-                        <div className="tasks-cell">
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2">
-                            <path d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                          </svg>
-                          <span className="tasks-count">{property.tasks} pending</span>
-                        </div>
-                      </td>
-                      <td className="table-center">
-                        <button className="manage-btn">
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M12 20h9"/>
-                            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
-                          </svg>
-                          Manage
-                        </button>
-                      </td>
+
+            <div className="rent-logs-container">
+              <div className="rent-logs-header">
+                <h3>Recent Rent Collections</h3>
+                <div className="filter-controls">
+                  <div className="filter-group">
+                    <label className="filter-label">Property:</label>
+                    <select className="filter-select">
+                      <option value="all">All Properties</option>
+                      <option value="sunset-apartments">Sunset Apartments</option>
+                      <option value="oak-street">Oak Street Complex</option>
+                      <option value="downtown-lofts">Downtown Lofts</option>
+                    </select>
+                  </div>
+                  
+                  <div className="filter-group">
+                    <label className="filter-label">Status:</label>
+                    <select className="filter-select">
+                      <option value="all">All Status</option>
+                      <option value="collected">Collected</option>
+                      <option value="pending">Pending</option>
+                      <option value="overdue">Overdue</option>
+                    </select>
+                  </div>
+                  
+                  <div className="filter-group">
+                    <label className="filter-label">Time Period:</label>
+                    <select className="filter-select">
+                      <option value="all">All Time</option>
+                      <option value="this-month">This Month</option>
+                      <option value="last-month">Last Month</option>
+                      <option value="last-3-months">Last 3 Months</option>
+                      <option value="this-year">This Year</option>
+                    </select>
+                  </div>
+                  
+                  <button className="filter-reset-btn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                      <path d="M3 3v5h5"/>
+                    </svg>
+                    Reset
+                  </button>
+                </div>
+              </div>
+
+              <div className="rent-logs-table-container">
+                <table className="rent-logs-table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Tenant</th>
+                      <th>Property</th>
+                      <th>Unit</th>
+                      <th>Amount</th>
+                      <th>Status</th>
+                      <th>Method</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Dec 15, 2024</td>
+                      <td>
+                        <div className="tenant-info">
+                          <div className="tenant-avatar">JS</div>
+                          <span>John Smith</span>
+                        </div>
+                      </td>
+                      <td>Sunset Apartments</td>
+                      <td>Unit 2A</td>
+                      <td className="amount-cell">$1,200</td>
+                      <td><span className="status-badge collected">Collected</span></td>
+                      <td>Bank Transfer</td>
+                    </tr>
+                    <tr>
+                      <td>Dec 14, 2024</td>
+                      <td>
+                        <div className="tenant-info">
+                          <div className="tenant-avatar">MJ</div>
+                          <span>Maria Johnson</span>
+                        </div>
+                      </td>
+                      <td>Oak Street Complex</td>
+                      <td>Unit 5B</td>
+                      <td className="amount-cell">$1,450</td>
+                      <td><span className="status-badge collected">Collected</span></td>
+                      <td>Credit Card</td>
+                    </tr>
+                    <tr>
+                      <td>Dec 13, 2024</td>
+                      <td>
+                        <div className="tenant-info">
+                          <div className="tenant-avatar">RW</div>
+                          <span>Robert Wilson</span>
+                        </div>
+                      </td>
+                      <td>Downtown Lofts</td>
+                      <td>Unit 12</td>
+                      <td className="amount-cell">$1,800</td>
+                      <td><span className="status-badge collected">Collected</span></td>
+                      <td>ACH</td>
+                    </tr>
+                    <tr>
+                      <td>Dec 12, 2024</td>
+                      <td>
+                        <div className="tenant-info">
+                          <div className="tenant-avatar">LB</div>
+                          <span>Lisa Brown</span>
+                        </div>
+                      </td>
+                      <td>Sunset Apartments</td>
+                      <td>Unit 1C</td>
+                      <td className="amount-cell">$1,100</td>
+                      <td><span className="status-badge pending">Pending</span></td>
+                      <td>Bank Transfer</td>
+                    </tr>
+                    <tr>
+                      <td>Dec 10, 2024</td>
+                      <td>
+                        <div className="tenant-info">
+                          <div className="tenant-avatar">DM</div>
+                          <span>David Miller</span>
+                        </div>
+                      </td>
+                      <td>Oak Street Complex</td>
+                      <td>Unit 3A</td>
+                      <td className="amount-cell">$1,350</td>
+                      <td><span className="status-badge overdue">Overdue</span></td>
+                      <td>-</td>
+                    </tr>
+                    <tr>
+                      <td>Dec 8, 2024</td>
+                      <td>
+                        <div className="tenant-info">
+                          <div className="tenant-avatar">ST</div>
+                          <span>Sarah Taylor</span>
+                        </div>
+                      </td>
+                      <td>Downtown Lofts</td>
+                      <td>Unit 8</td>
+                      <td className="amount-cell">$1,650</td>
+                      <td><span className="status-badge collected">Collected</span></td>
+                      <td>Credit Card</td>
+                    </tr>
+                    <tr>
+                      <td>Dec 5, 2024</td>
+                      <td>
+                        <div className="tenant-info">
+                          <div className="tenant-avatar">KA</div>
+                          <span>Kevin Anderson</span>
+                        </div>
+                      </td>
+                      <td>Sunset Apartments</td>
+                      <td>Unit 4B</td>
+                      <td className="amount-cell">$1,250</td>
+                      <td><span className="status-badge collected">Collected</span></td>
+                      <td>ACH</td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </div>
-                      </div>
-              </div>
+          </div>
+        </div>
                     
         {/* Recent Applications Section */}
         <div className="applications-section">
@@ -696,7 +886,12 @@ function Dashboard() {
               <h2 className="section-title">Recent Applications</h2>
               <p className="section-subtitle">Latest tenant applications requiring review</p>
           </div>
-            <button className="view-all-btn">View All Applications</button>
+            <button 
+              className="view-all-btn"
+              onClick={() => router.push('/applications')}
+            >
+              View All Applications
+            </button>
                 </div>
 
           <div className="applications-scroll-container">
@@ -722,7 +917,10 @@ function Dashboard() {
                   </div>
               </div>
 
-                  <button className="review-btn">
+                  <button 
+                    className="review-btn"
+                    onClick={() => router.push('/applications')}
+                  >
                     Review
                   </button>
                 </div>
@@ -731,6 +929,98 @@ function Dashboard() {
           </div>
         </div>
       </div>
+      
+      {/* Task Modal */}
+      {showTaskModal && (
+        <div className="task-modal">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h2>Add New Task</h2>
+              <button 
+                className="modal-close"
+                onClick={handleCancelTask}
+              >
+                ×
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmitTask}>
+              <div className="modal-section">
+                <label className="form-label">Task Description*</label>
+                <input
+                  type="text"
+                  name="task"
+                  value={taskForm.task}
+                  onChange={handleTaskFormChange}
+                  className="form-input"
+                  placeholder="Enter task description"
+                  required
+                />
+              </div>
+
+              <div className="modal-section">
+                <label className="form-label">Property*</label>
+                <select
+                  name="property"
+                  value={taskForm.property}
+                  onChange={handleTaskFormChange}
+                  className="form-input"
+                  required
+                >
+                  <option value="">Select a property</option>
+                  {properties.map(property => (
+                    <option key={property.id} value={property.name}>
+                      {property.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="modal-section">
+                <label className="form-label">Priority</label>
+                <select
+                  name="priority"
+                  value={taskForm.priority}
+                  onChange={handleTaskFormChange}
+                  className="form-input"
+                >
+                  <option value="Low">Low</option>
+                  <option value="Medium">Medium</option>
+                  <option value="High">High</option>
+                </select>
+              </div>
+
+              <div className="modal-section">
+                <label className="form-label">Due Date*</label>
+                <input
+                  type="date"
+                  name="dueDate"
+                  value={taskForm.dueDate}
+                  onChange={handleTaskFormChange}
+                  className="form-input"
+                  required
+                />
+              </div>
+
+              <div className="modal-actions">
+                <button 
+                  type="button"
+                  onClick={handleCancelTask}
+                  className="cancel-btn"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit"
+                  className="submit-btn"
+                >
+                  Add Task
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
       
       <style jsx>{`
         .dashboard-container {
@@ -1237,6 +1527,11 @@ function Dashboard() {
           border-color: #e9d5ff;
         }
 
+        .action-card.orange {
+          background: #fff7ed;
+          border-color: #fed7aa;
+        }
+
         .action-icon {
           width: 40px;
           height: 40px;
@@ -1259,6 +1554,11 @@ function Dashboard() {
 
         .action-card.purple .action-icon {
           background: #8b5cf6;
+          color: white;
+        }
+
+        .action-card.orange .action-icon {
+          background: #f97316;
           color: white;
         }
 
@@ -1856,6 +2156,7 @@ function Dashboard() {
         :global(.dark-mode) .action-card.blue .action-icon { background: rgba(59, 130, 246, 0.3); }
         :global(.dark-mode) .action-card.green .action-icon { background: rgba(34, 197, 94, 0.3); }
         :global(.dark-mode) .action-card.purple .action-icon { background: rgba(139, 92, 246, 0.3); }
+        :global(.dark-mode) .action-card.orange .action-icon { background: rgba(249, 115, 22, 0.3); }
         :global(.dark-mode) .tasks-cell .task-count { background: rgba(139, 92, 246, 0.3); }
         :global(.dark-mode) select {
           background-color: #111111 !important;
@@ -1904,6 +2205,499 @@ function Dashboard() {
         :global(.dark-mode) .date-highlight {
           background-color: #334155;
           color: #e2e8f0;
+        }
+
+        /* Task Modal */
+        .task-modal {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0, 0, 0, 0.5);
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          z-index: 1000;
+        }
+
+        .modal-content {
+          background: white;
+          border-radius: 8px;
+          width: 90%;
+          max-width: 500px;
+          box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+          padding: 24px;
+        }
+
+        .modal-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 20px;
+        }
+
+        .modal-header h2 {
+          font-size: 18px;
+          font-weight: 600;
+          color: #1f2937;
+          margin: 0;
+        }
+
+        .modal-close {
+          background: none;
+          border: none;
+          font-size: 24px;
+          font-weight: 600;
+          color: #6b7280;
+          cursor: pointer;
+          padding: 0;
+          width: 24px;
+          height: 24px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .modal-close:hover {
+          color: #374151;
+        }
+
+        .modal-section {
+          margin-bottom: 16px;
+        }
+
+        .form-label {
+          display: block;
+          font-size: 14px;
+          font-weight: 500;
+          color: #374151;
+          margin-bottom: 6px;
+        }
+
+        .form-input {
+          width: 100%;
+          padding: 10px 12px;
+          border: 1px solid #d1d5db;
+          border-radius: 6px;
+          font-size: 14px;
+          color: #374151;
+          background: white;
+          box-sizing: border-box;
+        }
+
+        .form-input:focus {
+          outline: none;
+          border-color: #3b82f6;
+          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .modal-actions {
+          display: flex;
+          justify-content: flex-end;
+          gap: 12px;
+          margin-top: 24px;
+        }
+
+        .cancel-btn {
+          background: #f9fafb;
+          color: #374151;
+          border: 1px solid #d1d5db;
+          padding: 10px 16px;
+          border-radius: 6px;
+          font-size: 14px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .cancel-btn:hover {
+          background: #f3f4f6;
+        }
+
+        .submit-btn {
+          background: #3b82f6;
+          color: white;
+          border: none;
+          padding: 10px 16px;
+          border-radius: 6px;
+          font-size: 14px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .submit-btn:hover {
+          background: #2563eb;
+        }
+
+        /* Dark mode modal styles */
+        :global(.dark-mode) .modal-content {
+          background: #1a1a1a !important;
+          color: #ffffff !important;
+        }
+
+        :global(.dark-mode) .modal-header h2 {
+          color: #ffffff !important;
+        }
+
+        :global(.dark-mode) .form-label {
+          color: #e5e7eb !important;
+        }
+
+        :global(.dark-mode) .form-input {
+          background: #111111 !important;
+          border-color: #374151 !important;
+          color: #ffffff !important;
+        }
+
+        :global(.dark-mode) .form-input:focus {
+          border-color: #3b82f6 !important;
+        }
+
+        :global(.dark-mode) .cancel-btn {
+          background: #374151 !important;
+          color: #e5e7eb !important;
+          border-color: #4b5563 !important;
+        }
+
+        :global(.dark-mode) .cancel-btn:hover {
+          background: #4b5563 !important;
+        }
+
+        /* Rent History Section */
+        .rent-history-section {
+          background: white;
+          border-radius: 6px;
+          padding: 18px;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+          border: 1px solid #e2e8f0;
+          margin-top: 24px;
+          margin-bottom: 24px;
+        }
+
+        .rent-history-content {
+          margin-top: 16px;
+        }
+
+        .rent-summary-cards {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 16px;
+          margin-bottom: 20px;
+        }
+
+        .summary-card {
+          background: white;
+          border-radius: 6px;
+          padding: 16px;
+          border: 1px solid #e2e8f0;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .summary-card.collected {
+          border-color: #16a34a;
+          background: #f0fdf4;
+        }
+
+        .summary-card.pending {
+          border-color: #d97706;
+          background: #fffbeb;
+        }
+
+        .summary-card.overdue {
+          border-color: #dc2626;
+          background: #fef2f2;
+        }
+
+        .summary-icon {
+          width: 40px;
+          height: 40px;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+
+        .summary-card.collected .summary-icon {
+          background: #dcfce7;
+          color: #16a34a;
+        }
+
+        .summary-card.pending .summary-icon {
+          background: #fef3c7;
+          color: #d97706;
+        }
+
+        .summary-card.overdue .summary-icon {
+          background: #fee2e2;
+          color: #dc2626;
+        }
+
+        .summary-content {
+          flex: 1;
+        }
+
+        .summary-value {
+          font-size: 20px;
+          font-weight: 700;
+          color: #1f2937;
+          margin: 0 0 4px 0;
+        }
+
+        .summary-label {
+          font-size: 12px;
+          color: #6b7280;
+          font-weight: 500;
+          margin: 0;
+        }
+
+        .rent-logs-container {
+          margin-top: 20px;
+        }
+
+        .rent-logs-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 16px;
+        }
+
+        .rent-logs-header h3 {
+          font-size: 16px;
+          font-weight: 600;
+          color: #1f2937;
+          margin: 0;
+        }
+
+        .filter-controls {
+          display: flex;
+          gap: 16px;
+          align-items: center;
+          flex-wrap: wrap;
+          background: #f8fafc;
+          padding: 16px;
+          border-radius: 8px;
+          border: 1px solid #e2e8f0;
+        }
+
+        .filter-group {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .filter-label {
+          font-size: 12px;
+          font-weight: 600;
+          color: #64748b;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          white-space: nowrap;
+        }
+
+        .filter-select {
+          padding: 8px 12px;
+          border: 1px solid #e2e8f0;
+          border-radius: 6px;
+          font-size: 13px;
+          color: #374151;
+          background: white;
+          min-width: 140px;
+          transition: all 0.2s ease;
+          cursor: pointer;
+        }
+
+        .filter-select:hover {
+          border-color: #6366f1;
+          box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .filter-select:focus {
+          outline: none;
+          border-color: #6366f1;
+          box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .filter-reset-btn {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 8px 12px;
+          border: 1px solid #e2e8f0;
+          border-radius: 6px;
+          background: white;
+          color: #64748b;
+          font-size: 12px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .filter-reset-btn:hover {
+          background: #f1f5f9;
+          border-color: #cbd5e1;
+          color: #475569;
+        }
+
+        .filter-reset-btn:active {
+          transform: translateY(1px);
+        }
+
+        .rent-logs-table-container {
+          overflow-x: auto;
+          border: 1px solid #e2e8f0;
+          border-radius: 6px;
+        }
+
+        .rent-logs-table {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 14px;
+        }
+
+        .rent-logs-table th {
+          background: #f8fafc;
+          color: #64748b;
+          font-weight: 600;
+          padding: 12px 8px;
+          text-align: left;
+          border-bottom: 1px solid #e2e8f0;
+          font-size: 12px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        .rent-logs-table td {
+          padding: 12px 8px;
+          border-bottom: 1px solid #f1f5f9;
+          color: #374151;
+        }
+
+        .rent-logs-table tbody tr:hover {
+          background: #f8fafc;
+        }
+
+        .tenant-info {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .tenant-avatar {
+          width: 28px;
+          height: 28px;
+          border-radius: 4px;
+          background: #e0e7ff;
+          color: #6366f1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 11px;
+          font-weight: 600;
+          flex-shrink: 0;
+        }
+
+        .amount-cell {
+          font-weight: 600;
+          color: #1f2937;
+        }
+
+        .status-badge.collected {
+          background: #dcfce7;
+          color: #16a34a;
+        }
+
+        .status-badge.pending {
+          background: #fef3c7;
+          color: #d97706;
+        }
+
+        .status-badge.overdue {
+          background: #fee2e2;
+          color: #dc2626;
+        }
+
+        /* Dark mode styles for rent history */
+        :global(.dark-mode) .rent-history-section {
+          background: #111111 !important;
+          border: 1px solid #333333 !important;
+        }
+
+        :global(.dark-mode) .summary-card {
+          background: #1a1a1a !important;
+          border-color: #333333 !important;
+        }
+
+        :global(.dark-mode) .summary-value {
+          color: #ffffff !important;
+        }
+
+        :global(.dark-mode) .summary-label {
+          color: #94a3b8 !important;
+        }
+
+        :global(.dark-mode) .rent-logs-header h3 {
+          color: #ffffff !important;
+        }
+
+        :global(.dark-mode) .filter-controls {
+          background: #1a1a1a !important;
+          border-color: #333333 !important;
+        }
+
+        :global(.dark-mode) .filter-label {
+          color: #9ca3af !important;
+        }
+
+        :global(.dark-mode) .filter-select {
+          background: #111111 !important;
+          border-color: #333333 !important;
+          color: #e2e8f0 !important;
+        }
+
+        :global(.dark-mode) .filter-select:hover {
+          border-color: #6366f1 !important;
+          box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2) !important;
+        }
+
+        :global(.dark-mode) .filter-select:focus {
+          border-color: #6366f1 !important;
+          box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2) !important;
+        }
+
+        :global(.dark-mode) .filter-reset-btn {
+          background: #111111 !important;
+          border-color: #333333 !important;
+          color: #9ca3af !important;
+        }
+
+        :global(.dark-mode) .filter-reset-btn:hover {
+          background: #222222 !important;
+          border-color: #4b5563 !important;
+          color: #e2e8f0 !important;
+        }
+
+        :global(.dark-mode) .rent-logs-table th {
+          background: #1a1a1a !important;
+          color: #94a3b8 !important;
+          border-bottom: 1px solid #333333 !important;
+        }
+
+        :global(.dark-mode) .rent-logs-table td {
+          color: #e2e8f0 !important;
+          border-bottom: 1px solid #333333 !important;
+        }
+
+        :global(.dark-mode) .rent-logs-table tbody tr:hover {
+          background: #222222 !important;
+        }
+
+        :global(.dark-mode) .amount-cell {
+          color: #ffffff !important;
         }
       `}</style>
     </DashboardLayout>

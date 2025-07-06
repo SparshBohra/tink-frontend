@@ -135,6 +135,12 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
     </svg>
   );
 
+  const AccountingIcon = () => (
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+    </svg>
+  );
+
   const SupportIcon = () => (
     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <circle cx="12" cy="12" r="10"/>
@@ -174,6 +180,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         { path: '/properties', label: 'Properties', icon: <PropertiesIcon /> },
         { path: '/leases', label: 'Leases', icon: <LeasesIcon /> },
         { path: '/tenants', label: 'Tenants', icon: <TenantsIcon /> },
+        { path: '/accounting', label: 'Accounting', icon: <AccountingIcon /> },
         { path: '/managers', label: 'Managers', icon: <ManagersIcon /> },
       ];
     }
@@ -185,6 +192,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         { path: '/properties', label: 'Properties', icon: <PropertiesIcon /> },
         { path: '/leases', label: 'Leases', icon: <LeasesIcon /> },
         { path: '/tenants', label: 'Tenants', icon: <TenantsIcon /> },
+        { path: '/accounting', label: 'Accounting', icon: <AccountingIcon /> },
         { path: '/communication', label: 'Communication', icon: <CommunicationIcon /> },
       ];
     }
@@ -526,8 +534,8 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
           display: flex;
           align-items: center;
           justify-content: center;
-          width: 36px;
-          height: 36px;
+          width: 44px;
+          height: 44px;
           border: none;
           background: rgba(255, 255, 255, 0.1);
           color: rgba(255, 255, 255, 0.7);

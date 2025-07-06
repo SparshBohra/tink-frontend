@@ -22,6 +22,9 @@ function Tenants() {
     emergency_contact_name: '',
     emergency_contact_phone: ''
   });
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [tenantToDelete, setTenantToDelete] = useState<{ id: number; name: string } | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   useEffect(() => {
     fetchTenants();
@@ -94,16 +97,43 @@ function Tenants() {
     setShowForm(true);
   };
 
-  const handleDelete = async (tenantId: number) => {
-    if (!confirm('Are you sure you want to delete this tenant?')) return;
-    
+  const handleDeleteTenant = (tenantId: number, tenantName: string) => {
+    setTenantToDelete({ id: tenantId, name: tenantName });
+    setShowDeleteModal(true);
+  };
+
+  const confirmDeleteTenant = async () => {
+    if (!tenantToDelete) return;
+
+    setDeleteLoading(true);
+    setError(null);
+
     try {
+      // Call API to delete tenant
+      await apiClient.deleteTenant(tenantToDelete.id);
+      
+      // Remove tenant from state
+      setTenants(tenants.filter(t => t.id !== tenantToDelete.id));
+      
+      // Close modal and reset state
+      setShowDeleteModal(false);
+      setTenantToDelete(null);
       setError(null);
-      await apiClient.deleteTenant(tenantId);
-      setTenants(tenants.filter(t => t.id !== tenantId));
-    } catch (error: any) {
-      setError(error?.message || 'Failed to delete tenant');
+      
+    } catch (err: any) {
+      console.error('Failed to delete tenant:', err);
+      setError(err.message || 'Failed to delete tenant. Please try again.');
+      setShowDeleteModal(false);
+      setTenantToDelete(null);
+    } finally {
+      setDeleteLoading(false);
     }
+  };
+
+  const cancelDeleteTenant = () => {
+    setShowDeleteModal(false);
+    setTenantToDelete(null);
+    setDeleteLoading(false);
   };
 
   const handleViewApplications = async (tenantId: number) => {
@@ -624,13 +654,27 @@ function Tenants() {
                             </td>
                               
                             <td className="table-center">
-                              <button onClick={() => router.push(`/tenants/${tenant.id}`)} className="manage-btn">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                  <path d="M12 20h9"/>
-                                  <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
-                                </svg>
-                                Manage
-                              </button>
+                              <div className="action-buttons">
+                                <button onClick={() => router.push(`/tenants/${tenant.id}`)} className="manage-btn">
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M12 20h9"/>
+                                    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                                  </svg>
+                                  Manage
+                                </button>
+                                <button 
+                                  onClick={() => handleDeleteTenant(tenant.id, tenant.full_name)} 
+                                  className="icon-btn delete-icon-btn"
+                                  title="Delete tenant"
+                                >
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <polyline points="3,6 5,6 21,6"/>
+                                    <path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2V6"/>
+                                    <line x1="10" y1="11" x2="10" y2="17"/>
+                                    <line x1="14" y1="11" x2="14" y2="17"/>
+                                  </svg>
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -726,6 +770,68 @@ function Tenants() {
           </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && tenantToDelete && (
+        <div className="delete-modal">
+          <div className="modal-content delete-modal-content">
+            <div className="modal-header">
+              <div className="modal-title-section">
+                <div className="warning-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+                    <path d="M12 9v4"/>
+                    <path d="m12 17 .01 0"/>
+                  </svg>
+                </div>
+                <div>
+                  <h2>Delete Tenant</h2>
+                  <p>This action cannot be undone</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="modal-section">
+              <p className="delete-message">
+                Are you sure you want to delete <strong>"{tenantToDelete.name}"</strong>? 
+                This will permanently remove the tenant and all associated data.
+              </p>
+            </div>
+
+            <div className="modal-actions">
+              <button 
+                onClick={cancelDeleteTenant}
+                className="cancel-btn"
+                disabled={deleteLoading}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={confirmDeleteTenant} 
+                className="delete-confirm-btn"
+                disabled={deleteLoading}
+              >
+                {deleteLoading ? (
+                  <>
+                    <div className="loading-spinner-small"></div>
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polyline points="3,6 5,6 21,6"/>
+                      <path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2V6"/>
+                      <line x1="10" y1="11" x2="10" y2="17"/>
+                      <line x1="14" y1="11" x2="14" y2="17"/>
+                    </svg>
+                    Delete Tenant
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       
       <style jsx>{`
         .dashboard-container {
@@ -1658,6 +1764,155 @@ function Tenants() {
         :global(.dark-mode) .date-highlight {
           background-color: #334155;
           color: #e2e8f0;
+        }
+
+        /* Action Buttons */
+        .action-buttons {
+          display: flex;
+          gap: 4px;
+          justify-content: center;
+          align-items: center;
+        }
+
+        /* Icon Button Styles */
+        .icon-btn {
+          background: none;
+          border: none;
+          padding: 8px;
+          border-radius: 4px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.2s ease;
+          width: 32px;
+          height: 32px;
+        }
+
+        .delete-icon-btn {
+          color: #dc2626;
+          background: #fef2f2;
+          border: 1px solid #fecaca;
+        }
+
+        .delete-icon-btn:hover {
+          background: #fee2e2;
+          color: #b91c1c;
+          transform: translateY(-1px);
+        }
+
+        /* Delete Modal */
+        .delete-modal {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0, 0, 0, 0.5);
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          z-index: 1000;
+        }
+
+        .delete-modal-content {
+          background: white;
+          border-radius: 8px;
+          width: 90%;
+          max-width: 500px;
+          box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+          padding: 20px;
+        }
+
+        .modal-title-section {
+          display: flex;
+          align-items: flex-start;
+          gap: 16px;
+        }
+
+        .warning-icon {
+          width: 48px;
+          height: 48px;
+          background: #fee2e2;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #dc2626;
+          flex-shrink: 0;
+        }
+
+        .delete-modal-content .modal-header h2 {
+          font-size: 18px;
+          font-weight: 600;
+          color: #1f2937;
+          margin: 0 0 4px 0;
+        }
+
+        .delete-modal-content .modal-header p {
+          font-size: 14px;
+          color: #6b7280;
+          margin: 0;
+        }
+
+        .modal-section {
+          margin: 20px 0;
+        }
+
+        .delete-message {
+          font-size: 14px;
+          color: #374151;
+          line-height: 1.5;
+          margin: 0;
+        }
+
+        .delete-message strong {
+          color: #1f2937;
+          font-weight: 600;
+        }
+
+        .modal-actions {
+          display: flex;
+          justify-content: flex-end;
+          gap: 12px;
+          margin-top: 20px;
+        }
+
+        .delete-confirm-btn {
+          background: #dc2626;
+          color: white;
+          padding: 10px 16px;
+          border-radius: 6px;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          border: none;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          transition: all 0.2s ease;
+        }
+
+        .delete-confirm-btn:hover:not(:disabled) {
+          background: #b91c1c;
+        }
+
+        .delete-confirm-btn:disabled {
+          background: #9ca3af;
+          cursor: not-allowed;
+        }
+
+        .loading-spinner-small {
+          width: 16px;
+          height: 16px;
+          border: 2px solid #ffffff40;
+          border-top-color: #ffffff;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+          to { transform: rotate(360deg); }
         }
       `}</style>
     </DashboardLayout>

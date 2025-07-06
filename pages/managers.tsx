@@ -171,7 +171,7 @@ function ManagersPage() {
               return property ? {
                 id: property.id,
                 name: property.name,
-                address: property.address,
+                address: property.full_address,
                 full_address: property.full_address,
                 total_rooms: property.total_rooms,
                 vacant_rooms: property.vacant_rooms

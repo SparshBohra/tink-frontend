@@ -11,6 +11,14 @@ function Properties() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showListingModal, setShowListingModal] = useState(false);
+  const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
+  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
+  const [listingLoading, setListingLoading] = useState(false);
+  const [listingSuccess, setListingSuccess] = useState<string | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [propertyToDelete, setPropertyToDelete] = useState<{ id: number; name: string } | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -75,6 +83,168 @@ function Properties() {
   const totalVacantRooms = properties.reduce((sum, property) => sum + (property.vacant_rooms || 0), 0);
   const occupiedRooms = totalRooms - totalVacantRooms;
   const overallOccupancyRate = totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0;
+
+  const handleCreateListing = () => {
+    setShowListingModal(true);
+  };
+
+  const handlePlatformToggle = (platform: string) => {
+    setSelectedPlatforms(prev => 
+      prev.includes(platform) 
+        ? prev.filter(p => p !== platform)
+        : [...prev, platform]
+    );
+  };
+
+  const submitListing = async () => {
+    if (!selectedProperty || selectedPlatforms.length === 0) {
+      setError('Please select a property and at least one platform.');
+      return;
+    }
+
+    setListingLoading(true);
+    setError(null);
+
+    try {
+      // Simulate API call to create listings
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      setListingSuccess(`Successfully created listings for "${selectedProperty.name}" on ${selectedPlatforms.join(', ')}`);
+      
+      // Reset form
+      setSelectedProperty(null);
+      setSelectedPlatforms([]);
+      
+      // Close modal after showing success
+      setTimeout(() => {
+        setShowListingModal(false);
+        setListingSuccess(null);
+      }, 3000);
+      
+    } catch (err: any) {
+      setError('Failed to create listings. Please try again.');
+    } finally {
+      setListingLoading(false);
+    }
+  };
+
+  const listingPlatforms = [
+    { 
+      id: 'zillow', 
+      name: 'Zillow', 
+      icon: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M12 2L2 12h3v8h6v-6h2v6h6v-8h3L12 2z" fill="#006AFF"/>
+        </svg>
+      )
+    },
+    { 
+      id: 'apartments', 
+      name: 'Apartments.com', 
+      icon: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <rect x="3" y="4" width="18" height="16" rx="2" fill="#FF6B35"/>
+          <rect x="6" y="7" width="3" height="3" fill="white"/>
+          <rect x="10.5" y="7" width="3" height="3" fill="white"/>
+          <rect x="15" y="7" width="3" height="3" fill="white"/>
+          <rect x="6" y="11" width="3" height="3" fill="white"/>
+          <rect x="10.5" y="11" width="3" height="3" fill="white"/>
+          <rect x="15" y="11" width="3" height="3" fill="white"/>
+          <rect x="8" y="15" width="8" height="3" fill="white"/>
+        </svg>
+      )
+    },
+    { 
+      id: 'craigslist', 
+      name: 'Craigslist', 
+      icon: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <rect x="2" y="2" width="20" height="20" rx="2" fill="#00AB44"/>
+          <text x="12" y="16" textAnchor="middle" fill="white" fontSize="12" fontWeight="bold">CL</text>
+        </svg>
+      )
+    },
+    { 
+      id: 'facebook', 
+      name: 'Facebook Marketplace', 
+      icon: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="10" fill="#1877F2"/>
+          <path d="M15.5 8.5H13.5C13.2 8.5 13 8.7 13 9V11H15.5C15.6 11 15.7 11.1 15.7 11.2L15.4 13.2C15.4 13.3 15.3 13.4 15.2 13.4H13V19.5C13 19.8 12.8 20 12.5 20H10.5C10.2 20 10 19.8 10 19.5V13.4H8.5C8.2 13.4 8 13.2 8 12.9V10.9C8 10.6 8.2 10.4 8.5 10.4H10V8.5C10 6.6 11.6 5 13.5 5H15.5C15.8 5 16 5.2 16 5.5V7.5C16 7.8 15.8 8 15.5 8V8.5Z" fill="white"/>
+        </svg>
+      )
+    },
+    { 
+      id: 'trulia', 
+      name: 'Trulia', 
+      icon: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="10" fill="#53B50A"/>
+          <path d="M12 6L8 10v8h2v-6h4v6h2v-8l-4-4z" fill="white"/>
+        </svg>
+      )
+    },
+    { 
+      id: 'rentals', 
+      name: 'Rentals.com', 
+      icon: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <rect x="2" y="2" width="20" height="20" rx="2" fill="#E31E24"/>
+          <path d="M7 8h10v2H7V8zm0 3h10v2H7v-2zm0 3h7v2H7v-2z" fill="white"/>
+          <circle cx="17" cy="15" r="1" fill="white"/>
+        </svg>
+      )
+    }
+  ];
+
+  const handleDeleteProperty = (propertyId: number, propertyName: string) => {
+    setPropertyToDelete({ id: propertyId, name: propertyName });
+    setShowDeleteModal(true);
+  };
+
+  const confirmDeleteProperty = async () => {
+    if (!propertyToDelete) return;
+
+    setDeleteLoading(true);
+    setError(null);
+
+    try {
+      // Check if property has rooms before deleting
+      const propertyStats = getPropertyStats(properties.find(p => p.id === propertyToDelete.id)!);
+      if (propertyStats.totalRooms > 0) {
+        setError('Cannot delete a property with rooms. Please remove all rooms first.');
+        setShowDeleteModal(false);
+        setPropertyToDelete(null);
+        setDeleteLoading(false);
+        return;
+      }
+
+      // Call API to delete property
+      await apiClient.deleteProperty(propertyToDelete.id);
+      
+      // Refresh the property data
+      await fetchData();
+      
+      // Close modal and reset state
+      setShowDeleteModal(false);
+      setPropertyToDelete(null);
+      setError(null);
+      
+    } catch (err: any) {
+      console.error('Failed to delete property:', err);
+      setError(err.message || 'Failed to delete property. Please try again.');
+      setShowDeleteModal(false);
+      setPropertyToDelete(null);
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const cancelDeleteProperty = () => {
+    setShowDeleteModal(false);
+    setPropertyToDelete(null);
+    setDeleteLoading(false);
+  };
 
   if (loading) {
     return (
@@ -306,7 +476,13 @@ function Properties() {
                         return (
                           <tr key={property.id}>
                             <td className="table-left">
-                              <div className="property-name">{property.name}</div>
+                              <div 
+                                className="property-name clickable-property-name"
+                                onClick={() => router.push(`/properties/${property.id}/rooms`)}
+                                style={{ cursor: 'pointer' }}
+                              >
+                                {property.name}
+                              </div>
                               <div className="property-type">{property.property_type}</div>
                             </td>
                             <td className="table-left">{property.full_address}</td>
@@ -326,13 +502,27 @@ function Properties() {
                               </span>
                             </td>
                             <td className="table-center">
-                              <button onClick={() => router.push(`/properties/${property.id}/rooms`)} className="manage-btn">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                  <path d="M12 20h9"/>
-                                  <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
-                                </svg>
-                                Manage
-                              </button>
+                              <div className="action-buttons">
+                                <button onClick={() => router.push(`/properties/${property.id}/rooms`)} className="manage-btn">
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M12 20h9"/>
+                                    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                                  </svg>
+                                  Manage
+                                </button>
+                                <button 
+                                  onClick={() => handleDeleteProperty(property.id, property.name)} 
+                                  className="icon-btn delete-icon-btn"
+                                  title="Delete property"
+                                >
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <polyline points="3,6 5,6 21,6"/>
+                                    <path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2V6"/>
+                                    <line x1="10" y1="11" x2="10" y2="17"/>
+                                    <line x1="14" y1="11" x2="14" y2="17"/>
+                                  </svg>
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         );
@@ -408,10 +598,182 @@ function Properties() {
                   <p className="action-subtitle">Create Financial Reports</p>
                 </div>
               </div>
+
+              <div className="action-card orange" onClick={handleCreateListing}>
+                <div className="action-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 12V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h7"/>
+                    <path d="M16 2v4"/>
+                    <path d="M8 2v4"/>
+                    <path d="M3 10h18"/>
+                    <path d="M15 19l2 2 4-4"/>
+                  </svg>
+                </div>
+                <div className="action-content">
+                  <h3 className="action-title">Create Listing</h3>
+                  <p className="action-subtitle">Post to Zillow, Apartments.com, etc.</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
+
+      {showListingModal && (
+        <div className="listing-modal">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h2>Create Property Listing</h2>
+              <button 
+                className="modal-close"
+                onClick={() => {
+                  setShowListingModal(false);
+                  setSelectedProperty(null);
+                  setSelectedPlatforms([]);
+                  setError(null);
+                  setListingSuccess(null);
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            {error && (
+              <div className="modal-error">
+                {error}
+              </div>
+            )}
+
+            {listingSuccess && (
+              <div className="modal-success">
+                {listingSuccess}
+              </div>
+            )}
+
+            <div className="modal-section">
+              <h3>Select Property</h3>
+              <select 
+                value={selectedProperty?.id || ''} 
+                onChange={(e) => {
+                  const property = properties.find(p => p.id === parseInt(e.target.value));
+                  setSelectedProperty(property || null);
+                }}
+                className="property-select"
+              >
+                <option value="">Choose a property...</option>
+                {properties.map(property => (
+                  <option key={property.id} value={property.id}>
+                    {property.name} - {property.full_address}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="modal-section">
+              <h3>Select Platforms</h3>
+              <div className="platform-grid">
+                {listingPlatforms.map((platform) => (
+                  <label key={platform.id} className="platform-card">
+                    <input
+                      type="checkbox"
+                      checked={selectedPlatforms.includes(platform.id)}
+                      onChange={() => handlePlatformToggle(platform.id)}
+                    />
+                    <div className="platform-info">
+                      <span className="platform-icon">{platform.icon}</span>
+                      <span className="platform-name">{platform.name}</span>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="modal-actions">
+              <button 
+                onClick={() => {
+                  setShowListingModal(false);
+                  setSelectedProperty(null);
+                  setSelectedPlatforms([]);
+                  setError(null);
+                  setListingSuccess(null);
+                }}
+                className="cancel-btn"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={submitListing} 
+                className="submit-btn"
+                disabled={listingLoading || !selectedProperty || selectedPlatforms.length === 0}
+              >
+                {listingLoading ? 'Creating Listings...' : 'Create Listings'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && propertyToDelete && (
+        <div className="delete-modal">
+          <div className="modal-content delete-modal-content">
+            <div className="modal-header">
+              <div className="modal-title-section">
+                <div className="warning-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+                    <path d="M12 9v4"/>
+                    <path d="m12 17 .01 0"/>
+                  </svg>
+                </div>
+                <div>
+                  <h2>Delete Property</h2>
+                  <p>This action cannot be undone</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="modal-section">
+              <p className="delete-message">
+                Are you sure you want to delete <strong>"{propertyToDelete.name}"</strong>? 
+                This will permanently remove the property and all associated data.
+              </p>
+            </div>
+
+            <div className="modal-actions">
+              <button 
+                onClick={cancelDeleteProperty}
+                className="cancel-btn"
+                disabled={deleteLoading}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={confirmDeleteProperty} 
+                className="delete-confirm-btn"
+                disabled={deleteLoading}
+              >
+                {deleteLoading ? (
+                  <>
+                    <div className="loading-spinner-small"></div>
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polyline points="3,6 5,6 21,6"/>
+                      <path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2V6"/>
+                      <line x1="10" y1="11" x2="10" y2="17"/>
+                      <line x1="14" y1="11" x2="14" y2="17"/>
+                    </svg>
+                    Delete Property
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style jsx>{`
         .dashboard-container {
@@ -758,6 +1120,17 @@ function Properties() {
           margin-bottom: 4px;
         }
 
+        .clickable-property-name {
+          color: #4f46e5;
+          font-weight: 600;
+          transition: all 0.2s ease;
+        }
+
+        .clickable-property-name:hover {
+          color: #3730a3;
+          text-decoration: underline;
+        }
+
         .property-type {
           font-size: 12px;
           color: #64748b;
@@ -881,6 +1254,16 @@ function Properties() {
         .action-card.purple {
           background: #faf5ff;
           border-color: #e9d5ff;
+        }
+
+        .action-card.orange {
+          background: #fef3c7;
+          border-color: #fed7aa;
+        }
+
+        .action-card.orange .action-icon {
+          background: #fed7aa;
+          color: #ea580c;
         }
 
         .action-icon {
@@ -1068,6 +1451,7 @@ function Properties() {
         :global(.dark-mode) .action-card.blue .action-icon { background: rgba(59, 130, 246, 0.3); }
         :global(.dark-mode) .action-card.green .action-icon { background: rgba(34, 197, 94, 0.3); }
         :global(.dark-mode) .action-card.purple .action-icon { background: rgba(139, 92, 246, 0.3); }
+        :global(.dark-mode) .action-card.orange .action-icon { background: rgba(249, 115, 22, 0.3); }
         :global(.dark-mode) .manage-btn {
             background-color: #f0f0f0 !important;
             color: #000000 !important;
@@ -1079,6 +1463,341 @@ function Properties() {
           background: rgba(239, 68, 68, 0.1) !important;
           border-color: rgba(239, 68, 68, 0.3) !important;
           color: #ef4444 !important;
+        }
+        :global(.dark-mode) .clickable-property-name {
+          color: #6366f1 !important;
+        }
+        :global(.dark-mode) .clickable-property-name:hover {
+          color: #8b5cf6 !important;
+        }
+
+        /* Listing Modal */
+        .listing-modal {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0, 0, 0, 0.5);
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          z-index: 1000;
+        }
+
+        .modal-content {
+          background: white;
+          padding: 20px;
+          border-radius: 8px;
+          width: 80%;
+          max-width: 600px;
+        }
+
+        .modal-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 20px;
+        }
+
+        .modal-close {
+          background: none;
+          border: none;
+          font-size: 16px;
+          font-weight: 600;
+          color: #64748b;
+          cursor: pointer;
+        }
+
+        .modal-error,
+        .modal-success {
+          margin-bottom: 20px;
+          padding: 12px;
+          border-radius: 6px;
+          background: #fef2f2;
+          border: 1px solid #fecaca;
+          color: #dc2626;
+          font-size: 14px;
+          font-weight: 500;
+        }
+
+        .modal-section {
+          margin-bottom: 20px;
+        }
+
+        .modal-section h3 {
+          font-size: 14px;
+          font-weight: 600;
+          color: #1e293b;
+          margin-bottom: 8px;
+        }
+
+        .property-select {
+          width: 100%;
+          padding: 10px;
+          border: 1px solid #e2e8f0;
+          border-radius: 6px;
+          font-size: 14px;
+          color: #374151;
+        }
+
+        .platform-grid {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+
+        .platform-card {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 8px;
+          border: 1px solid #e2e8f0;
+          border-radius: 6px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .platform-card:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .platform-info {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .platform-icon {
+          width: 20px;
+          height: 20px;
+          border-radius: 4px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .platform-name {
+          font-size: 14px;
+          font-weight: 600;
+          color: #1e293b;
+        }
+
+        .modal-actions {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+
+        .cancel-btn {
+          background: #f8fafc;
+          color: #64748b;
+          border: 1px solid #e2e8f0;
+          padding: 10px 16px;
+          border-radius: 6px;
+          font-size: 12px;
+          font-weight: 600;
+          cursor: pointer;
+        }
+
+        .submit-btn {
+          background: #4f46e5;
+          color: white;
+          border: none;
+          padding: 10px 16px;
+          border-radius: 6px;
+          font-size: 12px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .submit-btn:hover:not(:disabled) {
+          background: #3730a3;
+        }
+
+        .submit-btn:disabled {
+          background: #94a3b8;
+          cursor: not-allowed;
+        }
+
+        .cancel-btn:hover {
+          background: #e2e8f0;
+        }
+
+        .modal-success {
+          background: #f0fdf4 !important;
+          border: 1px solid #dcfce7 !important;
+          color: #16a34a !important;
+        }
+
+        /* Dark mode modal styles */
+        :global(.dark-mode) .modal-content {
+          background: #1a1a1a !important;
+          color: #ffffff !important;
+        }
+
+        :global(.dark-mode) .property-select {
+          background: #111111 !important;
+          border-color: #333333 !important;
+          color: #ffffff !important;
+        }
+
+        :global(.dark-mode) .platform-card {
+          background: #111111 !important;
+          border-color: #333333 !important;
+        }
+
+        :global(.dark-mode) .platform-name {
+          color: #ffffff !important;
+        }
+
+        :global(.dark-mode) .modal-close {
+          color: #94a3b8 !important;
+        }
+
+        :global(.dark-mode) .cancel-btn {
+          background: #1a1a1a !important;
+          color: #e2e8f0 !important;
+          border-color: #333333 !important;
+        }
+
+        :global(.dark-mode) .cancel-btn:hover {
+          background: #222222 !important;
+        }
+
+        /* Action Buttons */
+        .action-buttons {
+          display: flex;
+          gap: 4px;
+          justify-content: center;
+          align-items: center;
+        }
+
+        /* Icon Button Styles */
+        .icon-btn {
+          background: none;
+          border: none;
+          padding: 8px;
+          border-radius: 4px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.2s ease;
+          width: 32px;
+          height: 32px;
+        }
+
+        .delete-icon-btn {
+          color: #dc2626;
+          background: #fef2f2;
+          border: 1px solid #fecaca;
+        }
+
+        .delete-icon-btn:hover {
+          background: #fee2e2;
+          color: #b91c1c;
+          transform: translateY(-1px);
+        }
+
+        /* Delete Modal */
+        .delete-modal {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0, 0, 0, 0.5);
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          z-index: 1000;
+        }
+
+        .delete-modal-content {
+          background: white;
+          border-radius: 8px;
+          width: 90%;
+          max-width: 500px;
+          box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+
+        .modal-title-section {
+          display: flex;
+          align-items: flex-start;
+          gap: 16px;
+        }
+
+        .warning-icon {
+          width: 48px;
+          height: 48px;
+          background: #fee2e2;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #dc2626;
+          flex-shrink: 0;
+        }
+
+        .delete-modal-content .modal-header h2 {
+          font-size: 18px;
+          font-weight: 600;
+          color: #1f2937;
+          margin: 0 0 4px 0;
+        }
+
+        .delete-modal-content .modal-header p {
+          font-size: 14px;
+          color: #6b7280;
+          margin: 0;
+        }
+
+        .delete-message {
+          font-size: 14px;
+          color: #374151;
+          line-height: 1.5;
+          margin: 0;
+        }
+
+        .delete-message strong {
+          color: #1f2937;
+          font-weight: 600;
+        }
+
+        .delete-confirm-btn {
+          background: #dc2626;
+          color: white;
+          padding: 10px 16px;
+          border-radius: 6px;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          border: none;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          transition: all 0.2s ease;
+        }
+
+        .delete-confirm-btn:hover:not(:disabled) {
+          background: #b91c1c;
+        }
+
+        .delete-confirm-btn:disabled {
+          background: #9ca3af;
+          cursor: not-allowed;
+        }
+
+        .loading-spinner-small {
+          width: 16px;
+          height: 16px;
+          border: 2px solid #ffffff40;
+          border-top-color: #ffffff;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
         }
       `}</style>
     </DashboardLayout>

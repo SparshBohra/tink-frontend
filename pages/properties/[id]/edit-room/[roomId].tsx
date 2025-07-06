@@ -102,10 +102,17 @@ export default function EditRoom() {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: (name === 'monthly_rent' || name === 'security_deposit' || name === 'max_capacity') 
-        ? parseInt(value) || 0 
+      [name]: (name === 'monthly_rent' || name === 'security_deposit') 
+        ? parseFloat(value) || 0 
+        : (name === 'max_capacity')
+        ? parseInt(value) || 0
         : value
     }));
+  };
+
+  const formatCurrencyDisplay = (value: number) => {
+    if (value === 0) return '';
+    return value.toString();
   };
 
   if (!propertyId || !roomIdNum) {
@@ -360,33 +367,41 @@ export default function EditRoom() {
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Monthly Rent ($)*</label>
-                    <input
-                      type="number"
-                      name="monthly_rent"
-                      value={formData.monthly_rent}
-                      onChange={handleChange}
-                      required
-                      min="0"
-                      step="0.01"
-                      placeholder="0.00"
-                      className="form-input"
-                    />
+                    <label className="form-label">Monthly Rent*</label>
+                    <div className="currency-input-wrapper">
+                      <span className="currency-symbol">$</span>
+                      <input
+                        type="number"
+                        name="monthly_rent"
+                        value={formData.monthly_rent || ''}
+                        onChange={handleChange}
+                        required
+                        min="0"
+                        step="0.01"
+                        placeholder="Enter monthly rent amount"
+                        className="form-input currency-input"
+                      />
+                    </div>
+                    <div className="field-hint">Enter the monthly rent amount in USD</div>
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Security Deposit ($)*</label>
-                    <input
-                      type="number"
-                      name="security_deposit"
-                      value={formData.security_deposit}
-                      onChange={handleChange}
-                      required
-                      min="0"
-                      step="0.01"
-                      placeholder="0.00"
-                      className="form-input"
-                    />
+                    <label className="form-label">Security Deposit*</label>
+                    <div className="currency-input-wrapper">
+                      <span className="currency-symbol">$</span>
+                      <input
+                        type="number"
+                        name="security_deposit"
+                        value={formData.security_deposit || ''}
+                        onChange={handleChange}
+                        required
+                        min="0"
+                        step="0.01"
+                        placeholder="Enter security deposit amount"
+                        className="form-input currency-input"
+                      />
+                    </div>
+                    <div className="field-hint">Typically 1-2 months of rent</div>
                   </div>
                 </div>
 
@@ -683,6 +698,40 @@ export default function EditRoom() {
           outline: none;
           border-color: #4f46e5;
           box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        /* Currency Input Styling */
+        .currency-input-wrapper {
+          position: relative;
+          display: flex;
+          align-items: center;
+        }
+
+        .currency-symbol {
+          position: absolute;
+          left: 12px;
+          top: 50%;
+          transform: translateY(-50%);
+          font-weight: 600;
+          color: #6b7280;
+          font-size: 14px;
+          z-index: 1;
+          pointer-events: none;
+        }
+
+        .currency-input {
+          padding-left: 28px !important;
+        }
+
+        .field-hint {
+          font-size: 12px;
+          color: #6b7280;
+          margin-top: 4px;
+          font-style: italic;
+        }
+
+        .currency-input-wrapper:focus-within .currency-symbol {
+          color: #4f46e5;
         }
         
         .form-actions {

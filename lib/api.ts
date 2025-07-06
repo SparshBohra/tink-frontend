@@ -441,7 +441,37 @@ class ApiClient {
   async createProperty(data: PropertyFormData): Promise<Property> {
     try {
       const response = await this.api.post('/properties/', data);
-      return response.data;
+      const newProperty = response.data;
+      
+      // Auto-assign the property to the current manager
+      try {
+        const currentUser = await this.getProfile();
+        
+        // Only auto-assign for managers, not admins or landlords
+        if (currentUser.role === 'manager') {
+          // Get the manager's landlord relationships
+          const relationships = await this.getManagerLandlordRelationships();
+          const managerRelationship = relationships.find(rel => rel.manager === currentUser.id);
+          
+          if (managerRelationship) {
+            // Create the property assignment
+            await this.createManagerPropertyAssignment({
+              manager: currentUser.id,
+              property: newProperty.id,
+              landlord_relationship: managerRelationship.id,
+              role_note: `Auto-assigned to ${currentUser.full_name} (property creator)`
+            });
+            console.log(`Auto-assigned property ${newProperty.id} to manager ${currentUser.id}`);
+          } else {
+            console.warn('No landlord relationship found for manager, skipping auto-assignment');
+          }
+        }
+      } catch (assignmentError) {
+        // Don't fail the property creation if assignment fails
+        console.error('Failed to auto-assign property to manager:', assignmentError);
+      }
+      
+      return newProperty;
     } catch (error: any) {
       console.error('Property creation error:', error);
       if (error.response?.status === 403) {

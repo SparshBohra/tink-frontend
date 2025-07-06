@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import DashboardLayout from '../components/DashboardLayout';
 import { withAuth } from '../lib/auth-context';
 import { useAuth } from '../lib/auth-context';
@@ -72,6 +73,7 @@ const useCounterAnimation = (targetValue: number, duration = 2000, isRevenue = f
 
 function LandlordDashboard() {
   const { user, isLandlord, isManager, isAdmin } = useAuth();
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [propertyFilter, setPropertyFilter] = useState('All');
   const [currentMessage, setCurrentMessage] = useState<{ text: string; icon: React.ReactElement | null }>({ text: '', icon: null });
@@ -94,12 +96,28 @@ function LandlordDashboard() {
 
   useEffect(() => {
     let rotationTimeout: NodeJS.Timeout;
+    let typingInterval: NodeJS.Timeout;
+
     if (isTyping) {
       if (currentMessage.text.length < welcomeMessage.length) {
-        const typingTimeout = setTimeout(() => {
-          setCurrentMessage({ text: welcomeMessage.substring(0, currentMessage.text.length + 1), icon: null });
-        }, 40);
-        return () => clearTimeout(typingTimeout);
+        // Use requestAnimationFrame for better performance
+        const startTyping = () => {
+          typingInterval = setInterval(() => {
+            setCurrentMessage(prev => {
+              if (prev.text.length >= welcomeMessage.length) {
+                clearInterval(typingInterval);
+                return prev;
+              }
+              return { text: welcomeMessage.substring(0, prev.text.length + 1), icon: null };
+            });
+          }, 120); // Much slower for more natural typing effect
+        };
+        
+        requestAnimationFrame(startTyping);
+        
+        return () => {
+          if (typingInterval) clearInterval(typingInterval);
+        };
       } else {
         rotationTimeout = setTimeout(() => setIsTyping(false), 3000); // Pause after typing
       }
@@ -127,8 +145,11 @@ function LandlordDashboard() {
         }, 500); // Fade animation duration
       }, 5000); // Time message is displayed
     }
-    return () => clearTimeout(rotationTimeout);
-  }, [currentMessage, isTyping, messageIndex, notificationMessages, welcomeMessage]);
+    return () => {
+      clearTimeout(rotationTimeout);
+      if (typingInterval) clearInterval(typingInterval);
+    };
+  }, [isTyping, messageIndex, notificationMessages, welcomeMessage]);
   
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'N/A';
@@ -193,6 +214,30 @@ function LandlordDashboard() {
 
   const quickActions = [
     { 
+      title: 'View Properties',
+      subtitle: 'Manage your property portfolio',
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+          <polyline points="9,22 9,12 15,12 15,22"/>
+        </svg>
+      ), 
+      color: 'blue',
+      link: '/properties'
+    },
+    { 
+      title: 'Accounting',
+      subtitle: 'Financial reports and analytics',
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <line x1="12" y1="1" x2="12" y2="23"/>
+          <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+        </svg>
+      ), 
+      color: 'green',
+      link: '/accounting'
+    },
+    { 
       title: 'Add Property',
       subtitle: 'Expand your portfolio',
       icon: (
@@ -201,46 +246,8 @@ function LandlordDashboard() {
           <line x1="5" y1="12" x2="19" y2="12"/>
         </svg>
       ), 
-      color: 'blue' 
-    },
-    { 
-      title: 'Manage Team',
-      subtitle: 'Oversee your property managers',
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-          <circle cx="9" cy="7" r="4"></circle>
-          <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-          <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-        </svg>
-      ), 
-      color: 'green'
-    },
-    { 
-      title: 'Financial Reports',
-      subtitle: 'Review revenue and expenses',
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <line x1="18" y1="20" x2="18" y2="10"/>
-          <line x1="12" y1="20" x2="12" y2="4"/>
-          <line x1="6" y1="20" x2="6" y2="14"/>
-        </svg>
-      ), 
-      color: 'purple'
-    },
-    { 
-      title: 'Review Applications',
-      subtitle: 'Approve or deny new tenants',
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-          <polyline points="14,2 14,8 20,8"/>
-          <line x1="16" y1="13" x2="8" y2="13"/>
-          <line x1="16" y1="17" x2="8" y2="17"/>
-          <polyline points="10,9 9,9 8,9"/>
-        </svg>
-      ), 
-      color: 'blue'
+      color: 'orange',
+      link: '/properties/add'
     }
   ];
 
@@ -553,58 +560,220 @@ function LandlordDashboard() {
 
         {/* Main Content */}
         <div className="main-content">
-          {/* Pending Tasks Section */}
-          <div className="tasks-section">
+          {/* Rent History Section */}
+          <div className="rent-history-section">
             <div className="section-header">
               <div>
-                <h2 className="section-title">Pending Tasks</h2>
-                <p className="section-subtitle">High-level tasks for your business</p>
+                <h2 className="section-title">Rent History</h2>
+                <p className="section-subtitle">Recent rent collection logs and payment history</p>
               </div>
-              <button className="add-task-btn">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <line x1="12" y1="5" x2="12" y2="19"/>
-                  <line x1="5" y1="12" x2="19" y2="12"/>
-                </svg>
-                Add Task
-              </button>
+              <Link href="/accounting">
+                <button className="view-all-btn">View All</button>
+              </Link>
             </div>
             
-            <div className="tasks-scroll-container">
-              <div className="tasks-table-container">
-                <table className="tasks-table">
-                  <thead>
-                    <tr>
-                      <th className="table-left">Task</th>
-                      <th className="table-left">Category</th>
-                      <th className="table-center">Priority</th>
-                      <th className="table-left">Due Date</th>
-                      <th className="table-center">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {tasks.map((task) => (
-                      <tr key={task.id}>
-                        <td className="table-left">{task.task}</td>
-                        <td className="table-left">{task.property}</td>
-                        <td className="table-center">
-                          <span className={`priority-badge ${task.priority.toLowerCase()}`}>
-                            {task.priority}
-                          </span>
-                        </td>
-                        <td className="table-left">
-                          <span className="date-highlight">
-                            {formatDate(task.dueDate)}
-                          </span>
-                        </td>
-                        <td className="table-center">
-                          <span className={`status-badge ${task.status.toLowerCase().replace(' ', '-')}`}>
-                            {task.status === 'In Progress' ? 'In Progress' : task.status}
-                          </span>
-                        </td>
+            <div className="rent-history-content">
+              <div className="rent-summary-cards">
+                <div className="summary-card collected">
+                  <div className="summary-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                    </svg>
+                  </div>
+                  <div className="summary-content">
+                    <div className="summary-value">$38,400</div>
+                    <div className="summary-label">Collected This Month</div>
+                  </div>
+                </div>
+
+                <div className="summary-card pending">
+                  <div className="summary-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="12" r="10"/>
+                      <polyline points="12,6 12,12 16,14"/>
+                    </svg>
+                  </div>
+                  <div className="summary-content">
+                    <div className="summary-value">$7,200</div>
+                    <div className="summary-label">Pending Collection</div>
+                  </div>
+                </div>
+
+                <div className="summary-card overdue">
+                  <div className="summary-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="12" r="10"/>
+                      <line x1="15" y1="9" x2="9" y2="15"/>
+                      <line x1="9" y1="9" x2="15" y2="15"/>
+                    </svg>
+                  </div>
+                  <div className="summary-content">
+                    <div className="summary-value">$2,800</div>
+                    <div className="summary-label">Overdue</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rent-logs-container">
+                <div className="rent-logs-header">
+                  <h3>Recent Rent Collections</h3>
+                  <div className="filter-controls">
+                    <div className="filter-group">
+                      <label className="filter-label">Property:</label>
+                      <select className="filter-select">
+                        <option value="all">All Properties</option>
+                        <option value="sunset-apartments">Sunset Apartments</option>
+                        <option value="oak-street">Oak Street Complex</option>
+                        <option value="downtown-lofts">Downtown Lofts</option>
+                      </select>
+                    </div>
+                    
+                    <div className="filter-group">
+                      <label className="filter-label">Status:</label>
+                      <select className="filter-select">
+                        <option value="all">All Status</option>
+                        <option value="collected">Collected</option>
+                        <option value="pending">Pending</option>
+                        <option value="overdue">Overdue</option>
+                      </select>
+                    </div>
+                    
+                    <div className="filter-group">
+                      <label className="filter-label">Time Period:</label>
+                      <select className="filter-select">
+                        <option value="all">All Time</option>
+                        <option value="this-month">This Month</option>
+                        <option value="last-month">Last Month</option>
+                        <option value="last-3-months">Last 3 Months</option>
+                        <option value="this-year">This Year</option>
+                      </select>
+                    </div>
+                    
+                    <button className="filter-reset-btn">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                        <path d="M3 3v5h5"/>
+                      </svg>
+                      Reset
+                    </button>
+                  </div>
+                </div>
+
+                <div className="rent-logs-table-container">
+                  <table className="rent-logs-table">
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Tenant</th>
+                        <th>Property</th>
+                        <th>Unit</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                        <th>Method</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>Dec 15, 2024</td>
+                        <td>
+                          <div className="tenant-info">
+                            <div className="tenant-avatar">JS</div>
+                            <span>John Smith</span>
+                          </div>
+                        </td>
+                        <td>Sunset Apartments</td>
+                        <td>Unit 2A</td>
+                        <td className="amount-cell">$1,200</td>
+                        <td><span className="status-badge collected">Collected</span></td>
+                        <td>Bank Transfer</td>
+                      </tr>
+                      <tr>
+                        <td>Dec 14, 2024</td>
+                        <td>
+                          <div className="tenant-info">
+                            <div className="tenant-avatar">MJ</div>
+                            <span>Maria Johnson</span>
+                          </div>
+                        </td>
+                        <td>Oak Street Complex</td>
+                        <td>Unit 5B</td>
+                        <td className="amount-cell">$1,450</td>
+                        <td><span className="status-badge collected">Collected</span></td>
+                        <td>Credit Card</td>
+                      </tr>
+                      <tr>
+                        <td>Dec 13, 2024</td>
+                        <td>
+                          <div className="tenant-info">
+                            <div className="tenant-avatar">RW</div>
+                            <span>Robert Wilson</span>
+                          </div>
+                        </td>
+                        <td>Downtown Lofts</td>
+                        <td>Unit 12</td>
+                        <td className="amount-cell">$1,800</td>
+                        <td><span className="status-badge collected">Collected</span></td>
+                        <td>ACH</td>
+                      </tr>
+                      <tr>
+                        <td>Dec 12, 2024</td>
+                        <td>
+                          <div className="tenant-info">
+                            <div className="tenant-avatar">LB</div>
+                            <span>Lisa Brown</span>
+                          </div>
+                        </td>
+                        <td>Sunset Apartments</td>
+                        <td>Unit 1C</td>
+                        <td className="amount-cell">$1,100</td>
+                        <td><span className="status-badge pending">Pending</span></td>
+                        <td>Bank Transfer</td>
+                      </tr>
+                      <tr>
+                        <td>Dec 10, 2024</td>
+                        <td>
+                          <div className="tenant-info">
+                            <div className="tenant-avatar">DM</div>
+                            <span>David Miller</span>
+                          </div>
+                        </td>
+                        <td>Oak Street Complex</td>
+                        <td>Unit 3A</td>
+                        <td className="amount-cell">$1,350</td>
+                        <td><span className="status-badge overdue">Overdue</span></td>
+                        <td>-</td>
+                      </tr>
+                      <tr>
+                        <td>Dec 8, 2024</td>
+                        <td>
+                          <div className="tenant-info">
+                            <div className="tenant-avatar">ST</div>
+                            <span>Sarah Taylor</span>
+                          </div>
+                        </td>
+                        <td>Downtown Lofts</td>
+                        <td>Unit 8</td>
+                        <td className="amount-cell">$1,650</td>
+                        <td><span className="status-badge collected">Collected</span></td>
+                        <td>Credit Card</td>
+                      </tr>
+                      <tr>
+                        <td>Dec 5, 2024</td>
+                        <td>
+                          <div className="tenant-info">
+                            <div className="tenant-avatar">KA</div>
+                            <span>Kevin Anderson</span>
+                          </div>
+                        </td>
+                        <td>Sunset Apartments</td>
+                        <td>Unit 4B</td>
+                        <td className="amount-cell">$1,250</td>
+                        <td><span className="status-badge collected">Collected</span></td>
+                        <td>ACH</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           </div>
@@ -615,12 +784,17 @@ function LandlordDashboard() {
               <div>
                 <h2 className="section-title">Quick Actions</h2>
                 <p className="section-subtitle">Frequently used actions</p>
-                  </div>
-                  </div>
+              </div>
+            </div>
             
             <div className="actions-grid">
               {quickActions.map((action, index) => (
-                <div key={index} className={`action-card ${action.color}`}>
+                <div 
+                  key={index} 
+                  className={`action-card ${action.color}`}
+                  onClick={() => router.push(action.link)}
+                  style={{ cursor: 'pointer' }}
+                >
                   <div className="action-icon">
                     {action.icon}
                   </div>
@@ -628,11 +802,11 @@ function LandlordDashboard() {
                     <h3 className="action-title">{action.title}</h3>
                     <p className="action-subtitle">{action.subtitle}</p>
                   </div>
-                  </div>
+                </div>
               ))}
-                  </div>
-                  </div>
-                  </div>
+            </div>
+          </div>
+        </div>
 
         {/* My Properties Section */}
         <div className="properties-section">
@@ -647,19 +821,39 @@ function LandlordDashboard() {
           </div>
 
           <div className="properties-container">
-            {/* Filter Dropdown */}
-            <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <label htmlFor="property-filter" style={{ fontSize: 14, color: '#64748b', fontWeight: 500 }}>Filter:</label>
-              <select
-                id="property-filter"
-                value={propertyFilter}
-                onChange={e => setPropertyFilter(e.target.value)}
-                style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: 14 }}
-              >
-                <option value="All">All</option>
-                <option value="Active">Active</option>
-                <option value="Maintenance">Maintenance</option>
-              </select>
+            {/* Enhanced Filter Controls */}
+            <div className="properties-filter-controls">
+              <div className="properties-filter-group">
+                <label className="properties-filter-label">Status:</label>
+                <select
+                  className="properties-filter-select"
+                  value={propertyFilter}
+                  onChange={e => setPropertyFilter(e.target.value)}
+                >
+                  <option value="All">All Status</option>
+                  <option value="Active">Active</option>
+                  <option value="Maintenance">Maintenance</option>
+                </select>
+              </div>
+              
+              <div className="properties-filter-group">
+                <label className="properties-filter-label">Occupancy:</label>
+                <select className="properties-filter-select">
+                  <option value="all">All Occupancy</option>
+                  <option value="full">100% Occupied</option>
+                  <option value="high">90%+ Occupied</option>
+                  <option value="medium">70-89% Occupied</option>
+                  <option value="low">Below 70%</option>
+                </select>
+              </div>
+              
+              <button className="properties-filter-reset-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                  <path d="M3 3v5h5"/>
+                </svg>
+                Reset
+              </button>
             </div>
             {/* Remove tabs, keep table always visible */}
             <div className="properties-scroll-container">
@@ -711,7 +905,10 @@ function LandlordDashboard() {
                         </div>
                       </td>
                       <td className="table-center">
-                        <button className="manage-btn">
+                        <button 
+                          className="manage-btn"
+                          onClick={() => router.push(`/properties/${property.id}/rooms`)}
+                        >
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <path d="M12 20h9"/>
                             <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
@@ -737,7 +934,12 @@ function LandlordDashboard() {
                 <h2 className="section-title">Recent Applications</h2>
                 <p className="section-subtitle">Latest tenant applications requiring review</p>
               </div>
-              <button className="view-all-btn">View All Applications</button>
+              <button 
+                className="view-all-btn"
+                onClick={() => router.push('/applications')}
+              >
+                View All Applications
+              </button>
             </div>
 
             <div className="applications-scroll-container">
@@ -763,7 +965,10 @@ function LandlordDashboard() {
                       </div>
                     </div>
 
-                    <button className="review-btn">
+                    <button 
+                      className="review-btn"
+                      onClick={() => router.push('/applications')}
+                    >
                       Review
                     </button>
                   </div>
@@ -779,7 +984,12 @@ function LandlordDashboard() {
                 <h2 className="section-title">My Teams</h2>
                 <p className="section-subtitle">Manage your property management team</p>
               </div>
-              <button className="view-all-btn">Manage Team</button>
+              <button 
+                className="view-all-btn"
+                onClick={() => router.push('/managers')}
+              >
+                Manage Team
+              </button>
             </div>
 
             <div className="teams-scroll-container">
@@ -820,6 +1030,22 @@ function LandlordDashboard() {
           box-sizing: border-box;
           position: relative;
           z-index: 1;
+          /* Optimize for animations */
+          contain: layout style paint;
+        }
+
+        /* Ensure sidebar remains interactive during typing animation */
+        :global(.sidebar) {
+          z-index: 100 !important;
+          pointer-events: all !important;
+        }
+
+        :global(.sidebar a) {
+          pointer-events: all !important;
+        }
+
+        :global(.sidebar button) {
+          pointer-events: all !important;
         }
 
         /* Custom Header */
@@ -864,6 +1090,10 @@ function LandlordDashboard() {
           pointer-events: none;
           position: relative;
           z-index: 1;
+          /* Optimize for performance during animation */
+          will-change: auto;
+          backface-visibility: hidden;
+          transform: translateZ(0);
         }
 
         .welcome-message.notification {
@@ -1232,7 +1462,7 @@ function LandlordDashboard() {
           padding: 18px; /* Reduced padding */
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
           border: 1px solid #e2e8f0;
-          height: 400px; /* Match tasks section height */
+          height: fit-content; /* Remove fixed height to eliminate whitespace */
           display: flex;
           flex-direction: column;
         }
@@ -1276,6 +1506,11 @@ function LandlordDashboard() {
           border-color: #e9d5ff;
         }
 
+        .action-card.orange {
+          background: #fff7ed;
+          border-color: #fed7aa;
+        }
+
         .action-icon {
           width: 40px;
           height: 40px;
@@ -1298,6 +1533,11 @@ function LandlordDashboard() {
 
         .action-card.purple .action-icon {
           background: #8b5cf6;
+          color: white;
+        }
+
+        .action-card.orange .action-icon {
+          background: #f97316;
           color: white;
         }
 
@@ -1356,6 +1596,82 @@ function LandlordDashboard() {
           height: 420px; /* Reduced height */
           display: flex;
           flex-direction: column;
+        }
+
+        /* Properties Filter Controls */
+        .properties-filter-controls {
+          display: flex;
+          gap: 16px;
+          align-items: center;
+          flex-wrap: wrap;
+          background: #f8fafc;
+          padding: 16px;
+          border-radius: 8px;
+          border: 1px solid #e2e8f0;
+          margin-bottom: 16px;
+        }
+
+        .properties-filter-group {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .properties-filter-label {
+          font-size: 12px;
+          font-weight: 600;
+          color: #64748b;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          white-space: nowrap;
+        }
+
+        .properties-filter-select {
+          padding: 8px 12px;
+          border: 1px solid #e2e8f0;
+          border-radius: 6px;
+          font-size: 13px;
+          color: #374151;
+          background: white;
+          min-width: 140px;
+          transition: all 0.2s ease;
+          cursor: pointer;
+        }
+
+        .properties-filter-select:hover {
+          border-color: #6366f1;
+          box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .properties-filter-select:focus {
+          outline: none;
+          border-color: #6366f1;
+          box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .properties-filter-reset-btn {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 8px 12px;
+          border: 1px solid #e2e8f0;
+          border-radius: 6px;
+          background: white;
+          color: #64748b;
+          font-size: 12px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .properties-filter-reset-btn:hover {
+          background: #f1f5f9;
+          border-color: #cbd5e1;
+          color: #475569;
+        }
+
+        .properties-filter-reset-btn:active {
+          transform: translateY(1px);
         }
 
         .properties-scroll-container {
@@ -2043,10 +2359,49 @@ function LandlordDashboard() {
         :global(.dark-mode) .action-card.blue .action-icon { background: rgba(59, 130, 246, 0.3); }
         :global(.dark-mode) .action-card.green .action-icon { background: rgba(34, 197, 94, 0.3); }
         :global(.dark-mode) .action-card.purple .action-icon { background: rgba(139, 92, 246, 0.3); }
+        :global(.dark-mode) .action-card.orange .action-icon { background: rgba(249, 115, 22, 0.3); }
         :global(.dark-mode) .tasks-cell .task-count { background: rgba(139, 92, 246, 0.3); }
         :global(.dark-mode) select {
           background-color: #111111 !important;
           border-color: #333333 !important;
+        }
+
+        /* Dark mode styles for Properties Filter Controls */
+        :global(.dark-mode) .properties-filter-controls {
+          background: #1a1a1a !important;
+          border-color: #333333 !important;
+        }
+
+        :global(.dark-mode) .properties-filter-label {
+          color: #9ca3af !important;
+        }
+
+        :global(.dark-mode) .properties-filter-select {
+          background: #111111 !important;
+          border-color: #333333 !important;
+          color: #e2e8f0 !important;
+        }
+
+        :global(.dark-mode) .properties-filter-select:hover {
+          border-color: #6366f1 !important;
+          box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2) !important;
+        }
+
+        :global(.dark-mode) .properties-filter-select:focus {
+          border-color: #6366f1 !important;
+          box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2) !important;
+        }
+
+        :global(.dark-mode) .properties-filter-reset-btn {
+          background: #111111 !important;
+          border-color: #333333 !important;
+          color: #9ca3af !important;
+        }
+
+        :global(.dark-mode) .properties-filter-reset-btn:hover {
+          background: #1f2937 !important;
+          border-color: #4b5563 !important;
+          color: #e2e8f0 !important;
         }
         :global(.dark-mode) .occupancy-cell .occupancy-progress { background: #333333; }
         :global(.dark-mode) .occupancy-cell .occupancy-bar { background: #3b82f6; }
@@ -2123,6 +2478,422 @@ function LandlordDashboard() {
         :global(.dark-mode) .team-member-row:hover {
           background-color: #1a1a1a;
           border-color: #333333;
+        }
+
+        /* Accounting Section */
+        /* Rent History Section */
+        .rent-history-section {
+          background: white;
+          border-radius: 6px;
+          padding: 18px;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+          border: 1px solid #e2e8f0;
+          height: 500px;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+        }
+
+        .rent-history-content {
+          flex: 1;
+          overflow-y: auto;
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+
+        .rent-history-content::-webkit-scrollbar {
+          width: 6px;
+        }
+
+        .rent-history-content::-webkit-scrollbar-track {
+          background: rgba(226, 232, 240, 0.3);
+          border-radius: 3px;
+        }
+
+        .rent-history-content::-webkit-scrollbar-thumb {
+          background: rgba(156, 163, 175, 0.5);
+          border-radius: 3px;
+        }
+
+        .rent-summary-cards {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 12px;
+          flex-shrink: 0;
+        }
+
+        .summary-card {
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 6px;
+          padding: 12px;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          transition: all 0.2s ease;
+        }
+
+        .summary-card:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .summary-icon {
+          width: 36px;
+          height: 36px;
+          border-radius: 6px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+
+        .summary-card.collected .summary-icon {
+          background: #dcfce7;
+          color: #16a34a;
+        }
+
+        .summary-card.pending .summary-icon {
+          background: #fef3c7;
+          color: #d97706;
+        }
+
+        .summary-card.overdue .summary-icon {
+          background: #fee2e2;
+          color: #dc2626;
+        }
+
+        .summary-content {
+          flex: 1;
+        }
+
+        .summary-value {
+          font-size: 16px;
+          font-weight: 700;
+          color: #1e293b;
+          margin-bottom: 2px;
+        }
+
+        .summary-label {
+          font-size: 11px;
+          color: #64748b;
+          font-weight: 500;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        .rent-logs-container {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          min-height: 0;
+        }
+
+        .rent-logs-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 12px;
+        }
+
+        .rent-logs-header h3 {
+          font-size: 14px;
+          font-weight: 600;
+          color: #374151;
+          margin: 0;
+        }
+
+        .filter-controls {
+          display: flex;
+          gap: 16px;
+          align-items: center;
+          flex-wrap: wrap;
+          background: #f8fafc;
+          padding: 16px;
+          border-radius: 8px;
+          border: 1px solid #e2e8f0;
+        }
+
+        .filter-group {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .filter-label {
+          font-size: 12px;
+          font-weight: 600;
+          color: #64748b;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          white-space: nowrap;
+        }
+
+        .filter-select {
+          padding: 8px 12px;
+          border: 1px solid #e2e8f0;
+          border-radius: 6px;
+          font-size: 13px;
+          color: #374151;
+          background: white;
+          min-width: 140px;
+          transition: all 0.2s ease;
+          cursor: pointer;
+        }
+
+        .filter-select:hover {
+          border-color: #6366f1;
+          box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .filter-select:focus {
+          outline: none;
+          border-color: #6366f1;
+          box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .filter-reset-btn {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 8px 12px;
+          border: 1px solid #e2e8f0;
+          border-radius: 6px;
+          background: white;
+          color: #64748b;
+          font-size: 12px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .filter-reset-btn:hover {
+          background: #f1f5f9;
+          border-color: #cbd5e1;
+          color: #475569;
+        }
+
+        .filter-reset-btn:active {
+          transform: translateY(1px);
+        }
+
+        .rent-logs-table-container {
+          flex: 1;
+          overflow-y: auto;
+          border: 1px solid #e2e8f0;
+          border-radius: 6px;
+        }
+
+        .rent-logs-table {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 12px;
+        }
+
+        .rent-logs-table th {
+          background: #f8fafc;
+          color: #64748b;
+          font-weight: 600;
+          padding: 12px 8px;
+          text-align: left;
+          border-bottom: 1px solid #e2e8f0;
+          font-size: 11px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        .rent-logs-table td {
+          padding: 12px 8px;
+          border-bottom: 1px solid #f1f5f9;
+          color: #374151;
+        }
+
+        .rent-logs-table tbody tr:hover {
+          background: #f8fafc;
+        }
+
+        .tenant-info {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .tenant-avatar {
+          width: 28px;
+          height: 28px;
+          border-radius: 4px;
+          background: #e0e7ff;
+          color: #6366f1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 10px;
+          font-weight: 600;
+        }
+
+        .amount-cell {
+          font-weight: 600;
+          color: #1e293b;
+        }
+
+        .status-badge.collected {
+          background: #dcfce7;
+          color: #16a34a;
+          padding: 4px 8px;
+          border-radius: 4px;
+          font-size: 10px;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        .status-badge.pending {
+          background: #fef3c7;
+          color: #d97706;
+          padding: 4px 8px;
+          border-radius: 4px;
+          font-size: 10px;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        .status-badge.overdue {
+          background: #fee2e2;
+          color: #dc2626;
+          padding: 4px 8px;
+          border-radius: 4px;
+          font-size: 10px;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        /* Dark Mode Styles for Rent History Section */
+        :global(.dark-mode) .rent-history-section {
+          background: #111111 !important;
+          border-color: #333333 !important;
+        }
+
+        :global(.dark-mode) .summary-card,
+        :global(.dark-mode) .rent-logs-table-container {
+          background: #1a1a1a !important;
+          border-color: #333333 !important;
+        }
+
+        :global(.dark-mode) .summary-card:hover {
+          background: #222222 !important;
+        }
+
+        :global(.dark-mode) .summary-value,
+        :global(.dark-mode) .amount-cell {
+          color: #ffffff !important;
+        }
+
+        :global(.dark-mode) .rent-logs-header h3 {
+          color: #e2e8f0 !important;
+        }
+
+        :global(.dark-mode) .summary-label,
+        :global(.dark-mode) .filter-select {
+          color: #9ca3af !important;
+        }
+
+        :global(.dark-mode) .filter-controls {
+          background: #1a1a1a !important;
+          border-color: #333333 !important;
+        }
+
+        :global(.dark-mode) .filter-label {
+          color: #9ca3af !important;
+        }
+
+        :global(.dark-mode) .filter-select {
+          background: #111111 !important;
+          border-color: #333333 !important;
+          color: #e2e8f0 !important;
+        }
+
+        :global(.dark-mode) .filter-select:hover {
+          border-color: #6366f1 !important;
+          box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2) !important;
+        }
+
+        :global(.dark-mode) .filter-select:focus {
+          border-color: #6366f1 !important;
+          box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2) !important;
+        }
+
+        :global(.dark-mode) .filter-reset-btn {
+          background: #111111 !important;
+          border-color: #333333 !important;
+          color: #9ca3af !important;
+        }
+
+        :global(.dark-mode) .filter-reset-btn:hover {
+          background: #222222 !important;
+          border-color: #4b5563 !important;
+          color: #e2e8f0 !important;
+        }
+
+        :global(.dark-mode) .summary-card.collected .summary-icon {
+          background: rgba(34, 197, 94, 0.3) !important;
+          color: #22c55e !important;
+        }
+
+        :global(.dark-mode) .summary-card.pending .summary-icon {
+          background: rgba(245, 158, 11, 0.3) !important;
+          color: #f59e0b !important;
+        }
+
+        :global(.dark-mode) .summary-card.overdue .summary-icon {
+          background: rgba(239, 68, 68, 0.3) !important;
+          color: #ef4444 !important;
+        }
+
+        :global(.dark-mode) .rent-history-content::-webkit-scrollbar-track {
+          background: rgba(75, 85, 99, 0.3) !important;
+        }
+
+        :global(.dark-mode) .rent-history-content::-webkit-scrollbar-thumb {
+          background: rgba(156, 163, 175, 0.8) !important;
+        }
+
+        :global(.dark-mode) .rent-logs-table th {
+          background: #1a1a1a !important;
+          border-color: #333333 !important;
+          color: #9ca3af !important;
+        }
+
+        :global(.dark-mode) .rent-logs-table td {
+          background: #111111 !important;
+          border-color: #333333 !important;
+          color: #e2e8f0 !important;
+        }
+
+        :global(.dark-mode) .rent-logs-table tbody tr:hover {
+          background: #222222 !important;
+        }
+
+        :global(.dark-mode) .tenant-avatar {
+          background: rgba(99, 102, 241, 0.3) !important;
+          color: #a5b4fc !important;
+        }
+
+        :global(.dark-mode) .status-badge.collected {
+          background: rgba(34, 197, 94, 0.3) !important;
+          color: #22c55e !important;
+        }
+
+        :global(.dark-mode) .status-badge.pending {
+          background: rgba(245, 158, 11, 0.3) !important;
+          color: #f59e0b !important;
+        }
+
+        :global(.dark-mode) .status-badge.overdue {
+          background: rgba(239, 68, 68, 0.3) !important;
+          color: #ef4444 !important;
         }
       `}</style>
     </DashboardLayout>

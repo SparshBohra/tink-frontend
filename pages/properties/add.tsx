@@ -4,6 +4,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { apiClient } from '../../lib/api';
 import DashboardLayout from '../../components/DashboardLayout';
+import { usStates } from '../../lib/states';
 
 export default function AddProperty() {
   const router = useRouter();
@@ -16,7 +17,7 @@ export default function AddProperty() {
     postal_code: '',
     country: 'United States',
     property_type: 'coliving',
-    timezone: 'America/New_York'
+    timezone: ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -27,6 +28,13 @@ export default function AddProperty() {
     setLoading(true);
     setError(null);
     setSuccess(null);
+
+    // Validate required fields
+    if (!formData.name || !formData.address_line1 || !formData.city || !formData.state || !formData.postal_code || !formData.country || !formData.timezone) {
+      setError('Please fill in all required fields.');
+      setLoading(false);
+      return;
+    }
 
     try {
       const newProperty = await apiClient.createProperty(formData);
@@ -41,7 +49,7 @@ export default function AddProperty() {
         postal_code: '',
         country: 'United States',
         property_type: 'coliving',
-        timezone: 'America/New_York'
+        timezone: ''
       });
       
       setTimeout(() => {
@@ -109,11 +117,32 @@ export default function AddProperty() {
                     <input type="text" name="address_line2" value={formData.address_line2} onChange={handleChange} placeholder="e.g., Apt 4B, Suite 200 (optional)" className="form-input"/>
                   </div>
                   <div className="form-group"><label className="form-label">City*</label><input type="text" name="city" value={formData.city} onChange={handleChange} required placeholder="e.g., New York" className="form-input"/></div>
-                  <div className="form-group"><label className="form-label">State*</label><input type="text" name="state" value={formData.state} onChange={handleChange} required placeholder="e.g., NY" className="form-input"/></div>
+                  <div className="form-group">
+                    <label className="form-label">State*</label>
+                    <select name="state" value={formData.state} onChange={handleChange} required className="form-input">
+                      <option value="" disabled>Select a state</option>
+                      {usStates.map(s => (
+                        <option key={s.abbreviation} value={s.abbreviation}>{s.name}</option>
+                      ))}
+                    </select>
+                  </div>
                   <div className="form-group"><label className="form-label">Postal Code*</label><input type="text" name="postal_code" value={formData.postal_code} onChange={handleChange} required placeholder="e.g., 10001" className="form-input"/></div>
-                  <div className="form-group"><label className="form-label">Country</label><select name="country" value={formData.country} onChange={handleChange} className="form-input"><option value="United States">United States</option><option value="Canada">Canada</option></select></div>
+                  <div className="form-group">
+                    <label className="form-label">Country*</label>
+                    <select name="country" value={formData.country} onChange={handleChange} required className="form-input">
+                      <option value="United States">United States</option>
+                    </select>
+                  </div>
                   <div className="form-group"><label className="form-label">Property Type*</label><select name="property_type" value={formData.property_type} onChange={handleChange} required className="form-input"><option value="coliving">Co-Living Space</option><option value="residential">Residential Property</option></select></div>
-                  <div className="form-group"><label className="form-label">Time Zone*</label><select name="timezone" value={formData.timezone} onChange={handleChange} className="form-input"><option value="America/New_York">Eastern Time</option><option value="America/Chicago">Central Time</option></select></div>
+                  <div className="form-group">
+                    <label className="form-label">Time Zone*</label>
+                    <select name="timezone" value={formData.timezone} onChange={handleChange} required className="form-input">
+                      <option value="" disabled>Select a timezone</option>
+                      <option value="America/New_York">Eastern Time</option>
+                      <option value="America/Chicago">Central Time</option>
+                      <option value="America/Los_Angeles">Pacific Time</option>
+                    </select>
+                  </div>
                 </div>
                 <div className="form-actions">
                   <button type="submit" className="btn btn-primary" disabled={loading}>

@@ -197,7 +197,7 @@ function LandlordDetailsPage() {
               renderRow={(property) => (
                 <tr key={property.id}>
                   <td style={{ textAlign: 'center' }}><strong>{property.name}</strong></td>
-                  <td style={{ textAlign: 'center' }}>{property.full_address || property.address}</td>
+                  <td style={{ textAlign: 'center' }}>{property.full_address}</td>
                   <td style={{ textAlign: 'center' }}>{property.total_rooms || 'N/A'}</td>
                   <td style={{ textAlign: 'center' }}>
                     <Link href={`/properties/${property.id}/rooms`} className="btn btn-primary btn-sm">
