@@ -1,3 +1,4 @@
+// A comment to force re-linting
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
@@ -5,6 +6,7 @@ import DashboardLayout from '../components/DashboardLayout';
 import { withAuth } from '../lib/auth-context';
 import { apiClient } from '../lib/api';
 import { Application, Property, Room } from '../lib/types';
+import NewApplicationModal from '../components/NewApplicationModal';
 
 function Applications() {
   const router = useRouter();
@@ -17,6 +19,7 @@ function Applications() {
   const [selectedProperty, setSelectedProperty] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -261,6 +264,15 @@ function Applications() {
                 </p>
               </div>
             </div>
+            <div className="header-right">
+              <button onClick={() => setIsModalOpen(true)} className="new-application-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                New Application
+              </button>
+            </div>
           </div>
         </div>
 
@@ -471,7 +483,7 @@ function Applications() {
                           </td>
                           <td className="table-center">
                             {getStatusBadge(app.status)}
-                            {app.days_pending > 5 && (
+                            {(app.days_pending ?? 0) > 5 && (
                               <div className="pending-days">
                                 {app.days_pending} days
                               </div>
@@ -597,6 +609,8 @@ function Applications() {
         </div>
       </div>
 
+      {isModalOpen && <NewApplicationModal onClose={() => setIsModalOpen(false)} />}
+
       <style jsx>{`
         .dashboard-container {
           width: 100%;
@@ -614,16 +628,20 @@ function Applications() {
         .header-content {
           display: flex;
           justify-content: space-between;
-          align-items: flex-start;
-          gap: 20px;
+          align-items: center;
+          padding: 0 24px;
         }
 
         .header-left {
           flex: 1;
         }
 
+        .header-right {
+          /* Styles for the new container */
+        }
+
         .dashboard-title {
-          font-size: 22px;
+          font-size: 28px;
           font-weight: 700;
           color: #1e293b;
           margin: 0 0 4px 0;
@@ -788,9 +806,27 @@ function Applications() {
         }
 
         /* Button Styles */
+        .new-application-btn {
+          background-color: var(--primary-500, #8A2BE2);
+          color: white;
+          padding: 8px 16px;
+          border-radius: 6px;
+          font-weight: 500;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          border: none;
+          cursor: pointer;
+          transition: background-color 0.2s;
+        }
+
+        .new-application-btn:hover {
+          background-color: var(--primary-600, #7A1DD1);
+        }
+
         .refresh-btn {
-          background: #f8fafc;
-          color: #64748b;
+          background-color: #fff;
+          color: var(--gray-700, #4a5568);
           border: 1px solid #e2e8f0;
           padding: 10px 14px;
           border-radius: 6px;

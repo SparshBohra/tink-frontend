@@ -19,6 +19,9 @@ function Properties() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [propertyToDelete, setPropertyToDelete] = useState<{ id: number; name: string } | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [activeDropdown, setActiveDropdown] = useState<number | null>(null);
+  const [showTenantAssignModal, setShowTenantAssignModal] = useState(false);
+  const [selectedPropertyForAssign, setSelectedPropertyForAssign] = useState<Property | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -245,6 +248,39 @@ function Properties() {
     setPropertyToDelete(null);
     setDeleteLoading(false);
   };
+
+  const handleManageClick = (e: React.MouseEvent, propertyId: number) => {
+    e.stopPropagation();
+    setActiveDropdown(activeDropdown === propertyId ? null : propertyId);
+  };
+
+  const handleAssignTenant = (property: Property) => {
+    setSelectedPropertyForAssign(property);
+    setShowTenantAssignModal(true);
+    setActiveDropdown(null);
+  };
+
+  const handleManageProperty = (propertyId: number) => {
+    router.push(`/properties/${propertyId}/rooms`);
+    setActiveDropdown(null);
+  };
+
+  const handleCloseTenantAssignModal = () => {
+    setShowTenantAssignModal(false);
+    setSelectedPropertyForAssign(null);
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => {
+      setActiveDropdown(null);
+    };
+    
+    if (activeDropdown !== null) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [activeDropdown]);
 
   if (loading) {
     return (
@@ -503,13 +539,47 @@ function Properties() {
                             </td>
                             <td className="table-center">
                               <div className="action-buttons">
-                                <button onClick={() => router.push(`/properties/${property.id}/rooms`)} className="manage-btn">
-                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <path d="M12 20h9"/>
-                                    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
-                                  </svg>
-                                  Manage
-                                </button>
+                                <div className="manage-dropdown-container">
+                                  <button 
+                                    onClick={(e) => handleManageClick(e, property.id)} 
+                                    className="manage-btn"
+                                  >
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                      <path d="M12 20h9"/>
+                                      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                                    </svg>
+                                    Manage
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginLeft: '4px' }}>
+                                      <polyline points="6,9 12,15 18,9"/>
+                                    </svg>
+                                  </button>
+                                  
+                                  {activeDropdown === property.id && (
+                                    <div className="manage-dropdown">
+                                      <button 
+                                        onClick={() => handleAssignTenant(property)}
+                                        className="dropdown-item"
+                                      >
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                                          <circle cx="12" cy="7" r="4"/>
+                                        </svg>
+                                        Assign Tenant
+                                      </button>
+                                      <button 
+                                        onClick={() => handleManageProperty(property.id)}
+                                        className="dropdown-item"
+                                      >
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                          <path d="M3 21h18"/>
+                                          <path d="M5 21V7l8-4v18"/>
+                                          <path d="M19 21V11l-6-4"/>
+                                        </svg>
+                                        Manage Property
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
                                 <button 
                                   onClick={() => handleDeleteProperty(property.id, property.name)} 
                                   className="icon-btn delete-icon-btn"
@@ -769,6 +839,46 @@ function Properties() {
                     Delete Property
                   </>
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tenant Assignment Modal */}
+      {showTenantAssignModal && selectedPropertyForAssign && (
+        <div className="tenant-assign-modal">
+          <div className="modal-content tenant-assign-modal-content">
+            <div className="modal-header">
+              <h2>Assign Tenant to {selectedPropertyForAssign.name}</h2>
+              <button 
+                className="modal-close"
+                onClick={handleCloseTenantAssignModal}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="modal-section">
+              <p>This feature will be implemented to assign tenants to specific rooms in the property.</p>
+              <p><strong>Property:</strong> {selectedPropertyForAssign.name}</p>
+              <p><strong>Address:</strong> {selectedPropertyForAssign.full_address}</p>
+              <p><strong>Total Rooms:</strong> {selectedPropertyForAssign.total_rooms}</p>
+              <p><strong>Vacant Rooms:</strong> {selectedPropertyForAssign.vacant_rooms}</p>
+            </div>
+
+            <div className="modal-actions">
+              <button 
+                onClick={handleCloseTenantAssignModal}
+                className="cancel-btn"
+              >
+                Close
+              </button>
+              <button 
+                onClick={() => router.push(`/properties/${selectedPropertyForAssign.id}/rooms`)}
+                className="assign-btn"
+              >
+                Go to Rooms
               </button>
             </div>
           </div>

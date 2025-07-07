@@ -12,6 +12,7 @@ import EmptyState from '../../../components/EmptyState';
 import TenantAssignmentModal from '../../../components/TenantAssignmentModal';
 import { formatCurrency } from '../../../lib/utils';
 import PropertyTenantAssignmentModal from '../../../components/PropertyTenantAssignmentModal';
+import NewApplicationModal from '../../../components/NewApplicationModal';
 
 export default function PropertyRooms() {
   const router = useRouter();
@@ -34,6 +35,7 @@ export default function PropertyRooms() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [activeHistoryTab, setActiveHistoryTab] = useState<'tenant' | 'rent'>('tenant');
   const [propertyAssignmentModalOpen, setPropertyAssignmentModalOpen] = useState(false);
+  const [isNewApplicationModalOpen, setIsNewApplicationModalOpen] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -539,17 +541,32 @@ export default function PropertyRooms() {
             <div className="header-content">
               <div className="header-left">
                 <h1 className="dashboard-title">{property.name}</h1>
-                <p className="welcome-message">{property.full_address}</p>
+                <div className="subtitle-container">
+                  <p className="welcome-message">{property.full_address}</p>
+                </div>
               </div>
               <div className="header-right">
-                <Link href={`/properties/${property.id}/edit`} className="btn btn-primary">
+                <button onClick={() => router.back()} className="btn btn-secondary">
+                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5m7 7l-7-7 7-7"/></svg>
+                   Back
+                </button>
+                <button 
+                  onClick={() => setIsNewApplicationModalOpen(true)} 
+                  className="btn btn-primary"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px' }}>
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                  </svg>
+                  New Application
+                </button>
+                <Link href={`/properties/${property.id}/edit`} className="btn btn-secondary">
                   Edit Property
                 </Link>
                 {rooms.length === 0 && !getPropertyLevelLease() && (
                   <button
                     className="btn btn-secondary"
                     onClick={openPropertyAssignment}
-                    style={{ marginLeft: '8px' }}
                   >
                     Assign Tenant
                   </button>
@@ -560,153 +577,229 @@ export default function PropertyRooms() {
 
           {error && <div className="alert alert-error">{error}</div>}
 
-          <div className="main-content-grid">
-            <div className="left-column">
-              {/* Metrics Bar */}
-              <div className="metrics-grid">
-                <div className="metric-card">
-                  <div className="metric-header">
-                    <h3 className="metric-title">Total Rooms</h3>
-                    <div className="metric-icon">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>
-                    </div>
+          {/* Top Metrics Row */}
+          <div className="metrics-grid">
+            <div className="metric-card">
+              <div className="metric-header">
+                <div className="metric-info">
+                  <h3 className="metric-title">Total Rooms</h3>
+                  <div className="metric-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M3 21h18"/>
+                      <path d="M5 21V7l8-4v18"/>
+                      <path d="M19 21V11l-6-4"/>
+                    </svg>
                   </div>
-                  <p className="metric-value">{rooms.length}</p>
-                  <p className="metric-subtitle">Total units</p>
-                </div>
-                <div className="metric-card">
-                  <div className="metric-header">
-                    <h3 className="metric-title">Current Occupancy</h3>
-                    <div className="metric-icon">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-                    </div>
-                  </div>
-                  <p className="metric-value">{stats.occupiedRooms}</p>
-                  <p className="metric-subtitle">{stats.occupancyRate}% occupied</p>
-                </div>
-                <div className="metric-card">
-                  <div className="metric-header">
-                    <h3 className="metric-title">Monthly Revenue</h3>
-                    <div className="metric-icon">
-                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
-                    </div>
-                  </div>
-                  <p className="metric-value">{formatCurrency(totalRevenue)}</p>
-                  <p className="metric-subtitle">From all rooms</p>
                 </div>
               </div>
-
-              {/* Whole Property Lease Info */}
-              {getPropertyLevelLease() && (
-                <div className="property-lease-card">
-                   <h3>{getPropertyLevelLease()!.status === 'active' ? 'Current Tenant' : 'Upcoming Tenant'}</h3>
-                   <p><strong>{getTenantName(getPropertyLevelLease()!.tenant)}</strong></p>
-                   <p>Lease: {getPropertyLevelLease()!.start_date} → {getPropertyLevelLease()!.end_date}</p>
-                   <span className={`status-badge ${getPropertyLevelLease()!.status}`}>{getPropertyLevelLease()!.status}</span>
+              <div className="metric-content">
+                <div className="metric-value">{rooms.length}</div>
+                <div className="metric-subtitle">Total units</div>
+                <div className="metric-progress">
+                  <span className="metric-label">{stats.vacantRooms} vacant</span>
+                  <span className="metric-change positive">+{rooms.length > 0 ? '1' : '0'}</span>
                 </div>
-              )}
-
-              {/* Room Details Section */}
-              <div className="section-card">
-                <div className="section-header">
-                  <h2 className="section-title">Room Details ({rooms.length})</h2>
-                </div>
-                {rooms.length > 0 ? (
-                  <DataTable columns={roomsTableColumns} data={roomsTableData} renderRow={renderRoomRow} />
-                ) : (
-                  <EmptyState
-                    title="No Rooms Found"
-                    description="No rooms have been added to this property yet."
-                    action={
-                      <Link href={`/properties/${property.id}/add-room`} className="btn btn-primary">
-                        Add New Room
-                      </Link>
-                    }
-                  />
-                )}
-              </div>
-
-              {/* Property History Section */}
-              <div className="section-card" style={{ marginTop: '20px' }}>
-                <div className="section-header">
-                  <h2 className="section-title">Property History</h2>
-                  {/* Add tab controls here if needed */}
-                </div>
-                <DataTable
-                  columns={[
-                    { key: 'tenant', header: 'Tenant' },
-                    { key: 'unit', header: 'Unit' },
-                    { key: 'move_in', header: 'Move In' },
-                    { key: 'move_out', header: 'Move Out' },
-                    { key: 'status', header: 'Status' },
-                  ]}
-                  data={leases.map(l => ({
-                    tenant: getTenantName(l.tenant),
-                    unit: l.room ? getRoomName(l.room) : '— Whole Property —',
-                    move_in: formatDate(l.start_date),
-                    move_out: l.end_date ? formatDate(l.end_date) : '-',
-                    status: l.status,
-                  }))}
-                  renderRow={(row: any) => (
-                    <tr>
-                      <td>{row.tenant}</td>
-                      <td>{row.unit}</td>
-                      <td>{row.move_in}</td>
-                      <td>{row.move_out}</td>
-                      <td>
-                        <span className={`status-badge ${row.status.toLowerCase()}`}>{row.status}</span>
-                      </td>
-                    </tr>
-                  )}
-                />
               </div>
             </div>
+            
+            <div className="metric-card">
+              <div className="metric-header">
+                <div className="metric-info">
+                  <h3 className="metric-title">Current Occupancy</h3>
+                  <div className="metric-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                      <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              <div className="metric-content">
+                <div className="metric-value">{stats.occupiedRooms}</div>
+                <div className="metric-subtitle">Active tenants</div>
+                <div className="metric-progress">
+                  <span className="metric-label">{stats.occupancyRate}% occupied</span>
+                  <span className="metric-change positive">+5%</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="metric-card">
+              <div className="metric-header">
+                <div className="metric-info">
+                  <h3 className="metric-title">Monthly Revenue</h3>
+                  <div className="metric-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <line x1="12" y1="1" x2="12" y2="23"/>
+                      <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              <div className="metric-content">
+                <div className="metric-value">{formatCurrency(totalRevenue)}</div>
+                <div className="metric-subtitle">From all rooms</div>
+                <div className="metric-progress">
+                  <span className="metric-label">95% of target</span>
+                  <span className="metric-change positive">+12%</span>
+                </div>
+              </div>
+            </div>
+          </div>
 
-            <div className="right-column">
-              {/* Property Info Card */}
-              <div className="info-card">
-                <h3 className="card-title">Property Information</h3>
-                <div className="info-item">
-                  <span className="info-label">ADDRESS</span>
-                  <p className="info-value">{property.full_address}</p>
+          <div className="main-content">
+            <div className="content-grid">
+              <div className="left-column">
+                {/* Room Details Section */}
+                <div className="section-card">
+                  <div className="section-header">
+                    <h2 className="section-title">Room Details ({rooms.length})</h2>
+                    <div className="section-actions">
+                      <Link href={`/properties/${property.id}/add-room`} className="btn btn-secondary">
+                        Add New Room
+                      </Link>
+                    </div>
+                  </div>
+                  {rooms.length > 0 ? (
+                    <DataTable columns={roomsTableColumns} data={roomsTableData} renderRow={renderRoomRow} />
+                  ) : (
+                    <EmptyState
+                      title="No Rooms Found"
+                      description="No rooms have been added to this property yet."
+                      action={
+                        <Link href={`/properties/${property.id}/add-room`} className="btn btn-primary">
+                          Add New Room
+                        </Link>
+                      }
+                    />
+                  )}
                 </div>
-                <div className="info-item">
-                  <span className="info-label">PROPERTY TYPE</span>
-                  <p className="info-value">{(() => {
-                    if (rooms.length === 0 && getPropertyLevelLease()) {
-                      return 'Single Lease House';
-                    }
-                    return property.property_type === 'coliving' ? 'Co-living' : 'Residential';
-                  })()}</p>
-                </div>
-                <div className="info-item">
-                  <span className="info-label">LANDLORD</span>
-                  <p className="info-value">{property.landlord_name}</p>
+
+                {/* Property History Section */}
+                <div className="section-card">
+                  <div className="section-header">
+                    <h2 className="section-title">Property History</h2>
+                  </div>
+                  <DataTable
+                    columns={[
+                      { key: 'tenant', header: 'Tenant' },
+                      { key: 'unit', header: 'Unit' },
+                      { key: 'move_in', header: 'Move In' },
+                      { key: 'move_out', header: 'Move Out' },
+                      { key: 'status', header: 'Status' },
+                    ]}
+                    data={leases.map(l => ({
+                      tenant: getTenantName(l.tenant),
+                      unit: l.room ? getRoomName(l.room) : '— Whole Property —',
+                      move_in: formatDate(l.start_date),
+                      move_out: l.end_date ? formatDate(l.end_date) : '-',
+                      status: l.status,
+                    }))}
+                    renderRow={(row: any) => (
+                      <tr>
+                        <td>{row.tenant}</td>
+                        <td>{row.unit}</td>
+                        <td>{row.move_in}</td>
+                        <td>{row.move_out}</td>
+                        <td>
+                          <span className={`status-badge ${row.status.toLowerCase()}`}>{row.status}</span>
+                        </td>
+                      </tr>
+                    )}
+                  />
                 </div>
               </div>
 
-              {/* Quick Actions Card */}
-              <div className="info-card">
-                <h3 className="card-title">Quick Actions</h3>
-                <div className="actions-grid">
-                    <Link href={`/properties/${property.id}/add-room`} className="action-item">
-                        <div className="action-icon">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14m-7-7h14"/></svg>
+              <div className="right-column">
+                {/* Property Information Section */}
+                <div className="property-info-section">
+                  <div className="section-header">
+                    <div>
+                      <h2 className="section-title">Property Information</h2>
+                      <p className="section-subtitle">Basic property details and configuration</p>
+                    </div>
+                  </div>
+                  
+                  <div className="info-cards-grid">
+                    <div className="info-card">
+                      <div className="info-header">
+                        <div className="info-icon">
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                            <circle cx="12" cy="10" r="3"/>
+                          </svg>
                         </div>
-                        <span>Add New Room</span>
-                    </Link>
-                    <Link href="/applications" className="action-item">
-                         <div className="action-icon">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-                         </div>
-                        <span>Review Applications</span>
-                    </Link>
-                    <Link href="/leases" className="action-item">
-                        <div className="action-icon">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
+                        <h3 className="info-title">Address</h3>
+                      </div>
+                      <p className="info-value">{property.full_address}</p>
+                    </div>
+                    
+                    <div className="info-card">
+                      <div className="info-header">
+                        <div className="info-icon">
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                            <polyline points="9,22 9,12 15,12 15,22"/>
+                          </svg>
                         </div>
-                        <span>View Leases</span>
-                    </Link>
+                        <h3 className="info-title">Property Type</h3>
+                      </div>
+                      <p className="info-value">{(() => {
+                        if (rooms.length === 0 && getPropertyLevelLease()) {
+                          return 'Single Lease House';
+                        }
+                        return property.property_type === 'coliving' ? 'Co-living' : 'Residential';
+                      })()}</p>
+                    </div>
+                    
+                    <div className="info-card">
+                      <div className="info-header">
+                        <div className="info-icon">
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                            <circle cx="12" cy="7" r="4"/>
+                          </svg>
+                        </div>
+                        <h3 className="info-title">Landlord</h3>
+                      </div>
+                      <p className="info-value">{property.landlord_name}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quick Actions Card */}
+                <div className="info-card">
+                  <h3 className="card-title">Quick Actions</h3>
+                  <p className="card-subtitle">Frequently used actions</p>
+                  <div className="actions-grid">
+                      <Link href={`/properties/${property.id}/add-room`} className="action-item orange">
+                          <div className="action-icon">
+                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14m-7-7h14"/></svg>
+                          </div>
+                          <div className="action-text">
+                            <h4>Add New Room</h4>
+                            <p>Create a new room in this property</p>
+                          </div>
+                      </Link>
+                      <Link href="/applications" className="action-item purple">
+                           <div className="action-icon">
+                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                           </div>
+                           <div className="action-text">
+                            <h4>Review Applications</h4>
+                            <p>Process rental applications</p>
+                          </div>
+                      </Link>
+                      <Link href="/leases" className="action-item blue">
+                          <div className="action-icon">
+                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
+                          </div>
+                          <div className="action-text">
+                            <h4>View Leases</h4>
+                            <p>Manage lease agreements</p>
+                          </div>
+                      </Link>
+                  </div>
                 </div>
               </div>
             </div>
@@ -874,465 +967,284 @@ export default function PropertyRooms() {
         />
       )}
 
+      {isNewApplicationModalOpen && (
+        <NewApplicationModal onClose={() => setIsNewApplicationModalOpen(false)} />
+      )}
+
       <style jsx>{`
         .dashboard-container {
-          padding: 0;
+          width: 100%;
+          padding: 16px 20px 20px 20px;
+          background: #f8fafc;
+          min-height: calc(100vh - 72px);
+          box-sizing: border-box;
         }
+
+        /* Custom Header */
         .dashboard-header {
-          background-color: white;
-          padding: 24px 32px;
-          border-bottom: 1px solid #e2e8f0;
-          position: sticky;
-          top: 0;
-          z-index: 10;
+          margin-bottom: 24px;
         }
+
         .header-content {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          gap: 20px;
+        }
+
+        .header-left {
+          flex: 1;
+        }
+
+        .header-right {
+          flex-shrink: 0;
+          display: flex;
+          gap: 12px;
+        }
+
+        .dashboard-title {
+          font-size: 22px;
+          font-weight: 700;
+          color: #1e293b;
+          margin: 0 0 4px 0;
+          line-height: 1.15;
+        }
+
+        .subtitle-container {
+          min-height: 22px;
+        }
+
+        .welcome-message {
+          font-size: 14px;
+          color: #4b5563;
+          margin: 0;
+          line-height: 1.45;
+        }
+
+        .btn {
+          padding: 10px 16px;
+          border-radius: 6px;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          transition: all 0.2s ease;
+          text-decoration: none;
+          border: none;
+        }
+
+        .btn-primary {
+          background: #4f46e5;
+          color: white;
+        }
+
+        .btn-primary:hover {
+          background: #3730a3;
+        }
+
+        .btn-secondary {
+          background: #f8fafc;
+          color: #64748b;
+          border: 1px solid #e2e8f0;
+        }
+
+        .btn-secondary:hover {
+          background: #e2e8f0;
+        }
+
+        /* Metrics Grid */
+        .metrics-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 12px;
+          margin-bottom: 20px;
+        }
+
+        .metric-card {
+          background: white;
+          border-radius: 6px;
+          padding: 14px;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+          border: 1px solid #e2e8f0;
+          transition: all 0.2s ease;
+        }
+
+        .metric-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .metric-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          margin-bottom: 12px;
+        }
+
+        .metric-info {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          width: 100%;
+        }
+
+        .metric-title {
+          font-size: 11px;
+          font-weight: 600;
+          color: #64748b;
+          margin: 0;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        .metric-icon {
+          width: 20px;
+          height: 20px;
+          color: #64748b;
+        }
+
+        .metric-content {
+          margin-top: 8px;
+        }
+
+        .metric-value {
+          font-size: 20px;
+          font-weight: 700;
+          color: #1e293b;
+          margin-bottom: 3px;
+          line-height: 1;
+        }
+
+        .metric-subtitle {
+          font-size: 11px;
+          color: #64748b;
+          margin-bottom: 10px;
+        }
+
+        .metric-progress {
           display: flex;
           justify-content: space-between;
           align-items: center;
         }
-        .header-left .dashboard-title {
-          font-size: 24px;
-          font-weight: 700;
-          margin: 0;
-        }
-        .header-left .welcome-message {
-          font-size: 14px;
+
+        .metric-label {
+          font-size: 12px;
           color: #64748b;
-          margin-top: 4px;
-        }
-        .header-right {
-          display: flex;
-          align-items: center;
-          gap: 12px;
         }
 
-        .main-content-grid {
+        .metric-change {
+          font-size: 12px;
+          font-weight: 600;
+        }
+
+        .metric-change.positive {
+          color: #10b981;
+        }
+
+        /* Main Content */
+        .main-content {
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+        }
+        
+        .content-grid {
           display: grid;
           grid-template-columns: 2fr 1fr;
           gap: 24px;
           align-items: flex-start;
-          padding: 24px 32px;
         }
+        
         .left-column, .right-column {
           display: flex;
           flex-direction: column;
           gap: 24px;
         }
+
         .right-column {
           position: sticky;
-          top: 110px; /* Adjust based on header height */
+          top: 24px;
         }
-
-        .section-card, .info-card, .metric-card {
+        
+        .section-card {
             background: white;
-            border-radius: 12px;
+            border-radius: 8px;
             padding: 24px;
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -2px rgba(0,0,0,0.05);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
             border: 1px solid #e2e8f0;
         }
         
         .card-title {
-            font-size: 18px;
-            font-weight: 600;
-            margin: 0 0 20px;
+          font-size: 18px;
+          font-weight: 600;
+          margin: 0 0 4px;
+        }
+        .card-subtitle {
+          font-size: 14px;
+          color: #64748b;
+          margin: 0 0 20px;
         }
         
-        .metrics-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 20px;
+        .actions-grid { 
+          display: flex; 
+          flex-direction: column; 
+          gap: 12px; 
         }
-        .metric-card {
-            padding: 20px;
-        }
-        .metric-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 12px;
-        }
-        .metric-title { font-size: 14px; color: #475569; margin:0; font-weight: 500; }
-        .metric-icon svg { color: #94a3b8; }
-        .metric-value { font-size: 28px; font-weight: 700; margin: 0; }
-        .metric-subtitle { font-size: 13px; color: #64748b; margin: 4px 0 0; }
-
-        .info-card .card-title {
-          font-size: 16px;
-        }
-        .info-item { margin-bottom: 20px; }
-        .info-item:last-child { margin-bottom: 0; }
-        .info-label { font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
-        .info-value { font-size: 14px; margin: 4px 0 0; color: #1e293b; }
-        
-        .actions-grid { display: flex; flex-direction: column; gap: 12px; }
         .action-item {
             display: flex;
             align-items: center;
-            gap: 16px;
-            padding: 12px;
-            border-radius: 8px;
-            transition: background-color 0.2s;
+            padding: 16px;
+            border-radius: 12px;
             text-decoration: none;
-            color: #334155;
-            font-weight: 500;
+            color: inherit;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            border: 1px solid transparent;
         }
-        .action-item:hover { background-color: #f8fafc; }
+        .action-item:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
         .action-icon {
-            background-color: #eef2ff;
-            color: #4f46e5;
-            border-radius: 8px;
             width: 40px;
             height: 40px;
+            border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
+            margin-right: 16px;
         }
-        .action-item span {
+        .action-icon svg {
+            width: 20px;
+            height: 20px;
+            color: white;
+        }
+        .action-text h4 {
+          font-size: 16px;
+          font-weight: 600;
+          margin: 0 0 2px 0;
+        }
+        .action-text p {
           font-size: 14px;
+          color: #64748b;
+          margin: 0;
         }
 
-        /* Status Badge from original screenshot */
-        .status-badge {
-          padding: 4px 10px;
-          border-radius: 12px;
-          font-size: 12px;
-          font-weight: 500;
-          text-transform: uppercase;
-          display: inline-block;
-        }
-        .status-badge.active, .status-badge.current {
-          color: #059669;
-          background-color: #d1fae5;
-        }
-        .status-badge.draft {
-          color: #52525b;
-          background-color: #f4f4f5;
-        }
-        .status-badge.vacant {
-          color: #d97706;
-          background-color: #fef3c7;
-        }
-
-        .property-lease-card {
-          background-color: #eff6ff;
-          border: 1px solid #bfdbfe;
-          color: #1e40af;
-          padding: 16px;
-          border-radius: 8px;
-        }
+        .action-item.blue { background-color: #eff6ff; border-color: #dbeafe; }
+        .action-item.blue .action-icon { background-color: #3b82f6; }
+        .action-item.blue h4 { color: #2563eb; }
         
-        .section-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 16px;
-        }
-        .section-title {
-          font-size: 18px;
-          font-weight: 600;
-        }
+        .action-item.purple { background-color: #f5f3ff; border-color: #e0dfff; }
+        .action-item.purple .action-icon { background-color: #8b5cf6; }
+        .action-item.purple h4 { color: #7c3aed; }
 
-        .loading-indicator {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          padding: 48px 24px;
-          text-align: center;
-        }
-        
-        .loading-spinner {
-          width: 40px;
-          height: 40px;
-          border: 4px solid #e2e8f0;
-          border-top-color: #6366f1;
-          border-radius: 50%;
-          animation: spin 1s linear infinite;
-          margin-bottom: 16px;
-        }
-        
-        @keyframes spin {
-          to {
-            transform: rotate(360deg);
-          }
-        }
-
-        .alert {
-          padding: 12px 16px;
-          border-radius: 6px;
-          margin-bottom: 20px;
-          font-size: 14px;
-        }
-        
-        .alert-error {
-          background-color: #fef2f2;
-          border: 1px solid #fecaca;
-          color: #dc2626;
-        }
-
-        .actions-container {
-          margin-bottom: 20px;
-        }
-
-        .back-btn {
-          background: #f8fafc;
-          color: #64748b;
-          border: 1px solid #e2e8f0;
-          padding: 8px 16px;
-          border-radius: 6px;
-          font-size: 14px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          white-space: nowrap;
-        }
-
-        .back-btn:hover {
-          background: #e2e8f0;
-        }
-
-        .refresh-btn {
-          background: #f8fafc;
-          color: #64748b;
-          border: 1px solid #e2e8f0;
-          padding: 10px 14px;
-          border-radius: 6px;
-          font-size: 12px;
-          font-weight: 600;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          transition: all 0.2s ease;
-        }
-
-        .refresh-btn:hover {
-          background: #e2e8f0;
-          transform: translateY(-1px);
-        }
-
-        .applications-scroll-container {
-          overflow-y: auto;
-          max-height: 600px;
-        }
-
-        .applications-scroll-container::-webkit-scrollbar {
-          width: 6px;
-        }
-
-        .applications-scroll-container::-webkit-scrollbar-track {
-          background: rgba(226, 232, 240, 0.3);
-          border-radius: 3px;
-        }
-
-        .applications-scroll-container::-webkit-scrollbar-thumb {
-          background: rgba(156, 163, 175, 0.5);
-          border-radius: 3px;
-        }
-
-        .applications-table-container {
-          width: 100%;
-          overflow-x: auto;
-          border-radius: 8px;
-          background: white;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-        }
-
-        .applications-table {
-          width: 100%;
-          border-collapse: separate;
-          border-spacing: 0;
-        }
-
-        /* Add hover effect for table rows */
-        .applications-table tbody tr {
-          transition: background-color 0.2s ease;
-        }
-
-        .applications-table tbody tr:hover {
-          background-color: #f9fafb;
-        }
-
-        /* Table headers - Applications Page Standard */
-        .applications-table th {
-          position: sticky;
-          top: 0;
-          background: #ffffff;
-          z-index: 2;
-          font-size: 12px;
-          font-weight: 600;
-          color: #9ca3af;
-          padding: 12px 16px;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-          border-bottom: 1px solid #e5e7eb;
-          text-align: left;
-        }
-
-        /* Table cells - Applications Page Standard */
-        .applications-table td {
-          padding: 12px 16px;
-          vertical-align: middle;
-          height: 48px;
-          border-bottom: 1px solid #f1f5f9;
-          font-size: 14px;
-          color: #374151;
-        }
-
-        /* Center align specific columns */
-        .applications-table th.table-center,
-        .applications-table td.table-center {
-          text-align: center !important;
-        }
-
-        .applications-table th.table-left,
-        .applications-table td.table-left {
-          text-align: left !important;
-        }
-
-        .applicant-name {
-          color: #1e293b;
-          margin-bottom: 4px;
-        }
-
-        .applicant-email {
-          font-size: 12px;
-          color: #64748b;
-        }
-
-        .property-name {
-          color: #1e293b;
-          margin-bottom: 4px;
-        }
-
-        .property-vacancy {
-          font-size: 12px;
-          color: #64748b;
-        }
-
-        .app-details {
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-          font-size: 12px;
-        }
-
-        .app-details > div {
-          color: #64748b;
-        }
-
-        .detail-label {
-          font-weight: 600;
-          color: #374151;
-          margin-right: 4px;
-        }
-
-        .action-buttons {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-        }
-
-        .manage-btn {
-          background-color: #4f46e5;
-          color: white;
-          border: none;
-          padding: 8px 12px;
-          border-radius: 6px;
-          cursor: pointer;
-          font-weight: 500;
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          transition: background-color 0.2s;
-        }
-        .manage-btn:hover {
-          background-color: #4338ca;
-        }
-
-        .delete-btn {
-          background: transparent;
-          border: none;
-          color: #94a3b8;
-          cursor: pointer;
-          padding: 6px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transition: background-color 0.2s, color 0.2s;
-        }
-        .delete-btn:hover {
-          background-color: #fef2f2;
-          color: #ef4444;
-        }
-
-        /* Modal Styles */
-        .delete-modal {
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          background-color: rgba(0, 0, 0, 0.5);
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          z-index: 1000;
-        }
-        .delete-modal-content {
-          background-color: white;
-          padding: 24px;
-          border-radius: 8px;
-          max-width: 400px;
-          width: 100%;
-          text-align: center;
-        }
-        .warning-icon {
-          width: 48px;
-          height: 48px;
-          border-radius: 50%;
-          background-color: #fee2e2;
-          color: #ef4444;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          margin-bottom: 16px;
-        }
-        .delete-modal-content h3 {
-          margin: 0 0 8px;
-          font-size: 18px;
-        }
-        .delete-modal-content p {
-          margin: 0 0 24px;
-          color: #64748b;
-        }
-        .modal-actions {
-          display: flex;
-          justify-content: center;
-          gap: 12px;
-        }
-        .modal-actions button {
-          padding: 10px 16px;
-          border-radius: 6px;
-          border: 1px solid transparent;
-          cursor: pointer;
-          font-weight: 500;
-        }
-        .confirm-delete-btn {
-          background-color: #ef4444;
-          color: white;
-        }
-        .cancel-delete-btn {
-          background-color: white;
-          border-color: #d1d5db;
-          color: #374151;
-        }
-
-        /* Other styles... */
+        .action-item.orange { background-color: #fff7ed; border-color: #ffedd5; }
+        .action-item.orange .action-icon { background-color: #f97316; }
+        .action-item.orange h4 { color: #ea580c; }
       `}</style>
     </>
   );
-} 
+}
+
