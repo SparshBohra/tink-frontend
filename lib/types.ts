@@ -64,6 +64,10 @@ export interface Property {
   landlord_name?: string;
   created_at: string;
   updated_at?: string;
+  rent_type?: 'per_property' | 'per_room';
+  monthly_rent?: number | string | null;
+  effective_rent?: number | string | null;
+  effective_security_deposit?: number | string | null;
 }
 
 export interface Room {
@@ -202,6 +206,9 @@ export interface PropertyFormData {
   country: string;
   property_type: string;
   timezone: string;
+  rent_type: 'per_property' | 'per_room';
+  monthly_rent: string;
+  landlord?: number;
 }
 
 export interface RoomFormData {

@@ -503,6 +503,8 @@ function Properties() {
                         <th className="table-left">Address</th>
                         <th className="table-center">Rooms</th>
                         <th className="table-center">Occupancy</th>
+                        <th className="table-center">Effective Rent</th>
+                        <th className="table-center">Security Deposit</th>
                         <th className="table-center">Actions</th>
                       </tr>
                     </thead>
@@ -536,6 +538,12 @@ function Properties() {
                                 {stats.occupancyRate < 50 ? 'Low' : 
                                  stats.occupancyRate < 80 ? 'Good' : 'Excellent'} ({stats.occupancyRate}%)
                               </span>
+                            </td>
+                            <td className="table-center">
+                              {property.effective_rent !== undefined && property.effective_rent !== null ? `$${property.effective_rent}` : '-'}
+                            </td>
+                            <td className="table-center">
+                              {property.effective_security_deposit !== undefined && property.effective_security_deposit !== null ? `$${property.effective_security_deposit}` : '-'}
                             </td>
                             <td className="table-center">
                               <div className="action-buttons">

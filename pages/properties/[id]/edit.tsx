@@ -21,7 +21,8 @@ export default function EditProperty() {
     country: 'United States',
     property_type: 'coliving',
     timezone: '',
-    monthly_rent: 0,
+    rent_type: 'per_property',
+    monthly_rent: '',
     landlord: undefined,
   });
   const [loading, setLoading] = useState(false);
@@ -43,7 +44,8 @@ export default function EditProperty() {
             country: data.country,
             property_type: data.property_type,
             timezone: data.timezone,
-            monthly_rent: data.monthly_rent || 0,
+            rent_type: data.rent_type || 'per_property',
+            monthly_rent: data.monthly_rent ? String(data.monthly_rent) : '',
             landlord: data.landlord,
           });
         })
@@ -66,9 +68,19 @@ export default function EditProperty() {
       return;
     }
 
+    if (formData.rent_type === 'per_property' && (!formData.monthly_rent || isNaN(Number(formData.monthly_rent)))) {
+      setError('Please enter a valid monthly rent amount for the property. This field is required when "Per Property" rent structure is selected.');
+      setLoading(false);
+      return;
+    }
+
     try {
       if (!id) return;
-      const updatedProperty = await apiClient.updateProperty(Number(id), formData);
+      const payload = {
+        ...formData,
+        monthly_rent: formData.rent_type === 'per_property' ? formData.monthly_rent : '',
+      };
+      const updatedProperty = await apiClient.updateProperty(Number(id), payload);
       setSuccess(`Property "${updatedProperty.name}" updated successfully!`);
       setTimeout(() => {
         router.push(`/properties/${updatedProperty.id}/rooms`);
@@ -85,7 +97,7 @@ export default function EditProperty() {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: name === 'monthly_rent' ? parseFloat(value) : value,
+      [name]: value,
     }));
   };
 
@@ -161,10 +173,94 @@ export default function EditProperty() {
                       <option value="America/Los_Angeles">Pacific Time</option>
                     </select>
                   </div>
-                  <div className="form-group">
-                    <label className="form-label">Monthly Rent</label>
-                    <input type="number" name="monthly_rent" value={formData.monthly_rent || ''} onChange={handleChange} placeholder="e.g., 3000" className="form-input"/>
+                  <div className="form-group full-width">
+                    <label className="form-label">Rent Structure*</label>
+                    <div className="rent-type-selection">
+                      <div className="rent-type-options">
+                        <label className={`rent-type-option ${formData.rent_type === 'per_property' ? 'selected' : ''}`}>
+                          <input 
+                            type="radio" 
+                            name="rent_type" 
+                            value="per_property" 
+                            checked={formData.rent_type === 'per_property'}
+                            onChange={handleChange}
+                            className="rent-type-radio"
+                          />
+                          <div className="rent-type-content">
+                            <div className="rent-type-header">
+                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M3 21h18"/>
+                                <path d="M5 21V7l8-4v18"/>
+                                <path d="M19 21V11l-6-4"/>
+                              </svg>
+                              <span className="rent-type-title">Per Property</span>
+                            </div>
+                            <p className="rent-type-description">Set one rent amount for the entire property. Best for single-family homes or when renting the whole property to one tenant.</p>
+                          </div>
+                        </label>
+                        <label className={`rent-type-option ${formData.rent_type === 'per_room' ? 'selected' : ''}`}>
+                          <input 
+                            type="radio" 
+                            name="rent_type" 
+                            value="per_room" 
+                            checked={formData.rent_type === 'per_room'}
+                            onChange={handleChange}
+                            className="rent-type-radio"
+                          />
+                          <div className="rent-type-content">
+                            <div className="rent-type-header">
+                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                                <line x1="8" y1="21" x2="16" y2="21"/>
+                                <line x1="12" y1="17" x2="12" y2="21"/>
+                              </svg>
+                              <span className="rent-type-title">Per Room</span>
+                            </div>
+                            <p className="rent-type-description">Set individual rent amounts for each room. Perfect for co-living spaces, shared housing, or multi-room rentals.</p>
+                          </div>
+                        </label>
+                      </div>
+                    </div>
                   </div>
+                  {formData.rent_type === 'per_property' && (
+                    <div className="form-group full-width">
+                      <label className="form-label">Monthly Rent*</label>
+                      <div className="rent-input-wrapper">
+                        <span className="currency-symbol">$</span>
+                        <input 
+                          type="number" 
+                          name="monthly_rent" 
+                          value={formData.monthly_rent} 
+                          onChange={handleChange} 
+                          required 
+                          placeholder="3000" 
+                          className="form-input currency-input" 
+                          min="0"
+                          step="1"
+                        />
+                      </div>
+                      <p className="form-help">This rent amount will apply to the entire property.</p>
+                    </div>
+                  )}
+                  {formData.rent_type === 'per_room' && (
+                    <div className="form-group full-width">
+                      <div className="per-room-info">
+                        <div className="info-icon">
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <path d="M12 16v-4"/>
+                            <path d="M12 8h.01"/>
+                          </svg>
+                        </div>
+                        <div className="info-content">
+                          <h4 className="info-title">Room-Based Rent Management</h4>
+                          <p className="info-description">
+                            Rent amounts are managed individually for each room. You can set specific rent amounts in the room management section.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div className="form-actions">
                   <button type="submit" className="btn btn-primary" disabled={loading}>
@@ -215,6 +311,153 @@ export default function EditProperty() {
         .btn-primary { background: #4f46e5; color: white; }
         .btn-primary:hover:not(:disabled) { background: #3730a3; }
         .btn-secondary { background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; }
+        
+        /* Enhanced Rent Type Selection */
+        .rent-type-selection {
+          margin-top: 8px;
+        }
+        
+        .rent-type-options {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 16px;
+        }
+        
+        .rent-type-option {
+          display: flex;
+          align-items: flex-start;
+          gap: 12px;
+          padding: 16px;
+          border: 2px solid #e2e8f0;
+          border-radius: 8px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          background: #f8fafc;
+        }
+        
+        .rent-type-option:hover {
+          border-color: #cbd5e1;
+          background: #f1f5f9;
+        }
+        
+        .rent-type-option.selected {
+          border-color: #4f46e5;
+          background: #eff6ff;
+        }
+        
+        .rent-type-radio {
+          margin: 0;
+          width: 20px;
+          height: 20px;
+          accent-color: #4f46e5;
+        }
+        
+        .rent-type-content {
+          flex: 1;
+        }
+        
+        .rent-type-header {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-bottom: 8px;
+        }
+        
+        .rent-type-header svg {
+          color: #4f46e5;
+          flex-shrink: 0;
+        }
+        
+        .rent-type-title {
+          font-size: 14px;
+          font-weight: 600;
+          color: #1e293b;
+          margin: 0;
+        }
+        
+        .rent-type-description {
+          font-size: 12px;
+          color: #64748b;
+          margin: 0;
+          line-height: 1.4;
+        }
+        
+        /* Enhanced Currency Input */
+        .rent-input-wrapper {
+          position: relative;
+          display: inline-block;
+          width: 100%;
+        }
+        
+        .currency-symbol {
+          position: absolute;
+          left: 12px;
+          top: 50%;
+          transform: translateY(-50%);
+          color: #6b7280;
+          font-weight: 600;
+          font-size: 14px;
+          z-index: 1;
+        }
+        
+        .currency-input {
+          padding-left: 28px;
+        }
+        
+        .form-help {
+          font-size: 12px;
+          color: #6b7280;
+          margin: 4px 0 0 0;
+          font-style: italic;
+        }
+        
+        /* Per Room Info */
+        .per-room-info {
+          display: flex;
+          align-items: flex-start;
+          gap: 12px;
+          padding: 16px;
+          background: #f0f9ff;
+          border: 1px solid #bae6fd;
+          border-radius: 8px;
+          margin-top: 8px;
+        }
+        
+        .info-icon {
+          width: 40px;
+          height: 40px;
+          background: #0ea5e9;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          flex-shrink: 0;
+        }
+        
+        .info-content {
+          flex: 1;
+        }
+        
+        .info-title {
+          font-size: 14px;
+          font-weight: 600;
+          color: #0c4a6e;
+          margin: 0 0 4px 0;
+        }
+        
+        .info-description {
+          font-size: 12px;
+          color: #075985;
+          margin: 0;
+          line-height: 1.4;
+        }
+        
+        @media (max-width: 768px) {
+          .rent-type-options {
+            grid-template-columns: 1fr;
+          }
+        }
       `}</style>
     </>
   );

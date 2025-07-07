@@ -373,16 +373,25 @@ export default function EditRoom() {
                       <input
                         type="number"
                         name="monthly_rent"
-                        value={formData.monthly_rent || ''}
+                        value={typeof formData.monthly_rent === 'number' ? formData.monthly_rent : (formData.monthly_rent ? Number(formData.monthly_rent) : '')}
                         onChange={handleChange}
                         required
                         min="0"
                         step="0.01"
                         placeholder="Enter monthly rent amount"
                         className="form-input currency-input"
+                        disabled={property && property.rent_type === 'per_property'}
+                        title={property && property.rent_type === 'per_property' ? 'Monthly rent is set at the property level and cannot be edited for individual rooms.' : ''}
                       />
                     </div>
-                    <div className="field-hint">Enter the monthly rent amount in USD</div>
+                    {property && property.rent_type === 'per_property' && (
+                      <div className="field-hint" style={{ color: '#d97706' }}>
+                        Rent is set at the property level. To change rent, edit the property instead.
+                      </div>
+                    )}
+                    {(!property || property.rent_type !== 'per_property') && (
+                      <div className="field-hint">Enter the monthly rent amount in USD</div>
+                    )}
                   </div>
 
                   <div className="form-group">
@@ -392,7 +401,7 @@ export default function EditRoom() {
                       <input
                         type="number"
                         name="security_deposit"
-                        value={formData.security_deposit || ''}
+                        value={typeof formData.security_deposit === 'number' ? formData.security_deposit : (formData.security_deposit ? Number(formData.security_deposit) : '')}
                         onChange={handleChange}
                         required
                         min="0"
