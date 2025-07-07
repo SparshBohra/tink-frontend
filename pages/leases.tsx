@@ -155,6 +155,30 @@ function Leases() {
     }
   };
 
+  const handleActivateLease = async (lease: any) => {
+    try {
+      setError(null);
+      const currentUser = await apiClient.getProfile();
+      const payload = {
+        tenant: lease.tenant,
+        room: lease.room,
+        property_ref: lease.property_ref,
+        application: lease.application,
+        start_date: lease.start_date,
+        end_date: lease.end_date,
+        monthly_rent: lease.monthly_rent,
+        security_deposit: lease.security_deposit,
+        created_by: currentUser.id,
+        status: 'active',
+        is_active: true,
+      };
+      await apiClient.updateLease(lease.id, payload);
+      await fetchData();
+    } catch (e:any) {
+      setError(e.message || 'Failed to activate lease');
+    }
+  };
+
   const downloadLeasesReport = () => {
     const csvData = [
       ['Tenant', 'Email', 'Phone', 'Property', 'Room', 'Start Date', 'End Date', 'Monthly Rent', 'Security Deposit', 'Status', 'Days to Expiry'],
@@ -656,7 +680,7 @@ function Leases() {
                         </td>
                         <td className="table-center">
                           <div className="draft-actions">
-                            <button className="activate-btn">Activate</button>
+                            <button className="activate-btn" onClick={() => handleActivateLease(lease)}>Activate</button>
                             <button className="delete-btn">Delete</button>
                           </div>
                         </td>

@@ -440,7 +440,32 @@ class ApiClient {
 
   async createProperty(data: PropertyFormData): Promise<Property> {
     try {
-      const response = await this.api.post('/properties/', data);
+      // Determine landlord ID automatically
+      let landlordId: number | undefined = data.landlord;
+      try {
+        const currentUser = await this.getProfile();
+        if (!landlordId) {
+          if (currentUser.role === 'landlord') {
+            landlordId = currentUser.id;
+          } else if (currentUser.role === 'manager') {
+            // Pick first related landlord
+            const relationships = await this.getManagerLandlordRelationships();
+            if (relationships.length > 0) {
+              landlordId = relationships[0].landlord;
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('Could not determine landlord automatically:', e);
+      }
+
+      const payload = {
+        ...data,
+        landlord: landlordId,
+        monthly_rent: data.monthly_rent ? parseInt(String(data.monthly_rent), 10) : undefined,
+      };
+
+      const response = await this.api.post('/properties/', payload);
       const newProperty = response.data;
       
       // Auto-assign the property to the current manager
@@ -491,7 +516,12 @@ class ApiClient {
   }
 
   async updateProperty(id: number, data: Partial<PropertyFormData>): Promise<Property> {
-    const response = await this.api.put(`/properties/${id}/`, data);
+    const payload = {
+      ...data,
+      monthly_rent: data.monthly_rent ? parseInt(String(data.monthly_rent), 10) : undefined,
+    };
+    delete (payload as Partial<PropertyFormData>).landlord;
+    const response = await this.api.patch(`/properties/${id}/`, payload);
     return response.data;
   }
 
@@ -674,19 +704,9 @@ class ApiClient {
     return response.data;
   }
 
-  async createLease(data: LeaseFormData): Promise<Lease> {
-    try {
-      const response = await this.api.post('/leases/', data);
-      return response.data;
-    } catch (error: any) {
-      if (error.status === 403) {
-        throw new Error('You do not have permission to create leases. Please contact your administrator.');
-      }
-      if (error.status === 400) {
-        throw new Error('Invalid lease data. Please check all required fields.');
-      }
-      throw error;
-    }
+  async createLease(data: any): Promise<Lease> {
+    const response = await this.api.post('/leases/', data);
+    return response.data;
   }
 
   async updateLease(id: number, data: Partial<LeaseFormData>): Promise<Lease> {

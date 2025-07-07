@@ -2,14 +2,16 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Link from 'next/link';
-import { apiClient } from '../../lib/api';
-import DashboardLayout from '../../components/DashboardLayout';
-import { usStates } from '../../lib/states';
-import { Landlord } from '../../lib/types';
+import { apiClient } from '../../../lib/api';
+import DashboardLayout from '../../../components/DashboardLayout';
+import { usStates } from '../../../lib/states';
+import { PropertyFormData, Property } from '../../../lib/types';
 
-export default function AddProperty() {
+export default function EditProperty() {
   const router = useRouter();
-  const [formData, setFormData] = useState({
+  const { id } = router.query;
+  const [property, setProperty] = useState<Property | null>(null);
+  const [formData, setFormData] = useState<PropertyFormData>({
     name: '',
     address_line1: '',
     address_line2: '',
@@ -20,44 +22,37 @@ export default function AddProperty() {
     property_type: 'coliving',
     timezone: '',
     monthly_rent: 0,
-    landlord: undefined as number | undefined,
+    landlord: undefined,
   });
-  const [landlords, setLandlords] = useState<Landlord[]>([]);
-  const [landlordsLoading, setLandlordsLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [profileResolved, setProfileResolved] = useState(false);
 
-  // Auto-detect landlord or fetch list
   useEffect(() => {
-    const init = async () => {
-      try {
-        const profile = await apiClient.getProfile();
-        if (profile.role === 'landlord') {
-          setFormData(prev => ({ ...prev, landlord: profile.id }));
-          return;
-        }
-        if (profile.role === 'manager') {
-          const rel = await apiClient.getManagerLandlordRelationships();
-          if (rel.length === 1) {
-            setFormData(prev => ({ ...prev, landlord: rel[0].landlord }));
-            return;
-          }
-        }
-        // Otherwise fetch all landlords for selection
-        setLandlordsLoading(true);
-        const list = await apiClient.getAllLandlords();
-        setLandlords(list);
-      } catch (e) {
-        console.error('Failed to load landlords:', e);
-      } finally {
-        setLandlordsLoading(false);
-        setProfileResolved(true);
-      }
-    };
-    init();
-  }, []);
+    if (id) {
+      apiClient.getProperty(Number(id))
+        .then(data => {
+          setProperty(data);
+          setFormData({
+            name: data.name,
+            address_line1: data.address_line1,
+            address_line2: data.address_line2 || '',
+            city: data.city,
+            state: data.state,
+            postal_code: data.postal_code,
+            country: data.country,
+            property_type: data.property_type,
+            timezone: data.timezone,
+            monthly_rent: data.monthly_rent || 0,
+            landlord: data.landlord,
+          });
+        })
+        .catch(err => {
+          setError('Failed to fetch property details.');
+          console.error(err);
+        });
+    }
+  }, [id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,43 +60,22 @@ export default function AddProperty() {
     setError(null);
     setSuccess(null);
 
-    // Validate required fields
     if (!formData.name || !formData.address_line1 || !formData.city || !formData.state || !formData.postal_code || !formData.country || !formData.timezone) {
       setError('Please fill in all required fields.');
       setLoading(false);
       return;
     }
 
-    if (!formData.landlord) {
-      setError('Please select a landlord.');
-      setLoading(false);
-      return;
-    }
-
     try {
-      const newProperty = await apiClient.createProperty(formData);
-      setSuccess(`Property "${newProperty.name}" created successfully!`);
-
-      setFormData({
-        name: '',
-        address_line1: '',
-        address_line2: '',
-        city: '',
-        state: '',
-        postal_code: '',
-        country: 'United States',
-        property_type: 'coliving',
-        timezone: '',
-        monthly_rent: 0,
-        landlord: formData.landlord,
-      });
-
+      if (!id) return;
+      const updatedProperty = await apiClient.updateProperty(Number(id), formData);
+      setSuccess(`Property "${updatedProperty.name}" updated successfully!`);
       setTimeout(() => {
-        router.push(`/properties/${newProperty.id}/rooms`);
+        router.push(`/properties/${updatedProperty.id}/rooms`);
       }, 1500);
     } catch (err: any) {
-      console.error('Failed to create property:', err);
-      setError(err.message || 'Failed to create property. Please try again.');
+      console.error('Failed to update property:', err);
+      setError(err.message || 'Failed to update property. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -118,15 +92,15 @@ export default function AddProperty() {
   return (
     <>
       <Head>
-        <title>Register New Property - Tink</title>
+        <title>Edit Property - {property?.name || ''} - Tink</title>
       </Head>
       <DashboardLayout title="">
         <div className="dashboard-container">
           <div className="dashboard-header">
             <div className="header-content">
               <div className="header-left">
-                <h1 className="dashboard-title">Register New Property</h1>
-                <p className="welcome-message">Add a new property to your management portfolio.</p>
+                <h1 className="dashboard-title">Edit Property</h1>
+                <p className="welcome-message">Update details for {property?.name}.</p>
               </div>
               <div className="header-right">
                 <button onClick={() => router.back()} className="back-btn">
@@ -144,7 +118,7 @@ export default function AddProperty() {
             <div className="form-section">
               <div className="section-header">
                   <h2 className="section-title">Property Details</h2>
-                  <p className="section-subtitle">Enter the information for your new property.</p>
+                  <p className="section-subtitle">Update the information for your new property.</p>
               </div>
               <form onSubmit={handleSubmit}>
                 <div className="form-grid">
@@ -187,27 +161,6 @@ export default function AddProperty() {
                       <option value="America/Los_Angeles">Pacific Time</option>
                     </select>
                   </div>
-                  {!profileResolved ? null : formData.landlord === undefined && (
-                    <div className="form-group">
-                      <label className="form-label">Landlord*</label>
-                      {landlordsLoading ? (
-                        <div>Loading landlords…</div>
-                      ) : (
-                        <select
-                          name="landlord"
-                          value={formData.landlord || ''}
-                          onChange={handleChange}
-                          required
-                          className="form-input"
-                        >
-                          <option value="" disabled>Select landlord</option>
-                          {landlords.map(l => (
-                            <option key={l.id} value={l.id}>{l.full_name}</option>
-                          ))}
-                        </select>
-                      )}
-                    </div>
-                  )}
                   <div className="form-group">
                     <label className="form-label">Monthly Rent</label>
                     <input type="number" name="monthly_rent" value={formData.monthly_rent || ''} onChange={handleChange} placeholder="e.g., 3000" className="form-input"/>
@@ -215,53 +168,13 @@ export default function AddProperty() {
                 </div>
                 <div className="form-actions">
                   <button type="submit" className="btn btn-primary" disabled={loading}>
-                    {loading ? 'Saving...' : 'Save and Add Rooms'}
+                    {loading ? 'Saving...' : 'Save Changes'}
                   </button>
                   <button type="button" onClick={() => router.back()} className="btn btn-secondary">
                     Cancel
                   </button>
                 </div>
               </form>
-            </div>
-
-            <div className="quick-actions-section">
-              <div className="section-header">
-                <div>
-                  <h2 className="section-title">Quick Actions</h2>
-                  <p className="section-subtitle">Frequently used actions</p>
-                </div>
-              </div>
-
-              <div className="actions-grid">
-                <div className="action-card blue" onClick={() => router.push('/properties')}>
-                  <div className="action-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg></div>
-                  <div className="action-content">
-                    <h3 className="action-title">View All Properties</h3>
-                    <p className="action-subtitle">Back to property list</p>
-                  </div>
-                </div>
-                <div className="action-card green" onClick={() => router.push('/tenants')}>
-                  <div className="action-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
-                  <div className="action-content">
-                    <h3 className="action-title">Manage Tenants</h3>
-                    <p className="action-subtitle">View and add tenants</p>
-                  </div>
-                </div>
-                <div className="action-card purple" onClick={() => router.push('/applications')}>
-                  <div className="action-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
-                  <div className="action-content">
-                    <h3 className="action-title">Review Applications</h3>
-                    <p className="action-subtitle">Process new applications</p>
-                  </div>
-                </div>
-                <div className="action-card blue" onClick={() => router.push('/leases')}>
-                  <div className="action-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
-                  <div className="action-content">
-                    <h3 className="action-title">Manage Leases</h3>
-                    <p className="action-subtitle">View and manage leases</p>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -302,35 +215,6 @@ export default function AddProperty() {
         .btn-primary { background: #4f46e5; color: white; }
         .btn-primary:hover:not(:disabled) { background: #3730a3; }
         .btn-secondary { background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; }
-        .btn-secondary:hover { background: #e2e8f0; }
-        .actions-grid { display: flex; flex-direction: column; gap: 12px; }
-        .action-card { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 5px; border: 1px solid #e2e8f0; cursor: pointer; transition: all 0.2s ease; text-decoration: none; }
-        .action-card:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        .action-card.blue { background: #eff6ff; border-color: #dbeafe; }
-        .action-card.green { background: #f0fdf4; border-color: #dcfce7; }
-        .action-card.purple { background: #faf5ff; border-color: #e9d5ff; }
-        .action-icon { width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: white; }
-        .action-card.blue .action-icon { background: #3b82f6; }
-        .action-card.green .action-icon { background: #10b981; }
-        .action-card.purple .action-icon { background: #8b5cf6; }
-        .action-content { flex: 1; }
-        .action-title { font-size: 13px; font-weight: 600; color: #1e293b; margin: 0 0 2px 0; }
-        .action-subtitle { font-size: 11px; color: #64748b; margin: 0; }
-        :global(.dark-mode) .dashboard-container { background-color: #0a0a0a; }
-        :global(.dark-mode) .dashboard-title, :global(.dark-mode) .section-title, :global(.dark-mode) .action-title { color: #ffffff; }
-        :global(.dark-mode) .welcome-message, :global(.dark-mode) .section-subtitle, :global(.dark-mode) .action-subtitle { color: #94a3b8; }
-        :global(.dark-mode) .back-btn, :global(.dark-mode) .btn-secondary { background: #1a1a1a; border: 1px solid #333333; color: #e2e8f0; }
-        :global(.dark-mode) .back-btn:hover, :global(.dark-mode) .btn-secondary:hover { background: #222222; }
-        :global(.dark-mode) .alert-error { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.3); color: #ef4444; }
-        :global(.dark-mode) .alert-success { background: rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.3); color: #10b981; }
-        :global(.dark-mode) .form-section, :global(.dark-mode) .quick-actions-section { background: #1a1a1a; border-color: #333333; }
-        :global(.dark-mode) .form-label { color: #e2e8f0; }
-        :global(.dark-mode) .form-input { background: #111111; border-color: #333333; color: #ffffff; }
-        :global(.dark-mode) .form-input:focus { border-color: #4f46e5; }
-        :global(.dark-mode) .action-card { color: #e2e8f0; }
-        :global(.dark-mode) .action-card:hover { background: #222222; }
-        @media (max-width: 1024px) { .main-content-grid { grid-template-columns: 1fr; } }
-        @media (max-width: 768px) { .form-grid { grid-template-columns: 1fr; } .form-group.full-width { grid-column: span 1; } }
       `}</style>
     </>
   );
