@@ -184,7 +184,7 @@ const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
           <div className="header-content">
             <div className="header-left">
               <h2 className="modal-title">Application Details</h2>
-              <div className="applicant-info">
+              <div className="applicant-main-info">
                 <span className="applicant-name">{application.tenant_name}</span>
                 <span className="applicant-email">{application.tenant_email}</span>
               </div>
@@ -201,286 +201,379 @@ const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
           </button>
         </div>
 
-        <div className="modal-tabs">
-          <button
-            className={`tab-button ${activeTab === 'overview' ? 'active' : ''}`}
-            onClick={() => setActiveTab('overview')}
-          >
-            Overview
-          </button>
-          <button
-            className={`tab-button ${activeTab === 'timeline' ? 'active' : ''}`}
-            onClick={() => setActiveTab('timeline')}
-          >
-            Timeline
-          </button>
-          <button
-            className={`tab-button ${activeTab === 'analysis' ? 'active' : ''}`}
-            onClick={() => setActiveTab('analysis')}
-          >
-            Analysis
-          </button>
-          <button
-            className={`tab-button ${activeTab === 'documents' ? 'active' : ''}`}
-            onClick={() => setActiveTab('documents')}
-          >
-            Documents
-          </button>
-        </div>
+        <div className="modal-body">
+          <div className="modal-tabs">
+            <button
+              className={`tab-button ${activeTab === 'overview' ? 'active' : ''}`}
+              onClick={() => setActiveTab('overview')}
+            >
+              Overview
+            </button>
+            <button
+              className={`tab-button ${activeTab === 'timeline' ? 'active' : ''}`}
+              onClick={() => setActiveTab('timeline')}
+            >
+              Timeline
+            </button>
+            <button
+              className={`tab-button ${activeTab === 'analysis' ? 'active' : ''}`}
+              onClick={() => setActiveTab('analysis')}
+            >
+              Analysis
+            </button>
+            <button
+              className={`tab-button ${activeTab === 'documents' ? 'active' : ''}`}
+              onClick={() => setActiveTab('documents')}
+            >
+              Documents
+            </button>
+          </div>
 
-        <div className="modal-content">
-          {activeTab === 'overview' && (
-            <div className="overview-tab">
-              <div className="overview-grid">
-                <div className="overview-section">
-                  <h3 className="section-title">Application Information</h3>
-                  <div className="info-grid">
-                    <div className="info-item">
-                      <label>Property:</label>
-                      <span>{property?.name || 'Unknown Property'}</span>
-                    </div>
-                    <div className="info-item">
-                      <label>Applied Date:</label>
-                      <span>{formatDate(application.created_at)}</span>
-                    </div>
-                    <div className="info-item">
-                      <label>Desired Move-in:</label>
-                      <span>{formatDate(application.desired_move_in_date || null)}</span>
-                    </div>
-                    <div className="info-item">
-                      <label>Budget:</label>
-                      <span>${application.rent_budget || 'N/A'}</span>
-                    </div>
-                    <div className="info-item">
-                      <label>Days Pending:</label>
-                      <span>{application.days_pending || 0} days</span>
-                    </div>
-                    <div className="info-item">
-                      <label>Last Updated:</label>
-                      <span>{formatDate(application.updated_at || null)}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="overview-section">
-                  <h3 className="section-title">Priority & Urgency</h3>
-                  <div className="priority-section">
-                    <div className="priority-score">
-                      <div className="score-circle" style={{ borderColor: priorityLevel.color }}>
-                        <span className="score-value">{application.priority_score || 0}</span>
-                        <span className="score-label">Priority</span>
-                      </div>
-                      <div className="priority-info">
-                        <div className="priority-level" style={{ color: priorityLevel.color }}>
-                          {priorityLevel.level}
+          <div className="modal-content">
+            {activeTab === 'overview' && (
+              <div className="overview-tab">
+                <div className="overview-grid">
+                  <div className="main-column">
+                    <div className="info-panel">
+                      <h3 className="panel-title">Application Information</h3>
+                      <div className="info-grid">
+                        <div className="info-item">
+                          <label>Property:</label>
+                          <span>{property?.name || 'Unknown Property'}</span>
                         </div>
-                        <div className="urgency-indicator" style={{ color: urgencyIndicator.color }}>
-                          {urgencyIndicator.text}
+                        <div className="info-item">
+                          <label>Applied Date:</label>
+                          <span>{formatDate(application.created_at)}</span>
+                        </div>
+                        <div className="info-item">
+                          <label>Desired Move-in:</label>
+                          <span>{formatDate(application.desired_move_in_date || null)}</span>
+                        </div>
+                        <div className="info-item">
+                          <label>Budget:</label>
+                          <span>${application.rent_budget || 'N/A'}</span>
+                        </div>
+                        <div className="info-item">
+                          <label>Days Pending:</label>
+                          <span>{application.days_pending || 0} days</span>
+                        </div>
+                        <div className="info-item">
+                          <label>Last Updated:</label>
+                          <span>{formatDate(application.updated_at || null)}</span>
                         </div>
                       </div>
                     </div>
-                    <div className="priority-breakdown">
-                      <div className="breakdown-item">
-                        <span className="breakdown-label">Budget Compatible:</span>
-                        <span className={`breakdown-value ${application.is_budget_compatible ? 'positive' : 'negative'}`}>
-                          {application.is_budget_compatible ? 'Yes' : 'No'}
-                        </span>
+
+                    <div className="info-panel">
+                      <h3 className="panel-title">Priority & Urgency</h3>
+                      <div className="priority-section">
+                        <div className="score-circle">
+                          <div className="score-circle-inner">
+                            <span className="score-value">{application.priority_score || 0}</span>
+                            <span className="score-label">Priority</span>
+                          </div>
+                        </div>
+                        <div className="priority-info">
+                          <div className="priority-level" style={{ color: priorityLevel.color }}>
+                            {priorityLevel.level}
+                          </div>
+                          <div className="urgency-indicator" style={{ color: urgencyIndicator.color }}>
+                            {urgencyIndicator.text}
+                          </div>
+                        </div>
                       </div>
-                      <div className="breakdown-item">
-                        <span className="breakdown-label">Match Score:</span>
-                        <span className="breakdown-value">{application.match_score || 0}%</span>
+                      <div className="priority-breakdown">
+                        <div className="breakdown-item">
+                          <span className="breakdown-label">Budget Compatible:</span>
+                          <span className={`breakdown-value ${application.is_budget_compatible ? 'positive' : 'negative'}`}>
+                            {application.is_budget_compatible ? 'Yes' : 'No'}
+                          </span>
+                        </div>
+                        <div className="breakdown-item">
+                          <span className="breakdown-label">Match Score:</span>
+                          <span className="breakdown-value">{application.match_score || 0}%</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </div>
 
-                <div className="overview-section">
-                  <h3 className="section-title">Room Recommendations</h3>
-                  <div className="recommendations-list">
-                    {recommendedRooms.length > 0 ? (
-                      recommendedRooms.map((room, index) => {
-                        if (!room) return null;
-                        return (
-                          <div key={room.id} className="recommendation-item">
-                            <div className="room-info">
-                              <div className="room-name">{room.name}</div>
-                              <div className="room-details">
-                                <span className="room-type">{room.room_type || 'Standard'}</span>
-                                <span className="room-rent">${typeof room.monthly_rent === 'string' ? parseFloat(room.monthly_rent) : (room.monthly_rent || 0)}/month</span>
+                    <div className="info-panel">
+                      <h3 className="panel-title">Room Recommendations</h3>
+                      <div className="recommendations-list">
+                        {recommendedRooms.length > 0 ? (
+                          recommendedRooms.map((room, index) => {
+                            if (!room) return null;
+                            return (
+                              <div key={room.id} className="recommendation-item">
+                                <div className="room-info">
+                                  <div className="room-name">{room.name}</div>
+                                  <div className="room-details">
+                                    <span className="room-type">{room.room_type || 'Standard'}</span>
+                                    <span className="room-rent">${typeof room.monthly_rent === 'string' ? parseFloat(room.monthly_rent) : (room.monthly_rent || 0)}/month</span>
+                                  </div>
+                                </div>
+                                <div className="compatibility-badge">
+                                  {Math.round(85 + (index * 5))}% Match
+                                </div>
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <div className="no-recommendations">
+                            <p>No room recommendations available</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="info-panel">
+                      <h3 className="panel-title">Conflicts & Issues</h3>
+                      <div className="conflicts-section">
+                        {application.has_conflicts ? (
+                          <div className="conflict-alert">
+                            <div className="conflict-icon">⚠️</div>
+                            <div className="conflict-info">
+                              <div className="conflict-title">Application Conflicts Detected</div>
+                              <div className="conflict-description">
+                                This application conflicts with {application.conflicting_applications?.length || 0} other applications
                               </div>
                             </div>
-                            <div className="compatibility-badge">
-                              {Math.round(85 + (index * 5))}% Match
+                          </div>
+                        ) : (
+                          <div className="no-conflicts">
+                            <div className="success-icon">✅</div>
+                            <span>No conflicts detected</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="sidebar-column">
+                    <div className="info-panel">
+                      <h3 className="panel-title">Priority Score Breakdown</h3>
+                      <div className="score-breakdown">
+                        <div className="score-item">
+                          <span className="score-label">Days Pending (40%)</span>
+                          <div className="score-bar">
+                            <div className="score-fill" style={{ width: `${Math.min((application.days_pending || 0) * 10, 100)}%` }}></div>
+                          </div>
+                          <span className="score-value">{application.days_pending || 0} days</span>
+                        </div>
+                        <div className="score-item">
+                          <span className="score-label">Budget Compatibility (30%)</span>
+                          <div className="score-bar">
+                            <div className="score-fill" style={{ width: application.is_budget_compatible ? '100%' : '0%' }}></div>
+                          </div>
+                          <span className="score-value">{application.is_budget_compatible ? 'Compatible' : 'Not Compatible'}</span>
+                        </div>
+                        <div className="score-item">
+                          <span className="score-label">Room Match (20%)</span>
+                          <div className="score-bar">
+                            <div className="score-fill" style={{ width: `${application.match_score || 0}%` }}></div>
+                          </div>
+                          <span className="score-value">{application.match_score || 0}%</span>
+                        </div>
+                        <div className="score-item">
+                          <span className="score-label">Urgency Level (10%)</span>
+                          <div className="score-bar">
+                            <div className="score-fill" style={{ width: `${Math.min((application.days_pending || 0) * 5, 100)}%` }}></div>
+                          </div>
+                          <span className="score-value">{urgencyIndicator.text}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="info-panel">
+                      <h3 className="panel-title">Recommended Actions</h3>
+                      <div className="recommendations">
+                        {application.priority_score && application.priority_score >= 80 && (
+                          <div className="recommendation high-priority">
+                            <div className="recommendation-icon">🔥</div>
+                            <div className="recommendation-content">
+                              <div className="recommendation-title">High Priority - Immediate Action Required</div>
+                              <div className="recommendation-description">
+                                This application has a high priority score and should be processed immediately.
+                              </div>
                             </div>
                           </div>
-                        );
-                      })
-                    ) : (
-                      <div className="no-recommendations">
-                        <p>No room recommendations available</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="overview-section">
-                  <h3 className="section-title">Conflicts & Issues</h3>
-                  <div className="conflicts-section">
-                    {application.has_conflicts ? (
-                      <div className="conflict-alert">
-                        <div className="conflict-icon">⚠️</div>
-                        <div className="conflict-info">
-                          <div className="conflict-title">Application Conflicts Detected</div>
-                          <div className="conflict-description">
-                            This application conflicts with {application.conflicting_applications?.length || 0} other applications
+                        )}
+                        
+                        {application.has_conflicts && (
+                          <div className="recommendation conflict">
+                            <div className="recommendation-icon">⚠️</div>
+                            <div className="recommendation-content">
+                              <div className="recommendation-title">Resolve Conflicts</div>
+                              <div className="recommendation-description">
+                                This application conflicts with other applications. Review and resolve conflicts.
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="no-conflicts">
-                        <div className="success-icon">✅</div>
-                        <span>No conflicts detected</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+                        )}
 
-          {activeTab === 'timeline' && (
-            <div className="timeline-tab">
-              <h3 className="section-title">Application Timeline</h3>
-              <div className="timeline-container">
-                {timeline.map((event, index) => (
-                  <div key={event.id} className="timeline-item">
-                    <div className="timeline-connector">
-                      <div className="timeline-dot" style={{ backgroundColor: event.color }}>
-                        <span className="timeline-icon">{event.icon}</span>
-                      </div>
-                      {index < timeline.length - 1 && <div className="timeline-line"></div>}
-                    </div>
-                    <div className="timeline-content">
-                      <div className="timeline-header">
-                        <h4 className="timeline-title">{event.title}</h4>
-                        <span className="timeline-time">{formatDate(event.timestamp)}</span>
-                      </div>
-                      <p className="timeline-description">{event.description}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'analysis' && (
-            <div className="analysis-tab">
-              <h3 className="section-title">Application Analysis</h3>
-              <div className="analysis-grid">
-                <div className="analysis-section">
-                  <h4 className="analysis-subtitle">Priority Score Breakdown</h4>
-                  <div className="score-breakdown">
-                    <div className="score-item">
-                      <span className="score-label">Days Pending (40%)</span>
-                      <div className="score-bar">
-                        <div className="score-fill" style={{ width: `${Math.min((application.days_pending || 0) * 10, 100)}%` }}></div>
-                      </div>
-                      <span className="score-value">{application.days_pending || 0} days</span>
-                    </div>
-                    <div className="score-item">
-                      <span className="score-label">Budget Compatibility (30%)</span>
-                      <div className="score-bar">
-                        <div className="score-fill" style={{ width: application.is_budget_compatible ? '100%' : '0%' }}></div>
-                      </div>
-                      <span className="score-value">{application.is_budget_compatible ? 'Compatible' : 'Not Compatible'}</span>
-                    </div>
-                    <div className="score-item">
-                      <span className="score-label">Room Match (20%)</span>
-                      <div className="score-bar">
-                        <div className="score-fill" style={{ width: `${application.match_score || 0}%` }}></div>
-                      </div>
-                      <span className="score-value">{application.match_score || 0}%</span>
-                    </div>
-                    <div className="score-item">
-                      <span className="score-label">Urgency Level (10%)</span>
-                      <div className="score-bar">
-                        <div className="score-fill" style={{ width: `${Math.min((application.days_pending || 0) * 5, 100)}%` }}></div>
-                      </div>
-                      <span className="score-value">{urgencyIndicator.text}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="analysis-section">
-                  <h4 className="analysis-subtitle">Recommended Actions</h4>
-                  <div className="recommendations">
-                    {application.priority_score && application.priority_score >= 80 && (
-                      <div className="recommendation high-priority">
-                        <div className="recommendation-icon">🔥</div>
-                        <div className="recommendation-content">
-                          <div className="recommendation-title">High Priority - Immediate Action Required</div>
-                          <div className="recommendation-description">
-                            This application has a high priority score and should be processed immediately.
+                        {availableRooms.length === 0 && (
+                          <div className="recommendation no-rooms">
+                            <div className="recommendation-icon">🏠</div>
+                            <div className="recommendation-content">
+                              <div className="recommendation-title">No Available Rooms</div>
+                              <div className="recommendation-description">
+                                There are no available rooms in the selected property.
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {application.has_conflicts && (
-                      <div className="recommendation conflict">
-                        <div className="recommendation-icon">⚠️</div>
-                        <div className="recommendation-content">
-                          <div className="recommendation-title">Resolve Conflicts</div>
-                          <div className="recommendation-description">
-                            This application conflicts with other applications. Review and resolve conflicts.
-                          </div>
-                        </div>
-                      </div>
-                    )}
+                        )}
 
-                    {availableRooms.length === 0 && (
-                      <div className="recommendation no-rooms">
-                        <div className="recommendation-icon">🏠</div>
-                        <div className="recommendation-content">
-                          <div className="recommendation-title">No Available Rooms</div>
-                          <div className="recommendation-description">
-                            There are no available rooms in the selected property.
+                        {!application.has_conflicts && availableRooms.length > 0 && application.is_budget_compatible && (
+                          <div className="recommendation approve">
+                            <div className="recommendation-icon">✅</div>
+                            <div className="recommendation-content">
+                              <div className="recommendation-title">Ready for Approval</div>
+                              <div className="recommendation-description">
+                                This application meets all criteria and can be approved.
+                              </div>
+                            </div>
                           </div>
-                        </div>
+                        )}
                       </div>
-                    )}
-
-                    {!application.has_conflicts && availableRooms.length > 0 && application.is_budget_compatible && (
-                      <div className="recommendation approve">
-                        <div className="recommendation-icon">✅</div>
-                        <div className="recommendation-content">
-                          <div className="recommendation-title">Ready for Approval</div>
-                          <div className="recommendation-description">
-                            This application meets all criteria and can be approved.
-                          </div>
-                        </div>
-                      </div>
-                    )}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {activeTab === 'documents' && (
-            <div className="documents-tab">
-              <h3 className="section-title">Documents & Attachments</h3>
-              <div className="documents-section">
-                <div className="documents-placeholder">
-                  <div className="placeholder-icon">📄</div>
-                  <div className="placeholder-text">
-                    <h4>No Documents Available</h4>
-                    <p>Document management functionality will be available in a future update.</p>
+            {activeTab === 'timeline' && (
+              <div className="timeline-tab">
+                <h3 className="section-title">Application Timeline</h3>
+                <div className="timeline-container">
+                  {timeline.map((event, index) => (
+                    <div key={event.id} className="timeline-item">
+                      <div className="timeline-connector">
+                        <div className="timeline-dot" style={{ backgroundColor: event.color }}>
+                          <span className="timeline-icon">{event.icon}</span>
+                        </div>
+                        {index < timeline.length - 1 && <div className="timeline-line"></div>}
+                      </div>
+                      <div className="timeline-content">
+                        <div className="timeline-header">
+                          <h4 className="timeline-title">{event.title}</h4>
+                          <span className="timeline-time">{formatDate(event.timestamp)}</span>
+                        </div>
+                        <p className="timeline-description">{event.description}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'analysis' && (
+              <div className="analysis-tab">
+                <h3 className="section-title">Application Analysis</h3>
+                <div className="analysis-grid">
+                  <div className="analysis-section">
+                    <h4 className="analysis-subtitle">Priority Score Breakdown</h4>
+                    <div className="score-breakdown">
+                      <div className="score-item">
+                        <span className="score-label">Days Pending (40%)</span>
+                        <div className="score-bar">
+                          <div className="score-fill" style={{ width: `${Math.min((application.days_pending || 0) * 10, 100)}%` }}></div>
+                        </div>
+                        <span className="score-value">{application.days_pending || 0} days</span>
+                      </div>
+                      <div className="score-item">
+                        <span className="score-label">Budget Compatibility (30%)</span>
+                        <div className="score-bar">
+                          <div className="score-fill" style={{ width: application.is_budget_compatible ? '100%' : '0%' }}></div>
+                        </div>
+                        <span className="score-value">{application.is_budget_compatible ? 'Compatible' : 'Not Compatible'}</span>
+                      </div>
+                      <div className="score-item">
+                        <span className="score-label">Room Match (20%)</span>
+                        <div className="score-bar">
+                          <div className="score-fill" style={{ width: `${application.match_score || 0}%` }}></div>
+                        </div>
+                        <span className="score-value">{application.match_score || 0}%</span>
+                      </div>
+                      <div className="score-item">
+                        <span className="score-label">Urgency Level (10%)</span>
+                        <div className="score-bar">
+                          <div className="score-fill" style={{ width: `${Math.min((application.days_pending || 0) * 5, 100)}%` }}></div>
+                        </div>
+                        <span className="score-value">{urgencyIndicator.text}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="analysis-section">
+                    <h4 className="analysis-subtitle">Recommended Actions</h4>
+                    <div className="recommendations">
+                      {application.priority_score && application.priority_score >= 80 && (
+                        <div className="recommendation high-priority">
+                          <div className="recommendation-icon">🔥</div>
+                          <div className="recommendation-content">
+                            <div className="recommendation-title">High Priority - Immediate Action Required</div>
+                            <div className="recommendation-description">
+                              This application has a high priority score and should be processed immediately.
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {application.has_conflicts && (
+                        <div className="recommendation conflict">
+                          <div className="recommendation-icon">⚠️</div>
+                          <div className="recommendation-content">
+                            <div className="recommendation-title">Resolve Conflicts</div>
+                            <div className="recommendation-description">
+                              This application conflicts with other applications. Review and resolve conflicts.
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {availableRooms.length === 0 && (
+                        <div className="recommendation no-rooms">
+                          <div className="recommendation-icon">🏠</div>
+                          <div className="recommendation-content">
+                            <div className="recommendation-title">No Available Rooms</div>
+                            <div className="recommendation-description">
+                              There are no available rooms in the selected property.
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {!application.has_conflicts && availableRooms.length > 0 && application.is_budget_compatible && (
+                        <div className="recommendation approve">
+                          <div className="recommendation-icon">✅</div>
+                          <div className="recommendation-content">
+                            <div className="recommendation-title">Ready for Approval</div>
+                            <div className="recommendation-description">
+                              This application meets all criteria and can be approved.
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
+
+            {activeTab === 'documents' && (
+              <div className="documents-tab">
+                <h3 className="section-title">Documents & Attachments</h3>
+                <div className="documents-section">
+                  <div className="documents-placeholder">
+                    <div className="placeholder-icon">📄</div>
+                    <div className="placeholder-text">
+                      <h4>No Documents Available</h4>
+                      <p>Document management functionality will be available in a future update.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="modal-actions">
@@ -529,44 +622,39 @@ const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
       <style jsx>{`
         .modal-overlay {
           position: fixed;
-          top: 72px;
+          top: 0;
           left: 0;
           right: 0;
           bottom: 0;
-          background: rgba(0, 0, 0, 0.5);
+          background: rgba(31, 41, 55, 0.5);
           display: flex;
           align-items: center;
           justify-content: center;
           z-index: 1000;
+          backdrop-filter: blur(4px);
         }
 
         .application-detail-modal {
-          background: white;
-          border-radius: 8px;
-          width: 92%;
-          max-width: 900px;
-          max-height: calc(100vh - 120px);
-          overflow-y: auto;
-          box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
-          position: relative;
-          border: 1px solid #e5e7eb;
+          background: #f7f8fa;
+          border-radius: 12px;
+          width: 95%;
+          max-width: 950px;
+          height: 90vh;
+          max-height: 800px;
+          display: flex;
+          flex-direction: column;
+          box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
         }
 
         .modal-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          padding: 20px 24px;
+          padding: 20px 28px;
           border-bottom: 1px solid #e5e7eb;
-          position: relative;
-          background: #f9fafb;
-        }
-
-        .header-content {
+          background: white;
+          border-radius: 12px 12px 0 0;
           display: flex;
           justify-content: space-between;
-          align-items: flex-start;
-          width: 100%;
+          align-items: center;
+          flex-shrink: 0;
         }
 
         .header-left {
@@ -574,198 +662,230 @@ const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
         }
 
         .modal-title {
-          font-size: 20px;
+          font-size: 18px;
           font-weight: 600;
-          color: #1f2937;
-          margin: 0 0 6px 0;
+          color: #4b5563;
+          margin: 0 0 12px 0;
         }
-
-        .applicant-info {
+        
+        .applicant-main-info {
           display: flex;
-          flex-direction: column;
-          gap: 3px;
+          align-items: center;
+          gap: 16px;
         }
 
         .applicant-name {
-          font-size: 16px;
-          font-weight: 500;
-          color: #374151;
+          font-size: 24px;
+          font-weight: 700;
+          color: #1f2937;
         }
 
         .applicant-email {
-          font-size: 13px;
+          font-size: 14px;
           color: #6b7280;
+          background: #f3f4f6;
+          padding: 4px 8px;
+          border-radius: 6px;
         }
-
+        
         .header-right {
           display: flex;
           align-items: center;
-          gap: 12px;
+          gap: 20px;
         }
 
         .close-btn {
-          position: absolute;
-          top: 20px;
-          right: 20px;
           background: none;
           border: none;
           cursor: pointer;
-          color: #6b7280;
+          color: #9ca3af;
           padding: 8px;
-          border-radius: 6px;
-          transition: all 0.2s;
+          border-radius: 50%;
+          transition: all 0.2s ease;
         }
 
         .close-btn:hover {
           background: #f3f4f6;
-          color: #374151;
+          color: #1f2937;
+        }
+
+        .modal-body {
+          flex-grow: 1;
+          overflow-y: auto;
+          display: flex;
         }
 
         .modal-tabs {
           display: flex;
-          border-bottom: 1px solid #e5e7eb;
-          background: #f9fafb;
+          flex-direction: column;
+          border-right: 1px solid #e5e7eb;
+          background: white;
+          padding: 20px 0;
+          flex-shrink: 0;
         }
 
         .tab-button {
-          padding: 16px 24px;
+          padding: 12px 24px;
           background: none;
           border: none;
           cursor: pointer;
           font-size: 14px;
-          font-weight: 500;
-          color: #6b7280;
-          border-bottom: 2px solid transparent;
-          transition: all 0.2s;
+          font-weight: 600;
+          color: #4b5563;
+          border-left: 3px solid transparent;
+          text-align: left;
+          transition: all 0.2s ease;
+          display: flex;
+          align-items: center;
+          gap: 8px;
         }
 
         .tab-button:hover {
-          color: #374151;
-          background: #f3f4f6;
+          color: #1f2937;
+          background: #f8fafc;
         }
 
         .tab-button.active {
-          color: #3b82f6;
-          border-bottom-color: #3b82f6;
-          background: white;
+          color: #2563eb;
+          background: #f0f5ff;
+          border-left-color: #2563eb;
         }
 
         .modal-content {
-          padding: 20px;
-          min-height: 350px;
+          padding: 28px;
+          flex-grow: 1;
+          overflow-y: auto;
         }
 
-        .overview-grid {
+        .content-title {
+          font-size: 20px;
+          font-weight: 700;
+          color: #1f2937;
+          margin-bottom: 24px;
+        }
+        
+        .overview-grid, .analysis-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-          gap: 20px;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 24px;
+        }
+        
+        .main-column {
+          grid-column: span 2;
+          display: flex;
+          flex-direction: column;
+          gap: 24px;
+        }
+        
+        .sidebar-column {
+          grid-column: span 1;
+          display: flex;
+          flex-direction: column;
+          gap: 24px;
         }
 
-        .overview-section {
-          background: #f9fafb;
-          border-radius: 6px;
-          padding: 18px;
+        .info-panel {
+          background: white;
+          border-radius: 8px;
+          padding: 24px;
           border: 1px solid #e5e7eb;
         }
-
-        .section-title {
-          font-size: 15px;
+        
+        .panel-title {
+          font-size: 16px;
           font-weight: 600;
           color: #1f2937;
-          margin: 0 0 14px 0;
-          padding-bottom: 6px;
-          border-bottom: 1px solid #e5e7eb;
+          margin: 0 0 20px 0;
         }
-
+        
         .info-grid {
           display: grid;
-          gap: 12px;
+          grid-template-columns: 1fr 1fr;
+          gap: 16px 24px;
         }
 
         .info-item {
           display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 8px 0;
-          border-bottom: 1px solid #e5e7eb;
-        }
-
-        .info-item:last-child {
-          border-bottom: none;
+          flex-direction: column;
         }
 
         .info-item label {
           font-weight: 500;
-          color: #374151;
+          color: #6b7280;
+          font-size: 13px;
+          margin-bottom: 4px;
         }
 
         .info-item span {
-          color: #6b7280;
+          color: #1f2937;
+          font-size: 14px;
+          font-weight: 600;
         }
-
+        
         .priority-section {
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
+          text-align: center;
         }
-
-        .priority-score {
-          display: flex;
-          align-items: center;
-          gap: 16px;
-        }
-
+        
         .score-circle {
-          width: 80px;
-          height: 80px;
+          width: 140px;
+          height: 140px;
           border-radius: 50%;
-          border: 4px solid;
+          margin: 0 auto 20px auto;
+          position: relative;
+        }
+        
+        .score-circle-inner {
+          position: absolute;
+          inset: 12px;
+          background: white;
+          border-radius: 50%;
           display: flex;
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          background: white;
         }
 
         .score-value {
-          font-size: 24px;
-          font-weight: 600;
+          font-size: 32px;
+          font-weight: 700;
           color: #1f2937;
+          line-height: 1;
         }
 
         .score-label {
-          font-size: 12px;
+          font-size: 13px;
           color: #6b7280;
           font-weight: 500;
         }
-
+        
         .priority-info {
           display: flex;
-          flex-direction: column;
-          gap: 4px;
+          justify-content: center;
+          align-items: center;
+          gap: 12px;
         }
-
+        
         .priority-level {
           font-size: 18px;
           font-weight: 600;
         }
-
+        
         .urgency-indicator {
-          font-size: 14px;
-          font-weight: 500;
+          font-size: 13px;
+          font-weight: 600;
         }
 
         .priority-breakdown {
+          margin-top: 24px;
           display: flex;
           flex-direction: column;
-          gap: 8px;
+          gap: 12px;
         }
-
+        
         .breakdown-item {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          padding: 6px 0;
         }
 
         .breakdown-label {
@@ -775,214 +895,78 @@ const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
 
         .breakdown-value {
           font-size: 14px;
-          font-weight: 500;
+          font-weight: 600;
         }
+        
+        .positive { color: #16a34a; }
+        .negative { color: #ef4444; }
 
-        .breakdown-value.positive {
-          color: #10b981;
-        }
-
-        .breakdown-value.negative {
-          color: #ef4444;
-        }
-
-        .recommendations-list {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-        }
-
-        .recommendation-item {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 12px;
-          background: white;
-          border-radius: 6px;
-          border: 1px solid #e5e7eb;
-        }
-
-        .room-info {
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-        }
-
-        .room-name {
-          font-size: 16px;
-          font-weight: 500;
-          color: #1f2937;
-        }
-
-        .room-details {
-          display: flex;
-          gap: 12px;
-        }
-
-        .room-type, .room-rent {
-          font-size: 14px;
-          color: #6b7280;
-        }
-
-        .compatibility-badge {
-          padding: 4px 8px;
-          background: #eff6ff;
-          color: #3b82f6;
-          border-radius: 12px;
-          font-size: 12px;
-          font-weight: 500;
-        }
-
-        .no-recommendations {
+        .no-recommendations, .no-conflicts {
           text-align: center;
-          padding: 20px;
+          padding: 32px 20px;
           color: #6b7280;
-        }
-
-        .conflicts-section {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-        }
-
-        .conflict-alert {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          padding: 12px;
-          background: #fef3c7;
-          border: 1px solid #f59e0b;
-          border-radius: 6px;
-        }
-
-        .conflict-icon {
-          font-size: 24px;
-        }
-
-        .conflict-info {
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-        }
-
-        .conflict-title {
-          font-size: 16px;
-          font-weight: 500;
-          color: #78350f;
-        }
-
-        .conflict-description {
           font-size: 14px;
-          color: #92400e;
-        }
-
-        .no-conflicts {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          color: #10b981;
-          font-weight: 500;
-        }
-
-        .success-icon {
-          font-size: 20px;
-        }
-
-        .timeline-container {
           display: flex;
           flex-direction: column;
-          gap: 16px;
+          align-items: center;
+          justify-content: center;
+          gap: 12px;
+        }
+        
+        .no-conflicts {
+          color: #16a34a;
         }
 
+        /* Timeline */
         .timeline-item {
           display: flex;
-          gap: 16px;
+          gap: 20px;
         }
-
+        
         .timeline-connector {
           display: flex;
           flex-direction: column;
           align-items: center;
-          flex-shrink: 0;
         }
 
         .timeline-dot {
-          width: 40px;
-          height: 40px;
+          width: 32px;
+          height: 32px;
           border-radius: 50%;
           display: flex;
           align-items: center;
           justify-content: center;
           color: white;
-          font-weight: 600;
-          font-size: 18px;
+          flex-shrink: 0;
         }
 
         .timeline-line {
           width: 2px;
-          height: 32px;
+          flex-grow: 1;
           background: #e5e7eb;
-          margin-top: 8px;
         }
 
         .timeline-content {
-          flex: 1;
-          padding-bottom: 16px;
+          padding-bottom: 28px;
         }
 
-        .timeline-header {
+        /* Analysis Tab */
+        .analysis-section {
+          background: white;
+          border-radius: 8px;
+          padding: 24px;
+          border: 1px solid #e5e7eb;
+        }
+        
+        .score-item {
+          margin-bottom: 20px;
+        }
+        
+        .score-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
           margin-bottom: 8px;
-        }
-
-        .timeline-title {
-          font-size: 16px;
-          font-weight: 600;
-          color: #1f2937;
-          margin: 0;
-        }
-
-        .timeline-time {
-          font-size: 14px;
-          color: #6b7280;
-        }
-
-        .timeline-description {
-          font-size: 14px;
-          color: #6b7280;
-          margin: 0;
-        }
-
-        .analysis-grid {
-          display: grid;
-          gap: 24px;
-        }
-
-        .analysis-section {
-          background: #f9fafb;
-          border-radius: 8px;
-          padding: 20px;
-        }
-
-        .analysis-subtitle {
-          font-size: 16px;
-          font-weight: 600;
-          color: #1f2937;
-          margin: 0 0 16px 0;
-        }
-
-        .score-breakdown {
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-        }
-
-        .score-item {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
         }
 
         .score-bar {
@@ -994,226 +978,57 @@ const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
 
         .score-fill {
           height: 100%;
-          background: #3b82f6;
-          transition: width 0.3s ease;
-        }
-
-        .recommendations {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-        }
-
-        .recommendation {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          padding: 12px;
-          border-radius: 6px;
-          border: 1px solid;
-        }
-
-        .recommendation.high-priority {
-          background: #fef2f2;
-          border-color: #fecaca;
-        }
-
-        .recommendation.conflict {
-          background: #fef3c7;
-          border-color: #fde68a;
-        }
-
-        .recommendation.approve {
-          background: #f0fdf4;
-          border-color: #bbf7d0;
-        }
-
-        .recommendation.no-rooms {
-          background: #f3f4f6;
-          border-color: #d1d5db;
-        }
-
-        .recommendation-icon {
-          font-size: 20px;
-          flex-shrink: 0;
-        }
-
-        .recommendation-content {
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-        }
-
-        .recommendation-title {
-          font-size: 14px;
-          font-weight: 600;
-          color: #1f2937;
-        }
-
-        .recommendation-description {
-          font-size: 14px;
-          color: #6b7280;
-        }
-
-        .documents-section {
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          min-height: 300px;
-        }
-
-        .documents-placeholder {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 16px;
-          color: #6b7280;
-        }
-
-        .placeholder-icon {
-          font-size: 48px;
-        }
-
-        .placeholder-text {
-          text-align: center;
-        }
-
-        .placeholder-text h4 {
-          font-size: 18px;
-          font-weight: 600;
-          color: #374151;
-          margin: 0 0 8px 0;
-        }
-
-        .placeholder-text p {
-          font-size: 14px;
-          margin: 0;
+          border-radius: 4px;
         }
 
         .modal-actions {
           display: flex;
           justify-content: flex-end;
-          gap: 10px;
-          padding: 16px 20px;
+          gap: 12px;
+          padding: 16px 28px;
           border-top: 1px solid #e5e7eb;
-          background: #f9fafb;
+          background: white;
+          border-radius: 0 0 12px 12px;
+          flex-shrink: 0;
         }
 
         .action-btn {
           display: flex;
           align-items: center;
-          gap: 6px;
-          padding: 8px 14px;
-          border: none;
-          border-radius: 5px;
+          gap: 8px;
+          padding: 10px 16px;
+          border: 1px solid transparent;
+          border-radius: 6px;
           cursor: pointer;
-          font-size: 13px;
-          font-weight: 500;
-          transition: all 0.2s;
+          font-size: 14px;
+          font-weight: 600;
+          transition: all 0.2s ease;
         }
-
+        
         .action-btn.approve {
           background: #10b981;
           color: white;
         }
-
-        .action-btn.approve:hover {
-          background: #059669;
-        }
+        .action-btn.approve:hover { background: #059669; }
 
         .action-btn.assign {
-          background: #3b82f6;
+          background: #2563eb;
           color: white;
         }
-
-        .action-btn.assign:hover {
-          background: #2563eb;
-        }
+        .action-btn.assign:hover { background: #1d4ed8; }
 
         .action-btn.reject {
           background: #ef4444;
           color: white;
         }
-
-        .action-btn.reject:hover {
-          background: #dc2626;
-        }
-
+        .action-btn.reject:hover { background: #dc2626; }
+        
         .action-btn.cancel {
-          background: #6b7280;
-          color: white;
+          background: white;
+          color: #4b5563;
+          border-color: #d1d5db;
         }
-
-        .action-btn.cancel:hover {
-          background: #4b5563;
-        }
-
-        .action-btn:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-        }
-
-        .action-btn:disabled:hover {
-          background: initial;
-        }
-
-        @media (max-width: 768px) {
-          .modal-overlay {
-            top: 60px;
-            padding: 10px;
-            align-items: flex-start;
-          }
-
-          .application-detail-modal {
-            width: 100%;
-            max-width: 100%;
-            max-height: calc(100vh - 80px);
-            border-radius: 6px;
-            margin-top: 10px;
-          }
-
-          .modal-header {
-            padding: 16px;
-          }
-
-          .modal-title {
-            font-size: 18px;
-          }
-
-          .modal-content {
-            padding: 16px;
-          }
-
-          .overview-grid {
-            grid-template-columns: 1fr;
-            gap: 16px;
-          }
-
-          .overview-section {
-            padding: 16px;
-          }
-
-          .modal-tabs {
-            overflow-x: auto;
-          }
-
-          .tab-button {
-            white-space: nowrap;
-            padding: 12px 16px;
-            font-size: 13px;
-          }
-
-          .modal-actions {
-            padding: 12px 16px;
-            flex-wrap: wrap;
-          }
-
-          .action-btn {
-            flex: 1;
-            min-width: 100px;
-            justify-content: center;
-          }
-        }
+        .action-btn.cancel:hover { background: #f9fafb; }
       `}</style>
     </div>
   );
