@@ -440,33 +440,63 @@ class ApiClient {
 
   async createProperty(data: PropertyFormData): Promise<Property> {
     try {
-      // Determine landlord ID automatically
-      let landlordId: number | undefined = data.landlord;
-      try {
-        const currentUser = await this.getProfile();
-        if (!landlordId) {
-          if (currentUser.role === 'landlord') {
-            landlordId = currentUser.id;
-          } else if (currentUser.role === 'manager') {
-            // Pick first related landlord
-            const relationships = await this.getManagerLandlordRelationships();
-            if (relationships.length > 0) {
-              landlordId = relationships[0].landlord;
-            }
-          }
-        }
-      } catch (e) {
-        console.warn('Could not determine landlord automatically:', e);
+      // The landlord should already be determined by the form
+      // If not provided, this is an error that should be caught
+      if (!data.landlord) {
+        throw new Error('Landlord information is required but was not provided.');
       }
 
+      // Extract room-related fields for later use
+      const { total_rooms, room_names, room_types, room_rents, room_capacities, ...propertyData } = data;
+
       const payload = {
-        ...data,
-        landlord: landlordId,
+        ...propertyData,
+        landlord: data.landlord,
         monthly_rent: data.monthly_rent ? parseInt(String(data.monthly_rent), 10) : undefined,
       };
 
+      console.log('Creating property with payload:', payload); // Debug log
+
       const response = await this.api.post('/properties/', payload);
       const newProperty = response.data;
+      
+      console.log('Property created successfully:', newProperty); // Debug log
+      
+      // Auto-create rooms if rent_type is 'per_room'
+      if (data.rent_type === 'per_room' && total_rooms > 0) {
+        console.log(`Auto-creating ${total_rooms} rooms for property ${newProperty.id}`);
+        try {
+          const roomPromises = Array.from({ length: total_rooms }, (_, index) => {
+            const roomName = room_names && room_names[index] 
+              ? room_names[index] 
+              : `Room ${index + 1}`;
+            
+            const roomData: RoomFormData = {
+              property_ref: newProperty.id,
+              name: roomName,
+              room_type: room_types && room_types[index] ? room_types[index] : 'Standard',
+              floor: '', // Empty string for floor
+              max_capacity: room_capacities && room_capacities[index] ? room_capacities[index] : 2, // Default capacity
+              monthly_rent: room_rents && room_rents[index] ? parseFloat(room_rents[index]) || 0 : 0, // Convert string to number
+              security_deposit: 0, // Will be set later by the user
+            };
+            
+            console.log(`Creating room ${index + 1}:`, roomData);
+            return this.createRoom(roomData);
+          });
+
+          const createdRooms = await Promise.all(roomPromises);
+          console.log(`Successfully auto-created ${createdRooms.length} rooms for property ${newProperty.id}:`, createdRooms);
+        } catch (roomError) {
+          console.error('Failed to auto-create rooms:', roomError);
+          // Log the specific error details
+          if (roomError instanceof Error) {
+            console.error('Room creation error details:', roomError.message);
+          }
+          // Don't fail the property creation if room creation fails
+          // The user can manually add rooms later
+        }
+      }
       
       // Auto-assign the property to the current manager
       try {
@@ -613,16 +643,25 @@ class ApiClient {
 
   async createApplication(data: ApplicationFormData): Promise<Application> {
     try {
+      console.log('Creating application with data:', data);
       const response = await this.api.post('/applications/', data);
+      console.log('Application created successfully:', response.data);
       return response.data;
     } catch (error: any) {
-      if (error.status === 403) {
+      console.error('Application creation failed:', error);
+      console.error('Error response:', error.response?.data);
+      
+      if (error.response?.status === 403) {
         throw new Error('You do not have permission to create applications. Please contact your administrator.');
       }
-      if (error.status === 400) {
-        throw new Error('Invalid application data. Please check all required fields.');
+      if (error.response?.status === 400) {
+        const details = error.response?.data?.detail || error.response?.data?.message || JSON.stringify(error.response?.data);
+        throw new Error(`Invalid application data: ${details}`);
       }
-      throw error;
+      if (error.response?.status === 500) {
+        throw new Error('Server error occurred while creating application. Please try again or contact support.');
+      }
+      throw new Error(error.message || 'Failed to create application');
     }
   }
 
@@ -643,8 +682,27 @@ class ApiClient {
     security_deposit?: number;
     decision_notes?: string;
   }): Promise<Application> {
+    try {
+      console.log(`Deciding on application ${id} with data:`, decisionData);
     const response = await this.api.post(`/applications/${id}/decide/`, decisionData);
+      console.log('Application decision successful:', response.data);
     return response.data;
+    } catch (error: any) {
+      console.error(`Application decision failed for ID ${id}:`, error);
+      console.error('Error response:', error.response?.data);
+      
+      if (error.response?.status === 400) {
+        const details = error.response?.data?.detail || error.response?.data?.message || JSON.stringify(error.response?.data);
+        throw new Error(`Decision validation failed: ${details}`);
+      }
+      if (error.response?.status === 404) {
+        throw new Error(`Application with ID ${id} not found`);
+      }
+      if (error.response?.status === 500) {
+        throw new Error('Server error occurred while processing application decision. Please try again or contact support.');
+      }
+      throw new Error(error.message || `Failed to decide on application ${id}`);
+    }
   }
 
   async getPendingApplications(): Promise<Application[]> {
@@ -705,8 +763,27 @@ class ApiClient {
   }
 
   async createLease(data: any): Promise<Lease> {
+    try {
+      console.log('Creating lease with data:', data);
     const response = await this.api.post('/leases/', data);
+      console.log('Lease created successfully:', response.data);
     return response.data;
+    } catch (error: any) {
+      console.error('Lease creation failed:', error);
+      console.error('Error response:', error.response?.data);
+      
+      if (error.response?.status === 400) {
+        const details = error.response?.data?.detail || error.response?.data?.message || JSON.stringify(error.response?.data);
+        throw new Error(`Invalid lease data: ${details}`);
+      }
+      if (error.response?.status === 403) {
+        throw new Error('You do not have permission to create leases. Please contact your administrator.');
+      }
+      if (error.response?.status === 500) {
+        throw new Error('Server error occurred while creating lease. Please try again or contact support.');
+      }
+      throw new Error(error.message || 'Failed to create lease');
+    }
   }
 
   async updateLease(id: number, data: Partial<LeaseFormData>): Promise<Lease> {
@@ -1116,6 +1193,112 @@ class ApiClient {
   async updateLandlordProfile(data: any): Promise<any> {
     const response = await this.api.put('/landlords/profile/', data);
     return response.data;
+  }
+
+  // Enhanced Property Management API Endpoints
+  async getPropertyAnalysisData(propertyId: number): Promise<any> {
+    const response = await this.api.get(`/properties/${propertyId}/analysis/`);
+    return response.data;
+  }
+
+  async getPropertyRevenueBreakdown(propertyId: number): Promise<any> {
+    const response = await this.api.get(`/properties/${propertyId}/revenue-breakdown/`);
+    return response.data;
+  }
+
+  async getPropertyOccupancyData(propertyId: number): Promise<any> {
+    const response = await this.api.get(`/properties/${propertyId}/occupancy-data/`);
+    return response.data;
+  }
+
+  async validatePropertyOperation(propertyId: number, operation: string, data: any): Promise<any> {
+    const response = await this.api.post(`/properties/${propertyId}/validate-operation/`, {
+      operation,
+      ...data
+    });
+    return response.data;
+  }
+
+  async executeRentTypeConversion(propertyId: number, conversionData: any): Promise<any> {
+    const response = await this.api.post(`/properties/${propertyId}/convert-rent-type/`, conversionData);
+    return response.data;
+  }
+
+  async updatePropertyRoomCount(propertyId: number, roomCountData: any): Promise<any> {
+    const response = await this.api.post(`/properties/${propertyId}/update-room-count/`, roomCountData);
+    return response.data;
+  }
+
+  async refreshPropertyData(propertyId: number): Promise<any> {
+    const response = await this.api.post(`/properties/${propertyId}/refresh-data/`);
+    return response.data;
+  }
+
+  // Smart Property/Room Management API Endpoints
+  async validatePropertyDeletion(propertyId: number): Promise<any> {
+    try {
+      const response = await this.api.get(`/properties/${propertyId}/validate-deletion/`);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Property deletion validation failed for ID ${propertyId}:`, error);
+      throw new Error(error.message || 'Failed to validate property deletion');
+    }
+  }
+
+  async cleanupPropertyData(propertyId: number): Promise<any> {
+    try {
+      const response = await this.api.post(`/properties/${propertyId}/cleanup/`);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Property cleanup failed for ID ${propertyId}:`, error);
+      throw new Error(error.message || 'Failed to cleanup property data');
+    }
+  }
+
+  async forceDeleteProperty(propertyId: number): Promise<void> {
+    try {
+      console.log(`Force deleting property ${propertyId}`);
+      await this.api.delete(`/properties/${propertyId}/force/`);
+      console.log('Property force deleted successfully');
+    } catch (error: any) {
+      console.error(`Force property deletion failed for ID ${propertyId}:`, error);
+      throw new Error(error.message || 'Failed to force delete property');
+    }
+  }
+
+  async validateRoomDeletion(roomId: number): Promise<any> {
+    try {
+      const response = await this.api.get(`/rooms/${roomId}/validate-deletion/`);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Room deletion validation failed for ID ${roomId}:`, error);
+      throw new Error(error.message || 'Failed to validate room deletion');
+    }
+  }
+
+  async terminateLease(leaseId: number, terminationData: {
+    termination_date: string;
+    reason: string;
+    early_termination_fee?: number;
+    notes?: string;
+  }): Promise<any> {
+    try {
+      const response = await this.api.post(`/leases/${leaseId}/terminate/`, terminationData);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Lease termination failed for ID ${leaseId}:`, error);
+      throw new Error(error.message || 'Failed to terminate lease');
+    }
+  }
+
+  async getPropertyInconsistencies(propertyId: number): Promise<any> {
+    try {
+      const response = await this.api.get(`/properties/${propertyId}/inconsistencies/`);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Property inconsistency check failed for ID ${propertyId}:`, error);
+      throw new Error(error.message || 'Failed to check property inconsistencies');
+    }
   }
 }
 

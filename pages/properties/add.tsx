@@ -548,7 +548,9 @@ export default function AddProperty() {
         /* Dark mode for new elements */
         :global(.dark-mode) .rent-type-option {
           background: #111111;
+
           border-color: #333333;
+
         }
         
         :global(.dark-mode) .rent-type-option:hover {

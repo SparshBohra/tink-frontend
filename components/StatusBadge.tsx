@@ -24,6 +24,8 @@ export default function StatusBadge({
       case 'approved':
       case 'completed':
       case 'paid':
+      case 'lease_created':
+      case 'moved_in':
         return 'status-success';
       
       case 'warning':
@@ -38,6 +40,7 @@ export default function StatusBadge({
       case 'failed':
       case 'overdue':
       case 'cancelled':
+      case 'withdrawn':
         return 'status-error';
       
       case 'info':

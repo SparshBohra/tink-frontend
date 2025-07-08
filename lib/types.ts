@@ -96,7 +96,7 @@ export interface Application {
   tenant: number;
   room: number;
   property_ref: number;
-  status: string;
+  status: 'pending' | 'processing' | 'approved' | 'rejected' | 'withdrawn' | 'lease_created' | 'moved_in' | 'active';
   application_date: string;
   move_in_date?: string;
   desired_move_in_date?: string;
@@ -109,7 +109,29 @@ export interface Application {
   decision_notes?: string;
   created_at: string;
   updated_at: string;
+  // Enhanced fields for MVP improvements
+  priority_score?: number; // 0-100 scoring
+  match_score?: number; // Room compatibility score
+  has_conflicts?: boolean; // Conflict detection
+  conflicting_applications?: number[]; // Related conflicts
+  is_budget_compatible?: boolean; // Budget validation
+  urgency_level?: 'low' | 'medium' | 'high'; // Priority level
+  recommended_rooms?: number[]; // Suggested room IDs
 }
+
+// Application status constants
+export const APPLICATION_STATUSES = {
+  PENDING: 'pending' as const,
+  PROCESSING: 'processing' as const,
+  APPROVED: 'approved' as const,
+  REJECTED: 'rejected' as const,
+  WITHDRAWN: 'withdrawn' as const,
+  LEASE_CREATED: 'lease_created' as const,
+  MOVED_IN: 'moved_in' as const,
+  ACTIVE: 'active' as const, // For backward compatibility
+} as const;
+
+export type ApplicationStatus = typeof APPLICATION_STATUSES[keyof typeof APPLICATION_STATUSES];
 
 export interface Lease {
   id: number;
@@ -209,6 +231,11 @@ export interface PropertyFormData {
   rent_type: 'per_property' | 'per_room';
   monthly_rent: string;
   landlord?: number;
+  total_rooms: number;
+  room_names?: string[];
+  room_types?: string[];
+  room_rents?: string[];
+  room_capacities?: number[];
 }
 
 export interface RoomFormData {
@@ -224,7 +251,7 @@ export interface RoomFormData {
 export interface ApplicationFormData {
   tenant: number;
   property_ref: number;
-  room: number;
+  room?: number;
   desired_move_in_date: string;
   desired_lease_duration: number;
   rent_budget: number;

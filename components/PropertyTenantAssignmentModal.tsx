@@ -3,7 +3,7 @@ import { apiClient } from '../lib/api';
 import { Tenant, Application, ApplicationFormData, Property, LeaseFormData, TenantFormData } from '../lib/types';
 
 interface PropertyTenantAssignmentModalProps {
-  property: Property;
+  property: Property | null;
   isOpen: boolean;
   onClose: () => void;
   onSave: () => void;
@@ -21,8 +21,8 @@ export default function PropertyTenantAssignmentModal({
   const [leaseData, setLeaseData] = useState<Partial<LeaseFormData>>({
     start_date: '',
     end_date: '',
-    monthly_rent: property.monthly_rent || 0,
-    security_deposit: property.monthly_rent ? property.monthly_rent : 0,
+    monthly_rent: Number(property?.monthly_rent) || 0,
+    security_deposit: Number(property?.monthly_rent) || 0,
   });
   const [activeTab, setActiveTab] = useState<'applications' | 'tenants' | 'create'>('applications');
   const [newTenantForm, setNewTenantForm] = useState<TenantFormData>({
@@ -34,13 +34,26 @@ export default function PropertyTenantAssignmentModal({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Update lease data when property changes
   useEffect(() => {
-    if (isOpen) {
+    if (property) {
+      setLeaseData(prev => ({
+        ...prev,
+        monthly_rent: Number(property.monthly_rent) || 0,
+        security_deposit: Number(property.monthly_rent) || 0,
+      }));
+    }
+  }, [property]);
+
+  useEffect(() => {
+    if (isOpen && property) {
       fetchData();
     }
-  }, [isOpen]);
+  }, [isOpen, property]);
 
   const fetchData = async () => {
+    if (!property) return;
+    
     try {
       setLoading(true);
       const [tenantRes, appRes] = await Promise.all([
@@ -75,6 +88,11 @@ export default function PropertyTenantAssignmentModal({
 
   const handleSave = async () => {
     if (!validate()) return;
+    if (!property?.id) {
+      setError('Property information is missing. Please try again.');
+      return;
+    }
+    
     try {
       setSaving(true);
       setError(null);
@@ -93,7 +111,7 @@ export default function PropertyTenantAssignmentModal({
           desired_move_in_date: leaseData.start_date!,
           desired_lease_duration: durationMonths,
           rent_budget: leaseData.monthly_rent!,
-          message: `Auto-generated application for property ${property.name}`,
+          message: `Auto-generated application for property ${property?.name || 'Property'}`,
           special_requests: '',
         };
         app = await apiClient.createApplication(appPayload);
@@ -163,7 +181,7 @@ export default function PropertyTenantAssignmentModal({
     <div className="modal-overlay">
       <div className="modal-content">
         <div className="modal-header">
-          <h2>Assign Tenant to {property.name}</h2>
+          <h2>Assign Tenant to {property?.name || 'Property'}</h2>
           <button className="modal-close" onClick={onClose}>×</button>
         </div>
 

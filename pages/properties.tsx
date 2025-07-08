@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import DashboardLayout from '../components/DashboardLayout';
+import PropertyDeletionModal from '../components/PropertyDeletionModal';
 import { useRouter } from 'next/router';
 import { withAuth } from '../lib/auth-context';
 import { apiClient } from '../lib/api';
@@ -201,51 +202,28 @@ function Properties() {
   ];
 
   const handleDeleteProperty = (propertyId: number, propertyName: string) => {
-    setPropertyToDelete({ id: propertyId, name: propertyName });
+    const property = properties.find(p => p.id === propertyId);
+    if (property) {
+      setSelectedProperty(property);
     setShowDeleteModal(true);
+    }
   };
 
-  const confirmDeleteProperty = async () => {
-    if (!propertyToDelete) return;
-
-    setDeleteLoading(true);
-    setError(null);
-
+  const handleDeleteComplete = async () => {
     try {
-      // Check if property has rooms before deleting
-      const propertyStats = getPropertyStats(properties.find(p => p.id === propertyToDelete.id)!);
-      if (propertyStats.totalRooms > 0) {
-        setError('Cannot delete a property with rooms. Please remove all rooms first.');
-        setShowDeleteModal(false);
-        setPropertyToDelete(null);
-        setDeleteLoading(false);
-        return;
-      }
-
-      // Call API to delete property
-      await apiClient.deleteProperty(propertyToDelete.id);
-      
       // Refresh the property data
       await fetchData();
-      
-      // Close modal and reset state
-      setShowDeleteModal(false);
-      setPropertyToDelete(null);
+      setSelectedProperty(null);
       setError(null);
-      
     } catch (err: any) {
-      console.error('Failed to delete property:', err);
-      setError(err.message || 'Failed to delete property. Please try again.');
-      setShowDeleteModal(false);
-      setPropertyToDelete(null);
-    } finally {
-      setDeleteLoading(false);
+      console.error('Failed to refresh data after deletion:', err);
+      setError(err.message || 'Failed to refresh data');
     }
   };
 
   const cancelDeleteProperty = () => {
     setShowDeleteModal(false);
-    setPropertyToDelete(null);
+    setSelectedProperty(null);
     setDeleteLoading(false);
   };
 
@@ -791,66 +769,14 @@ function Properties() {
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
-      {showDeleteModal && propertyToDelete && (
-        <div className="delete-modal">
-          <div className="modal-content delete-modal-content">
-            <div className="modal-header">
-              <div className="modal-title-section">
-                <div className="warning-icon">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
-                    <path d="M12 9v4"/>
-                    <path d="m12 17 .01 0"/>
-                  </svg>
-                </div>
-                <div>
-                  <h2>Delete Property</h2>
-                  <p>This action cannot be undone</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="modal-section">
-              <p className="delete-message">
-                Are you sure you want to delete <strong>"{propertyToDelete.name}"</strong>? 
-                This will permanently remove the property and all associated data.
-              </p>
-            </div>
-
-            <div className="modal-actions">
-              <button 
-                onClick={cancelDeleteProperty}
-                className="cancel-btn"
-                disabled={deleteLoading}
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={confirmDeleteProperty} 
-                className="delete-confirm-btn"
-                disabled={deleteLoading}
-              >
-                {deleteLoading ? (
-                  <>
-                    <div className="loading-spinner-small"></div>
-                    Deleting...
-                  </>
-                ) : (
-                  <>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <polyline points="3,6 5,6 21,6"/>
-                      <path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2V6"/>
-                      <line x1="10" y1="11" x2="10" y2="17"/>
-                      <line x1="14" y1="11" x2="14" y2="17"/>
-                    </svg>
-                    Delete Property
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* Property Deletion Modal */}
+      {showDeleteModal && selectedProperty && (
+        <PropertyDeletionModal
+          property={selectedProperty}
+          isOpen={showDeleteModal}
+          onClose={cancelDeleteProperty}
+          onDelete={handleDeleteComplete}
+        />
       )}
 
       {/* Tenant Assignment Modal */}

@@ -33,7 +33,7 @@ export default function PropertySummary() {
       <div className="dashboard-container">
         <div className="property-header">
           <div className="header-content">
-            <h1 className="dashboard-title">{property.name}</h1>
+        <h1 className="dashboard-title">{property.name}</h1>
             <p className="property-address">{property.full_address}</p>
             <div className="property-badges">
               <span className="property-type-badge">{property.property_type}</span>

@@ -163,7 +163,15 @@ export default function EditProperty() {
                       <option value="United States">United States</option>
                     </select>
                   </div>
-                  <div className="form-group"><label className="form-label">Property Type*</label><select name="property_type" value={formData.property_type} onChange={handleChange} required className="form-input"><option value="coliving">Co-Living Space</option><option value="residential">Residential Property</option></select></div>
+                  <div className="form-group">
+                    <label className="form-label">Property Type*</label>
+                    <select name="property_type" value={formData.property_type} onChange={handleChange} required className="form-input">
+                      <option value="apartment">Apartment</option>
+                      <option value="house">House</option>
+                      <option value="condo">Condominium</option>
+                      <option value="townhouse">Townhouse</option>
+                    </select>
+                  </div>
                   <div className="form-group">
                     <label className="form-label">Time Zone*</label>
                     <select name="timezone" value={formData.timezone} onChange={handleChange} required className="form-input">

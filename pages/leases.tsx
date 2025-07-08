@@ -57,7 +57,8 @@ function Leases() {
     return tenant ? { email: tenant.email, phone: tenant.phone } : null;
   };
 
-  const getPropertyName = (propertyId: number) => {
+  const getPropertyName = (propertyId: number | undefined) => {
+    if (!propertyId) return 'Unknown Property';
     const property = properties.find(p => p.id === propertyId);
     return property ? property.name : 'Unknown Property';
   };
@@ -86,74 +87,7 @@ function Leases() {
     });
   };
 
-  const handleRenewLease = async (leaseId: number) => {
-    try {
-      // In a real implementation, this would open a renewal form
-      // For now, we'll show an alert with renewal options
-      const lease = leases.find(l => l.id === leaseId);
-      if (lease) {
-        const tenant = getTenantName(lease.tenant);
-        const property = getPropertyName(lease.property_ref);
-        const room = getRoomName(lease.room);
-        
-        const confirmed = confirm(
-          `Renew lease for ${tenant} at ${property} - ${room}?\n\n` +
-          `Current rent: $${lease.monthly_rent}/month\n` +
-          `Current end date: ${lease.end_date}\n\n` +
-          `This will extend the lease for another 12 months.`
-        );
-        
-        if (confirmed) {
-          // Calculate new end date (12 months from current end date)
-          const currentEndDate = new Date(lease.end_date);
-          const newEndDate = new Date(currentEndDate);
-          newEndDate.setFullYear(newEndDate.getFullYear() + 1);
-          
-          const renewalData = {
-            tenant: lease.tenant,
-            room: lease.room,
-            start_date: lease.end_date, // New lease starts when old one ends
-            end_date: newEndDate.toISOString().split('T')[0],
-            monthly_rent: lease.monthly_rent, // Keep same rent for now
-            security_deposit: lease.security_deposit
-          };
-          
-          await apiClient.createLease(renewalData);
-          
-          alert(`Lease renewed successfully!`);
-          fetchData(); // Refresh data
-        }
-      }
-    } catch (error: any) {
-      alert(`Failed to renew lease: ${error.message}`);
-    }
-  };
 
-  const handleMoveOut = async (leaseId: number) => {
-    try {
-      const lease = leases.find(l => l.id === leaseId);
-      if (lease) {
-        const tenant = getTenantName(lease.tenant);
-        const moveOutDate = prompt(
-          `Process move-out for ${tenant}?\n\nEnter move-out date (YYYY-MM-DD):`,
-          new Date().toISOString().split('T')[0]
-        );
-        
-        if (moveOutDate) {
-          await apiClient.processMoveout(leaseId, {
-            move_out_date: moveOutDate,
-            move_out_condition: 'Good condition',
-            deposit_returned: lease.security_deposit
-          });
-          
-          alert(`Move-out processed successfully for ${tenant}`);
-          fetchData(); // Refresh data
-        }
-      }
-    } catch (error: any) {
-      alert(`Failed to process move-out: ${error.message}`);
-    }
-  };
 
   const handleActivateLease = async (lease: any) => {
     try {
@@ -482,28 +416,14 @@ function Leases() {
                             </td>
                             <td className="table-center">
                               <div className="action-buttons">
-                                <button 
-                                  onClick={() => handleRenewLease(lease.id)}
-                                  className="renew-btn"
-                                >
+                                <Link href={`/leases/${lease.id}`} legacyBehavior>
+                                  <a className="manage-lease-btn">
                                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <polyline points="23 4 23 10 17 10"/>
-                                    <polyline points="1 20 1 14 7 14"/>
-                                    <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>
+                                      <path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
                                   </svg>
-                                  Renew
-                                </button>
-                                <button 
-                                  onClick={() => handleMoveOut(lease.id)}
-                                  className="moveout-btn"
-                                >
-                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <path d="M3 3l18 18"/>
-                                    <path d="M21 12H3"/>
-                                    <path d="M12 3v18"/>
-                                  </svg>
-                                  Move Out
-                                </button>
+                                    Manage Lease
+                                  </a>
+                                </Link>
                               </div>
                             </td>
                           </tr>
@@ -627,12 +547,11 @@ function Leases() {
                             </span>
                           </td>
                           <td className="table-center">
-                            <button 
-                              onClick={() => handleRenewLease(lease.id)} 
-                              className="renew-now-btn"
-                            >
-                              Renew Now
-                            </button>
+                            <Link href={`/leases/${lease.id}`} legacyBehavior>
+                              <a className="renew-now-btn">
+                                Manage Lease
+                              </a>
+                            </Link>
                           </td>
                         </tr>
                       );
@@ -1204,6 +1123,29 @@ function Leases() {
         .moveout-btn:hover {
           background: #3730a3;
           transform: translateY(-1px);
+        }
+
+        .manage-lease-btn {
+          border: none;
+          padding: 6px 12px;
+          border-radius: 5px;
+          font-size: 12px;
+          font-weight: 500;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          transition: all 0.2s ease;
+          background: #3b82f6;
+          color: white;
+          text-decoration: none;
+        }
+
+        .manage-lease-btn:hover {
+          background: #2563eb;
+          transform: translateY(-1px);
+          color: white;
+          text-decoration: none;
         }
 
         .draft-actions {

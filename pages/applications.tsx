@@ -7,6 +7,11 @@ import { withAuth } from '../lib/auth-context';
 import { apiClient } from '../lib/api';
 import { Application, Property, Room } from '../lib/types';
 import NewApplicationModal from '../components/NewApplicationModal';
+import ConflictResolutionModal from '../components/ConflictResolutionModal';
+import RoomAssignmentModal from '../components/RoomAssignmentModal';
+import PropertyRoomManagement from '../components/PropertyRoomManagement';
+import ApplicationDetailModal from '../components/ApplicationDetailModal';
+import ImprovedLeaseGenerationModal from '../components/ImprovedLeaseGenerationModal';
 
 function Applications() {
   const router = useRouter();
@@ -20,6 +25,17 @@ function Applications() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isRoomAssignmentModalOpen, setIsRoomAssignmentModalOpen] = useState(false);
+  const [selectedApplicationForAssignment, setSelectedApplicationForAssignment] = useState<Application | null>(null);
+  const [isPropertyRoomManagementOpen, setIsPropertyRoomManagementOpen] = useState(false);
+  const [selectedPropertyForManagement, setSelectedPropertyForManagement] = useState<Property | null>(null);
+  const [isConflictModalOpen, setIsConflictModalOpen] = useState(false);
+  const [conflictingApplications, setConflictingApplications] = useState<Application[]>([]);
+  const [isApplicationDetailOpen, setIsApplicationDetailOpen] = useState(false);
+  const [selectedApplicationForDetail, setSelectedApplicationForDetail] = useState<Application | null>(null);
+  const [isLeaseGenerationOpen, setIsLeaseGenerationOpen] = useState(false);
+  const [selectedApplicationForLease, setSelectedApplicationForLease] = useState<Application | null>(null);
+  const [selectedRoomForLease, setSelectedRoomForLease] = useState<Room | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -186,6 +202,31 @@ function Applications() {
     return <span style={badge.style}>{badge.text}</span>;
   };
 
+  const handleRoomAssignment = (application: Application, room: Room) => {
+    // Implementation of handleRoomAssignment
+  };
+
+  const openLeaseGenerationModal = (application: Application, room: Room) => {
+    setSelectedApplicationForLease(application);
+    setSelectedRoomForLease(room);
+    setIsLeaseGenerationOpen(true);
+  };
+
+  const handleLeaseGenerated = (leaseData: any) => {
+    // Update application status to lease_created
+    setApplications(prevApps => 
+      prevApps.map(app => 
+        app.id === leaseData.applicationId 
+          ? { ...app, status: 'lease_created' }
+          : app
+      )
+    );
+    
+    // Show success message
+    alert(`✅ Lease generated successfully!\n\nTenant: ${leaseData.tenantName}\nRoom: ${leaseData.roomName}\nLease Period: ${leaseData.leaseStartDate} to ${leaseData.leaseEndDate}`);
+  };
+
+  // Filter applications by status
   const pendingApplications = filteredApplications.filter(app => app.status === 'pending');
   const reviewedApplications = filteredApplications.filter(app => app.status !== 'pending');
 
@@ -209,6 +250,25 @@ function Applications() {
     const today = new Date().toISOString().split('T')[0];
     a.download = `tink-applications-report-${today}.csv`;
     a.click();
+  };
+
+  const openRoomAssignmentModal = (application: Application) => {
+    setSelectedApplicationForAssignment(application);
+    setIsRoomAssignmentModalOpen(true);
+  };
+
+  const openPropertyRoomManagement = (property: Property) => {
+    setSelectedPropertyForManagement(property);
+    setIsPropertyRoomManagementOpen(true);
+  };
+
+  const openApplicationDetail = (application: Application) => {
+    setSelectedApplicationForDetail(application);
+    setIsApplicationDetailOpen(true);
+  };
+
+  const handleConflictResolution = (resolvedApplication: Application) => {
+    // Implementation of handleConflictResolution
   };
 
   if (loading) {
@@ -407,12 +467,32 @@ function Applications() {
                   </svg>
                   Download Report
                 </button>
-                <button onClick={() => router.push('/tenants')} className="view-all-btn">
+                <button 
+                  onClick={() => router.push('/tenants')}
+                  className="view-all-btn"
+                >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
                     <circle cx="12" cy="7" r="4"/>
                   </svg>
                   View All Tenants
+                </button>
+                <button 
+                  onClick={() => {
+                    const property = properties.find(p => p.id === selectedProperty);
+                    if (property) {
+                      openPropertyRoomManagement(property);
+                    } else if (properties.length > 0) {
+                      openPropertyRoomManagement(properties[0]);
+                    }
+                  }}
+                  className="view-all-btn property-room-btn"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                    <polyline points="9,22 9,12 15,12 15,22"/>
+                  </svg>
+                  Room Management
                 </button>
               </div>
             </div>
@@ -512,12 +592,17 @@ function Applications() {
                                 </svg>
                                 Reject
                               </button>
-                              <button onClick={() => router.push(`/tenants/${app.tenant}`)} className="manage-btn view-btn">
+                              <button 
+                                onClick={() => openApplicationDetail(app)}
+                                className="manage-btn detail-btn"
+                              >
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                                  <circle cx="12" cy="12" r="3"/>
+                                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                  <polyline points="14,2 14,8 20,8"/>
+                                  <line x1="16" y1="13" x2="8" y2="13"/>
+                                  <line x1="16" y1="17" x2="8" y2="17"/>
                                 </svg>
-                                View
+                                View Application
                               </button>
                             </div>
                           </td>
@@ -589,13 +674,53 @@ function Applications() {
                           </td>
                           <td className="table-center">
                             <div className="action-buttons">
-                              <button onClick={() => router.push(`/tenants/${app.tenant}`)} className="manage-btn view-btn">
+                              {app.status === 'approved' && (
+                                <button onClick={() => router.push(`/tenants/${app.tenant}`)} className="manage-btn view-btn">
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                    <circle cx="12" cy="12" r="3"/>
+                                  </svg>
+                                  View Tenant
+                                </button>
+                              )}
+                              <button 
+                                onClick={() => openApplicationDetail(app)}
+                                className="manage-btn detail-btn"
+                              >
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                                  <circle cx="12" cy="12" r="3"/>
+                                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                  <polyline points="14,2 14,8 20,8"/>
+                                  <line x1="16" y1="13" x2="8" y2="13"/>
+                                  <line x1="16" y1="17" x2="8" y2="17"/>
                                 </svg>
-                                View
+                                View Application
                               </button>
+                              {app.status === 'approved' && (
+                                <button 
+                                  onClick={() => {
+                                    // Find the first available room for the property
+                                    const availableRooms = rooms.filter(room => 
+                                      room.property_ref === app.property_ref && room.is_vacant
+                                    );
+                                    if (availableRooms.length > 0) {
+                                      openLeaseGenerationModal(app, availableRooms[0]);
+                                    } else {
+                                      alert('No available rooms for lease generation');
+                                    }
+                                  }}
+                                  className="manage-btn lease-btn"
+                                >
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                    <polyline points="14,2 14,8 20,8"/>
+                                    <line x1="16" y1="13" x2="8" y2="13"/>
+                                    <line x1="16" y1="17" x2="8" y2="17"/>
+                                    <line x1="12" y1="18" x2="12" y2="22"/>
+                                    <line x1="5" y1="12" x2="19" y2="12"/>
+                                  </svg>
+                                  Generate Lease
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -610,6 +735,73 @@ function Applications() {
       </div>
 
       {isModalOpen && <NewApplicationModal onClose={() => setIsModalOpen(false)} />}
+
+      {isConflictModalOpen && (
+        <ConflictResolutionModal
+          conflictingApplications={conflictingApplications}
+          availableRooms={rooms.filter(room => room.is_vacant)}
+          properties={properties}
+          onClose={() => setIsConflictModalOpen(false)}
+          onResolveConflict={handleConflictResolution}
+        />
+      )}
+
+      {isRoomAssignmentModalOpen && selectedApplicationForAssignment && (
+        <RoomAssignmentModal
+          application={selectedApplicationForAssignment}
+          availableRooms={rooms.filter(room => room.is_vacant)}
+          properties={properties}
+          onClose={() => {
+            setIsRoomAssignmentModalOpen(false);
+            setSelectedApplicationForAssignment(null);
+          }}
+          onAssignRoom={handleRoomAssignment}
+        />
+      )}
+
+      {isPropertyRoomManagementOpen && (
+        <PropertyRoomManagement
+          isOpen={isPropertyRoomManagementOpen}
+          selectedProperty={selectedPropertyForManagement}
+          applications={applications}
+          onClose={() => {
+            setIsPropertyRoomManagementOpen(false);
+            setSelectedPropertyForManagement(null);
+          }}
+          onRoomUpdate={fetchData}
+        />
+      )}
+
+      {isApplicationDetailOpen && selectedApplicationForDetail && (
+        <ApplicationDetailModal
+          isOpen={isApplicationDetailOpen}
+          application={selectedApplicationForDetail}
+          properties={properties}
+          rooms={rooms}
+          onClose={() => {
+            setIsApplicationDetailOpen(false);
+            setSelectedApplicationForDetail(null);
+          }}
+          onApprove={handleQuickApprove}
+          onReject={handleReject}
+          onAssignRoom={openRoomAssignmentModal}
+        />
+      )}
+
+      {isLeaseGenerationOpen && selectedApplicationForLease && selectedRoomForLease && (
+        <ImprovedLeaseGenerationModal
+          isOpen={isLeaseGenerationOpen}
+          application={selectedApplicationForLease}
+          room={selectedRoomForLease}
+          properties={properties}
+          onClose={() => {
+            setIsLeaseGenerationOpen(false);
+            setSelectedApplicationForLease(null);
+            setSelectedRoomForLease(null);
+          }}
+          onLeaseGenerated={handleLeaseGenerated}
+        />
+      )}
 
       <style jsx>{`
         .dashboard-container {
@@ -1246,6 +1438,30 @@ function Applications() {
         }
         :global(.dark-mode) .detail-label {
           color: #d1d5db;
+        }
+
+        .property-room-btn {
+          background: #059669 !important;
+        }
+
+        .property-room-btn:hover {
+          background: #047857 !important;
+        }
+
+        .detail-btn {
+          background: #8b5cf6 !important;
+        }
+
+        .detail-btn:hover {
+          background: #7c3aed !important;
+        }
+
+        .lease-btn {
+          background: #059669 !important;
+        }
+
+        .lease-btn:hover {
+          background: #047857 !important;
         }
       `}</style>
     </DashboardLayout>

@@ -5,11 +5,14 @@ import Head from 'next/head';
 import DashboardLayout from '../components/DashboardLayout';
 import { withAuth } from '../lib/auth-context';
 import { apiClient } from '../lib/api';
-import { Tenant, TenantFormData, Application, Lease } from '../lib/types';
+import { Tenant, TenantFormData, Application, Lease, Property, Room } from '../lib/types';
+import ApplicationDetailModal from '../components/ApplicationDetailModal';
 
 function Tenants() {
   const router = useRouter();
   const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -25,10 +28,28 @@ function Tenants() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [tenantToDelete, setTenantToDelete] = useState<{ id: number; name: string } | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  
+  // Application Detail Modal State
+  const [isApplicationDetailOpen, setIsApplicationDetailOpen] = useState(false);
+  const [selectedApplicationForDetail, setSelectedApplicationForDetail] = useState<Application | null>(null);
 
   useEffect(() => {
     fetchTenants();
+    fetchPropertiesAndRooms();
   }, []);
+
+  const fetchPropertiesAndRooms = async () => {
+    try {
+      const [propertiesResponse, roomsResponse] = await Promise.all([
+        apiClient.getProperties(),
+        apiClient.getRooms()
+      ]);
+      setProperties(propertiesResponse.results || []);
+      setRooms(roomsResponse.results || []);
+    } catch (error: any) {
+      console.error('Failed to fetch properties and rooms:', error);
+    }
+  };
 
   const fetchTenants = async () => {
     try {
@@ -148,21 +169,58 @@ function Tenants() {
         if (createNew) {
           window.location.href = '/applications';
         }
+      } else if (applications.length === 1) {
+        // Single application - open detail modal directly
+        setSelectedApplicationForDetail(applications[0]);
+        setIsApplicationDetailOpen(true);
       } else {
-        const appDetails = applications.map(app => 
-          `• Property ID: ${app.property_ref} - Status: ${app.status.toUpperCase()}`
+        // Multiple applications - show selection dialog
+        const appList = applications.map((app, index) => 
+          `${index + 1}. Property: ${getPropertyName(app.property_ref)} - Status: ${app.status.toUpperCase()} - Applied: ${new Date(app.created_at).toLocaleDateString()}`
         ).join('\n');
         
-        const viewAll = confirm(
-          `${tenant?.full_name} has ${applications.length} application(s):\n\n${appDetails}\n\nView all applications on the Applications page?`
+        const selection = prompt(
+          `${tenant?.full_name} has ${applications.length} applications:\n\n${appList}\n\nEnter the number (1-${applications.length}) to view details, or press Cancel to go to Applications page:`
         );
-        if (viewAll) {
+        
+        if (selection) {
+          const index = parseInt(selection) - 1;
+          if (index >= 0 && index < applications.length) {
+            setSelectedApplicationForDetail(applications[index]);
+            setIsApplicationDetailOpen(true);
+          } else {
+            alert('Invalid selection. Please enter a number between 1 and ' + applications.length);
+          }
+        } else {
           window.location.href = '/applications';
         }
       }
     } catch (error: any) {
       setError(error?.message || 'Failed to load applications');
     }
+  };
+
+  const getPropertyName = (propertyId: number) => {
+    const property = properties.find(p => p.id === propertyId);
+    return property ? property.name : `Property #${propertyId}`;
+  };
+
+  const openApplicationDetail = (application: Application) => {
+    setSelectedApplicationForDetail(application);
+    setIsApplicationDetailOpen(true);
+  };
+
+  // Dummy handlers for ApplicationDetailModal
+  const handleQuickApprove = async (applicationId: number, propertyId: number) => {
+    alert('Approval functionality not available from tenants page. Please use the Applications page.');
+  };
+
+  const handleReject = async (applicationId: number) => {
+    alert('Rejection functionality not available from tenants page. Please use the Applications page.');
+  };
+
+  const handleAssignRoom = (application: Application) => {
+    alert('Room assignment functionality not available from tenants page. Please use the Applications page.');
   };
 
   const handleViewCurrentLease = async (tenantId: number) => {
@@ -1915,6 +1973,23 @@ function Tenants() {
           to { transform: rotate(360deg); }
         }
       `}</style>
+      
+      {/* Application Detail Modal */}
+      {isApplicationDetailOpen && selectedApplicationForDetail && (
+        <ApplicationDetailModal
+          isOpen={isApplicationDetailOpen}
+          application={selectedApplicationForDetail}
+          properties={properties}
+          rooms={rooms}
+          onClose={() => {
+            setIsApplicationDetailOpen(false);
+            setSelectedApplicationForDetail(null);
+          }}
+          onApprove={handleQuickApprove}
+          onReject={handleReject}
+          onAssignRoom={handleAssignRoom}
+        />
+      )}
     </DashboardLayout>
   );
 }

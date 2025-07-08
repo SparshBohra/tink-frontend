@@ -8,6 +8,7 @@ import DashboardLayout from '../../components/DashboardLayout';
 import StatusBadge from '../../components/StatusBadge';
 import DataTable from '../../components/DataTable';
 import EmptyState from '../../components/EmptyState';
+import ApplicationDetailModal from '../../components/ApplicationDetailModal';
 import { formatCurrency } from '../../lib/utils';
 
 const formatDate = (dateString: string | null) => {
@@ -34,6 +35,10 @@ export default function TenantDetails() {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Application Detail Modal State
+  const [isApplicationDetailOpen, setIsApplicationDetailOpen] = useState(false);
+  const [selectedApplicationForDetail, setSelectedApplicationForDetail] = useState<Application | null>(null);
 
   useEffect(() => {
     if (tenantId !== null) {
@@ -88,6 +93,24 @@ export default function TenantDetails() {
   const getRoomName = (roomId: number) => {
     const room = rooms.find(r => r.id === roomId);
     return room ? room.name : `Room #${roomId}`;
+  };
+
+  const openApplicationDetail = (application: Application) => {
+    setSelectedApplicationForDetail(application);
+    setIsApplicationDetailOpen(true);
+  };
+
+  // Dummy handlers for ApplicationDetailModal
+  const handleQuickApprove = async (applicationId: number, propertyId: number) => {
+    alert('Approval functionality not available from tenant page. Please use the Applications page.');
+  };
+
+  const handleReject = async (applicationId: number) => {
+    alert('Rejection functionality not available from tenant page. Please use the Applications page.');
+  };
+
+  const handleAssignRoom = (application: Application) => {
+    alert('Room assignment functionality not available from tenant page. Please use the Applications page.');
   };
 
   if (loading) {
@@ -163,8 +186,8 @@ export default function TenantDetails() {
 
   const applicationsTableData = applications.map(app => ({
     id: app.id,
-    property: app.room ? `Property ${app.room}` : 'Unknown Property',
-    room: app.room ? `Room ${app.room}` : 'Not specified',
+    property: getPropertyName(app.property_ref),
+    room: app.room ? getRoomName(app.room) : 'Not assigned',
     status: (
       <StatusBadge 
         status={app.status === 'approved' ? 'active' : app.status === 'pending' ? 'pending' : 'inactive'} 
@@ -173,9 +196,18 @@ export default function TenantDetails() {
     ),
     date: app.created_at ? new Date(app.created_at).toLocaleDateString() : 'Unknown',
     actions: (
-      <Link href={`/applications?tenant=${tenant.id}`} className="btn btn-primary btn-sm">
-        View Details
-      </Link>
+      <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+        <button 
+          onClick={() => openApplicationDetail(app)}
+          className="btn btn-primary btn-sm"
+          style={{ fontSize: '12px', padding: '4px 8px' }}
+        >
+          View Application Details
+        </button>
+        <Link href={`/applications?tenant=${tenant?.id}`} className="btn btn-secondary btn-sm">
+          Go to Applications
+        </Link>
+      </div>
     )
   }));
 
@@ -278,11 +310,11 @@ export default function TenantDetails() {
                               <span
                                 className="status-badge"
                                 style={{
-                                  backgroundColor: app.status === 'approved' ? '#dcfce7' : app.status === 'pending' ? '#fef3c7' : '#fee2e2',
-                                  color: app.status === 'approved' ? '#16a34a' : app.status === 'pending' ? '#d97706' : '#dc2626',
+                                  backgroundColor: app.status === 'active' ? '#dbeafe' : app.status === 'approved' ? '#dcfce7' : app.status === 'pending' ? '#fef3c7' : '#fee2e2',
+                                  color: app.status === 'active' ? '#2563eb' : app.status === 'approved' ? '#16a34a' : app.status === 'pending' ? '#d97706' : '#dc2626',
                                 }}
                               >
-                                {app.status}
+                                {app.status === 'active' ? 'Active' : app.status}
                               </span>
                             </td>
                               <td className="table-center">
@@ -347,6 +379,23 @@ export default function TenantDetails() {
           </div>
         </div>
       </DashboardLayout>
+
+      {/* Application Detail Modal */}
+      {isApplicationDetailOpen && selectedApplicationForDetail && (
+        <ApplicationDetailModal
+          isOpen={isApplicationDetailOpen}
+          application={selectedApplicationForDetail}
+          properties={properties}
+          rooms={rooms}
+          onClose={() => {
+            setIsApplicationDetailOpen(false);
+            setSelectedApplicationForDetail(null);
+          }}
+          onApprove={handleQuickApprove}
+          onReject={handleReject}
+          onAssignRoom={handleAssignRoom}
+        />
+      )}
 
       <style jsx>{`
         .dashboard-container { width: 100%; padding: 16px 20px 20px 20px; background: #f8fafc; min-height: calc(100vh - 72px); box-sizing: border-box; }

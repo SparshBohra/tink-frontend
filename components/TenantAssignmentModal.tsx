@@ -29,6 +29,7 @@ export default function TenantAssignmentModal({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'tenants' | 'applications' | 'create'>('applications');
+  const [skipApplication, setSkipApplication] = useState(false);
   const [newTenantForm, setNewTenantForm] = useState({
     full_name: '',
     email: '',
@@ -190,22 +191,69 @@ export default function TenantAssignmentModal({
       return false;
     }
     
-    if (new Date(leaseData.end_date) <= new Date(leaseData.start_date)) {
+    const startDate = new Date(leaseData.start_date);
+    const endDate = new Date(leaseData.end_date);
+    
+    if (endDate <= startDate) {
       setError('End date must be after start date');
       return false;
     }
     
-    if (!leaseData.monthly_rent || leaseData.monthly_rent <= 0) {
-      setError('Please enter a valid monthly rent');
+    // Check if start date is not too far in the past
+    const today = new Date();
+    const oneYearAgo = new Date(today);
+    oneYearAgo.setFullYear(today.getFullYear() - 1);
+    
+    if (startDate < oneYearAgo) {
+      setError('Start date cannot be more than 1 year in the past');
       return false;
     }
     
-    if (leaseData.security_deposit === undefined || leaseData.security_deposit < 0) {
-      setError('Please enter a valid security deposit');
+    const rentAmount = Number(leaseData.monthly_rent);
+    if (!rentAmount || rentAmount <= 0) {
+      setError('Please enter a valid monthly rent amount greater than 0');
+      return false;
+    }
+    
+    if (rentAmount > 50000) {
+      setError('Monthly rent seems unusually high. Please verify the amount.');
+      return false;
+    }
+    
+    const depositAmount = Number(leaseData.security_deposit);
+    if (depositAmount < 0) {
+      setError('Security deposit cannot be negative');
       return false;
     }
     
     return true;
+  };
+
+  // Alternative direct lease creation method
+  const createDirectLease = async () => {
+    try {
+      console.log('Creating direct lease...');
+      
+      const directLeaseData = {
+        tenant: selectedTenant!,
+        room: room.id,
+        property_ref: room.property_ref,
+        start_date: leaseData.start_date!,
+        end_date: leaseData.end_date!,
+        monthly_rent: Number(leaseData.monthly_rent!),
+        security_deposit: Number(leaseData.security_deposit!),
+        status: 'active'
+      };
+      
+      console.log('Direct lease data:', directLeaseData);
+      const lease = await apiClient.createLease(directLeaseData);
+      console.log('Direct lease created successfully:', lease);
+      
+      return lease;
+    } catch (error) {
+      console.error('Direct lease creation failed:', error);
+      throw error;
+    }
   };
 
   const handleSave = async () => {
@@ -217,16 +265,47 @@ export default function TenantAssignmentModal({
       setSaving(true);
       setError(null);
       
-      // Check if tenant already has an application for this property
-      let application = applications.find(app => app.tenant === selectedTenant);
+      console.log('Starting tenant assignment process...');
+      console.log('Selected tenant:', selectedTenant);
+      console.log('Room:', room);
+      console.log('Lease data:', leaseData);
+      
+      // If skip application is enabled, create lease directly
+      if (skipApplication) {
+        console.log('Skipping application process, creating lease directly');
+        await createDirectLease();
+        onSave();
+        onClose();
+        return;
+      }
+      
+      // Check if tenant already has an application for this property/room
+      let application = applications.find(app => 
+        app.tenant === selectedTenant && 
+        (app.room === room.id || app.property_ref === room.property_ref)
+      );
       
       // If no application exists, create one first
       if (!application) {
-        // Calculate lease duration in months
+        // Calculate lease duration in months more accurately
         const startDate = new Date(leaseData.start_date!);
         const endDate = new Date(leaseData.end_date!);
-        const leaseDurationMonths = (endDate.getFullYear() - startDate.getFullYear()) * 12 + 
-                                   (endDate.getMonth() - startDate.getMonth());
+        
+        // Calculate months between dates
+        let leaseDurationMonths = (endDate.getFullYear() - startDate.getFullYear()) * 12;
+        leaseDurationMonths += endDate.getMonth() - startDate.getMonth();
+        
+        // Ensure minimum 1 month duration
+        if (leaseDurationMonths <= 0) {
+          leaseDurationMonths = 1;
+        }
+        
+        // Ensure rent budget is a valid number
+        const rentBudget = Number(leaseData.monthly_rent) || 0;
+        if (rentBudget <= 0) {
+          setError('Monthly rent must be greater than 0');
+          return;
+        }
         
         const applicationData: ApplicationFormData = {
           tenant: selectedTenant!,
@@ -234,30 +313,57 @@ export default function TenantAssignmentModal({
           room: room.id,
           desired_move_in_date: leaseData.start_date!,
           desired_lease_duration: leaseDurationMonths,
-          rent_budget: leaseData.monthly_rent!,
+          rent_budget: rentBudget,
           message: `Application created automatically for room assignment to ${room.name}`,
-          special_requests: ''
+          special_requests: 'Direct assignment by property manager'
         };
         
+        console.log('Creating application with data:', applicationData);
         application = await apiClient.createApplication(applicationData);
+        console.log('Application created successfully:', application);
       }
       
       // Now approve the application to create the lease
-      await apiClient.decideApplication(application.id, {
-        decision: 'approve',
+      const decisionData = {
+        decision: 'approve' as const,
         start_date: leaseData.start_date!,
         end_date: leaseData.end_date!,
-        monthly_rent: leaseData.monthly_rent!,
-        security_deposit: leaseData.security_deposit!,
+        monthly_rent: Number(leaseData.monthly_rent!),
+        security_deposit: Number(leaseData.security_deposit!),
         decision_notes: `Lease created via direct tenant assignment to ${room.name}`
-      });
+      };
+      
+      console.log('Approving application with decision data:', decisionData);
+      
+      try {
+        await apiClient.decideApplication(application.id, decisionData);
+        console.log('Application approved successfully');
+      } catch (decisionError: any) {
+        console.warn('Application decision failed, trying direct lease creation:', decisionError);
+        
+        // If application decision fails, try creating lease directly
+        await createDirectLease();
+        console.log('Direct lease created as fallback');
+      }
       
       onSave();
       onClose();
       
     } catch (err: any) {
-      console.error('Error creating lease:', err);
-      setError(err?.message || 'Failed to assign tenant');
+      console.error('Error in tenant assignment:', err);
+      console.error('Error details:', err.response?.data);
+      
+      // Provide more specific error messages
+      if (err.message?.includes('Invalid application data')) {
+        setError('Application validation failed. Please check that all fields are filled correctly and the tenant is valid.');
+      } else if (err.response?.status === 500) {
+        setError('Server error occurred. Please try again or contact support if the issue persists.');
+      } else if (err.response?.status === 400) {
+        const errorDetails = err.response?.data?.detail || err.response?.data?.message;
+        setError(`Validation error: ${errorDetails || err.message}`);
+      } else {
+        setError(err?.message || 'Failed to assign tenant. Please try again.');
+      }
     } finally {
       setSaving(false);
     }
@@ -295,6 +401,24 @@ export default function TenantAssignmentModal({
             </div>
           ) : (
             <>
+              {/* Assignment Options */}
+              <div className="assignment-options">
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={skipApplication}
+                    onChange={(e) => setSkipApplication(e.target.checked)}
+                  />
+                  <span>Skip application process and create lease directly</span>
+                </label>
+                <small className="text-muted">
+                  {skipApplication 
+                    ? 'Lease will be created immediately without going through application approval.' 
+                    : 'An application will be created first, then automatically approved to create the lease.'
+                  }
+                </small>
+              </div>
+
               {/* Tenant Selection Tabs */}
               <div className="tab-container">
                 <div className="tab-buttons">
@@ -975,6 +1099,37 @@ export default function TenantAssignmentModal({
             width: 98%;
             margin: 1%;
           }
+        }
+
+        .assignment-options {
+          background: #f8f9fa;
+          border: 1px solid #e9ecef;
+          border-radius: 8px;
+          padding: 16px;
+          margin-bottom: 20px;
+        }
+
+        .checkbox-label {
+          display: flex;
+          align-items: center;
+          cursor: pointer;
+          font-weight: 500;
+          margin-bottom: 8px;
+        }
+
+        .checkbox-label input[type="checkbox"] {
+          margin-right: 8px;
+          transform: scale(1.2);
+        }
+
+        .checkbox-label span {
+          color: #495057;
+        }
+
+        .text-muted {
+          color: #6c757d;
+          font-size: 14px;
+          line-height: 1.4;
         }
       `}</style>
     </div>

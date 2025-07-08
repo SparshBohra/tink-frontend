@@ -794,6 +794,30 @@ p {
   color: #ffffff;
 } 
  
+/* Manage Lease Button */
+.manage-lease-btn {
+  border: none;
+  padding: 6px 12px;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  background: #3b82f6;
+  color: white;
+  text-decoration: none;
+}
+
+.manage-lease-btn:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
+  color: white;
+  text-decoration: none;
+}
+ 
  
  
  

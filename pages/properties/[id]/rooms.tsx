@@ -13,6 +13,10 @@ import TenantAssignmentModal from '../../../components/TenantAssignmentModal';
 import { formatCurrency } from '../../../lib/utils';
 import PropertyTenantAssignmentModal from '../../../components/PropertyTenantAssignmentModal';
 import NewApplicationModal from '../../../components/NewApplicationModal';
+import { calculatePropertyRevenue, getOccupancyStats as getOccupancyStatsUtil, formatRevenue } from '../../../lib/revenueCalculator';
+import RentTypeConversionWizard from '../../../components/RentTypeConversionWizard';
+import RoomCountEditor from '../../../components/RoomCountEditor';
+import RoomDeletionModal from '../../../components/RoomDeletionModal';
 
 export default function PropertyRooms() {
   const router = useRouter();
@@ -36,6 +40,8 @@ export default function PropertyRooms() {
   const [activeHistoryTab, setActiveHistoryTab] = useState<'tenant' | 'rent'>('tenant');
   const [propertyAssignmentModalOpen, setPropertyAssignmentModalOpen] = useState(false);
   const [isNewApplicationModalOpen, setIsNewApplicationModalOpen] = useState(false);
+  const [conversionWizardOpen, setConversionWizardOpen] = useState(false);
+  const [roomCountEditorOpen, setRoomCountEditorOpen] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -48,15 +54,16 @@ export default function PropertyRooms() {
       setLoading(true);
       const propertyId = parseInt(id as string);
 
-      // Fetch property details
+      console.log('Fetching data for property ID:', propertyId);
+
       const propertyData = await apiClient.getProperty(propertyId);
+      console.log('Property data:', propertyData);
       setProperty(propertyData);
 
-      // Fetch rooms for this property
       const roomsData = await apiClient.getPropertyRooms(propertyId);
+      console.log('Rooms data:', roomsData);
       setRooms(roomsData);
 
-      // Fetch tenants and leases for reference
       const tenantsResponse = await apiClient.getTenants();
       setTenants(tenantsResponse.results || []);
       
@@ -64,6 +71,7 @@ export default function PropertyRooms() {
       setLeases(leasesResponse.results || []);
 
     } catch (err: any) {
+      console.error('Error fetching property data:', err);
       setError(err.message || 'Failed to fetch property data');
     } finally {
       setLoading(false);
@@ -87,21 +95,16 @@ export default function PropertyRooms() {
     return activeLease;
   };
 
-  const getOccupancyStats = () => {
-    if (property?.rent_type === 'per_property') {
-      const lease = getPropertyLevelLease();
-      const totalRooms = 1; // The whole property is one "room"
-      const occupiedRooms = lease ? 1 : 0;
-      const vacantRooms = lease ? 0 : 1;
-      const occupancyRate = lease ? '100.0' : '0.0';
-      return { totalRooms, occupiedRooms, vacantRooms, occupancyRate };
-    }
-    const totalRooms = rooms.length;
-    const occupiedRooms = rooms.filter(room => getRoomOccupancy(room.id)).length;
-    const vacantRooms = totalRooms - occupiedRooms;
-    const occupancyRate = totalRooms > 0 ? (occupiedRooms / totalRooms * 100).toFixed(1) : '0';
+  const getPropertyOccupancyStats = () => {
+    if (!property) return { totalRooms: 0, occupiedRooms: 0, vacantRooms: 0, occupancyRate: '0.0' };
     
-    return { totalRooms, occupiedRooms, vacantRooms, occupancyRate };
+    const stats = getOccupancyStatsUtil(property, leases, rooms);
+    return {
+      totalRooms: stats.totalUnits,
+      occupiedRooms: stats.occupiedUnits,
+      vacantRooms: stats.vacantUnits,
+      occupancyRate: stats.occupancyRate
+    };
   };
 
   const formatDate = (dateString: string) => {
@@ -114,14 +117,10 @@ export default function PropertyRooms() {
   };
 
   const getTotalRevenue = () => {
-    if (property?.rent_type === 'per_property') {
-      const lease = getPropertyLevelLease();
-      return lease ? lease.monthly_rent : 0;
-    }
-    return rooms.reduce((total, room) => {
-      const lease = getRoomOccupancy(room.id);
-      return total + (lease ? lease.monthly_rent : 0);
-    }, 0);
+    if (!property) return 0;
+    
+    const calculation = calculatePropertyRevenue(property, leases, rooms);
+    return calculation.monthlyRevenue;
   };
 
   const getPropertyLevelLease = () => {
@@ -130,7 +129,6 @@ export default function PropertyRooms() {
     return leases.find(l => {
       const isProp = l.property_ref === property.id && (!l.room || l.room === 0);
       if (!isProp) return false;
-      // consider lease current/future if end_date missing or in future
       const leaseEnd = l.end_date ? new Date(l.end_date) : undefined;
       const stillValid = !leaseEnd || leaseEnd >= today;
       return stillValid;
@@ -148,9 +146,21 @@ export default function PropertyRooms() {
   };
 
   const handleAssignmentModalSave = async () => {
-    await fetchPropertyData(); // Refresh the room data
+    await fetchPropertyData();
     setAssignmentModalOpen(false);
     setSelectedRoomForAssignment(null);
+  };
+
+  const handleConversionComplete = async (updatedProperty: Property) => {
+    setProperty(updatedProperty);
+    await fetchPropertyData();
+    setConversionWizardOpen(false);
+  };
+
+  const handleRoomCountUpdate = async (updatedRooms: Room[]) => {
+    setRooms(updatedRooms);
+    await fetchPropertyData();
+    setRoomCountEditorOpen(false);
   };
 
   const handleCreateListing = () => {
@@ -158,51 +168,27 @@ export default function PropertyRooms() {
   };
 
   const handleDeleteRoom = (roomId: number, roomName: string) => {
-    setRoomToDelete({ id: roomId, name: roomName });
+    const room = rooms.find(r => r.id === roomId);
+    if (room) {
+      setSelectedRoom(room);
     setShowDeleteModal(true);
+    }
   };
 
-  const confirmDeleteRoom = async () => {
-    if (!roomToDelete) return;
-
-    setDeleteLoading(true);
-    setError(null);
-
+  const handleDeleteComplete = async () => {
     try {
-      // Check if room is occupied before deleting
-      const lease = getRoomOccupancy(roomToDelete.id);
-      if (lease) {
-        setError('Cannot delete an occupied room. Please end the lease first.');
-        setShowDeleteModal(false);
-        setRoomToDelete(null);
-        setDeleteLoading(false);
-        return;
-      }
-
-      // Call API to delete room
-      await apiClient.deleteRoom(roomToDelete.id);
-      
-      // Refresh the room data
       await fetchPropertyData();
-      
-      // Close modal and reset state
-      setShowDeleteModal(false);
-      setRoomToDelete(null);
+      setSelectedRoom(null);
       setError(null);
-      
     } catch (err: any) {
-      console.error('Failed to delete room:', err);
-      setError(err.message || 'Failed to delete room. Please try again.');
-      setShowDeleteModal(false);
-      setRoomToDelete(null);
-    } finally {
-      setDeleteLoading(false);
+      console.error('Failed to refresh data after room deletion:', err);
+      setError(err.message || 'Failed to refresh data');
     }
   };
 
   const cancelDeleteRoom = () => {
     setShowDeleteModal(false);
-    setRoomToDelete(null);
+    setSelectedRoom(null);
     setDeleteLoading(false);
   };
 
@@ -241,8 +227,12 @@ export default function PropertyRooms() {
   };
 
   const openPropertyAssignment = () => {
+    console.log('openPropertyAssignment called', { property: property, rent_type: property?.rent_type });
     if (property?.rent_type === 'per_property') {
+      console.log('Opening property assignment modal');
     setPropertyAssignmentModalOpen(true);
+    } else {
+      console.log('Property assignment not available - rent_type is not per_property');
     }
   };
 
@@ -261,7 +251,7 @@ export default function PropertyRooms() {
   if (error) return <DashboardLayout><div className="error-state">Error: {error}</div></DashboardLayout>;
   if (!property) return <DashboardLayout><div className="empty-state">Property not found.</div></DashboardLayout>;
 
-  const { totalRooms, occupiedRooms, vacantRooms, occupancyRate } = getOccupancyStats();
+  const { totalRooms, occupiedRooms, vacantRooms, occupancyRate } = getPropertyOccupancyStats();
   const totalRevenue = getTotalRevenue();
   const propertyLevelLease = getPropertyLevelLease();
 
@@ -400,7 +390,7 @@ export default function PropertyRooms() {
                                     { header: 'Status', key: 'status' },
                                     { header: 'Tenant', key: 'tenant' },
                                     { header: 'Rent', key: 'rent' },
-                                    { header: 'Actions', key: 'actions', style: { textAlign: 'right', paddingRight: '24px' } },
+                                    { header: 'Actions', key: 'actions' },
                                 ]}
                                 data={rooms}
                                 renderRow={renderRoomRow}
@@ -562,6 +552,20 @@ export default function PropertyRooms() {
                             <p>Create a new room in this property</p>
                           </div>
                       </Link>
+                        <button onClick={() => setConversionWizardOpen(true)} className="quick-action-item">
+                            <div className="quick-action-icon" style={{background: '#f0f9ff', color: '#8b5cf6'}}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/><path d="M12 8v8m-4-4h8"/></svg></div>
+                            <div className="quick-action-text">
+                            <h4>Convert Rent Type</h4>
+                            <p>Change between per-property and per-room</p>
+                          </div>
+                        </button>
+                        <button onClick={() => setRoomCountEditorOpen(true)} className="quick-action-item">
+                            <div className="quick-action-icon" style={{background: '#ecfdf5', color: '#059669'}}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></div>
+                            <div className="quick-action-text">
+                            <h4>Manage Rooms</h4>
+                            <p>Edit room count and structure</p>
+                          </div>
+                        </button>
                         <button onClick={() => setIsNewApplicationModalOpen(true)} className="quick-action-item">
                            <div className="quick-action-icon" style={{background: '#f0fdf4', color: '#22c55e'}}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
                            <div className="quick-action-text">
@@ -591,7 +595,8 @@ export default function PropertyRooms() {
 
       {assignmentModalOpen && selectedRoomForAssignment && (
         <TenantAssignmentModal
-          roomId={selectedRoomForAssignment.id}
+          room={selectedRoomForAssignment}
+          isOpen={assignmentModalOpen}
           onClose={handleAssignmentModalClose}
           onSave={handleAssignmentModalSave}
         />
@@ -599,7 +604,8 @@ export default function PropertyRooms() {
 
       {propertyAssignmentModalOpen && property && (
         <PropertyTenantAssignmentModal
-          propertyId={property.id}
+          property={property}
+          isOpen={propertyAssignmentModalOpen}
           onClose={closePropertyAssignment}
           onSave={handlePropertyAssignmentSave}
         />
@@ -609,21 +615,58 @@ export default function PropertyRooms() {
         <NewApplicationModal onClose={() => setIsNewApplicationModalOpen(false)} />
       )}
 
-      {showDeleteModal && roomToDelete && (
-        <div className="delete-modal-backdrop">
-          <div className="delete-modal-container">
-            <h3>Confirm Deletion</h3>
-            <p>Are you sure you want to delete room "{roomToDelete.name}"? This action cannot be undone.</p>
-            <div className="delete-modal-actions">
-              <button onClick={cancelDeleteRoom} className="btn btn-secondary" disabled={deleteLoading}>
-                Cancel
-              </button>
-              <button onClick={confirmDeleteRoom} className="btn btn-danger" disabled={deleteLoading}>
-                {deleteLoading ? 'Deleting...' : 'Delete'}
-              </button>
+      {/* Conversion Wizard */}
+      {conversionWizardOpen && property && (
+        <RentTypeConversionWizard
+          property={property}
+          rooms={rooms}
+          leases={leases}
+          tenants={tenants}
+          isOpen={conversionWizardOpen}
+          onClose={() => setConversionWizardOpen(false)}
+          onComplete={(updatedProperty) => {
+            setProperty(updatedProperty);
+            setConversionWizardOpen(false);
+            fetchPropertyData();
+          }}
+        />
+      )}
+
+      {/* Room Count Editor Modal */}
+      {roomCountEditorOpen && property && (
+        <div className="modal-overlay" onClick={() => setRoomCountEditorOpen(false)}>
+          <div className="modal-container" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Room Management</h2>
+              <button onClick={() => setRoomCountEditorOpen(false)} className="modal-close">×</button>
+            </div>
+            <div className="modal-body">
+              <RoomCountEditor
+                property={property}
+                rooms={rooms}
+                leases={leases}
+                tenants={tenants}
+                onUpdate={(updatedRooms) => {
+                  setRooms(updatedRooms);
+                  setRoomCountEditorOpen(false);
+                  fetchPropertyData();
+                }}
+              />
             </div>
           </div>
         </div>
+      )}
+
+      {showDeleteModal && selectedRoom && property && (
+        <RoomDeletionModal
+          room={selectedRoom}
+          property={property}
+          leases={leases}
+          tenants={tenants}
+          isOpen={showDeleteModal}
+          onClose={cancelDeleteRoom}
+          onDelete={handleDeleteComplete}
+        />
       )}
 
       <style jsx>{`
@@ -858,13 +901,12 @@ export default function PropertyRooms() {
         .info-value { font-size: 14px; font-weight: 500; margin: 2px 0 0; color: #1e293b; }
         :global(.dark-mode) .info-value { color: #f0f6fc; }
         
-        .quick-actions-grid { display: flex; flex-direction: column; gap: 12px; padding: 20px; }
-        .quick-action-item { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 8px; background: #f8fafc; cursor: pointer; text-decoration: none; border: 1px solid #f8fafc; }
+        .quick-actions-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+        .quick-action-item { display: flex; align-items: center; gap: 12px; padding: 16px; background: white; border: 1px solid #e2e8f0; border-radius: 8px; text-decoration: none; color: inherit; transition: all 0.2s ease; cursor: pointer; }
         :global(.dark-mode) .quick-action-item { background: #21262d; border-color: #21262d; }
-        .quick-action-item:hover { border-color: #e2e8f0; }
-        :global(.dark-mode) .quick-action-item:hover { border-color: #30363d; }
+        .quick-action-item:hover { border-color: #cbd5e1; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); }
         .quick-action-icon { width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-        .quick-action-text h4 { font-size: 14px; font-weight: 600; color: #1e293b; margin: 0 0 2px; }
+        .quick-action-text h4 { font-size: 14px; font-weight: 600; color: #1e293b; margin: 0 0 4px 0; }
         .quick-action-text p { font-size: 12px; color: #64748b; margin: 0; }
         :global(.dark-mode) .quick-action-text h4 { color: #f0f6fc; }
         :global(.dark-mode) .quick-action-text p { color: #8b949e; }
@@ -890,6 +932,7 @@ export default function PropertyRooms() {
             .metrics-grid { grid-template-columns: 1fr; }
             .page-header { flex-direction: column; align-items: flex-start; gap: 16px; }
             .header-right { width: 100%; }
+            .quick-actions-grid { grid-template-columns: 1fr; }
         }
         
         /* ... (existing styles for modals, etc.) */
@@ -933,7 +976,130 @@ export default function PropertyRooms() {
             color: white;
         }
         
-        /* ... rest of the modal styles */
+        .delete-modal-actions button.btn-danger:hover {
+          background-color: #dc2626;
+        }
+
+        /* Modal Styles for Room Count Editor */
+        .modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.5);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 1000;
+        }
+
+        .modal-container {
+          background: white;
+          border-radius: 12px;
+          width: 90%;
+          max-width: 900px;
+          max-height: 90vh;
+          overflow: hidden;
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 20px 24px;
+          border-bottom: 1px solid #e2e8f0;
+        }
+
+        .modal-header h2 {
+          font-size: 20px;
+          font-weight: 600;
+          color: #1e293b;
+          margin: 0;
+        }
+
+        .modal-close {
+          background: none;
+          border: none;
+          font-size: 24px;
+          color: #64748b;
+          cursor: pointer;
+          width: 32px;
+          height: 32px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 6px;
+          transition: all 0.2s ease;
+        }
+
+        .modal-close:hover {
+          background: #f1f5f9;
+          color: #1e293b;
+        }
+
+        .modal-body {
+          padding: 24px;
+          max-height: calc(90vh - 80px);
+          overflow-y: auto;
+        }
+
+        /* Enhanced Quick Actions */
+        .quick-actions-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+          gap: 12px;
+        }
+
+        .quick-action-item {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 16px;
+          background: white;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          text-decoration: none;
+          color: inherit;
+          transition: all 0.2s ease;
+          cursor: pointer;
+        }
+
+        .quick-action-item:hover {
+          border-color: #cbd5e1;
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .quick-action-icon {
+          width: 40px;
+          height: 40px;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+
+        .quick-action-text h4 {
+          font-size: 14px;
+          font-weight: 600;
+          color: #1e293b;
+          margin: 0 0 4px 0;
+        }
+
+        .quick-action-text p {
+          font-size: 12px;
+          color: #64748b;
+          margin: 0;
+        }
+
+        @media (max-width: 768px) {
+          .quick-actions-grid {
+            grid-template-columns: 1fr;
+          }
+        }
       `}</style>
     </DashboardLayout>
   );
