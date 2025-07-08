@@ -97,12 +97,29 @@ export interface Room {
   updated_at?: string;
 }
 
+export interface ApplicationViewing {
+  id: number;
+  application: number;
+  scheduled_date: string;
+  scheduled_time: string;
+  contact_person: string;
+  contact_phone: string;
+  viewing_notes: string;
+  completed_at?: string;
+  outcome?: 'positive' | 'negative' | 'neutral';
+  tenant_feedback?: string;
+  landlord_notes?: string;
+  next_action?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Application {
   id: number;
   tenant: number;
   room: number;
   property_ref: number;
-  status: 'pending' | 'processing' | 'approved' | 'rejected' | 'withdrawn' | 'lease_created' | 'moved_in' | 'active';
+  status: ApplicationStatus;
   application_date: string;
   move_in_date?: string;
   desired_move_in_date?: string;
@@ -110,9 +127,24 @@ export interface Application {
   notes?: string;
   tenant_name?: string;
   tenant_email?: string;
+  tenant_phone?: string;
+  property_name?: string;
+  room_name?: string;
+  monthly_income?: number;
+  occupation?: string;
+  emergency_contact_name?: string;
+  emergency_contact_phone?: string;
   days_pending?: number;
   decision_date?: string;
   decision_notes?: string;
+  lease_id?: number;
+  lease_start_date?: string;
+  lease_end_date?: string;
+  monthly_rent?: number;
+  security_deposit?: number;
+  room_assignment?: any;
+  lease_terms?: any;
+  viewings?: ApplicationViewing[];
   created_at: string;
   updated_at: string;
   // Enhanced fields for MVP improvements
@@ -125,19 +157,83 @@ export interface Application {
   recommended_rooms?: number[]; // Suggested room IDs
 }
 
-// Application status constants
+// Application status constants - Enhanced workflow with 9 states
 export const APPLICATION_STATUSES = {
   PENDING: 'pending' as const,
-  PROCESSING: 'processing' as const,
   APPROVED: 'approved' as const,
-  REJECTED: 'rejected' as const,
-  WITHDRAWN: 'withdrawn' as const,
+  VIEWING_SCHEDULED: 'viewing_scheduled' as const,
+  VIEWING_COMPLETED: 'viewing_completed' as const,
+  ROOM_ASSIGNED: 'room_assigned' as const,
+  LEASE_READY: 'lease_ready' as const,
   LEASE_CREATED: 'lease_created' as const,
+  LEASE_SIGNED: 'lease_signed' as const,
   MOVED_IN: 'moved_in' as const,
-  ACTIVE: 'active' as const, // For backward compatibility
+  REJECTED: 'rejected' as const,
+  // Legacy statuses for backward compatibility
+  PROCESSING: 'processing' as const,
+  WITHDRAWN: 'withdrawn' as const,
+  ACTIVE: 'active' as const,
 } as const;
 
 export type ApplicationStatus = typeof APPLICATION_STATUSES[keyof typeof APPLICATION_STATUSES];
+
+// Status helper functions
+export const getStatusDisplayName = (status: ApplicationStatus): string => {
+  switch (status) {
+    case APPLICATION_STATUSES.PENDING: return 'Awaiting Review';
+    case APPLICATION_STATUSES.APPROVED: return 'Approved - Viewing Needed';
+    case APPLICATION_STATUSES.VIEWING_SCHEDULED: return 'Viewing Scheduled';
+    case APPLICATION_STATUSES.VIEWING_COMPLETED: return 'Viewing Complete';
+    case APPLICATION_STATUSES.ROOM_ASSIGNED: return 'Room Assigned';
+    case APPLICATION_STATUSES.LEASE_READY: return 'Lease Ready';
+    case APPLICATION_STATUSES.LEASE_CREATED: return 'Lease Generated';
+    case APPLICATION_STATUSES.LEASE_SIGNED: return 'Lease Signed';
+    case APPLICATION_STATUSES.MOVED_IN: return 'Moved In';
+    case APPLICATION_STATUSES.REJECTED: return 'Rejected';
+    case APPLICATION_STATUSES.PROCESSING: return 'Processing'; // Legacy
+    case APPLICATION_STATUSES.WITHDRAWN: return 'Withdrawn'; // Legacy
+    case APPLICATION_STATUSES.ACTIVE: return 'Active'; // Legacy
+    default: return status;
+  }
+};
+
+export const getStatusIcon = (status: ApplicationStatus): string => {
+  switch (status) {
+    case APPLICATION_STATUSES.PENDING: return '🟡';
+    case APPLICATION_STATUSES.APPROVED: return '🟢';
+    case APPLICATION_STATUSES.VIEWING_SCHEDULED: return '📅';
+    case APPLICATION_STATUSES.VIEWING_COMPLETED: return '✅';
+    case APPLICATION_STATUSES.ROOM_ASSIGNED: return '🏠';
+    case APPLICATION_STATUSES.LEASE_READY: return '📋';
+    case APPLICATION_STATUSES.LEASE_CREATED: return '📄';
+    case APPLICATION_STATUSES.LEASE_SIGNED: return '✍️';
+    case APPLICATION_STATUSES.MOVED_IN: return '🏡';
+    case APPLICATION_STATUSES.REJECTED: return '❌';
+    case APPLICATION_STATUSES.PROCESSING: return '🔄'; // Legacy
+    case APPLICATION_STATUSES.WITHDRAWN: return '🚫'; // Legacy
+    case APPLICATION_STATUSES.ACTIVE: return '🏡'; // Legacy
+    default: return '⚪';
+  }
+};
+
+export const getStatusColor = (status: ApplicationStatus): string => {
+  switch (status) {
+    case APPLICATION_STATUSES.PENDING: return 'bg-yellow-100 text-yellow-800';
+    case APPLICATION_STATUSES.APPROVED: return 'bg-green-100 text-green-800';
+    case APPLICATION_STATUSES.VIEWING_SCHEDULED: return 'bg-blue-100 text-blue-800';
+    case APPLICATION_STATUSES.VIEWING_COMPLETED: return 'bg-emerald-100 text-emerald-800';
+    case APPLICATION_STATUSES.ROOM_ASSIGNED: return 'bg-purple-100 text-purple-800';
+    case APPLICATION_STATUSES.LEASE_READY: return 'bg-indigo-100 text-indigo-800';
+    case APPLICATION_STATUSES.LEASE_CREATED: return 'bg-cyan-100 text-cyan-800';
+    case APPLICATION_STATUSES.LEASE_SIGNED: return 'bg-teal-100 text-teal-800';
+    case APPLICATION_STATUSES.MOVED_IN: return 'bg-green-100 text-green-800';
+    case APPLICATION_STATUSES.REJECTED: return 'bg-red-100 text-red-800';
+    case APPLICATION_STATUSES.PROCESSING: return 'bg-blue-100 text-blue-800'; // Legacy
+    case APPLICATION_STATUSES.WITHDRAWN: return 'bg-gray-100 text-gray-800'; // Legacy
+    case APPLICATION_STATUSES.ACTIVE: return 'bg-green-100 text-green-800'; // Legacy
+    default: return 'bg-gray-100 text-gray-800';
+  }
+};
 
 export interface Lease {
   id: number;

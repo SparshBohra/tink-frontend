@@ -194,6 +194,18 @@ export default function RoomAssignmentModal({
                           <span className="label">Type:</span>
                           <span className="value">{room.room_type || 'Standard'}</span>
                         </div>
+                        {room.floor_number && (
+                          <div className="detail">
+                            <span className="label">Floor:</span>
+                            <span className="value">{room.floor_number}</span>
+                          </div>
+                        )}
+                        {room.square_footage && (
+                          <div className="detail">
+                            <span className="label">Size:</span>
+                            <span className="value">{room.square_footage} sq ft</span>
+                          </div>
+                        )}
                         <div className="detail">
                           <span className="label">Compatibility:</span>
                           <span 
@@ -211,6 +223,28 @@ export default function RoomAssignmentModal({
                           {getCompatibilityText(compatibilityScore)}
                         </span>
                       </div>
+                      
+                      {room.room_features && (
+                        <div className="room-features">
+                          <span className="features-title">Features:</span>
+                          <div className="features-list">
+                            {Array.isArray(room.room_features) 
+                              ? room.room_features.map((feature, index) => (
+                                  <span key={index} className="feature-tag">
+                                    {feature}
+                                  </span>
+                                ))
+                              : typeof room.room_features === 'string' 
+                                ? room.room_features.split(',').map((feature, index) => (
+                                    <span key={index} className="feature-tag">
+                                      {feature.trim()}
+                                    </span>
+                                  ))
+                                : null
+                            }
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
@@ -434,6 +468,35 @@ export default function RoomAssignmentModal({
           color: #059669;
           text-transform: uppercase;
           letter-spacing: 0.5px;
+        }
+
+        .room-features {
+          margin-top: 8px;
+          padding-top: 8px;
+          border-top: 1px solid #e5e7eb;
+        }
+
+        .features-title {
+          font-size: 12px;
+          font-weight: 500;
+          color: #6b7280;
+          display: block;
+          margin-bottom: 4px;
+        }
+
+        .features-list {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 4px;
+        }
+
+        .feature-tag {
+          background: #dbeafe;
+          color: #1d4ed8;
+          padding: 2px 6px;
+          border-radius: 4px;
+          font-size: 10px;
+          font-weight: 500;
         }
 
         .all-rooms-section h4 {

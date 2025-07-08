@@ -153,6 +153,13 @@ export default function Navigation() {
                 </span>
               </Link>
               <Link 
+                href="/viewings" 
+                className={`nav-link ${isActive('/viewings') ? 'active' : ''}`}
+              >
+                <span className="nav-icon viewing-icon"></span>
+                <span className="nav-text">Viewings</span>
+              </Link>
+              <Link 
                 href="/leases" 
                 className={`nav-link ${isActive('/leases') ? 'active' : ''}`}
               >
@@ -203,6 +210,13 @@ export default function Navigation() {
                     <span className="count-badge">{pendingApplicationsCount}</span>
                   )}
                 </span>
+              </Link>
+              <Link 
+                href="/viewings" 
+                className={`nav-link ${isActive('/viewings') ? 'active' : ''}`}
+              >
+                <span className="nav-icon viewing-icon"></span>
+                <span className="nav-text">Viewings</span>
               </Link>
               <Link 
                 href="/leases" 

@@ -8,6 +8,7 @@ import {
   Property,
   Room,
   Application,
+  ApplicationViewing,
   Lease,
   Landlord,
   Document,
@@ -707,6 +708,103 @@ class ApiClient {
 
   async getPendingApplications(): Promise<Application[]> {
     const response = await this.api.get('/applications/pending/');
+    return response.data;
+  }
+
+  // Enhanced workflow endpoints
+  async scheduleViewing(applicationId: number, viewingData: {
+    scheduled_date: string;
+    scheduled_time: string;
+    contact_person: string;
+    contact_phone: string;
+    viewing_notes: string;
+  }): Promise<ApplicationViewing> {
+    try {
+      const response = await this.api.post(`/applications/${applicationId}/schedule-viewing/`, viewingData);
+      return response.data;
+    } catch (error: any) {
+      console.error('Viewing scheduling failed:', error);
+      if (error.response?.status === 400) {
+        const details = error.response?.data?.detail || error.response?.data?.message || JSON.stringify(error.response?.data);
+        throw new Error(`Invalid viewing data: ${details}`);
+      }
+      throw new Error(error.message || 'Failed to schedule viewing');
+    }
+  }
+
+  async completeViewing(applicationId: number, completionData: {
+    outcome: 'positive' | 'negative' | 'neutral';
+    tenant_feedback?: string;
+    landlord_notes?: string;
+    next_action?: string;
+  }): Promise<ApplicationViewing> {
+    try {
+      const response = await this.api.post(`/applications/${applicationId}/complete-viewing/`, completionData);
+      return response.data;
+    } catch (error: any) {
+      console.error('Viewing completion failed:', error);
+      if (error.response?.status === 400) {
+        const details = error.response?.data?.detail || error.response?.data?.message || JSON.stringify(error.response?.data);
+        throw new Error(`Invalid completion data: ${details}`);
+      }
+      throw new Error(error.message || 'Failed to complete viewing');
+    }
+  }
+
+  async getApplicationViewings(applicationId: number): Promise<ApplicationViewing[]> {
+    const response = await this.api.get(`/applications/${applicationId}/viewings/`);
+    return response.data;
+  }
+
+  async assignRoom(applicationId: number, roomData: { room_id: number }): Promise<Application> {
+    try {
+      const response = await this.api.post(`/applications/${applicationId}/assign_room/`, roomData);
+      return response.data;
+    } catch (error: any) {
+      console.error('Room assignment failed:', error);
+      if (error.response?.status === 409) {
+        throw new Error('Room is already assigned or unavailable');
+      }
+      if (error.response?.status === 400) {
+        const details = error.response?.data?.detail || error.response?.data?.message || JSON.stringify(error.response?.data);
+        throw new Error(`Invalid room assignment: ${details}`);
+      }
+      throw new Error(error.message || 'Failed to assign room');
+    }
+  }
+
+  async generateLease(applicationId: number): Promise<Application> {
+    try {
+      const response = await this.api.post(`/applications/${applicationId}/generate-lease/`, {});
+      return response.data;
+    } catch (error: any) {
+      console.error('Lease generation failed:', error);
+      if (error.response?.status === 400) {
+        const details = error.response?.data?.detail || error.response?.data?.message || JSON.stringify(error.response?.data);
+        throw new Error(`Cannot generate lease: ${details}`);
+      }
+      throw new Error(error.message || 'Failed to generate lease');
+    }
+  }
+
+  async getApplicationsPipeline(): Promise<{
+    summary: {
+      total_applications: number;
+      active_applications: number;
+      completed_applications: number;
+      rejected_applications: number;
+    };
+    pending: Application[];
+    approved: Application[];
+    viewing_scheduled: Application[];
+    viewing_completed: Application[];
+    room_assigned: Application[];
+    lease_created: Application[];
+    lease_signed: Application[];
+    moved_in: Application[];
+    rejected: Application[];
+  }> {
+    const response = await this.api.get('/applications/pipeline/');
     return response.data;
   }
 

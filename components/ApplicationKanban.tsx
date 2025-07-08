@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import StatusBadge from './StatusBadge';
+import StatusProgressIndicator from './StatusProgressIndicator';
 import { Application } from '../lib/types';
 
 interface ApplicationKanbanProps {
@@ -76,11 +77,11 @@ function ApplicationListView({
       case 'Pending Review':
         return 'New applications waiting for initial screening and approval decision';
       case 'Qualified':
-        return 'Approved applicants ready for room assignment and lease preparation';
-      case 'Viewed / Negotiating':
-        return 'Active discussions about rooms, terms, and move-in arrangements';
-      case 'Lease Created':
-        return 'Legal documents generated and awaiting signatures from all parties';
+        return 'Approved applicants ready for property viewing scheduling';
+      case 'Viewing Process':
+        return 'Property viewings scheduled, in progress, or completed - ready for room assignment';
+      case 'Lease Process':
+        return 'Room assigned and lease documents in preparation, generation, or signing process';
       case 'Active Tenants':
         return 'Completed applications - active tenants';
       default:
@@ -152,7 +153,7 @@ function ApplicationListView({
                               <button className="btn-sm success" onClick={() => onApprove(app.id, app.property_ref)}>
                                 Approve
                               </button>
-                              <button className="btn-sm danger" onClick={() => onReject(app.id)}>
+                              <button className="btn-sm btn-error" onClick={() => onReject(app.id)}>
                                 Reject
                               </button>
                             </>
@@ -173,31 +174,62 @@ function ApplicationListView({
                           {/* Qualified actions */}
                           {app.status === 'approved' && (
                             <button className="btn-sm primary" onClick={() => onSetupViewing && onSetupViewing(app)}>
-                              Setup Viewing
+                              Schedule Viewing
                             </button>
                           )}
 
-                          {/* Viewed / Negotiating actions */}
-                          {app.status === 'processing' && (
+                          {/* Viewing Scheduled actions */}
+                          {app.status === 'viewing_scheduled' && (
                             <>
-                              <button className="btn-sm primary" onClick={() => onAssignRoom(app)}>
-                                Assign Room
+                              <button className="btn-sm success" onClick={() => onSetupViewing && onSetupViewing(app)}>
+                                Complete Viewing
                               </button>
-                              <button className="btn-sm success" onClick={() => onGenerateLease && onGenerateLease(app)}>
-                                Generate Lease
+                              <button className="btn-sm secondary" onClick={() => onSetupViewing && onSetupViewing(app)}>
+                                Reschedule
                               </button>
                             </>
                           )}
 
-                          {/* Lease Created actions */}
-                          {app.status === 'lease_created' && (
+                          {/* Viewing Complete actions */}
+                          {(app.status === 'viewing_completed' || app.status === 'processing') && (
+                            <>
+                              <button className="btn-sm primary" onClick={() => onAssignRoom(app)}>
+                                Assign Room
+                              </button>
+                              <button className="btn-sm secondary" onClick={() => onReject(app.id)}>
+                                Reject
+                              </button>
+                            </>
+                          )}
+
+                          {/* Room Assigned actions */}
+                          {app.status === 'room_assigned' && (
+                            <>
+                              <button className="btn-sm success" onClick={() => onGenerateLease && onGenerateLease(app)}>
+                                Generate Lease
+                              </button>
+                              <button className="btn-sm secondary" onClick={() => onAssignRoom(app)}>
+                                Change Room
+                              </button>
+                            </>
+                          )}
+
+                          {/* Lease Process actions */}
+                          {(app.status === 'lease_created' || app.status === 'lease_signed') && (
                             <>
                               <button className="btn-sm primary" onClick={() => onReview(app)}>
-                                View Application
+                                View Lease
                               </button>
-                              <button className="btn-sm success" onClick={() => onActivateLease && onActivateLease(app)}>
-                                Activate Lease
-                              </button>
+                              {app.status === 'lease_created' && (
+                                <button className="btn-sm success" onClick={() => onActivateLease && onActivateLease(app)}>
+                                  Send to Tenant
+                                </button>
+                              )}
+                              {app.status === 'lease_signed' && (
+                                <button className="btn-sm success" onClick={() => onActivateLease && onActivateLease(app)}>
+                                  Schedule Move-in
+                                </button>
+                              )}
                             </>
                           )}
 
@@ -236,8 +268,8 @@ type Column = { keys: string[]; title: string };
 const STATUS_COLUMNS: Column[] = [
   { keys: ['pending', 'rejected'], title: 'Pending Review' },
   { keys: ['approved'], title: 'Qualified' },
-  { keys: ['processing'], title: 'Viewed / Negotiating' },
-  { keys: ['lease_created'], title: 'Lease Created' },
+  { keys: ['viewing_scheduled', 'viewing_completed', 'processing'], title: 'Viewing Process' },
+  { keys: ['room_assigned', 'lease_ready', 'lease_created', 'lease_signed'], title: 'Lease Process' },
   { keys: ['moved_in', 'active'], title: 'Active Tenants' },
 ];
 
@@ -262,11 +294,11 @@ export default function ApplicationKanban({
       case 'Pending Review':
         return 'New applications waiting for initial screening and approval decision';
       case 'Qualified':
-        return 'Approved applicants ready for room assignment and lease preparation';
-      case 'Viewed / Negotiating':
-        return 'Active discussions about rooms, terms, and move-in arrangements';
-      case 'Lease Created':
-        return 'Legal documents generated and awaiting signatures from all parties';
+        return 'Approved applicants ready for property viewing scheduling';
+      case 'Viewing Process':
+        return 'Property viewings scheduled, in progress, or completed - ready for room assignment';
+      case 'Lease Process':
+        return 'Room assigned and lease documents in preparation, generation, or signing process';
       case 'Active Tenants':
         return 'Completed applications - active tenants';
       default:
@@ -326,6 +358,20 @@ export default function ApplicationKanban({
                       </div>
                       <div className="app-prop">{getPropertyName(app.property_ref)}</div>
                       <div className="app-dates">Applied: {formatDate(app.created_at)}</div>
+                      <div className="app-status-text">
+                        {app.status === 'pending' && 'Awaiting Review'}
+                        {app.status === 'approved' && 'Approved - Viewing Needed'}
+                        {app.status === 'rejected' && 'Application Rejected'}
+                        {app.status === 'viewing_scheduled' && 'Viewing Scheduled'}
+                        {app.status === 'viewing_completed' && 'Viewing Completed'}
+                        {app.status === 'processing' && 'Processing Application'}
+                        {app.status === 'room_assigned' && 'Room Assigned'}
+                        {app.status === 'lease_ready' && 'Lease Ready'}
+                        {app.status === 'lease_created' && 'Lease Generated'}
+                        {app.status === 'lease_signed' && 'Lease Signed'}
+                        {app.status === 'moved_in' && 'Tenant Moved In'}
+                        {app.status === 'active' && 'Active Tenant'}
+                      </div>
                       <div className="kanban-actions">
                         {/* Pending actions */}
                         {app.status === 'pending' && (
@@ -336,7 +382,7 @@ export default function ApplicationKanban({
                             <button className="btn-sm success" onClick={() => onApprove(app.id, app.property_ref)}>
                               Approve
                             </button>
-                            <button className="btn-sm danger" onClick={() => onReject(app.id)}>
+                            <button className="btn-sm btn-error" onClick={() => onReject(app.id)}>
                               Reject
                             </button>
                           </>
@@ -358,32 +404,63 @@ export default function ApplicationKanban({
                         {app.status === 'approved' && (
                           <>
                             <button className="btn-sm primary" onClick={() => onSetupViewing && onSetupViewing(app)}>
-                              Setup Viewing
+                              Schedule Viewing
                             </button>
                           </>
                         )}
 
-                        {/* Viewed / Negotiating actions */}
-                        {app.status === 'processing' && (
+                        {/* Viewing Scheduled actions */}
+                        {app.status === 'viewing_scheduled' && (
+                          <>
+                            <button className="btn-sm success" onClick={() => onSetupViewing && onSetupViewing(app)}>
+                              Complete Viewing
+                            </button>
+                            <button className="btn-sm secondary" onClick={() => onSetupViewing && onSetupViewing(app)}>
+                              Reschedule
+                            </button>
+                          </>
+                        )}
+
+                        {/* Viewing Complete actions */}
+                        {(app.status === 'viewing_completed' || app.status === 'processing') && (
                           <>
                             <button className="btn-sm primary" onClick={() => onAssignRoom(app)}>
                               Assign Room
                             </button>
-                            <button className="btn-sm success" onClick={() => onGenerateLease && onGenerateLease(app)}>
-                              Generate Lease
+                            <button className="btn-sm secondary" onClick={() => onReject(app.id)}>
+                              Reject
                             </button>
                           </>
                         )}
 
-                        {/* Lease Created actions */}
-                        {app.status === 'lease_created' && (
+                        {/* Room Assigned actions */}
+                        {app.status === 'room_assigned' && (
+                          <>
+                            <button className="btn-sm success" onClick={() => onGenerateLease && onGenerateLease(app)}>
+                              Generate Lease
+                            </button>
+                            <button className="btn-sm secondary" onClick={() => onAssignRoom(app)}>
+                              Change Room
+                            </button>
+                          </>
+                        )}
+
+                        {/* Lease Process actions */}
+                        {(app.status === 'lease_created' || app.status === 'lease_signed') && (
                           <>
                             <button className="btn-sm primary" onClick={() => onReview(app)}>
-                              View Application
+                              View Lease
                             </button>
-                            <button className="btn-sm success" onClick={() => onActivateLease && onActivateLease(app)}>
-                              Activate Lease
-                            </button>
+                            {app.status === 'lease_created' && (
+                              <button className="btn-sm success" onClick={() => onActivateLease && onActivateLease(app)}>
+                                Send to Tenant
+                              </button>
+                            )}
+                            {app.status === 'lease_signed' && (
+                              <button className="btn-sm success" onClick={() => onActivateLease && onActivateLease(app)}>
+                                Schedule Move-in
+                              </button>
+                            )}
                           </>
                         )}
 
@@ -581,17 +658,18 @@ export default function ApplicationKanban({
           margin: 8px 0;
         }
         .kanban-card {
-          background: #ffffff;
-          border: 1px solid #e5e7eb;
+          background: white;
+          border: 1px solid #e2e8f0;
           border-radius: 8px;
           padding: 16px;
-          margin-bottom: 14px;
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+          margin-bottom: 12px;
           display: flex;
           flex-direction: column;
-          gap: 8px;
+          gap: 10px;
           transition: all 0.2s ease;
           cursor: pointer;
+          min-height: 140px;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
         }
         .kanban-card:hover {
           border-color: #3b82f6;
@@ -602,14 +680,17 @@ export default function ApplicationKanban({
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
-          gap: 8px;
+          gap: 12px;
+          margin-bottom: 8px;
         }
         .applicant-name {
           font-weight: 600;
           color: #1e293b;
-          font-size: 14px;
-          line-height: 1.3;
+          font-size: 15px;
+          line-height: 1.4;
           cursor: pointer;
+          flex: 1;
+          margin: 0;
         }
         .applicant-name:hover {
           color: #3b82f6;
@@ -618,16 +699,32 @@ export default function ApplicationKanban({
           font-size: 13px;
           color: #64748b;
           font-weight: 500;
+          margin: 0 0 6px 0;
+          line-height: 1.3;
         }
         .app-dates {
           font-size: 12px;
           color: #94a3b8;
+          margin: 0 0 8px 0;
+        }
+        .app-status-text {
+          font-size: 12px;
+          color: #4f46e5;
+          font-weight: 500;
+          padding: 6px 10px;
+          background: rgba(79, 70, 229, 0.08);
+          border-radius: 6px;
+          border: 1px solid rgba(79, 70, 229, 0.2);
+          text-align: center;
+          margin: 4px 0;
         }
         .kanban-actions {
           display: flex;
           flex-wrap: wrap;
-          gap: 6px;
-          margin-top: 4px;
+          gap: 8px;
+          margin-top: auto;
+          padding-top: 12px;
+          border-top: 1px solid #f1f5f9;
         }
 
         /* List View Styles */
@@ -763,16 +860,18 @@ export default function ApplicationKanban({
           background: #10b981;
           color: white;
         }
-        .btn-sm.success:hover {
+                .btn-sm.success:hover {
           background: #059669;
           transform: translateY(-1px);
         }
-        .btn-sm.danger {
-          background: #ef4444;
-          color: white;
+        .btn-sm.secondary {
+          background: #f8fafc;
+          color: #64748b;
+          border: 1px solid #e2e8f0;
         }
-        .btn-sm.danger:hover {
-          background: #dc2626;
+        .btn-sm.secondary:hover {
+          background: #f1f5f9;
+          color: #475569;
           transform: translateY(-1px);
         }
         .btn-sm.message {
