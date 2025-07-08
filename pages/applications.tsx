@@ -6,6 +6,7 @@ import DashboardLayout from '../components/DashboardLayout';
 import { withAuth } from '../lib/auth-context';
 import { apiClient } from '../lib/api';
 import { Application, Property, Room } from '../lib/types';
+import ApplicationKanban from '../components/ApplicationKanban';
 
 interface ConflictResolution {
   applicationId: number;
@@ -83,9 +84,9 @@ function Applications() {
       setFilteredApplications(apps);
       setProperties(propertiesResponse.results || []);
       setRooms(roomsResponse.results || []);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to fetch applications data:', error);
-      setError(error?.message || 'Failed to load applications data');
+      setError(error instanceof Error ? error.message : 'Failed to load applications data');
     } finally {
       setLoading(false);
     }
@@ -107,10 +108,6 @@ function Applications() {
   const getPropertyName = (propertyId: number) => {
     const property = properties.find(p => p.id === propertyId);
     return property ? property.name : 'Unknown Property';
-  };
-
-  const getVacantRoomsForProperty = (propertyId: number) => {
-    return rooms.filter(room => room.property_ref === propertyId && room.is_vacant);
   };
 
   const getPropertyDetails = (propertyId: number) => {
@@ -156,9 +153,9 @@ function Applications() {
         });
         fetchData(); // Refresh data
         alert(`✅ Application approved!\n\nTenant: ${application.tenant_name}\nRoom: ${availableRoom.name}\nLease created successfully!`);
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('Approval error:', error);
-        alert(`❌ Failed to approve application: ${error.message || 'Unknown error'}`);
+        alert(`❌ Failed to approve application: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
     } else {
       alert('Cannot approve - no vacant rooms in this property');
@@ -173,8 +170,8 @@ function Applications() {
       });
       fetchData(); // Refresh data
       alert('Application rejected');
-    } catch (error: any) {
-      alert(`Failed to reject application: ${error.message}`);
+    } catch (error: unknown) {
+      alert(`Failed to reject application: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -209,7 +206,7 @@ function Applications() {
     return <span style={badge.style}>{badge.text}</span>;
   };
 
-  const handleRoomAssignment = (applicationId: number, roomId: number, roomInfo: any) => {
+  const handleRoomAssignment = (applicationId: number, roomId: number, roomInfo: unknown) => {
     // Implementation of handleRoomAssignment
     console.log('Room assignment:', applicationId, roomId, roomInfo);
     setIsRoomAssignmentModalOpen(false);
@@ -223,7 +220,7 @@ function Applications() {
     setIsLeaseGenerationOpen(true);
   };
 
-  const handleLeaseGenerated = (leaseData: any) => {
+  const handleLeaseGenerated = (leaseData: { applicationId: number; tenantName: string; roomName: string; leaseStartDate: string; leaseEndDate: string }) => {
     // Update application status to lease_created
     setApplications(prevApps => 
       prevApps.map(app => 
@@ -307,6 +304,40 @@ function Applications() {
     return `Generate lease document for ${app.tenant_name} - ${availableRooms.length} room(s) available`;
   };
 
+  const handleGenerateLease = (app: Application) => {
+    const availableRooms = rooms.filter(room => room.property_ref === app.property_ref && room.is_vacant);
+    if (availableRooms.length > 0) {
+      openLeaseGenerationModal(app, availableRooms[0]);
+    } else {
+      alert('No available rooms for lease generation');
+    }
+  };
+
+  const handleMessage = (app: Application) => {
+    // Navigate to communication page with this applicant
+    router.push(`/communication?applicant=${app.id}&tenant=${app.tenant_name}`);
+  };
+
+  const handleSetupViewing = (app: Application) => {
+    alert(`Setting up viewing for ${app.tenant_name || `Applicant #${app.id}`} at ${getPropertyName(app.property_ref)}`);
+  };
+
+  const handleActivateLease = async (app: Application) => {
+    try {
+      // This would activate the lease and change status to 'active' or 'moved_in'
+      // For now, we'll just simulate the activation
+      await apiClient.decideApplication(app.id, {
+        decision: 'approve', // This might need to be a different endpoint in real implementation
+        decision_notes: 'Lease activated via dashboard'
+      });
+      fetchData(); // Refresh data
+      alert(`✅ Lease activated for ${app.tenant_name || `Applicant #${app.id}`}!`);
+    } catch (error: unknown) {
+      console.error('Lease activation error:', error);
+      alert(`❌ Failed to activate lease: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
   if (loading) {
     return (
       <DashboardLayout
@@ -340,6 +371,11 @@ function Applications() {
     pending: pendingApplications.length,
     approved: filteredApplications.filter(app => app.status === 'approved').length,
     rejected: filteredApplications.filter(app => app.status === 'rejected').length,
+    active: filteredApplications.filter(app => ['moved_in', 'active'].includes(app.status)).length,
+    conversionRate: filteredApplications.length > 0 ? 
+      Math.round((filteredApplications.filter(app => ['approved', 'lease_created', 'moved_in', 'active'].includes(app.status)).length / filteredApplications.length) * 100) : 0,
+    avgDaysPending: filteredApplications.length > 0 ?
+      Math.round(filteredApplications.reduce((sum, app) => sum + (app.days_pending || 0), 0) / filteredApplications.length) : 0,
   };
 
   return (
@@ -456,26 +492,40 @@ function Applications() {
           <div className="metric-card">
             <div className="metric-header">
               <div className="metric-info">
-                <h3 className="metric-title">Rejected</h3>
+                <h3 className="metric-title">Conversion Rate</h3>
                 <div className="metric-icon">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="12" cy="12" r="10"/>
-                    <line x1="15" y1="9" x2="9" y2="15"/>
-                    <line x1="9" y1="9" x2="15" y2="15"/>
+                    <path d="M3 17l6-6 4 4 8-8"/>
+                    <path d="M21 7l-5 5v-4h-4"/>
                   </svg>
                 </div>
               </div>
             </div>
             <div className="metric-content">
-              <div className="metric-value">{metrics.rejected}</div>
-              <div className="metric-subtitle">Not approved</div>
+              <div className="metric-value">{metrics.conversionRate}%</div>
+              <div className="metric-subtitle">Applications to tenants</div>
               <div className="metric-progress">
-                <span className="metric-label">Rejection rate</span>
-                <span className="metric-change positive">+{metrics.rejected > 0 ? '1' : '0'}</span>
+                <span className="metric-label">Success rate</span>
+                <span className="metric-change positive">+{metrics.conversionRate > 50 ? '↗' : metrics.conversionRate > 25 ? '→' : '↘'}</span>
               </div>
             </div>
           </div>
         </div>
+
+        {/* Kanban Board View */}
+        <ApplicationKanban
+          applications={filteredApplications}
+          onReview={openApplicationDetail}
+          onApprove={handleQuickApprove}
+          onReject={handleReject}
+          onAssignRoom={openRoomAssignmentModal}
+          onGenerateLease={handleGenerateLease}
+          onMessage={handleMessage}
+          onSetupViewing={handleSetupViewing}
+          onActivateLease={handleActivateLease}
+          getPropertyName={getPropertyName}
+          formatDate={formatDate}
+        />
 
         {/* Main Content */}
         <div className="main-content">
@@ -783,17 +833,7 @@ function Applications() {
                               </button>
                               {app.status === 'approved' && (
                                 <button 
-                                  onClick={() => {
-                                    // Find the first available room for the property
-                                    const availableRooms = rooms.filter(room => 
-                                      room.property_ref === app.property_ref && room.is_vacant
-                                    );
-                                    if (availableRooms.length > 0) {
-                                      openLeaseGenerationModal(app, availableRooms[0]);
-                                    } else {
-                                      alert('No available rooms for lease generation');
-                                    }
-                                  }}
+                                  onClick={() => handleGenerateLease(app)}
                                   className="manage-btn lease-btn"
                                   title={getLeaseButtonTooltip(app)}
                                 >
