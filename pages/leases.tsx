@@ -335,7 +335,11 @@ function Leases() {
                 <p className="section-subtitle">Currently active leases across all properties</p>
               </div>
               <div className="section-actions">
-                <button onClick={() => fetchData()} className="refresh-btn">
+                <button 
+                  onClick={() => fetchData()} 
+                  className="refresh-btn"
+                  title="Refresh lease data to get the latest information"
+                >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <polyline points="23 4 23 10 17 10"/>
                     <polyline points="1 20 1 14 7 14"/>
@@ -343,7 +347,11 @@ function Leases() {
                   </svg>
                   Refresh
                 </button>
-                <button onClick={downloadLeasesReport} className="download-btn">
+                <button 
+                  onClick={downloadLeasesReport} 
+                  className="download-btn"
+                  title="Download a comprehensive CSV report of all leases with details and analytics"
+                >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                     <polyline points="7,10 12,15 17,10"/>
@@ -389,13 +397,25 @@ function Leases() {
                         return (
                           <tr key={lease.id}>
                             <td className="table-left">
-                              <div className="tenant-name">{tenant}</div>
+                              <div 
+                                className="tenant-name clickable-name" 
+                                onClick={() => router.push(`/tenants/${lease.tenant}`)}
+                                title={`View ${tenant}'s tenant profile and lease history`}
+                              >
+                                {tenant}
+                              </div>
                               {tenantContact && (
                                 <div className="tenant-contact">{tenantContact.phone}</div>
                               )}
                             </td>
                             <td className="table-left">
-                              <div className="property-name">{property}</div>
+                              <div 
+                                className="property-name clickable-property" 
+                                onClick={() => router.push(`/properties/${lease.property_ref}/rooms`)}
+                                title={`View ${property} property details and room management`}
+                              >
+                                {property}
+                              </div>
                               <div className="room-name">{room}</div>
                             </td>
                             <td className="table-left">
@@ -417,7 +437,10 @@ function Leases() {
                             <td className="table-center">
                               <div className="action-buttons">
                                 <Link href={`/leases/${lease.id}`} legacyBehavior>
-                                  <a className="manage-lease-btn">
+                                  <a 
+                                    className="manage-lease-btn"
+                                    title={`Manage ${tenant}'s lease - view details, process renewals, handle move-outs`}
+                                  >
                                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                       <path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
                                   </svg>
@@ -532,9 +555,23 @@ function Leases() {
                       const daysToExpiry = getDaysUntilExpiry(lease.end_date);
                       return (
                         <tr key={lease.id}>
-                          <td className="table-left">{getTenantName(lease.tenant)}</td>
                           <td className="table-left">
-                            <div className="property-name">{getPropertyName(lease.property_ref)}</div>
+                            <div 
+                              className="tenant-name clickable-name" 
+                              onClick={() => router.push(`/tenants/${lease.tenant}`)}
+                              title={`View ${getTenantName(lease.tenant)}'s tenant profile and lease history`}
+                            >
+                              {getTenantName(lease.tenant)}
+                            </div>
+                          </td>
+                          <td className="table-left">
+                            <div 
+                              className="property-name clickable-property" 
+                              onClick={() => router.push(`/properties/${lease.property_ref}/rooms`)}
+                              title={`View ${getPropertyName(lease.property_ref)} property details and room management`}
+                            >
+                              {getPropertyName(lease.property_ref)}
+                            </div>
                             <div className="room-name">{getRoomName(lease.room)}</div>
                           </td>
                           <td className="table-center">
@@ -548,7 +585,13 @@ function Leases() {
                           </td>
                           <td className="table-center">
                             <Link href={`/leases/${lease.id}`} legacyBehavior>
-                              <a className="renew-now-btn">
+                              <a 
+                                className="manage-lease-btn"
+                                title={`Manage ${getTenantName(lease.tenant)}'s lease - view details, process renewals, handle move-outs`}
+                              >
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                              </svg>
                                 Manage Lease
                               </a>
                             </Link>
@@ -586,9 +629,23 @@ function Leases() {
                   <tbody>
                     {draftLeases.map((lease) => (
                       <tr key={lease.id}>
-                        <td className="table-left">{getTenantName(lease.tenant)}</td>
                         <td className="table-left">
-                          <div className="property-name">{getPropertyName(lease.property_ref)}</div>
+                          <div 
+                            className="tenant-name clickable-name" 
+                            onClick={() => router.push(`/tenants/${lease.tenant}`)}
+                            title={`View ${getTenantName(lease.tenant)}'s tenant profile and lease history`}
+                          >
+                            {getTenantName(lease.tenant)}
+                          </div>
+                        </td>
+                        <td className="table-left">
+                          <div 
+                            className="property-name clickable-property" 
+                            onClick={() => router.push(`/properties/${lease.property_ref}/rooms`)}
+                            title={`View ${getPropertyName(lease.property_ref)} property details and room management`}
+                          >
+                            {getPropertyName(lease.property_ref)}
+                          </div>
                           <div className="room-name">{getRoomName(lease.room)}</div>
                         </td>
                         <td className="table-left">
@@ -1370,6 +1427,57 @@ function Leases() {
           background: rgba(239, 68, 68, 0.1) !important;
           border-color: rgba(239, 68, 68, 0.3) !important;
           color: #ef4444 !important;
+        }
+
+        .clickable-name {
+          cursor: pointer;
+          transition: color 0.2s ease;
+          border-radius: 4px;
+          padding: 2px 4px;
+          margin: -2px -4px;
+        }
+
+        .clickable-name:hover {
+          color: #3b82f6;
+          background: #eff6ff;
+        }
+
+        .clickable-property {
+          cursor: pointer;
+          transition: color 0.2s ease;
+          border-radius: 4px;
+          padding: 2px 4px;
+          margin: -2px -4px;
+        }
+
+        .clickable-property:hover {
+          color: #059669;
+          background: #ecfdf5;
+        }
+
+        .tenant-name {
+          font-size: 14px;
+          font-weight: 500;
+          color: #374151;
+          margin-bottom: 2px;
+        }
+
+        .tenant-contact {
+          font-size: 12px;
+          color: #6b7280;
+        }
+
+        .property-name {
+          font-size: 14px;
+          font-weight: 500;
+          color: #374151;
+          margin-bottom: 2px;
+        }
+
+        .lease-details {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
         }
       `}</style>
     </DashboardLayout>

@@ -6,6 +6,13 @@ import DashboardLayout from '../components/DashboardLayout';
 import { withAuth } from '../lib/auth-context';
 import { apiClient } from '../lib/api';
 import { Application, Property, Room } from '../lib/types';
+
+interface ConflictResolution {
+  applicationId: number;
+  action: 'approve' | 'reject' | 'assign_room';
+  roomId?: number;
+  reason?: string;
+}
 import NewApplicationModal from '../components/NewApplicationModal';
 import ConflictResolutionModal from '../components/ConflictResolutionModal';
 import RoomAssignmentModal from '../components/RoomAssignmentModal';
@@ -202,8 +209,12 @@ function Applications() {
     return <span style={badge.style}>{badge.text}</span>;
   };
 
-  const handleRoomAssignment = (application: Application, room: Room) => {
+  const handleRoomAssignment = (applicationId: number, roomId: number, roomInfo: any) => {
     // Implementation of handleRoomAssignment
+    console.log('Room assignment:', applicationId, roomId, roomInfo);
+    setIsRoomAssignmentModalOpen(false);
+    setSelectedApplicationForAssignment(null);
+    fetchData();
   };
 
   const openLeaseGenerationModal = (application: Application, room: Room) => {
@@ -267,8 +278,33 @@ function Applications() {
     setIsApplicationDetailOpen(true);
   };
 
-  const handleConflictResolution = (resolvedApplication: Application) => {
+  const handleConflictResolution = (resolutions: ConflictResolution[]) => {
     // Implementation of handleConflictResolution
+    console.log('Conflict resolutions:', resolutions);
+    setIsConflictModalOpen(false);
+    setConflictingApplications([]);
+    fetchData();
+  };
+
+  const getApproveButtonTooltip = (propertyId: number) => {
+    const propertyDetails = getPropertyDetails(propertyId);
+    const propertyName = getPropertyName(propertyId);
+    
+    if (propertyDetails.vacantRooms === 0) {
+      return `Cannot approve - no vacant rooms available in ${propertyName}. Click "Room Management" to add rooms or manage room availability.`;
+    }
+    return `Quick approve and automatically assign to available room in ${propertyName} (${propertyDetails.vacantRooms} vacant rooms available)`;
+  };
+
+  const getLeaseButtonTooltip = (app: Application) => {
+    const availableRooms = rooms.filter(room => 
+      room.property_ref === app.property_ref && room.is_vacant
+    );
+    
+    if (availableRooms.length === 0) {
+      return 'Cannot generate lease - no available rooms in this property';
+    }
+    return `Generate lease document for ${app.tenant_name} - ${availableRooms.length} room(s) available`;
   };
 
   if (loading) {
@@ -325,7 +361,7 @@ function Applications() {
               </div>
             </div>
             <div className="header-right">
-              <button onClick={() => setIsModalOpen(true)} className="new-application-btn">
+              <button onClick={() => setIsModalOpen(true)} className="view-all-btn">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="12" y1="5" x2="12" y2="19"></line>
                   <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -451,7 +487,11 @@ function Applications() {
                 <p className="section-subtitle">These applications are waiting for your decision. Quick decisions help fill vacant rooms faster.</p>
               </div>
               <div className="section-actions">
-                <button onClick={fetchData} className="refresh-btn">
+                <button 
+                  onClick={fetchData} 
+                  className="refresh-btn"
+                  title="Refresh applications data to get the latest information"
+                >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <polyline points="23 4 23 10 17 10"/>
                     <polyline points="1 20 1 14 7 14"/>
@@ -459,21 +499,28 @@ function Applications() {
                   </svg>
                   Refresh
                 </button>
-                <button onClick={downloadApplicationsReport} className="view-all-btn">
+                <button 
+                  onClick={downloadApplicationsReport} 
+                  className="view-all-btn"
+                  title="Download a comprehensive report of all applications with analytics and insights"
+                >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                     <polyline points="7,10 12,15 17,10"/>
-                    <line x1="12" y1="15" x2="12" y2="3"/>
+                    <path d="M12 15V3"/>
                   </svg>
                   Download Report
                 </button>
                 <button 
-                  onClick={() => router.push('/tenants')}
+                  onClick={() => router.push('/tenants')} 
                   className="view-all-btn"
+                  title="View all tenants, their lease details, and rental history"
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                    <circle cx="12" cy="7" r="4"/>
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
                   </svg>
                   View All Tenants
                 </button>
@@ -485,8 +532,9 @@ function Applications() {
                     } else if (properties.length > 0) {
                       openPropertyRoomManagement(properties[0]);
                     }
-                  }}
-                  className="view-all-btn property-room-btn"
+                  }} 
+                  className="view-all-btn room-management-btn"
+                  title="Manage room availability, pricing, and assignments across all properties"
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
@@ -545,11 +593,23 @@ function Applications() {
                       {pendingApplications.map((app) => (
                         <tr key={app.id}>
                           <td className="table-left">
-                            <div className="applicant-name">{app.tenant_name}</div>
+                            <div 
+                              className="applicant-name clickable-name" 
+                              onClick={() => openApplicationDetail(app)}
+                              title={`View ${app.tenant_name}'s application details`}
+                            >
+                              {app.tenant_name}
+                            </div>
                             <div className="applicant-email">{app.tenant_email}</div>
                           </td>
                           <td className="table-left">
-                            <div className="property-name">{getPropertyName(app.property_ref)}</div>
+                            <div 
+                              className="property-name clickable-property" 
+                              onClick={() => router.push(`/properties/${app.property_ref}/rooms`)}
+                              title={`View ${getPropertyName(app.property_ref)} property details and room management`}
+                            >
+                              {getPropertyName(app.property_ref)}
+                            </div>
                             <div className="property-vacancy">
                               {getPropertyDetails(app.property_ref).vacantRooms} vacant rooms
                             </div>
@@ -575,6 +635,7 @@ function Applications() {
                                 onClick={() => handleQuickApprove(app.id, app.property_ref)}
                                 className="manage-btn approve-btn"
                                 disabled={getPropertyDetails(app.property_ref).vacantRooms === 0}
+                                title={getApproveButtonTooltip(app.property_ref)}
                               >
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                   <polyline points="20,6 9,17 4,12"/>
@@ -584,6 +645,7 @@ function Applications() {
                               <button 
                                 onClick={() => handleReject(app.id)}
                                 className="manage-btn reject-btn"
+                                title={`Reject ${app.tenant_name}'s application. This action cannot be undone.`}
                               >
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                   <circle cx="12" cy="12" r="10"/>
@@ -595,6 +657,7 @@ function Applications() {
                               <button 
                                 onClick={() => openApplicationDetail(app)}
                                 className="manage-btn detail-btn"
+                                title={`View detailed information about ${app.tenant_name}'s application including timeline, analysis, and documents`}
                               >
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -654,11 +717,29 @@ function Applications() {
                       {reviewedApplications.map((app) => (
                         <tr key={app.id}>
                           <td className="table-left">
-                            <div className="applicant-name">{app.tenant_name}</div>
+                            <div 
+                              className="applicant-name clickable-name" 
+                              onClick={() => {
+                                if (app.status === 'approved') {
+                                  router.push(`/tenants/${app.tenant}`);
+                                } else {
+                                  openApplicationDetail(app);
+                                }
+                              }}
+                              title={app.status === 'approved' ? `View ${app.tenant_name}'s tenant profile` : `View ${app.tenant_name}'s application details`}
+                            >
+                              {app.tenant_name}
+                            </div>
                             <div className="applicant-email">{app.tenant_email}</div>
                           </td>
                           <td className="table-left">
-                            <div className="property-name">{getPropertyName(app.property_ref)}</div>
+                            <div 
+                              className="property-name clickable-property" 
+                              onClick={() => router.push(`/properties/${app.property_ref}/rooms`)}
+                              title={`View ${getPropertyName(app.property_ref)} property details and room management`}
+                            >
+                              {getPropertyName(app.property_ref)}
+                            </div>
                           </td>
                           <td className="table-left">
                             <div className="app-details">
@@ -675,7 +756,11 @@ function Applications() {
                           <td className="table-center">
                             <div className="action-buttons">
                               {app.status === 'approved' && (
-                                <button onClick={() => router.push(`/tenants/${app.tenant}`)} className="manage-btn view-btn">
+                                <button 
+                                  onClick={() => router.push(`/tenants/${app.tenant}`)} 
+                                  className="manage-btn view-btn"
+                                  title={`View ${app.tenant_name}'s tenant profile, lease details, and rental history`}
+                                >
                                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
                                     <circle cx="12" cy="12" r="3"/>
@@ -686,6 +771,7 @@ function Applications() {
                               <button 
                                 onClick={() => openApplicationDetail(app)}
                                 className="manage-btn detail-btn"
+                                title={`View detailed information about ${app.tenant_name}'s application including timeline, analysis, and documents`}
                               >
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -709,6 +795,7 @@ function Applications() {
                                     }
                                   }}
                                   className="manage-btn lease-btn"
+                                  title={getLeaseButtonTooltip(app)}
                                 >
                                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -820,8 +907,8 @@ function Applications() {
         .header-content {
           display: flex;
           justify-content: space-between;
-          align-items: center;
-          padding: 0 24px;
+          align-items: flex-start;
+          gap: 20px;
         }
 
         .header-left {
@@ -829,7 +916,9 @@ function Applications() {
         }
 
         .header-right {
-          /* Styles for the new container */
+          display: flex;
+          align-items: center;
+          gap: 12px;
         }
 
         .dashboard-title {
@@ -1144,13 +1233,40 @@ function Applications() {
         }
 
         .applicant-email {
-          font-size: 12px;
-          color: #64748b;
+          font-size: 14px;
+          color: #6b7280;
+        }
+
+        .clickable-name {
+          cursor: pointer;
+          transition: color 0.2s ease;
+          border-radius: 4px;
+          padding: 2px 4px;
+          margin: -2px -4px;
+        }
+
+        .clickable-name:hover {
+          color: #3b82f6;
+          background: #eff6ff;
+        }
+
+        .clickable-property {
+          cursor: pointer;
+          transition: color 0.2s ease;
+          border-radius: 4px;
+          padding: 2px 4px;
+          margin: -2px -4px;
+        }
+
+        .clickable-property:hover {
+          color: #059669;
+          background: #ecfdf5;
         }
 
         .property-name {
-          color: #1e293b;
-          margin-bottom: 4px;
+          font-size: 14px;
+          font-weight: 500;
+          color: #374151;
         }
 
         .property-vacancy {
