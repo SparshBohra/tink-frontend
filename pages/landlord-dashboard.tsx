@@ -5,6 +5,8 @@ import { useRouter } from 'next/router';
 import DashboardLayout from '../components/DashboardLayout';
 import { withAuth } from '../lib/auth-context';
 import { useAuth } from '../lib/auth-context';
+import ApplicationDetailModal from '../components/ApplicationDetailModal';
+import { Application, Property, Room } from '../lib/types';
 
 // Icon Components
 const SparklesIcon = () => (
@@ -80,6 +82,10 @@ function LandlordDashboard() {
   const [isFading, setIsFading] = useState(false);
   const [isTyping, setIsTyping] = useState(true);
   const [messageIndex, setMessageIndex] = useState(0);
+  
+  // Application modal state
+  const [isApplicationDetailOpen, setIsApplicationDetailOpen] = useState(false);
+  const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
   
   const welcomeMessage = `Welcome back, ${user?.full_name || 'User'}! Here's an overview of your business operations.`;
   
@@ -319,54 +325,84 @@ function LandlordDashboard() {
     }
   ];
 
-  const recentApplications = [
+  const recentApplications: Application[] = [
     {
       id: 1,
-      name: 'John Smith',
-      initials: 'JS',
+      tenant_name: 'John Smith',
+      tenant_email: 'john.smith@email.com',
+      tenant_phone: '+1-555-0101',
+      property_ref: 1,
+      desired_move_in_date: '2024-01-15',
+      rent_budget: 1200,
+      status: 'pending',
+      priority_score: 85,
+      days_pending: 2,
+      created_at: '2024-01-10T10:00:00Z',
+      updated_at: '2024-01-10T10:00:00Z',
+      decision_date: null,
+      decision_notes: null,
+      start_date: null,
+      end_date: null,
+      monthly_rent: null,
+      security_deposit: null,
+      has_conflicts: false,
+      conflicting_applications: [],
+      recommended_rooms: [1, 2],
+      applicant_initials: 'JS',
       appliedDate: '2 days ago',
-      property: 'Downtown Coliving Hub',
-      status: 'Pending Review'
+      property_name: 'Downtown Coliving Hub'
     },
     {
       id: 2,
-      name: 'Maria Johnson',
-      initials: 'MJ',
+      tenant_name: 'Maria Johnson',
+      tenant_email: 'maria.johnson@email.com',
+      tenant_phone: '+1-555-0102',
+      property_ref: 2,
+      desired_move_in_date: '2024-01-16',
+      rent_budget: 1100,
+      status: 'pending',
+      priority_score: 92,
+      days_pending: 1,
+      created_at: '2024-01-11T14:30:00Z',
+      updated_at: '2024-01-11T14:30:00Z',
+      decision_date: null,
+      decision_notes: null,
+      start_date: null,
+      end_date: null,
+      monthly_rent: null,
+      security_deposit: null,
+      has_conflicts: false,
+      conflicting_applications: [],
+      recommended_rooms: [3, 4],
+      applicant_initials: 'MJ',
       appliedDate: '1 day ago',
-      property: 'University District House',
-      status: 'Pending Review'
+      property_name: 'University District House'
     },
     {
       id: 3,
-      name: 'Robert Brown',
-      initials: 'RB',
+      tenant_name: 'Robert Brown',
+      tenant_email: 'robert.brown@email.com',
+      tenant_phone: '+1-555-0103',
+      property_ref: 3,
+      desired_move_in_date: '2024-01-12',
+      rent_budget: 1300,
+      status: 'pending',
+      priority_score: 78,
+      days_pending: 0,
+      created_at: '2024-01-12T09:15:00Z',
+      updated_at: '2024-01-12T09:15:00Z',
+      decision_date: null,
+      decision_notes: null,
+      start_date: null,
+      end_date: null,
+      monthly_rent: null,
+      security_deposit: null,
+      has_conflicts: false,
+      conflicting_applications: [],
+      recommended_rooms: [5, 6],
+      applicant_initials: 'RB',
       appliedDate: 'today',
-      property: 'Sunset Boulevard Apartments',
-      status: 'Pending Review'
-    },
-    {
-      id: 4,
-      name: 'Alice Lee',
-      initials: 'AL',
-      appliedDate: '3 days ago',
-      property: 'Oak Street Residences',
-      status: 'Pending Review'
-    },
-    {
-      id: 5,
-      name: 'David Wilson',
-      initials: 'DW',
-      appliedDate: '1 week ago',
-      property: 'Maple Street Commons',
-      status: 'Pending Review'
-    },
-    {
-      id: 6,
-      name: 'Sarah Taylor',
-      initials: 'ST',
-      appliedDate: '2 weeks ago',
-      property: 'Riverside Student Housing',
-      status: 'Pending Review'
+      property_name: 'Sunset Boulevard Apartments'
     }
   ];
 
@@ -423,6 +459,208 @@ function LandlordDashboard() {
   const filteredProperties = propertyFilter === 'All'
     ? properties
     : properties.filter((p) => p.status === propertyFilter);
+
+  // Demo properties and rooms data for the modal
+  const demoProperties: Property[] = [
+    { 
+      id: 1, 
+      landlord: 1,
+      name: 'Downtown Coliving Hub', 
+      address: '123 Main St',
+      address_line1: '123 Main St',
+      city: 'Downtown', 
+      state: 'CA', 
+      postal_code: '90210',
+      country: 'USA',
+      full_address: '123 Main St, Downtown, CA 90210',
+      property_type: 'Apartment',
+      timezone: 'America/Los_Angeles',
+      timezone_display: 'Pacific Time',
+      total_rooms: 2,
+      vacant_rooms: 2,
+      rent_type: 'per_room', 
+      monthly_rent: 1200, 
+      created_at: '2024-01-01T00:00:00Z'
+    },
+    { 
+      id: 2, 
+      landlord: 1,
+      name: 'University District House', 
+      address: '456 College Ave',
+      address_line1: '456 College Ave',
+      city: 'University District', 
+      state: 'CA', 
+      postal_code: '90211',
+      country: 'USA',
+      full_address: '456 College Ave, University District, CA 90211',
+      property_type: 'House',
+      timezone: 'America/Los_Angeles',
+      timezone_display: 'Pacific Time',
+      total_rooms: 2,
+      vacant_rooms: 1,
+      rent_type: 'per_room', 
+      monthly_rent: 1100, 
+      created_at: '2024-01-01T00:00:00Z'
+    },
+    { 
+      id: 3, 
+      landlord: 1,
+      name: 'Sunset Boulevard Apartments', 
+      address: '789 Sunset Blvd',
+      address_line1: '789 Sunset Blvd',
+      city: 'West Hollywood', 
+      state: 'CA', 
+      postal_code: '90212',
+      country: 'USA',
+      full_address: '789 Sunset Blvd, West Hollywood, CA 90212',
+      property_type: 'Apartment',
+      timezone: 'America/Los_Angeles',
+      timezone_display: 'Pacific Time',
+      total_rooms: 2,
+      vacant_rooms: 2,
+      rent_type: 'per_room', 
+      monthly_rent: 1300, 
+      created_at: '2024-01-01T00:00:00Z'
+    }
+  ];
+
+  const demoRooms: Room[] = [
+    { 
+      id: 1, 
+      property_ref: 1, 
+      name: 'Room A1', 
+      room_type: 'standard', 
+      max_capacity: 1,
+      current_occupancy: 0,
+      monthly_rent: 1200, 
+      is_vacant: true, 
+      occupancy_rate: 0,
+      property_name: 'Downtown Coliving Hub',
+      can_add_tenant: true,
+      created_at: '2024-01-01T00:00:00Z'
+    },
+    { 
+      id: 2, 
+      property_ref: 1, 
+      name: 'Room A2', 
+      room_type: 'standard', 
+      max_capacity: 1,
+      current_occupancy: 0,
+      monthly_rent: 1200, 
+      is_vacant: true, 
+      occupancy_rate: 0,
+      property_name: 'Downtown Coliving Hub',
+      can_add_tenant: true,
+      created_at: '2024-01-01T00:00:00Z'
+    },
+    { 
+      id: 3, 
+      property_ref: 2, 
+      name: 'Room B1', 
+      room_type: 'suite', 
+      max_capacity: 1,
+      current_occupancy: 0,
+      monthly_rent: 1100, 
+      is_vacant: true, 
+      occupancy_rate: 0,
+      property_name: 'University District House',
+      can_add_tenant: true,
+      created_at: '2024-01-01T00:00:00Z'
+    },
+    { 
+      id: 4, 
+      property_ref: 2, 
+      name: 'Room B2', 
+      room_type: 'standard', 
+      max_capacity: 1,
+      current_occupancy: 1,
+      monthly_rent: 1100, 
+      is_vacant: false, 
+      occupancy_rate: 100,
+      property_name: 'University District House',
+      can_add_tenant: false,
+      created_at: '2024-01-01T00:00:00Z'
+    },
+    { 
+      id: 5, 
+      property_ref: 3, 
+      name: 'Room C1', 
+      room_type: 'studio', 
+      max_capacity: 1,
+      current_occupancy: 0,
+      monthly_rent: 1300, 
+      is_vacant: true, 
+      occupancy_rate: 0,
+      property_name: 'Sunset Boulevard Apartments',
+      can_add_tenant: true,
+      created_at: '2024-01-01T00:00:00Z'
+    },
+    { 
+      id: 6, 
+      property_ref: 3, 
+      name: 'Room C2', 
+      room_type: 'standard', 
+      max_capacity: 1,
+      current_occupancy: 0,
+      monthly_rent: 1300, 
+      is_vacant: true, 
+      occupancy_rate: 0,
+      property_name: 'Sunset Boulevard Apartments',
+      can_add_tenant: true,
+      created_at: '2024-01-01T00:00:00Z'
+    }
+  ];
+
+  // Helper functions for display
+  const getApplicantInitials = (application: Application) => {
+    if (application.tenant_name) {
+      return application.tenant_name.split(' ').map(n => n[0]).join('').toUpperCase();
+    }
+    return 'N/A';
+  };
+
+  const getPropertyName = (application: Application) => {
+    const property = demoProperties.find(p => p.id === application.property_ref);
+    return property ? property.name : 'Unknown Property';
+  };
+
+  const getTimeSinceApplication = (application: Application) => {
+    const daysAgo = application.days_pending || 0;
+    if (daysAgo === 0) return 'today';
+    if (daysAgo === 1) return '1 day ago';
+    return `${daysAgo} days ago`;
+  };
+
+  // Handler functions for the modal
+  const handleViewApplication = (application: Application) => {
+    setSelectedApplication(application);
+    setIsApplicationDetailOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsApplicationDetailOpen(false);
+    setSelectedApplication(null);
+  };
+
+  const handleApprove = (applicationId: number, propertyId: number) => {
+    console.log('Approve application:', applicationId, propertyId);
+    // Here you would normally call the API
+    alert(`Application ${applicationId} approved!`);
+    handleCloseModal();
+  };
+
+  const handleReject = (applicationId: number) => {
+    console.log('Reject application:', applicationId);
+    // Here you would normally call the API
+    alert(`Application ${applicationId} rejected!`);
+    handleCloseModal();
+  };
+
+  const handleAssignRoom = (application: Application) => {
+    console.log('Assign room for application:', application.id);
+    // Here you would normally open room assignment modal
+    alert(`Opening room assignment for ${application.tenant_name}`);
+  };
 
   return (
     <DashboardLayout title="">
@@ -872,7 +1110,14 @@ function LandlordDashboard() {
                 <tbody>
                     {filteredProperties.map((property) => (
                     <tr key={property.id}>
-                      <td className="table-left">{property.name}</td>
+                      <td className="table-left">
+                        <div 
+                          className="property-name-link"
+                          onClick={() => router.push(`/properties/${property.id}/rooms`)}
+                        >
+                          {property.name}
+                        </div>
+                      </td>
                       <td className="table-left">
                         <span className={`status-badge ${property.status.toLowerCase()}`}>
                           {property.status}
@@ -947,29 +1192,29 @@ function LandlordDashboard() {
                 {recentApplications.slice(0, 3).map((application) => (
                   <div key={application.id} className="application-card">
                     <div className="application-header">
-                      <div className="applicant-avatar">{application.initials}</div>
-                      <span className="status-badge pending">{application.status}</span>
+                      <div className="applicant-avatar">{getApplicantInitials(application)}</div>
+                      <span className="status-badge pending">PENDING REVIEW</span>
                     </div>
                     
                     <div className="application-content">
-                      <h3 className="applicant-name">{application.name}</h3>
+                      <h3 className="applicant-name">{application.tenant_name}</h3>
                       <div className="application-time">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <circle cx="12" cy="12" r="10"/>
                           <polyline points="12,6 12,12 16,14"/>
                         </svg>
-                        Applied {application.appliedDate}
+                        Applied {getTimeSinceApplication(application)}
                       </div>
                       <div className="application-property">
-                        <span className="detail-label">Property:</span> {application.property}
+                        <span className="detail-label">Property:</span> {getPropertyName(application)}
                       </div>
                     </div>
 
                     <button 
                       className="review-btn"
-                      onClick={() => router.push('/applications')}
+                      onClick={() => handleViewApplication(application)}
                     >
-                      Review
+                      View Application
                     </button>
                   </div>
                 ))}
@@ -1020,6 +1265,18 @@ function LandlordDashboard() {
           </div>
         </div>
       </div>
+      
+      {/* Application Detail Modal */}
+      <ApplicationDetailModal
+        isOpen={isApplicationDetailOpen}
+        application={selectedApplication}
+        properties={demoProperties}
+        rooms={demoRooms}
+        onClose={handleCloseModal}
+        onApprove={handleApprove}
+        onReject={handleReject}
+        onAssignRoom={handleAssignRoom}
+      />
       
       <style jsx>{`
         .dashboard-container {
@@ -1747,18 +2004,29 @@ function LandlordDashboard() {
 
         /* Properties table header and cell styling */
         .properties-table th {
-          position: sticky;
-          top: 0;
-          background: #ffffff;
-          z-index: 2;
-          font-size: 12px;
+          background: #f8fafc;
+          border-bottom: 1px solid #e2e8f0;
+          padding: 16px 20px;
           font-weight: 600;
-          color: #9ca3af;
-          padding: 12px 16px;
+          font-size: 14px;
+          color: #475569;
           text-transform: uppercase;
           letter-spacing: 0.5px;
-          border-bottom: 1px solid #e5e7eb;
-          text-align: left;
+          position: sticky;
+          top: 0;
+          z-index: 10;
+        }
+
+        .property-name-link {
+          color: #3b82f6;
+          cursor: pointer;
+          font-weight: 600;
+          transition: color 0.2s ease, text-decoration 0.2s ease;
+        }
+
+        .property-name-link:hover {
+          color: #1d4ed8;
+          text-decoration: underline;
         }
 
         .properties-table td {

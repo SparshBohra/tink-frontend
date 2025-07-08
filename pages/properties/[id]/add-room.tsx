@@ -330,10 +330,10 @@ export default function AddRoom() {
           <div className="main-content-grid">
             <div className="form-section">
               <div className="section-header">
-                <h2 className="section-title">Room Details</h2>
+                  <h2 className="section-title">Room Details</h2>
                 <p className="section-subtitle">Enter the details for the new room.</p>
               </div>
-
+              
               <form onSubmit={handleSubmit} className="room-form">
                 {/* Basic Information */}
                 <div className="form-grid">
@@ -565,7 +565,7 @@ export default function AddRoom() {
                 <h3 className="section-title">Quick Actions</h3>
                 <p className="section-subtitle">Related actions and shortcuts</p>
               </div>
-
+              
               <div className="actions-grid">
                 <Link href={`/properties/${propertyId}/rooms`} className="action-card blue">
                   <div className="action-icon">
@@ -580,7 +580,7 @@ export default function AddRoom() {
                     <div className="action-subtitle">See existing rooms</div>
                   </div>
                 </Link>
-
+                
                 <Link href={`/properties/${propertyId}`} className="action-card green">
                   <div className="action-icon">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -594,7 +594,7 @@ export default function AddRoom() {
                     <div className="action-subtitle">View property info</div>
                   </div>
                 </Link>
-
+                
                 <Link href={`/properties/${propertyId}/edit`} className="action-card purple">
                   <div className="action-icon">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -612,14 +612,14 @@ export default function AddRoom() {
           </div>
         </div>
 
-        <style jsx>{`
-          .dashboard-container {
-            width: 100%;
-            padding: 16px 20px 20px 20px;
-            background: #f8fafc;
-            min-height: calc(100vh - 72px);
-            box-sizing: border-box;
-          }
+      <style jsx>{`
+        .dashboard-container {
+          width: 100%;
+          padding: 16px 20px 20px 20px;
+          background: #f8fafc;
+          min-height: calc(100vh - 72px);
+          box-sizing: border-box;
+        }
           .dashboard-header { margin-bottom: 24px; }
           .header-content { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; }
           .header-left { flex: 1; }
@@ -717,8 +717,8 @@ export default function AddRoom() {
             .header-content { flex-direction: column; align-items: stretch; gap: 12px; }
             .metrics-grid { grid-template-columns: 1fr; }
             .features-grid { grid-template-columns: 1fr 1fr; }
-          }
-        `}</style>
+        }
+      `}</style>
       </DashboardLayout>
     </>
   );

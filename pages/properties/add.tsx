@@ -81,21 +81,21 @@ export default function AddProperty() {
         const profile = await apiClient.getProfile();
         
         // Always set the current user as the landlord
-        setFormData(prev => ({ ...prev, landlord: profile.id }));
+          setFormData(prev => ({ ...prev, landlord: profile.id }));
         
         // If user is a manager, we might still want to show landlord relationships
         // but we'll use the current user's ID as the landlord for property creation
         if (profile.role === 'manager') {
           try {
-            const rel = await apiClient.getManagerLandlordRelationships();
+          const rel = await apiClient.getManagerLandlordRelationships();
             // If manager has relationships, use the first one, otherwise use their own ID
             if (rel.length > 0) {
-              setFormData(prev => ({ ...prev, landlord: rel[0].landlord }));
-            }
+            setFormData(prev => ({ ...prev, landlord: rel[0].landlord }));
+          }
           } catch (e) {
             console.error('Failed to load manager relationships:', e);
             // Fallback to using manager's own ID
-          }
+        }
         }
       } catch (e) {
         console.error('Failed to load profile:', e);
@@ -239,8 +239,8 @@ export default function AddProperty() {
     if (formData.rent_type === 'per_property') {
       if (!formData.monthly_rent || isNaN(Number(formData.monthly_rent)) || Number(formData.monthly_rent) <= 0) {
         setError('Please enter a valid monthly rent amount for the property. This field is required when "Rent is for the whole property" is selected.');
-        setLoading(false);
-        return;
+      setLoading(false);
+      return;
       }
     }
 
@@ -324,7 +324,7 @@ export default function AddProperty() {
       }
 
       setSuccess(`Property "${newProperty.name}" created successfully! ${formData.rent_type === 'per_room' ? `Created ${getTotalRooms()} rooms.` : ''}`);
-      
+
       setTimeout(() => {
         router.push(`/properties/${newProperty.id}/rooms`);
       }, 2000);
@@ -360,16 +360,16 @@ export default function AddProperty() {
 
   // Don't render the form until profile is resolved
   if (!profileResolved) {
-    return (
-      <>
-        <Head>
+  return (
+    <>
+      <Head>
           <title>Add Property - Loading - Tink</title>
-        </Head>
-        <DashboardLayout title="">
-          <div className="dashboard-container">
-            <div className="dashboard-header">
-              <div className="header-content">
-                <div className="header-left">
+      </Head>
+      <DashboardLayout title="">
+        <div className="dashboard-container">
+          <div className="dashboard-header">
+            <div className="header-content">
+              <div className="header-left">
                   <h1 className="dashboard-title">Loading...</h1>
                   <p className="welcome-message">Please wait while we load your profile information.</p>
                 </div>
@@ -418,7 +418,7 @@ export default function AddProperty() {
           <div className="main-content-grid">
             <div className="form-section">
               <div className="section-header">
-                <h2 className="section-title">Property Details</h2>
+                  <h2 className="section-title">Property Details</h2>
                 <p className="section-subtitle">Enter the basic information for your new property.</p>
               </div>
 
@@ -438,7 +438,7 @@ export default function AddProperty() {
                     required
                   />
                   <div className="form-hint">Maximum 200 characters</div>
-                </div>
+                  </div>
 
                 {/* Property Type */}
                 <div className="form-group">
@@ -460,10 +460,10 @@ export default function AddProperty() {
                   <div className="form-hint">
                     {PROPERTY_TYPES.find(t => t.value === formData.property_type)?.description}
                   </div>
-                </div>
+                  </div>
 
                 {/* Rent Structure */}
-                <div className="form-group">
+                  <div className="form-group">
                   <label htmlFor="rent_type" className="form-label required">Rent Structure</label>
                   <select
                     id="rent_type"
@@ -477,8 +477,8 @@ export default function AddProperty() {
                       <option key={type.value} value={type.value}>
                         {type.label}
                       </option>
-                    ))}
-                  </select>
+                      ))}
+                    </select>
                   <div className="form-hint">
                     {RENT_TYPES.find(t => t.value === formData.rent_type)?.description}
                   </div>
@@ -487,7 +487,7 @@ export default function AddProperty() {
                 {/* Conditional Fields based on Rent Type */}
                 {formData.rent_type === 'per_property' && (
                   <>
-                    <div className="form-group">
+                  <div className="form-group">
                       <label htmlFor="total_rooms" className="form-label required">Total Rooms</label>
                       <input
                         type="number"
@@ -501,9 +501,9 @@ export default function AddProperty() {
                         required
                       />
                       <div className="form-hint">Number of rooms in this property (1-50)</div>
-                    </div>
+                  </div>
 
-                    <div className="form-group">
+                  <div className="form-group">
                       <label htmlFor="monthly_rent" className="form-label required">Monthly Rent</label>
                       <div className="input-group">
                         <span className="input-prefix">$</span>
@@ -519,7 +519,7 @@ export default function AddProperty() {
                           step="0.01"
                           required
                         />
-                      </div>
+                  </div>
                       <div className="form-hint">Total monthly rent for the entire property</div>
                     </div>
 
@@ -527,37 +527,37 @@ export default function AddProperty() {
                       <label htmlFor="security_deposit" className="form-label">Security Deposit</label>
                       <div className="input-group">
                         <span className="input-prefix">$</span>
-                        <input
+                          <input 
                           type="number"
                           id="security_deposit"
                           name="security_deposit"
                           value={formData.security_deposit}
-                          onChange={handleChange}
+                            onChange={handleChange}
                           className="form-input"
                           placeholder="1750.00"
                           min="0"
                           step="0.01"
                         />
-                      </div>
+                            </div>
                       <div className="form-hint">Optional security deposit amount</div>
-                    </div>
+                          </div>
                   </>
                 )}
 
                 {/* Address Information */}
                 <div className="form-group">
                   <label htmlFor="address_line1" className="form-label required">Address Line 1</label>
-                  <input
+                          <input 
                     type="text"
                     id="address_line1"
                     name="address_line1"
                     value={formData.address_line1}
-                    onChange={handleChange}
+                            onChange={handleChange}
                     className="form-input"
                     placeholder="123 Main Street"
                     required
                   />
-                </div>
+                            </div>
 
                 <div className="form-group">
                   <label htmlFor="address_line2" className="form-label">Address Line 2 (Optional)</label>
@@ -570,7 +570,7 @@ export default function AddProperty() {
                     className="form-input"
                     placeholder="Apartment, suite, unit, building, floor, etc."
                   />
-                </div>
+                          </div>
 
                 <div className="form-row">
                   <div className="form-group">
@@ -585,7 +585,7 @@ export default function AddProperty() {
                       placeholder="San Francisco"
                       required
                     />
-                  </div>
+                      </div>
 
                   <div className="form-group">
                     <label htmlFor="state" className="form-label required">State</label>
@@ -604,7 +604,7 @@ export default function AddProperty() {
                         </option>
                       ))}
                     </select>
-                  </div>
+                    </div>
 
                   <div className="form-group">
                     <label htmlFor="postal_code" className="form-label required">ZIP Code</label>
@@ -623,16 +623,16 @@ export default function AddProperty() {
 
                 <div className="form-group">
                   <label htmlFor="country" className="form-label required">Country</label>
-                  <input
+                        <input 
                     type="text"
                     id="country"
                     name="country"
                     value={formData.country}
-                    onChange={handleChange}
+                          onChange={handleChange} 
                     className="form-input"
-                    required
-                  />
-                </div>
+                          required 
+                        />
+                      </div>
 
                 <div className="form-group">
                   <label htmlFor="timezone" className="form-label required">Timezone</label>
@@ -652,16 +652,16 @@ export default function AddProperty() {
                   </select>
                   <div className="form-hint">
                     {TIMEZONE_OPTIONS.find(t => t.value === formData.timezone)?.description}
-                  </div>
+                    </div>
                 </div>
 
                 {/* Room Configuration for per_room rent type */}
-                {formData.rent_type === 'per_room' && (
+                  {formData.rent_type === 'per_room' && (
                   <div className="room-configuration-section">
                     <div className="section-header">
                       <h3 className="section-title">Room Configuration</h3>
                       <p className="section-subtitle">Configure the types and quantities of rooms for this property.</p>
-                    </div>
+                        </div>
 
                     {roomTypeConfigs.length > 0 && (
                       <div className="room-configs-list">
@@ -672,7 +672,7 @@ export default function AddProperty() {
                                 <h4 className="room-config-title">
                                   {ROOM_TYPES.find(rt => rt.value === config.roomType)?.label || 'Room Type'}
                                 </h4>
-                              </div>
+                        </div>
                               <button
                                 type="button"
                                 onClick={() => removeRoomTypeConfig(config.id)}
@@ -684,7 +684,7 @@ export default function AddProperty() {
                                   <line x1="6" y1="6" x2="18" y2="18"></line>
                                 </svg>
                               </button>
-                            </div>
+                      </div>
 
                             <div className="room-config-fields">
                               <div className="form-group">
@@ -700,7 +700,7 @@ export default function AddProperty() {
                                     </option>
                                   ))}
                                 </select>
-                              </div>
+                    </div>
 
                               <div className="form-group">
                                 <label className="form-label">Quantity</label>
@@ -712,7 +712,7 @@ export default function AddProperty() {
                                   min="1"
                                   max="20"
                                 />
-                              </div>
+                </div>
 
                               <div className="form-group">
                                 <label className="form-label">Monthly Rent</label>
@@ -727,8 +727,8 @@ export default function AddProperty() {
                                     min="0"
                                     step="0.01"
                                   />
-                                </div>
-                              </div>
+                </div>
+            </div>
 
                               <div className="form-group">
                                 <label className="form-label">Max Capacity</label>
@@ -751,8 +751,8 @@ export default function AddProperty() {
                                   className="form-input"
                                   placeholder="1, 2, Ground, etc."
                                 />
-                              </div>
-                            </div>
+                </div>
+              </div>
 
                             <div className="room-config-summary">
                               <span className="summary-item">
@@ -764,10 +764,10 @@ export default function AddProperty() {
                               <span className="summary-item">
                                 <strong>${(config.quantity * config.monthlyRent).toLocaleString()}</strong>/month revenue
                               </span>
-                            </div>
-                          </div>
+                  </div>
+                </div>
                         ))}
-                      </div>
+                  </div>
                     )}
 
                     <div className="add-room-type-section">
@@ -782,7 +782,7 @@ export default function AddProperty() {
                         </svg>
                         Add Room Type
                       </button>
-                    </div>
+                </div>
 
                     {/* Property Summary */}
                     {roomTypeConfigs.length > 0 && (
@@ -792,19 +792,19 @@ export default function AddProperty() {
                           <div className="summary-metric">
                             <div className="metric-value">{getTotalRooms()}</div>
                             <div className="metric-label">Total Rooms</div>
-                          </div>
+                  </div>
                           <div className="summary-metric">
                             <div className="metric-value">{getTotalCapacity()}</div>
                             <div className="metric-label">Max Occupancy</div>
-                          </div>
+                </div>
                           <div className="summary-metric">
                             <div className="metric-value">${getEstimatedRevenue().toLocaleString()}</div>
                             <div className="metric-label">Monthly Revenue</div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
                   </div>
+                </div>
+              </div>
+                    )}
+            </div>
                 )}
 
                 <div className="form-actions">
