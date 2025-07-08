@@ -206,7 +206,7 @@ export default function TenantDetails() {
         </button>
         <Link href={`/applications?tenant=${tenant?.id}`} className="btn btn-secondary btn-sm">
           Go to Applications
-        </Link>
+      </Link>
       </div>
     )
   }));

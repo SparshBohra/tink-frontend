@@ -23,18 +23,38 @@ function Properties() {
   const [activeDropdown, setActiveDropdown] = useState<number | null>(null);
   const [showTenantAssignModal, setShowTenantAssignModal] = useState(false);
   const [selectedPropertyForAssign, setSelectedPropertyForAssign] = useState<Property | null>(null);
+  const [sortOption, setSortOption] = useState<'name' | 'latest'>('latest');
+
+  const applySort = (list: Property[], option: 'name' | 'latest') => {
+    const cloned = [...list];
+    if (option === 'latest') {
+      return cloned.sort((a, b) => {
+        const ad = new Date((a.created_at || a.updated_at) ?? '').getTime() || 0;
+        const bd = new Date((b.created_at || b.updated_at) ?? '').getTime() || 0;
+        return bd - ad;
+      });
+    }
+    return cloned.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+  };
 
   useEffect(() => {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    // Re-sort when sort option changes, but only if there are properties
+    if (properties.length > 0) {
+      setProperties(prev => applySort(prev, sortOption));
+    }
+  }, [sortOption]);
+
   const fetchData = async () => {
     try {
       setLoading(true);
       setError(null);
-      
       const propertiesResponse = await apiClient.getProperties();
-      setProperties(propertiesResponse.results || []);
+      const sorted = applySort(propertiesResponse.results || [], sortOption);
+      setProperties(sorted);
     } catch (error: any) {
       console.error('Failed to fetch properties data:', error);
       setError(error?.message || 'Failed to load properties data');
@@ -438,6 +458,15 @@ function Properties() {
                 <p className="section-subtitle">Manage property details, rooms, and occupancy status</p>
               </div>
               <div className="section-actions">
+                <select
+                  value={sortOption}
+                  onChange={e => setSortOption(e.target.value as 'name' | 'latest')}
+                  className="sort-select"
+                  title="Sort properties"
+                >
+                  <option value="latest">Latest Added</option>
+                  <option value="name">Name A–Z</option>
+                </select>
                 <button onClick={() => fetchData()} className="refresh-btn">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <polyline points="23 4 23 10 17 10"/>
@@ -1843,6 +1872,9 @@ function Properties() {
           border-radius: 50%;
           animation: spin 1s linear infinite;
         }
+
+        .sort-select { padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; margin-right: 12px; }
+        .sort-select:focus { outline: none; border-color: #4f46e5; box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); }
       `}</style>
     </DashboardLayout>
   );

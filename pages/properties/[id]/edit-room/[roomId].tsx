@@ -6,6 +6,22 @@ import { apiClient } from '../../../../lib/api';
 import { Property, Room, RoomFormData } from '../../../../lib/types';
 import DashboardLayout from '../../../../components/DashboardLayout';
 
+// Updated to match backend API specifications
+const ROOM_TYPES = [
+  { value: 'standard', label: 'Standard Room', description: 'Basic room with standard amenities' },
+  { value: 'suite', label: 'Suite', description: 'Large room with separate living area' },
+  { value: 'studio', label: 'Studio', description: 'Open-plan room with kitchenette' },
+  { value: 'shared', label: 'Shared Room', description: 'Shared accommodation with multiple beds' },
+  { value: 'single', label: 'Single Occupancy', description: 'Room for one person' },
+  { value: 'double', label: 'Double Occupancy', description: 'Room for two people' },
+  { value: 'premium', label: 'Premium Room', description: 'High-end room with luxury amenities' }
+];
+
+const COMMON_ROOM_FEATURES = [
+  'ensuite', 'balcony', 'furnished', 'ac', 'heating', 
+  'closet', 'desk', 'window', 'hardwood', 'carpet'
+];
+
 export default function EditRoom() {
   const router = useRouter();
   const { id, roomId } = router.query;
@@ -14,14 +30,19 @@ export default function EditRoom() {
   
   const [property, setProperty] = useState<Property | null>(null);
   const [room, setRoom] = useState<Room | null>(null);
-  const [formData, setFormData] = useState<RoomFormData>({
+  const [formData, setFormData] = useState({
     property_ref: propertyId || 0,
     name: '',
-    room_type: 'Standard',
-    floor: '',
+    room_type: 'standard',
+    floor_number: '',
     max_capacity: 2,
-    monthly_rent: 0,
-    security_deposit: 0
+    monthly_rent: '',
+    security_deposit: '',
+    room_features: [] as string[],
+    is_available: true,
+    available_from: '',
+    available_until: '',
+    square_footage: ''
   });
   const [loading, setLoading] = useState(false);
   const [fetchLoading, setFetchLoading] = useState(true);
@@ -45,15 +66,32 @@ export default function EditRoom() {
       setProperty(propertyData);
       setRoom(roomData);
       
+      // Parse room features if they exist
+      let roomFeatures: string[] = [];
+      if ((roomData as any).room_features) {
+        try {
+          roomFeatures = Array.isArray((roomData as any).room_features) 
+            ? (roomData as any).room_features 
+            : JSON.parse((roomData as any).room_features);
+        } catch (e) {
+          console.warn('Could not parse room features:', (roomData as any).room_features);
+        }
+      }
+      
       // Populate form with existing room data
       setFormData({
         property_ref: propertyId as number,
         name: roomData.name || '',
-        room_type: roomData.room_type || 'Standard',
-        floor: roomData.floor || '',
-        max_capacity: roomData.max_capacity || 2,
-        monthly_rent: roomData.monthly_rent || 0,
-        security_deposit: roomData.security_deposit || 0
+        room_type: roomData.room_type || 'standard',
+        floor_number: (roomData as any).floor_number ? String((roomData as any).floor_number) : '',
+        max_capacity: Number(roomData.max_capacity) || 2,
+        monthly_rent: String(roomData.monthly_rent || ''),
+        security_deposit: String(roomData.security_deposit || ''),
+        room_features: roomFeatures,
+        is_available: (roomData as any).is_available !== false,
+        available_from: (roomData as any).available_from || '',
+        available_until: (roomData as any).available_until || '',
+        square_footage: (roomData as any).square_footage ? String((roomData as any).square_footage) : ''
       });
     } catch (err: any) {
       console.error('Failed to fetch data:', err);
@@ -69,17 +107,71 @@ export default function EditRoom() {
     setError(null);
     setSuccess(null);
 
+    // Validate required fields
+    if (!formData.name || !formData.room_type || !formData.monthly_rent || !formData.security_deposit) {
+      setError('Please fill in all required fields.');
+      setLoading(false);
+      return;
+    }
+
+    // Validate numeric fields
+    const monthlyRent = parseFloat(formData.monthly_rent);
+    const securityDeposit = parseFloat(formData.security_deposit);
+    
+    if (isNaN(monthlyRent) || monthlyRent <= 0) {
+      setError('Please enter a valid monthly rent amount.');
+      setLoading(false);
+      return;
+    }
+    
+    if (isNaN(securityDeposit) || securityDeposit < 0) {
+      setError('Please enter a valid security deposit amount.');
+      setLoading(false);
+      return;
+    }
+
+    if (formData.max_capacity < 1) {
+      setError('Max capacity must be at least 1.');
+      setLoading(false);
+      return;
+    }
+
     try {
       const updateData = {
         property_ref: formData.property_ref,
         name: formData.name,
         room_type: formData.room_type,
-        floor: formData.floor,
         max_capacity: formData.max_capacity,
-        monthly_rent: formData.monthly_rent,
-        security_deposit: formData.security_deposit
+        monthly_rent: parseFloat(formData.monthly_rent),
+        security_deposit: parseFloat(formData.security_deposit),
       };
       
+      // Add optional fields only if they have values
+      if (formData.floor_number && formData.floor_number.trim() !== '') {
+        (updateData as any).floor = formData.floor_number;
+      }
+
+      if (formData.room_features && formData.room_features.length > 0) {
+        (updateData as any).room_features = formData.room_features;
+      }
+
+      if (formData.is_available !== undefined) {
+        (updateData as any).is_available = formData.is_available;
+      }
+
+      if (formData.available_from && formData.available_from.trim() !== '') {
+        (updateData as any).available_from = formData.available_from;
+      }
+
+      if (formData.available_until && formData.available_until.trim() !== '') {
+        (updateData as any).available_until = formData.available_until;
+      }
+
+      if (formData.square_footage && formData.square_footage.trim() !== '') {
+        (updateData as any).square_footage = parseInt(formData.square_footage);
+      }
+
+      console.log('Updating room with data:', updateData); // Debug log
       const updatedRoom = await apiClient.updateRoom(roomIdNum as number, updateData);
       setSuccess(`Room "${updatedRoom.name}" updated successfully!`);
       
@@ -99,20 +191,37 @@ export default function EditRoom() {
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
+    const { name, value, type } = e.target;
+    
+    if (type === 'checkbox') {
+      const checked = (e.target as HTMLInputElement).checked;
     setFormData(prev => ({
       ...prev,
-      [name]: (name === 'monthly_rent' || name === 'security_deposit') 
-        ? parseFloat(value) || 0 
-        : (name === 'max_capacity')
-        ? parseInt(value) || 0
-        : value
+        [name]: checked
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
+  };
+
+  const handleFeatureToggle = (feature: string) => {
+    setFormData(prev => ({
+      ...prev,
+      room_features: prev.room_features.includes(feature)
+        ? prev.room_features.filter(f => f !== feature)
+        : [...prev.room_features, feature]
     }));
   };
 
-  const formatCurrencyDisplay = (value: number) => {
-    if (value === 0) return '';
-    return value.toString();
+  const calculateDefaultDeposit = () => {
+    const rent = parseFloat(formData.monthly_rent);
+    if (!isNaN(rent) && rent > 0) {
+      return (rent * 2).toFixed(2);
+    }
+    return '';
   };
 
   if (!propertyId || !roomIdNum) {
@@ -199,46 +308,32 @@ export default function EditRoom() {
                     <path d="M19 12H5"/>
                     <path d="M12 19l-7-7 7-7"/>
                   </svg>
-                  Back to Rooms
+                  Back to Property
                 </Link>
               </div>
             </div>
           </div>
 
-          {/* Current Room Overview */}
-          {property && room && (
+          {/* Room Overview */}
+          {room && (
             <div className="metrics-grid">
               <div className="metric-card">
                 <div className="metric-header">
                   <div className="metric-info">
-                    <h3 className="metric-title">Property</h3>
+                    <h3 className="metric-title">Current Status</h3>
                     <div className="metric-icon">
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/>
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
+                        <line x1="9" y1="9" x2="9.01" y2="9"></line>
+                        <line x1="15" y1="9" x2="15.01" y2="9"></line>
                       </svg>
                     </div>
                   </div>
                 </div>
                 <div className="metric-content">
-                  <div className="metric-value">{property.name}</div>
-                  <div className="metric-subtitle">Current property</div>
-                </div>
-              </div>
-              
-              <div className="metric-card">
-                <div className="metric-header">
-                  <div className="metric-info">
-                    <h3 className="metric-title">Room</h3>
-                    <div className="metric-icon">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
-                      </svg>
-                    </div>
-                  </div>
-                </div>
-                <div className="metric-content">
-                  <div className="metric-value">{room.name}</div>
-                  <div className="metric-subtitle">Room #{room.id}</div>
+                  <div className="metric-value">{room.is_vacant ? 'Vacant' : 'Occupied'}</div>
+                  <div className="metric-subtitle">Occupancy status</div>
                 </div>
               </div>
               
@@ -248,171 +343,257 @@ export default function EditRoom() {
                     <h3 className="metric-title">Occupancy</h3>
                     <div className="metric-icon">
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
                       </svg>
                     </div>
                   </div>
                 </div>
                 <div className="metric-content">
                   <div className="metric-value">{room.current_occupancy}/{room.max_capacity}</div>
-                  <div className="metric-subtitle">{room.occupancy_rate.toFixed(1)}% occupied</div>
+                  <div className="metric-subtitle">Current / Max</div>
                 </div>
               </div>
               
               <div className="metric-card">
                 <div className="metric-header">
                   <div className="metric-info">
-                    <h3 className="metric-title">Status</h3>
+                    <h3 className="metric-title">Monthly Rent</h3>
                     <div className="metric-icon">
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/>
+                        <line x1="12" y1="1" x2="12" y2="23"></line>
+                        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
                       </svg>
                     </div>
                   </div>
                 </div>
                 <div className="metric-content">
-                  <div className="metric-value">
-                    <span className={`status-badge ${room.is_vacant ? 'vacant' : 'occupied'}`}>
-                      {room.is_vacant ? 'Vacant' : 'Occupied'}
-                    </span>
-                  </div>
-                  <div className="metric-subtitle">Current status</div>
+                  <div className="metric-value">${Number(room.monthly_rent || 0).toLocaleString()}</div>
+                  <div className="metric-subtitle">Current rent</div>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Error/Success Messages */}
-          {error && (
-            <div className="alert alert-error">
-              <strong>Error:</strong> {error}
-            </div>
-          )}
-          
-          {success && (
-            <div className="alert alert-success">
-              <strong>Success:</strong> {success}
-            </div>
-          )}
+          {error && <div className="alert alert-error"><strong>Error:</strong> {error}</div>}
+          {success && <div className="alert alert-success"><strong>Success:</strong> {success}</div>}
 
-          {/* Main Content */}
-          <div className="main-content">
-            {/* Edit Room Form */}
+          <div className="main-content-grid">
             <div className="form-section">
               <div className="section-header">
-                <div>
-                  <h2 className="section-title">Edit Room Details</h2>
-                  <p className="section-subtitle">Update the room information</p>
-                </div>
+                <h2 className="section-title">Room Details</h2>
+                <p className="section-subtitle">Update the room information and settings.</p>
               </div>
               
-              <form onSubmit={handleSubmit}>
-                <div className="form-grid">
+              <form onSubmit={handleSubmit} className="room-form">
+                {/* Basic Information */}
                   <div className="form-group">
-                    <label className="form-label">Room Number/Name*</label>
+                  <label htmlFor="name" className="form-label required">Room Name</label>
                     <input
                       type="text"
+                    id="name"
                       name="name"
                       value={formData.name}
                       onChange={handleChange}
-                      required
-                      placeholder="e.g., Room 101, Suite A, etc."
                       className="form-input"
+                    placeholder="e.g., Master Bedroom, Room A, Studio 101"
+                    maxLength={100}
+                    required
                     />
+                  <div className="form-hint">Maximum 100 characters, must be unique within the property</div>
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Room Type*</label>
+                  <label htmlFor="room_type" className="form-label required">Room Type</label>
                     <select
+                    id="room_type"
                       name="room_type"
                       value={formData.room_type}
                       onChange={handleChange}
+                    className="form-select"
                       required
-                      className="form-input"
-                    >
-                      <option value="Standard">Standard</option>
-                      <option value="Deluxe">Deluxe</option>
-                      <option value="Suite">Suite</option>
-                      <option value="Studio">Studio</option>
-                      <option value="Shared">Shared</option>
-                      <option value="Premium">Premium</option>
-                      <option value="Economy">Economy</option>
+                  >
+                    {ROOM_TYPES.map(type => (
+                      <option key={type.value} value={type.value}>
+                        {type.label}
+                      </option>
+                    ))}
                     </select>
+                  <div className="form-hint">
+                    {ROOM_TYPES.find(t => t.value === formData.room_type)?.description}
+                  </div>
                   </div>
 
+                <div className="form-row">
                   <div className="form-group">
-                    <label className="form-label">Floor</label>
-                    <input
-                      type="text"
-                      name="floor"
-                      value={formData.floor || ''}
-                      onChange={handleChange}
-                      placeholder="e.g., 1st Floor, Ground, etc."
-                      className="form-input"
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">Max Capacity*</label>
+                    <label htmlFor="max_capacity" className="form-label required">Max Capacity</label>
                     <input
                       type="number"
+                      id="max_capacity"
                       name="max_capacity"
-                      value={formData.max_capacity || 2}
-                      onChange={handleChange}
-                      required
+                      value={formData.max_capacity}
+                      onChange={(e) => setFormData(prev => ({ ...prev, max_capacity: parseInt(e.target.value) || 1 }))}
+                      className="form-input"
                       min="1"
                       max="10"
-                      className="form-input"
+                      required
                     />
+                    <div className="form-hint">Maximum occupants (1-10)</div>
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Monthly Rent*</label>
-                    <div className="currency-input-wrapper">
-                      <span className="currency-symbol">$</span>
+                    <label htmlFor="floor_number" className="form-label">Floor Number</label>
+                    <input
+                      type="number"
+                      id="floor_number"
+                      name="floor_number"
+                      value={formData.floor_number}
+                      onChange={handleChange}
+                      className="form-input"
+                      placeholder="1, 2, 3..."
+                      min="1"
+                    />
+                    <div className="form-hint">Optional floor number</div>
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="square_footage" className="form-label">Square Footage</label>
+                    <input
+                      type="number"
+                      id="square_footage"
+                      name="square_footage"
+                      value={formData.square_footage}
+                      onChange={handleChange}
+                      className="form-input"
+                      placeholder="350"
+                      min="1"
+                    />
+                    <div className="form-hint">Optional room size in sq ft</div>
+                  </div>
+                  </div>
+
+                {/* Pricing */}
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="monthly_rent" className="form-label required">Monthly Rent</label>
+                    <div className="input-group">
+                      <span className="input-prefix">$</span>
                       <input
                         type="number"
+                        id="monthly_rent"
                         name="monthly_rent"
-                        value={typeof formData.monthly_rent === 'number' ? formData.monthly_rent : (formData.monthly_rent ? Number(formData.monthly_rent) : '')}
+                        value={formData.monthly_rent}
                         onChange={handleChange}
-                        required
+                        className="form-input"
+                        placeholder="1200.00"
                         min="0"
                         step="0.01"
-                        placeholder="Enter monthly rent amount"
-                        className="form-input currency-input"
-                        disabled={property && property.rent_type === 'per_property'}
-                        title={property && property.rent_type === 'per_property' ? 'Monthly rent is set at the property level and cannot be edited for individual rooms.' : ''}
+                        required
                       />
                     </div>
-                    {property && property.rent_type === 'per_property' && (
-                      <div className="field-hint" style={{ color: '#d97706' }}>
-                        Rent is set at the property level. To change rent, edit the property instead.
-                      </div>
-                    )}
-                    {(!property || property.rent_type !== 'per_property') && (
-                      <div className="field-hint">Enter the monthly rent amount in USD</div>
-                    )}
+                    <div className="form-hint">Monthly rent amount</div>
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Security Deposit*</label>
-                    <div className="currency-input-wrapper">
-                      <span className="currency-symbol">$</span>
+                    <label htmlFor="security_deposit" className="form-label required">Security Deposit</label>
+                    <div className="input-group">
+                      <span className="input-prefix">$</span>
                       <input
                         type="number"
+                        id="security_deposit"
                         name="security_deposit"
-                        value={typeof formData.security_deposit === 'number' ? formData.security_deposit : (formData.security_deposit ? Number(formData.security_deposit) : '')}
+                        value={formData.security_deposit}
                         onChange={handleChange}
-                        required
+                        className="form-input"
+                        placeholder="2400.00"
                         min="0"
                         step="0.01"
-                        placeholder="Enter security deposit amount"
-                        className="form-input currency-input"
+                        required
                       />
                     </div>
-                    <div className="field-hint">Typically 1-2 months of rent</div>
+                    <div className="form-hint">Security deposit amount</div>
+                    {formData.monthly_rent && (
+                      <div className="form-suggestion">
+                  <button
+                          type="button"
+                          onClick={() => setFormData(prev => ({ ...prev, security_deposit: calculateDefaultDeposit() }))}
+                          className="suggestion-btn"
+                  >
+                          Use 2x monthly rent (${calculateDefaultDeposit()})
+                  </button>
+                </div>
+                    )}
+                </div>
+              </div>
+              
+                {/* Availability */}
+                <div className="form-group">
+                  <div className="checkbox-group">
+                    <input
+                      type="checkbox"
+                      id="is_available"
+                      name="is_available"
+                      checked={formData.is_available}
+                      onChange={handleChange}
+                      className="form-checkbox"
+                    />
+                    <label htmlFor="is_available" className="checkbox-label">
+                      Room is available for rent
+                    </label>
                   </div>
                 </div>
+                
+                {formData.is_available && (
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label htmlFor="available_from" className="form-label">Available From</label>
+                      <input
+                        type="date"
+                        id="available_from"
+                        name="available_from"
+                        value={formData.available_from}
+                        onChange={handleChange}
+                        className="form-input"
+                      />
+                      <div className="form-hint">Optional availability start date</div>
+                </div>
+                
+                    <div className="form-group">
+                      <label htmlFor="available_until" className="form-label">Available Until</label>
+                      <input
+                        type="date"
+                        id="available_until"
+                        name="available_until"
+                        value={formData.available_until}
+                        onChange={handleChange}
+                        className="form-input"
+                      />
+                      <div className="form-hint">Optional availability end date</div>
+                  </div>
+                  </div>
+                )}
+
+                {/* Room Features */}
+                <div className="form-group">
+                  <label className="form-label">Room Features (Optional)</label>
+                  <div className="features-grid">
+                    {COMMON_ROOM_FEATURES.map(feature => (
+                      <div key={feature} className="feature-checkbox">
+                        <input
+                          type="checkbox"
+                          id={`feature-${feature}`}
+                          checked={formData.room_features.includes(feature)}
+                          onChange={() => handleFeatureToggle(feature)}
+                          className="form-checkbox"
+                        />
+                        <label htmlFor={`feature-${feature}`} className="feature-label">
+                          {feature.charAt(0).toUpperCase() + feature.slice(1)}
+                        </label>
+                    </div>
+                    ))}
+                    </div>
+                  <div className="form-hint">Select applicable room features and amenities</div>
+                  </div>
 
                 <div className="form-actions">
                   <button
@@ -420,579 +601,111 @@ export default function EditRoom() {
                     disabled={loading}
                     className="btn btn-primary"
                   >
-                    {loading ? 'Updating...' : 'Update Room'}
+                    {loading ? (
+                      <>
+                        <div className="btn-spinner"></div>
+                        Updating Room...
+                      </>
+                    ) : (
+                      'Update Room'
+                    )}
                   </button>
+
                   <Link href={`/properties/${propertyId}/rooms`} className="btn btn-secondary">
                     Cancel
                   </Link>
-                </div>
+              </div>
               </form>
-            </div>
-
-            {/* Quick Actions */}
-            <div className="quick-actions-section">
-              <div className="section-header">
-                <div>
-                  <h2 className="section-title">Quick Actions</h2>
-                  <p className="section-subtitle">Frequently used actions</p>
-                </div>
-              </div>
-              
-              <div className="actions-grid">
-                <div className="action-card blue" onClick={() => router.push(`/properties/${propertyId}/rooms`)}>
-                  <div className="action-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
-                  </div>
-                  <div className="action-content">
-                    <h3 className="action-title">View All Rooms</h3>
-                    <p className="action-subtitle">Back to rooms list</p>
-                  </div>
-                </div>
-                
-                <div className="action-card green" onClick={() => router.push(`/inventory?room=${roomIdNum}`)}>
-                  <div className="action-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
-                  </div>
-                  <div className="action-content">
-                    <h3 className="action-title">Room Inventory</h3>
-                    <p className="action-subtitle">Manage room items</p>
-                  </div>
-                </div>
-                
-                <div className="action-card purple" onClick={() => router.push('/applications')}>
-                  <div className="action-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                  </div>
-                  <div className="action-content">
-                    <h3 className="action-title">Find Tenant</h3>
-                    <p className="action-subtitle">Review applications</p>
-                  </div>
-                </div>
-                
-                {property && (
-                  <div className="action-card blue" onClick={() => router.push(`/properties/${propertyId}/rooms`)}>
-                    <div className="action-icon">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
-                    </div>
-                    <div className="action-content">
-                      <h3 className="action-title">Property Details</h3>
-                      <p className="action-subtitle">View property room management</p>
-                    </div>
-                  </div>
-                )}
-              </div>
             </div>
           </div>
         </div>
-      </DashboardLayout>
       
       <style jsx>{`
-        .dashboard-container {
-          width: 100%;
-          padding: 16px 20px 20px 20px;
-          background: #f8fafc;
-          min-height: calc(100vh - 72px);
-          box-sizing: border-box;
-        }
-
-        /* Custom Header */
-        .dashboard-header {
-          margin-bottom: 24px;
-        }
-
-        .header-content {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          gap: 20px;
-        }
-
-        .header-left {
-          flex: 1;
-        }
-
-        .header-right {
-          flex-shrink: 0;
-        }
-
-        .dashboard-title {
-          font-size: 22px;
-          font-weight: 700;
-          color: #1e293b;
-          margin: 0 0 4px 0;
-          line-height: 1.15;
-        }
-
-        .welcome-message {
-          font-size: 14px;
-          color: #4b5563;
-          margin: 0;
-          line-height: 1.45;
-        }
-
-        .back-btn {
-          background: #4f46e5;
-          color: white;
-          border: none;
-          padding: 10px 14px;
-          border-radius: 6px;
-          font-size: 12px;
-          font-weight: 600;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          transition: all 0.2s ease;
-          text-decoration: none;
-        }
-
-        .back-btn:hover {
-          background: #3730a3;
-          transform: translateY(-1px);
-        }
-
-        /* Metrics Grid */
-        .metrics-grid {
+          .form-row {
           display: grid;
-          grid-template-columns: repeat(4, 1fr);
-          gap: 12px;
-          margin-bottom: 20px;
-        }
-
-        .metric-card {
-          background: white;
-          border-radius: 6px;
-          padding: 14px;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-          border: 1px solid #e2e8f0;
-          transition: all 0.2s ease;
-        }
-
-        .metric-card:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-
-        .metric-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          margin-bottom: 12px;
-        }
-
-        .metric-info {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          width: 100%;
-        }
-
-        .metric-title {
-          font-size: 11px;
-          font-weight: 600;
-          color: #64748b;
-          margin: 0;
-        }
-
-        .metric-icon {
-          width: 20px;
-          height: 20px;
-          color: #64748b;
-        }
-
-        .metric-content {
-          margin-top: 8px;
-        }
-
-        .metric-value {
-          font-size: 20px;
-          font-weight: 700;
-          color: #1e293b;
-          margin-bottom: 3px;
-          line-height: 1;
-        }
-
-        .metric-subtitle {
-          font-size: 11px;
-          color: #64748b;
-          margin-bottom: 10px;
-        }
-
-        .status-badge {
-          padding: 4px 8px;
-          border-radius: 4px;
-          font-size: 12px;
-          font-weight: 500;
-          display: inline-block;
-        }
-
-        .status-badge.vacant {
-          background: #fef3c7;
-          color: #d97706;
-        }
-
-        .status-badge.occupied {
-          background: #dcfce7;
-          color: #16a34a;
-        }
-
-        /* Main Content */
-        .main-content {
-          display: grid;
-          grid-template-columns: 2fr 1fr;
-          gap: 20px;
-          margin-bottom: 20px;
-        }
-
-        /* Form Section */
-        .form-section,
-        .quick-actions-section {
-          background: white;
-          border-radius: 6px;
-          padding: 18px;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-          border: 1px solid #e2e8f0;
-          height: fit-content;
-        }
-
-        .section-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          margin-bottom: 16px;
-        }
-
-        .section-title {
-          font-size: 14px;
-          font-weight: 700;
-          color: #1e293b;
-          margin: 0 0 3px 0;
-        }
-
-        .section-subtitle {
-          font-size: 12px;
-          color: #64748b;
-          margin: 0;
-        }
-        
-        .form-grid {
-          display: grid;
-          grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: 1fr 1fr 1fr;
           gap: 16px;
-          margin-bottom: 20px;
         }
         
-        .form-group {
-          display: flex;
-          flex-direction: column;
-          gap: 6px;
-        }
-        
-        .form-label {
-          font-weight: 600;
-          color: #374151;
-          font-size: 14px;
-        }
-        
-        .form-input {
-          padding: 10px 12px;
-          border: 1px solid #d1d5db;
-          border-radius: 6px;
-          font-size: 14px;
-          transition: all 0.2s ease;
-          box-sizing: border-box;
-        }
-        
-        .form-input:focus {
-          outline: none;
-          border-color: #4f46e5;
-          box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
-        }
-
-        /* Currency Input Styling */
-        .currency-input-wrapper {
+          .input-group {
           position: relative;
           display: flex;
           align-items: center;
         }
 
-        .currency-symbol {
+          .input-prefix {
           position: absolute;
           left: 12px;
-          top: 50%;
-          transform: translateY(-50%);
-          font-weight: 600;
           color: #6b7280;
-          font-size: 14px;
-          z-index: 1;
+            font-weight: 500;
+            z-index: 10;
           pointer-events: none;
         }
 
-        .currency-input {
-          padding-left: 28px !important;
+          .input-group .form-input {
+            padding-left: 32px;
         }
 
-        .field-hint {
-          font-size: 12px;
-          color: #6b7280;
-          margin-top: 4px;
-          font-style: italic;
-        }
-
-        .currency-input-wrapper:focus-within .currency-symbol {
-          color: #4f46e5;
-        }
-        
-        .form-actions {
+          .checkbox-group {
           display: flex;
-          gap: 12px;
-          justify-content: flex-end;
-          margin-top: 20px;
-          padding-top: 16px;
-          border-top: 1px solid #e2e8f0;
+            align-items: center;
+            gap: 8px;
         }
 
-        .btn {
-          padding: 10px 16px;
-          border-radius: 6px;
+          .checkbox-label {
           font-size: 14px;
-          font-weight: 600;
+            color: #374151;
           cursor: pointer;
-          transition: all 0.2s ease;
-          text-decoration: none;
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          border: none;
-        }
+          }
 
-        .btn-primary {
-          background: #4f46e5;
-          color: white;
-        }
-
-        .btn-primary:hover {
-          background: #3730a3;
-        }
-
-        .btn-primary:disabled {
-          background: #9ca3af;
-          cursor: not-allowed;
-        }
-
-        .btn-secondary {
-          background: #f8fafc;
-          color: #64748b;
-          border: 1px solid #e2e8f0;
-        }
-
-        .btn-secondary:hover {
-          background: #e2e8f0;
-        }
-        
-        /* Quick Actions Section */
-        .actions-grid {
-          display: flex;
-          flex-direction: column;
+          .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
           gap: 12px;
+            margin-top: 8px;
         }
 
-        .action-card {
+          .feature-checkbox {
           display: flex;
           align-items: center;
-          gap: 12px;
-          padding: 12px;
-          border-radius: 5px;
-          border: 1px solid #e2e8f0;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          text-decoration: none;
+            gap: 8px;
         }
 
-        .action-card:hover {
-          transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+          .feature-label {
+            font-size: 14px;
+            color: #374151;
+            cursor: pointer;
         }
 
-        .action-card.blue {
-          background: #eff6ff;
-          border-color: #dbeafe;
+          .form-suggestion {
+            margin-top: 4px;
         }
 
-        .action-card.green {
-          background: #f0fdf4;
-          border-color: #dcfce7;
-        }
-
-        .action-card.purple {
-          background: #faf5ff;
-          border-color: #e9d5ff;
-        }
-
-        .action-icon {
-          width: 40px;
-          height: 40px;
-          border-radius: 8px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          flex-shrink: 0;
-        }
-
-        .action-card.blue .action-icon {
-          background: #3b82f6;
-          color: white;
-        }
-
-        .action-card.green .action-icon {
-          background: #10b981;
-          color: white;
-        }
-
-        .action-card.purple .action-icon {
-          background: #8b5cf6;
-          color: white;
-        }
-
-        .action-content {
-          flex: 1;
-        }
-
-        .action-title {
-          font-size: 14px;
-          font-weight: 600;
-          color: #1e293b;
-          margin: 0 0 3px 0;
-        }
-
-        .action-subtitle {
+          .suggestion-btn {
           font-size: 12px;
-          color: #64748b;
-          margin: 0;
-        }
-        
-        /* Alerts */
-        .alert {
-          padding: 12px 16px;
-          border-radius: 6px;
-          margin-bottom: 20px;
-          font-size: 14px;
-          font-weight: 500;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-        
-        .alert-error {
-          background: #fef2f2;
-          color: #dc2626;
-          border: 1px solid #fecaca;
-        }
-        
-        .alert-success {
-          background: #f0fdf4;
-          color: #16a34a;
-          border: 1px solid #bbf7d0;
+            color: #2563eb;
+            background: none;
+            border: none;
+            cursor: pointer;
+            text-decoration: underline;
+            padding: 0;
         }
 
-        /* Loading & Error sections */
-        .loading-section,
-        .error-section {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          padding: 40px 20px;
-          text-align: center;
-        }
-
-        .loading-indicator {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 16px;
-        }
-
-        .loading-spinner {
-          width: 40px;
-          height: 40px;
-          border: 4px solid #e5e7eb;
-          border-top-color: #4f46e5;
-          border-radius: 50%;
-          animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-          to {
-            transform: rotate(360deg);
-          }
-        }
-
-        .actions-container {
-          margin-top: 20px;
-        }
-
-        /* Responsive Design */
-        @media (max-width: 1200px) {
-          .metrics-grid {
-            grid-template-columns: repeat(2, 1fr);
-          }
+          .suggestion-btn:hover {
+            color: #1d4ed8;
         }
 
         @media (max-width: 768px) {
-          .dashboard-container {
-            padding: 24px 16px;
-          }
-
-          .header-content {
-            flex-direction: column;
-            gap: 16px;
-          }
-          
-          .dashboard-title {
-            font-size: 28px;
-          }
-          
-          .welcome-message {
-            font-size: 14px;
-          }
-
-          .main-content {
-            grid-template-columns: 1fr;
-            gap: 20px;
-          }
-
-          .form-grid {
+            .form-row {
             grid-template-columns: 1fr;
           }
 
-          .metrics-grid {
-            grid-template-columns: repeat(2, 1fr);
-          }
-        }
-
-        @media (max-width: 480px) {
-          .dashboard-container {
-            padding: 16px;
-          }
-
-          .dashboard-title {
-            font-size: 24px;
-          }
-
-          .welcome-message {
-            font-size: 13px;
-          }
-
-          .metrics-grid {
-            grid-template-columns: 1fr;
-          }
-
-          .form-actions {
-            flex-direction: column;
+            .features-grid {
+              grid-template-columns: 1fr 1fr;
           }
         }
       `}</style>
+      </DashboardLayout>
     </>
   );
 } 

@@ -77,12 +77,18 @@ export interface Room {
   room_number?: string;
   room_type?: string;
   floor?: string;
+  floor_number?: number;
   max_capacity: number;
   current_occupancy: number;
   monthly_rent?: string | number;
   security_deposit?: string | number;
   is_occupied?: boolean;
   is_vacant: boolean;
+  is_available?: boolean;
+  available_from?: string;
+  available_until?: string;
+  room_features?: string[] | string;
+  square_footage?: number;
   occupancy_rate: number;
   last_occupied_at?: string;
   property_name: string;

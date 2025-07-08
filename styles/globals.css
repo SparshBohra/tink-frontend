@@ -239,12 +239,102 @@ p {
 }
 
 .form-select {
+  position: relative;
+  z-index: 50;
+  background-color: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 10px 32px 10px 12px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #374151;
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 8px center;
   background-repeat: no-repeat;
-  background-position: right var(--spacing-sm) center;
   background-size: 16px;
-  padding-right: var(--spacing-2xl);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+  min-height: 44px;
+}
+
+.form-select:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  z-index: 60;
+}
+
+.form-select option {
+  padding: 8px 12px;
+  background: #ffffff;
+  color: #1f2937;
+  font-size: 14px;
+}
+
+.form-select option:hover {
+  background: #f3f4f6;
+}
+
+/* Fix for state dropdown specifically */
+select[name="state"] {
+  min-height: 44px;
+  font-size: 14px;
+  line-height: 1.5;
+  position: relative;
+  z-index: 50;
+}
+
+/* Ensure dropdown is properly visible and clickable */
+.form-group {
+  position: relative;
+  z-index: 1;
+}
+
+.form-group select {
+  position: relative;
+  z-index: 50;
+}
+
+/* Remove any potential overlay blocking */
+.form-row .form-group {
+  position: relative;
+}
+
+/* Ensure proper stacking context */
+.dashboard-container {
+  position: relative;
+  z-index: 1;
+}
+
+.main-content-grid {
+  position: relative;
+  z-index: 1;
+}
+
+.form-section {
+  position: relative;
+  z-index: 1;
+}
+
+/* Fix for any modal or overlay conflicts */
+.form-select:not(:disabled):not([readonly]) {
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+/* Ensure select is always interactive */
+select {
+  pointer-events: auto !important;
+  position: relative;
+  z-index: 50;
+}
+
+/* Remove any transform that might affect dropdowns */
+.form-select {
+  transform: none;
+  will-change: auto;
 }
 
 .form-check {
@@ -816,6 +906,491 @@ p {
   transform: translateY(-1px);
   color: white;
   text-decoration: none;
+}
+ 
+/* Add enhanced form styling for property and room forms */
+
+/* Form enhancements */
+.property-form,
+.room-form {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.form-label.required::after {
+  content: ' *';
+  color: #ef4444;
+  font-weight: 600;
+}
+
+.form-hint {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+.form-warning {
+  margin-top: 8px;
+  padding: 12px;
+  background: #fef3c7;
+  border: 1px solid #f59e0b;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #92400e;
+}
+
+.form-warning strong {
+  font-weight: 600;
+}
+
+/* Input group styling */
+.input-group {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-prefix {
+  position: absolute;
+  left: 12px;
+  color: #6b7280;
+  font-weight: 500;
+  z-index: 10;
+  pointer-events: none;
+  font-size: 14px;
+}
+
+.input-group .form-input {
+  padding-left: 32px;
+}
+
+/* Form row styling */
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+@media (max-width: 768px) {
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}
+
+/* Room configuration section */
+.room-configuration-section {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.room-configs-list {
+  margin-bottom: 20px;
+}
+
+.room-config-card {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 16px;
+  transition: all 0.2s ease;
+}
+
+.room-config-card:hover {
+  border-color: #d1d5db;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.room-config-header {
+  display: flex;
+  justify-content: between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.room-config-info {
+  flex: 1;
+}
+
+.room-config-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+}
+
+.remove-room-config-btn {
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.remove-room-config-btn:hover {
+  background: #dc2626;
+}
+
+.room-config-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.room-config-summary {
+  display: flex;
+  gap: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
+  font-size: 14px;
+}
+
+.summary-item {
+  color: #6b7280;
+}
+
+.summary-item strong {
+  color: #1f2937;
+  font-weight: 600;
+}
+
+.add-room-type-section {
+  text-align: center;
+  margin: 24px 0;
+}
+
+.add-room-type-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border: 2px dashed #d1d5db;
+  background: transparent;
+  color: #6b7280;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.add-room-type-btn:hover {
+  border-color: #2563eb;
+  color: #2563eb;
+  background: #f0f9ff;
+}
+
+/* Property summary */
+.property-summary {
+  background: #f0f9ff;
+  border: 1px solid #e0f2fe;
+  border-radius: 8px;
+  padding: 20px;
+  margin-top: 24px;
+}
+
+.summary-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #0369a1;
+  margin: 0 0 16px 0;
+}
+
+.summary-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 16px;
+}
+
+.summary-metric {
+  text-align: center;
+}
+
+.metric-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #0369a1;
+  margin-bottom: 4px;
+}
+
+.metric-label {
+  font-size: 12px;
+  color: #075985;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Checkbox styling */
+.checkbox-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.checkbox-label {
+  font-size: 14px;
+  color: #374151;
+  cursor: pointer;
+  line-height: 1.4;
+}
+
+.form-checkbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+/* Features grid */
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin-top: 8px;
+  padding: 16px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+}
+
+.feature-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.feature-label {
+  font-size: 14px;
+  color: #374151;
+  cursor: pointer;
+  line-height: 1.2;
+}
+
+/* Form suggestions */
+.form-suggestion {
+  margin-top: 6px;
+}
+
+.suggestion-btn {
+  font-size: 12px;
+  color: #2563eb;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+  transition: color 0.2s ease;
+}
+
+.suggestion-btn:hover {
+  color: #1d4ed8;
+}
+
+/* Info box styling */
+.info-box {
+  display: flex;
+  padding: 16px;
+  background: #f0f9ff;
+  border: 1px solid #e0f2fe;
+  border-radius: 8px;
+  margin: 16px 0;
+}
+
+.info-icon {
+  flex-shrink: 0;
+  margin-right: 12px;
+  color: #0369a1;
+}
+
+.info-content h4 {
+  margin: 0 0 6px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #0369a1;
+}
+
+.info-content p {
+  margin: 0;
+  font-size: 14px;
+  color: #075985;
+  line-height: 1.4;
+}
+
+/* Enhanced button styles */
+.btn-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid transparent;
+  border-top: 2px solid currentColor;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-right: 8px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Form actions */
+.form-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.form-actions .btn {
+  flex: 0 0 auto;
+}
+
+/* Loading states */
+.loading-section {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 60px 20px;
+}
+
+.loading-indicator {
+  text-align: center;
+  color: #6b7280;
+}
+
+.loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #e5e7eb;
+  border-top: 3px solid #2563eb;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 16px;
+}
+
+/* Error states */
+.error-section {
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.actions-container {
+  margin-top: 20px;
+}
+
+/* Form validation states */
+.form-input:invalid {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.form-input:valid {
+  border-color: #10b981;
+}
+
+.form-input:focus:invalid {
+  outline: none;
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.form-input:focus:valid {
+  outline: none;
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .room-config-fields {
+    grid-template-columns: 1fr;
+  }
+  
+  .room-config-summary {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .summary-metrics {
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 12px;
+  }
+  
+  .features-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  
+  .form-actions {
+    flex-direction: column;
+  }
+  
+  .form-actions .btn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .features-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .metrics-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Accessibility improvements */
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.btn:focus {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .form-hint {
+    color: #374151;
+  }
+  
+  .room-config-card {
+    border-color: #374151;
+  }
+  
+  .info-box {
+    border-color: #374151;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .btn-spinner,
+  .loading-spinner {
+    animation: none;
+  }
+  
+  .room-config-card {
+    transition: none;
+  }
+  
+  .add-room-type-btn {
+    transition: none;
+  }
 }
  
  
