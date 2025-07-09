@@ -15,6 +15,7 @@ interface ApplicationKanbanProps {
   onActivateLease?: (application: Application) => void;
   getPropertyName: (propertyId: number) => string;
   formatDate: (date: string | null) => string;
+  extraActions?: React.ReactNode;
 }
 
 interface ViewToggleProps {
@@ -285,6 +286,7 @@ export default function ApplicationKanban({
   onActivateLease,
   getPropertyName,
   formatDate,
+  extraActions,
 }: ApplicationKanbanProps) {
   const [currentView, setCurrentView] = useState<'kanban' | 'list'>('kanban');
 
@@ -330,6 +332,11 @@ export default function ApplicationKanban({
             Drag applications through stages or use action buttons to advance them in the rental process.
           </p>
         </div>
+        {extraActions && (
+          <div className="header-actions">
+            {extraActions}
+          </div>
+        )}
         <ViewToggle currentView={currentView} onViewChange={setCurrentView} />
       </div>
       
@@ -546,38 +553,46 @@ export default function ApplicationKanban({
           max-width: 650px;
         }
 
+        .header-actions {
+          display: flex;
+          gap: 14px;
+          margin-right: 24px; /* space before the view toggle */
+          margin-left: 20px;  /* space after title */
+        }
+
         .view-toggle {
           display: flex;
           background: #f1f5f9;
           border-radius: 8px;
           padding: 2px;
           gap: 2px;
+          border: 1px solid #e2e8f0;
         }
 
         .view-btn {
           display: flex;
           align-items: center;
           gap: 6px;
-          padding: 8px 12px;
+          padding: 8px 14px;
           border: none;
           background: transparent;
           border-radius: 6px;
           font-size: 13px;
-          font-weight: 500;
+          font-weight: 600;
           color: #64748b;
           cursor: pointer;
-          transition: all 0.2s ease;
+          transition: all 0.18s ease;
         }
 
         .view-btn:hover {
-          background: rgba(255, 255, 255, 0.8);
+          background: rgba(255, 255, 255, 0.9);
           color: #374151;
         }
 
         .view-btn.active {
-          background: white;
-          color: #1e293b;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+          background: #4f46e5;
+          color: #ffffff;
+          box-shadow: 0 2px 6px rgba(79, 70, 229, 0.25);
         }
         
         .kanban-board {

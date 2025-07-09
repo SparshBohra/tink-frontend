@@ -453,39 +453,13 @@ function Applications() {
               </div>
             </div>
             <div className="header-right">
-              {/* Primary quick-action buttons */}
+              {/* Primary quick-action buttons - reordered */}
               <button onClick={() => setIsModalOpen(true)} className="view-all-btn" title="Create a new manual application">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="12" y1="5" x2="12" y2="19" />
                   <line x1="5" y1="12" x2="19" y2="12" />
                 </svg>
                 New Application
-              </button>
-
-              <button
-                onClick={fetchData}
-                className="refresh-btn"
-                title="Refresh applications data to get the latest information"
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polyline points="23 4 23 10 17 10" />
-                  <polyline points="1 20 1 14 7 14" />
-                  <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15" />
-                </svg>
-                Refresh
-              </button>
-
-              <button
-                onClick={downloadApplicationsReport}
-                className="view-all-btn"
-                title="Download a comprehensive report of all applications with analytics and insights"
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                  <polyline points="7,10 12,15 17,10" />
-                  <path d="M12 15V3" />
-                </svg>
-                Download Report
               </button>
 
               <button
@@ -641,6 +615,34 @@ function Applications() {
           onActivateLease={handleActivateLease}
           getPropertyName={getPropertyName}
           formatDate={formatDate}
+          extraActions={(
+            <>
+              <button
+                onClick={fetchData}
+                className="refresh-btn"
+                title="Refresh applications data to get the latest information"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="23 4 23 10 17 10" />
+                  <polyline points="1 20 1 14 7 14" />
+                  <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15" />
+                </svg>
+                Refresh
+              </button>
+              <button
+                onClick={downloadApplicationsReport}
+                className="view-all-btn"
+                title="Download a comprehensive report of all applications with analytics and insights"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7,10 12,15 17,10" />
+                  <path d="M12 15V3" />
+                </svg>
+                Download Report
+              </button>
+            </>
+          )}
         />
 
         {/* Legacy pending & processed application tables removed – all workflow management is now handled via the Kanban board */}
