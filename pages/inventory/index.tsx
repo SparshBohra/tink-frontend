@@ -1,10 +1,12 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Link from 'next/link';
 import { apiClient } from '../../lib/api';
 import { InventoryItem, Property, Room } from '../../lib/types';
 import DashboardLayout from '../../components/DashboardLayout';
+import LoadingSpinner from '../../components/LoadingSpinner';
+import { useAuth, withAuth } from '../../lib/auth-context';
 
 export default function Inventory() {
   const router = useRouter();
@@ -207,15 +209,14 @@ export default function Inventory() {
     return (
       <>
         <Head>
-          <title>Inventory Management - Tink</title>
+          <title>Inventory - Tink</title>
         </Head>
         <DashboardLayout title="">
           <div className="dashboard-container">
-            {/* Custom Header */}
             <div className="dashboard-header">
               <div className="header-content">
                 <div className="header-left">
-                  <h1 className="dashboard-title">Property Inventory Management</h1>
+                  <h1 className="dashboard-title">Inventory</h1>
                   <div className="subtitle-container">
                     <p className="welcome-message">
                       Loading inventory data...
@@ -225,10 +226,7 @@ export default function Inventory() {
               </div>
             </div>
             
-          <div className="loading-indicator">
-            <div className="loading-spinner" />
-            <p>Fetching inventory data from the server...</p>
-            </div>
+            <LoadingSpinner message="Loading inventory data..." />
           </div>
         </DashboardLayout>
       </>

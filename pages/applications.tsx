@@ -1,15 +1,17 @@
 // A comment to force re-linting
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/router';
+import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
+import { useRouter } from 'next/router';
 import DashboardLayout from '../components/DashboardLayout';
-import { withAuth } from '../lib/auth-context';
-import { apiClient } from '../lib/api';
-import { Application, Property, Room } from '../lib/types';
 import ApplicationKanban from '../components/ApplicationKanban';
+import NewApplicationModal from '../components/NewApplicationModal';
 import ViewingSchedulerModal from '../components/ViewingSchedulerModal';
 import ViewingCompletionModal from '../components/ViewingCompletionModal';
 import LeaseGenerationModal from '../components/LeaseGenerationModal';
+import LoadingSpinner from '../components/LoadingSpinner';
+import { useAuth, withAuth } from '../lib/auth-context';
+import { Application, Property, Room } from '../lib/types';
+import { apiClient } from '../lib/api';
 
 interface ConflictResolution {
   applicationId: number;
@@ -17,7 +19,6 @@ interface ConflictResolution {
   roomId?: number;
   reason?: string;
 }
-import NewApplicationModal from '../components/NewApplicationModal';
 import ConflictResolutionModal from '../components/ConflictResolutionModal';
 import RoomAssignmentModal from '../components/RoomAssignmentModal';
 import PropertyRoomManagement from '../components/PropertyRoomManagement';
@@ -415,23 +416,7 @@ function Applications() {
         title="Applications Review"
         subtitle="Loading applications data..."
       >
-        <div className="loading-state">
-          <div className="loading-spinner">Loading applications...</div>
-        </div>
-        
-        <style jsx>{`
-          .loading-state {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 400px;
-          }
-          
-          .loading-spinner {
-            font-size: 18px;
-            color: var(--gray-600);
-          }
-        `}</style>
+        <LoadingSpinner />
       </DashboardLayout>
     );
   }

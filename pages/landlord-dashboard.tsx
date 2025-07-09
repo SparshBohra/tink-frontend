@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -78,10 +78,11 @@ function LandlordDashboard() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [propertyFilter, setPropertyFilter] = useState('All');
-  const [currentMessage, setCurrentMessage] = useState<{ text: string; icon: React.ReactElement | null }>({ text: '', icon: null });
-  const [isFading, setIsFading] = useState(false);
   const [isTyping, setIsTyping] = useState(true);
   const [messageIndex, setMessageIndex] = useState(0);
+  const [isFading, setIsFading] = useState(false);
+  const [currentMessage, setCurrentMessage] = useState<{ text: string; icon: React.ReactElement | null }>({ text: '', icon: null });
+  const [isUserInteracting, setIsUserInteracting] = useState(false);
   
   // Application modal state
   const [isApplicationDetailOpen, setIsApplicationDetailOpen] = useState(false);
@@ -89,6 +90,15 @@ function LandlordDashboard() {
   
   const welcomeMessage = `Welcome back, ${user?.full_name || 'User'}! Here's an overview of your business operations.`;
   
+  // Memoize the welcome message component to prevent unnecessary re-renders
+  const WelcomeMessageComponent = useMemo(() => (
+    <p className={`welcome-message ${isFading ? 'fading' : ''} ${isTyping ? 'typing' : 'notification'}`}>
+      {currentMessage.icon && <span className="message-icon">{currentMessage.icon}</span>}
+      <span className="message-text">{currentMessage.text}</span>
+      {isTyping && <span className="typing-cursor"></span>}
+    </p>
+  ), [currentMessage.text, currentMessage.icon, isFading, isTyping]);
+
   const notificationMessages = [
     { text: "Here's what's happening with your properties.", icon: <SparklesIcon /> },
     { text: "You have 3 pending applications to review.", icon: <BriefcaseIcon /> },
@@ -100,35 +110,71 @@ function LandlordDashboard() {
     { text: "All critical tasks are on track.", icon: <TargetIcon /> }
   ];
 
+  // Add user interaction detection
   useEffect(() => {
+    let interactionTimeout: NodeJS.Timeout;
+    
+    const handleUserInteraction = () => {
+      setIsUserInteracting(true);
+      clearTimeout(interactionTimeout);
+      interactionTimeout = setTimeout(() => {
+        setIsUserInteracting(false);
+      }, 2000); // Resume animation 2 seconds after last interaction
+    };
+
+    // Listen for various user interactions
+    const events = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart'];
+    events.forEach(event => {
+      document.addEventListener(event, handleUserInteraction, { passive: true });
+    });
+
+    return () => {
+      clearTimeout(interactionTimeout);
+      events.forEach(event => {
+        document.removeEventListener(event, handleUserInteraction);
+      });
+    };
+  }, []);
+
+  useEffect(() => {
+    // Pause animation when user is interacting
+    if (isUserInteracting) return;
+    
+    let animationId: number;
     let rotationTimeout: NodeJS.Timeout;
-    let typingInterval: NodeJS.Timeout;
 
     if (isTyping) {
       if (currentMessage.text.length < welcomeMessage.length) {
-        // Use requestAnimationFrame for better performance
-        const startTyping = () => {
-          typingInterval = setInterval(() => {
+        // Use requestAnimationFrame for smoother, non-blocking animation
+        let lastUpdate = 0;
+        const typeSpeed = 80; // Reduced from 120ms for faster typing
+        
+        const animateTyping = (timestamp: number) => {
+          if (timestamp - lastUpdate >= typeSpeed) {
             setCurrentMessage(prev => {
               if (prev.text.length >= welcomeMessage.length) {
-                clearInterval(typingInterval);
                 return prev;
               }
               return { text: welcomeMessage.substring(0, prev.text.length + 1), icon: null };
             });
-          }, 120); // Much slower for more natural typing effect
+            lastUpdate = timestamp;
+          }
+          
+          if (currentMessage.text.length < welcomeMessage.length) {
+            animationId = requestAnimationFrame(animateTyping);
+          }
         };
         
-        requestAnimationFrame(startTyping);
+        animationId = requestAnimationFrame(animateTyping);
         
         return () => {
-          if (typingInterval) clearInterval(typingInterval);
+          if (animationId) cancelAnimationFrame(animationId);
         };
       } else {
-        rotationTimeout = setTimeout(() => setIsTyping(false), 3000); // Pause after typing
+        rotationTimeout = setTimeout(() => setIsTyping(false), 2000); // Reduced pause time
       }
     } else {
-      // Fade and rotate notifications
+      // Faster transition between messages
       rotationTimeout = setTimeout(() => {
         setIsFading(true);
         setTimeout(() => {
@@ -145,17 +191,18 @@ function LandlordDashboard() {
                 setMessageIndex(0);
                 setIsTyping(true);
                 setIsFading(false);
-              }, 500);
-            }, 5000);
+              }, 300); // Reduced fade time
+            }, 3000); // Reduced display time
           }
-        }, 500); // Fade animation duration
-      }, 5000); // Time message is displayed
+        }, 300); // Reduced fade time
+      }, 3000); // Reduced display time
     }
+    
     return () => {
       clearTimeout(rotationTimeout);
-      if (typingInterval) clearInterval(typingInterval);
+      if (animationId) cancelAnimationFrame(animationId);
     };
-  }, [isTyping, messageIndex, notificationMessages, welcomeMessage]);
+  }, [isTyping, messageIndex, notificationMessages, welcomeMessage, currentMessage.text.length, isUserInteracting]);
   
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'N/A';
@@ -753,11 +800,7 @@ function LandlordDashboard() {
             <div className="header-left">
               <h1 className="dashboard-title">Landlord Dashboard</h1>
               <div className="subtitle-container">
-                <p className={`welcome-message ${isFading ? 'fading' : ''} ${isTyping ? 'typing' : 'notification'}`}>
-                  {currentMessage.icon && <span className="message-icon">{currentMessage.icon}</span>}
-                  <span className="message-text">{currentMessage.text}</span>
-                  {isTyping && <span className="typing-cursor"></span>}
-                </p>
+                {WelcomeMessageComponent}
               </div>
             </div>
             <div className="header-right">
@@ -1422,21 +1465,31 @@ function LandlordDashboard() {
           display: inline-flex;
           align-items: center; 
           gap: 8px; /* Reduced gap */
-          pointer-events: none;
+          pointer-events: none; /* Prevents blocking user interactions */
           position: relative;
           z-index: 1;
           /* Optimize for performance during animation */
-          will-change: auto;
+          will-change: transform, opacity;
           backface-visibility: hidden;
           transform: translateZ(0);
+          /* Ensure animation doesn't block other elements */
+          contain: layout style paint;
+          /* Use GPU acceleration for smoother animation */
+          transform: translate3d(0, 0, 0);
         }
 
         .welcome-message.notification {
-          transition: opacity 0.5s ease-in-out;
+          transition: opacity 0.3s ease-in-out; /* Reduced from 0.5s */
         }
 
         .welcome-message.fading {
           opacity: 0;
+        }
+
+        .message-icon {
+          /* Optimize icon animations */
+          will-change: transform;
+          transform: translate3d(0, 0, 0);
         }
 
         .message-icon svg {
@@ -1451,6 +1504,9 @@ function LandlordDashboard() {
           height: 14px; /* Reduced height */
           background-color: #4b5563;
           animation: blink 1s infinite;
+          /* Optimize cursor animation */
+          will-change: opacity;
+          transform: translate3d(0, 0, 0);
         }
 
         @keyframes blink {

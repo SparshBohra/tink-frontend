@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
-import { withAuth } from '../lib/auth-context';
-import { useAuth } from '../lib/auth-context';
+import React, { useState, useEffect } from 'react';
+import Head from 'next/head';
+import DashboardLayout from '../components/DashboardLayout';
 import Navigation from '../components/Navigation';
+import LoadingSpinner from '../components/LoadingSpinner';
+import { useAuth, withAuth } from '../lib/auth-context';
 import { apiClient } from '../lib/api';
 
 interface Landlord {
@@ -167,9 +169,7 @@ function AdminPanel() {
         </div>
 
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '40px' }}>
-            <h3>🔄 Loading admin data...</h3>
-          </div>
+          <LoadingSpinner />
         ) : error ? (
           <div style={{ color: 'red', padding: '20px', border: '1px solid red', marginBottom: '20px' }}>
             <strong>Error:</strong> {error}

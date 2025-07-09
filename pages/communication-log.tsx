@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import DashboardLayout from '../components/DashboardLayout';
-import { withAuth } from '../lib/auth-context';
+import LoadingSpinner from '../components/LoadingSpinner';
+import { useAuth, withAuth } from '../lib/auth-context';
+import { apiClient } from '../lib/api';
 
 interface CommunicationLogEntry {
   id: number;
@@ -281,7 +283,7 @@ function CommunicationLogPage() {
   };
 
   return (
-    <DashboardLayout>
+    <DashboardLayout title="Communication Log">
       <Head>
         <title>Communication Log - Tink</title>
         <meta name="description" content="View comprehensive communication history" />
@@ -384,10 +386,7 @@ function CommunicationLogPage() {
 
         <div className="logs-section">
           {loading ? (
-            <div className="loading-state">
-              <div className="loading-spinner"></div>
-              <p>Loading communication logs...</p>
-            </div>
+            <LoadingSpinner />
           ) : logs.length === 0 ? (
             <div className="empty-state">
               <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1">

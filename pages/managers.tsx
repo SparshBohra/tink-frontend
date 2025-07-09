@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import DashboardLayout from '../components/DashboardLayout';
 import PropertyAssignmentModal from '../components/PropertyAssignmentModal';
+import LoadingSpinner from '../components/LoadingSpinner';
 import { useAuth, withAuth } from '../lib/auth-context';
 import { apiClient } from '../lib/api';
 import { ManagerWithProperties, ManagerFormData, Property } from '../lib/types';
@@ -512,10 +513,7 @@ function ManagersPage() {
       <DashboardLayout
         title="Loading managers..."
       >
-        <div className="loading-indicator">
-          <div className="loading-spinner" />
-          <p>Fetching manager data...</p>
-        </div>
+        <LoadingSpinner />
       </DashboardLayout>
     );
   }

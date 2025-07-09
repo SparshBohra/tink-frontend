@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 import DashboardLayout from '../components/DashboardLayout';
+import LoadingSpinner from '../components/LoadingSpinner';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { withAuth } from '../lib/auth-context';
+import { useAuth, withAuth } from '../lib/auth-context';
 import { apiClient } from '../lib/api';
 import { formatCurrency } from '../lib/utils';
 
@@ -230,10 +231,7 @@ function Accounting() {
         title="Property Accounting"
         subtitle="Loading financial data..."
       >
-        <div className="loading-indicator">
-          <div className="loading-spinner"></div>
-          <p>Fetching property accounting data...</p>
-        </div>
+        <LoadingSpinner />
         
         <style jsx>{`
           .loading-indicator {

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 import DashboardLayout from '../components/DashboardLayout';
 import Link from 'next/link';
@@ -7,6 +7,7 @@ import { withAuth } from '../lib/auth-context';
 import { apiClient } from '../lib/api';
 import { Lease, Tenant, Property, Room } from '../lib/types';
 import { formatCurrency } from '../lib/utils';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 function Leases() {
   const router = useRouter();
@@ -164,10 +165,7 @@ function Leases() {
         title="Lease Management"
         subtitle="Loading lease data..."
       >
-        <div className="loading-indicator">
-          <div className="loading-spinner"></div>
-          <p>Fetching lease data...</p>
-        </div>
+        <LoadingSpinner />
         
         <style jsx>{`
           .loading-indicator {

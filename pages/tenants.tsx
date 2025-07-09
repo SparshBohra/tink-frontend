@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Head from 'next/head';
 import DashboardLayout from '../components/DashboardLayout';
-import { withAuth } from '../lib/auth-context';
+import LoadingSpinner from '../components/LoadingSpinner';
+import { useAuth, withAuth } from '../lib/auth-context';
 import { apiClient } from '../lib/api';
 import { Tenant, TenantFormData, Application, Lease, Property, Room } from '../lib/types';
 import ApplicationDetailModal from '../components/ApplicationDetailModal';
@@ -329,9 +330,7 @@ function Tenants() {
         title="Tenant Management"
         subtitle="Manage active tenants across all properties"
       >
-        <div className="loading-state">
-          <div className="loading-spinner">Loading tenants...</div>
-        </div>
+        <LoadingSpinner />
         
         <style jsx>{`
           .loading-state {

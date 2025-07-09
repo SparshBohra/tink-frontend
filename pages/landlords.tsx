@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
-import { useAuth } from '../lib/auth-context';
-import { apiClient } from '../lib/api';
-import { withAuth } from '../lib/auth-context';
 import DashboardLayout from '../components/DashboardLayout';
+import LoadingSpinner from '../components/LoadingSpinner';
+import { useAuth, withAuth } from '../lib/auth-context';
+import { apiClient } from '../lib/api';
 import SectionCard from '../components/SectionCard';
 import MetricCard from '../components/MetricCard';
 import StatusBadge from '../components/StatusBadge';
@@ -265,10 +265,7 @@ function LandlordsPage() {
           title="All Landlords"
           subtitle="Loading landlords..."
         >
-          <div className="loading-indicator">
-            <div className="loading-spinner" />
-            <p>Fetching landlords data...</p>
-          </div>
+          <LoadingSpinner />
         </DashboardLayout>
       </>
     );

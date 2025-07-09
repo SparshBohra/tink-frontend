@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
+import Link from 'next/link';
 import DashboardLayout from '../components/DashboardLayout';
+import LoadingSpinner from '../components/LoadingSpinner';
 import PropertyDeletionModal from '../components/PropertyDeletionModal';
 import { useRouter } from 'next/router';
 import { withAuth } from '../lib/auth-context';
@@ -286,10 +288,7 @@ function Properties() {
         title="Property Management"
         subtitle="Loading property data..."
       >
-        <div className="loading-indicator">
-          <div className="loading-spinner"></div>
-          <p>Fetching property data...</p>
-        </div>
+        <LoadingSpinner />
         
         <style jsx>{`
           .loading-indicator {

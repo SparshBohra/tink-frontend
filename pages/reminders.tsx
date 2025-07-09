@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 import DashboardLayout from '../components/DashboardLayout';
+import LoadingSpinner from '../components/LoadingSpinner';
 import SectionCard from '../components/SectionCard';
 import DataTable from '../components/DataTable';
 import EmptyState from '../components/EmptyState';
@@ -10,14 +11,28 @@ import { withAuth } from '../lib/auth-context';
 function Reminders() {
   const [tasks, setTasks] = useState<any[]>([]);
   const [newTask, setNewTask] = useState('');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Mock tasks
-    setTasks([
-      { id: 1, title: 'Send rent reminders for January', type: 'communication', priority: 'high', dueDate: '2024-01-01', completed: false },
-      { id: 2, title: 'Follow up on maintenance requests', type: 'maintenance', priority: 'medium', dueDate: '2024-01-02', completed: false },
-      { id: 3, title: 'Schedule property inspections', type: 'inspection', priority: 'low', dueDate: '2024-01-05', completed: true }
-    ]);
+    const fetchTasks = async () => {
+      setLoading(true);
+      try {
+        // Simulate API call
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Mock tasks
+        setTasks([
+          { id: 1, title: 'Send rent reminders for January', type: 'communication', priority: 'high', dueDate: '2024-01-01', completed: false },
+          { id: 2, title: 'Follow up on maintenance requests', type: 'maintenance', priority: 'medium', dueDate: '2024-01-02', completed: false },
+          { id: 3, title: 'Schedule property inspections', type: 'inspection', priority: 'low', dueDate: '2024-01-05', completed: true }
+        ]);
+      } catch (error) {
+        console.error('Error fetching tasks:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTasks();
   }, []);
 
   const addTask = () => {
@@ -54,6 +69,17 @@ function Reminders() {
     return 'info';
   }
 
+  if (loading) {
+    return (
+      <DashboardLayout title="Reminders & Tasks">
+        <Head>
+          <title>Reminders & Tasks - Tink</title>
+        </Head>
+        <LoadingSpinner />
+      </DashboardLayout>
+    );
+  }
+
   return (
     <>
       <Head>
@@ -72,9 +98,10 @@ function Reminders() {
               placeholder="Enter task description..."
               className="form-input"
               onKeyPress={(e) => e.key === 'Enter' && addTask()}
+              disabled={loading}
             />
-            <button onClick={addTask} className="btn btn-primary">
-              Add Task
+            <button onClick={addTask} className="btn btn-primary" disabled={loading}>
+              {loading ? 'Adding...' : 'Add Task'}
             </button>
           </div>
         </SectionCard>
@@ -119,8 +146,8 @@ function Reminders() {
                     <td className="center-cell">{task.dueDate}</td>
                     <td className="center-cell">
                       <div className="action-buttons">
-                        <button onClick={() => toggleTask(task.id)} className="btn btn-success btn-sm">Complete</button>
-                        <button onClick={() => deleteTask(task.id)} className="btn btn-error btn-sm">Delete</button>
+                        <button onClick={() => toggleTask(task.id)} className="btn btn-success btn-sm" disabled={loading}>Complete</button>
+                        <button onClick={() => deleteTask(task.id)} className="btn btn-error btn-sm" disabled={loading}>Delete</button>
                       </div>
                     </td>
                   </tr>
@@ -147,7 +174,7 @@ function Reminders() {
                     <td className="center-cell">{task.title}</td>
                     <td className="center-cell"><StatusBadge status="info" text={task.type} /></td>
                     <td className="center-cell">
-                      <button onClick={() => toggleTask(task.id)} className="btn btn-warning btn-sm">Mark as Pending</button>
+                      <button onClick={() => toggleTask(task.id)} className="btn btn-warning btn-sm" disabled={loading}>Mark as Pending</button>
                     </td>
                   </tr>
                 )}

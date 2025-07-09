@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import DashboardLayout from '../../components/DashboardLayout';
+import LoadingSpinner from '../../components/LoadingSpinner';
+import { useAuth, withAuth } from '../../lib/auth-context';
 import { apiClient } from '../../lib/api';
 import { Property } from '../../lib/types';
 
@@ -119,10 +121,7 @@ export default function AddInventoryItem() {
               </div>
             </div>
             
-            <div className="loading-indicator">
-              <div className="loading-spinner" />
-              <p>Loading form data...</p>
-            </div>
+            <LoadingSpinner />
           </div>
         </DashboardLayout>
       </>
