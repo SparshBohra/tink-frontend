@@ -686,7 +686,7 @@ export default function AddRoom() {
         }
 
         .currency-input {
-          padding-left: 28px !important;
+          padding-left: 48px !important;
         }
 
         .field-hint {

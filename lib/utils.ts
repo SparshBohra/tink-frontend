@@ -309,3 +309,66 @@ export const formatCurrency = (value: number | null | undefined): string => {
   if (value === null || value === undefined || isNaN(Number(value))) return '$0.00';
   return new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(Number(value));
 }; 
+
+// Phone number validation and formatting utilities
+export const phoneUtils = {
+  // Format phone number as user types
+  formatPhoneNumber: (value: string): string => {
+    // Remove all non-digits
+    const phoneNumber = value.replace(/\D/g, '');
+    
+    // Don't format if empty
+    if (!phoneNumber) return '';
+    
+    // Format based on length
+    if (phoneNumber.length <= 3) {
+      return `(${phoneNumber}`;
+    } else if (phoneNumber.length <= 6) {
+      return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3)}`;
+    } else {
+      return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3, 6)}-${phoneNumber.slice(6, 10)}`;
+    }
+  },
+
+  // Validate phone number format
+  validatePhoneNumber: (phoneNumber: string): boolean => {
+    // Remove all formatting and non-digits
+    const cleaned = phoneNumber.replace(/\D/g, '');
+    
+    // Check if it's exactly 10 digits (US format)
+    return cleaned.length === 10;
+  },
+
+  // Get error message for invalid phone
+  getPhoneErrorMessage: (phoneNumber: string): string | null => {
+    if (!phoneNumber.trim()) {
+      return 'Phone number is required';
+    }
+    
+    const cleaned = phoneNumber.replace(/\D/g, '');
+    
+    if (cleaned.length === 0) {
+      return 'Phone number is required';
+    } else if (cleaned.length < 10) {
+      return 'Phone number must be 10 digits';
+    } else if (cleaned.length > 10) {
+      return 'Phone number must be exactly 10 digits';
+    }
+    
+    return null;
+  },
+
+  // Clean phone number for storage (removes formatting)
+  cleanPhoneNumber: (phoneNumber: string): string => {
+    return phoneNumber.replace(/\D/g, '');
+  },
+
+  // Format phone number for display
+  displayPhoneNumber: (phoneNumber: string): string => {
+    const cleaned = phoneNumber.replace(/\D/g, '');
+    if (cleaned.length === 10) {
+      return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
+    }
+    return phoneNumber; // Return as-is if not 10 digits
+  }
+}; 

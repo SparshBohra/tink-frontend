@@ -287,105 +287,57 @@ export default function EditRoom() {
   }
 
   return (
-    <>
+    <DashboardLayout>
       <Head>
-        <title>Edit Room - {room?.name || 'Room'} - {property?.name || 'Property'} - Tink Property Management</title>
+        <title>Edit Room - {room?.name || 'Loading...'} | Tink</title>
       </Head>
-      <DashboardLayout title="">
-        <div className="dashboard-container">
-          {/* Custom Header */}
-          <div className="dashboard-header">
-            <div className="header-content">
-              <div className="header-left">
+      <div className="dashboard-container">
+        {/* Custom Header */}
+        <div className="dashboard-header">
+          <div className="header-content">
+            <div className="header-left">
+              <button onClick={() => router.push(`/properties/${id}/rooms`)} className="back-button">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M19 12H5m7-7l-7 7 7 7"/>
+                </svg>
+              </button>
+              <div>
                 <h1 className="dashboard-title">Edit Room</h1>
-                <p className="welcome-message">
-                  {property && room ? `Editing ${room.name} in ${property.name}` : 'Edit room details'}
-                </p>
+                <div className="subtitle-container">
+                  <p className="welcome-message">
+                    <span className="message-text">Update details for {room?.name}</span>
+                  </p>
+                </div>
               </div>
-              <div className="header-right">
-                <Link href={`/properties/${propertyId}/rooms`} className="back-btn">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M19 12H5"/>
-                    <path d="M12 19l-7-7 7-7"/>
-                  </svg>
-                  Back to Property
-                </Link>
-              </div>
+            </div>
+            <div className="header-right">
+              <button
+                type="submit"
+                form="edit-room-form"
+                className="btn btn-primary"
+                disabled={loading}
+              >
+                {loading ? 'Saving...' : 'Save Changes'}
+              </button>
             </div>
           </div>
+        </div>
 
-          {/* Room Overview */}
-          {room && (
-            <div className="metrics-grid">
-              <div className="metric-card">
-                <div className="metric-header">
-                  <div className="metric-info">
-                    <h3 className="metric-title">Current Status</h3>
-                    <div className="metric-icon">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
-                        <line x1="9" y1="9" x2="9.01" y2="9"></line>
-                        <line x1="15" y1="9" x2="15.01" y2="9"></line>
-                      </svg>
-                    </div>
-                  </div>
-                </div>
-                <div className="metric-content">
-                  <div className="metric-value">{room.is_vacant ? 'Vacant' : 'Occupied'}</div>
-                  <div className="metric-subtitle">Occupancy status</div>
-                </div>
-              </div>
-              
-              <div className="metric-card">
-                <div className="metric-header">
-                  <div className="metric-info">
-                    <h3 className="metric-title">Occupancy</h3>
-                    <div className="metric-icon">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                        <circle cx="12" cy="7" r="4"></circle>
-                      </svg>
-                    </div>
-                  </div>
-                </div>
-                <div className="metric-content">
-                  <div className="metric-value">{room.current_occupancy}/{room.max_capacity}</div>
-                  <div className="metric-subtitle">Current / Max</div>
-                </div>
-              </div>
-              
-              <div className="metric-card">
-                <div className="metric-header">
-                  <div className="metric-info">
-                    <h3 className="metric-title">Monthly Rent</h3>
-                    <div className="metric-icon">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <line x1="12" y1="1" x2="12" y2="23"></line>
-                        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-                      </svg>
-                    </div>
-                  </div>
-                </div>
-                <div className="metric-content">
-                  <div className="metric-value">${Number(room.monthly_rent || 0).toLocaleString()}</div>
-                  <div className="metric-subtitle">Current rent</div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {error && <div className="alert alert-error"><strong>Error:</strong> {error}</div>}
-          {success && <div className="alert alert-success"><strong>Success:</strong> {success}</div>}
-
-          <div className="main-content-grid">
-            <div className="form-section">
+        {/* Main Content */}
+        <div className="main-content-grid">
+          <div className="left-column">
+            <div className="section-card">
               <div className="section-header">
-                <h2 className="section-title">Room Details</h2>
-                <p className="section-subtitle">Update the room information and settings.</p>
+                <div className="section-title-group">
+                  <h2 className="section-title">Room Details</h2>
+                  <p className="section-subtitle">Update the core information for this room.</p>
+                </div>
               </div>
               
-              <form onSubmit={handleSubmit} className="room-form">
+              {error && <div className="alert alert-error" style={{ marginBottom: '16px' }}><strong>Error:</strong> {error}</div>}
+              {success && <div className="alert alert-success" style={{ marginBottom: '16px' }}><strong>Success:</strong> {success}</div>}
+              
+              <form id="edit-room-form" onSubmit={handleSubmit} className="room-form">
                 {/* Basic Information */}
                   <div className="form-group">
                   <label htmlFor="name" className="form-label required">Room Name</label>
@@ -618,94 +570,310 @@ export default function EditRoom() {
               </form>
             </div>
           </div>
+          
+          <div className="right-column">
+            {/* Placeholder for future content */}
+          </div>
         </div>
-      
+      </div>
       <style jsx>{`
-          .form-row {
+        .dashboard-container {
+          padding: 0;
+          background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+          min-height: 100vh;
+          font-family: 'Inter', system-ui, sans-serif;
+        }
+        :global(.dark-mode) .dashboard-container {
+          background: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
+        }
+
+        /* Header Styles */
+        .dashboard-header {
+          background: transparent;
+          backdrop-filter: none;
+          border-bottom: none;
+          padding: 24px 32px;
+          position: relative;
+          z-index: 100;
+        }
+        :global(.dark-mode) .dashboard-header {
+          background: transparent;
+          border-bottom: none;
+        }
+
+        .header-content {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          max-width: 1400px;
+          margin: 0 auto;
+        }
+
+        .header-left {
+          display: flex;
+          align-items: center;
+          gap: 20px;
+        }
+
+        .back-button {
+          background: rgba(255, 255, 255, 0.9);
+          border: 1px solid rgba(226, 232, 240, 0.8);
+          border-radius: 12px;
+          width: 44px;
+          height: 44px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          color: #64748b;
+          transition: all 0.2s ease;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        }
+        .back-button:hover {
+          background: #f8fafc;
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        :global(.dark-mode) .back-button {
+          background: rgba(22, 27, 34, 0.9);
+          border-color: rgba(48, 54, 61, 0.8);
+          color: #8b949e;
+        }
+        :global(.dark-mode) .back-button:hover {
+          background: #21262d;
+        }
+
+        .dashboard-title {
+          font-size: 32px;
+          font-weight: 800;
+          background: linear-gradient(135deg, #1e293b 0%, #475569 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          margin: 0;
+          letter-spacing: -0.02em;
+        }
+        :global(.dark-mode) .dashboard-title {
+          background: linear-gradient(135deg, #f0f6fc 0%, #c9d1d9 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle-container {
+          margin-top: 4px;
+        }
+
+        .welcome-message {
+          font-size: 15px;
+          color: #64748b;
+          margin: 0;
+          font-weight: 500;
+          letter-spacing: 0.01em;
+        }
+        :global(.dark-mode) .welcome-message {
+          color: #8b949e;
+        }
+
+        .header-right {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .btn {
+          padding: 12px 20px;
+          border-radius: 10px;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          border: none;
+          transition: all 0.2s ease;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          text-decoration: none;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        }
+        .btn:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-primary {
+          background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+          color: white;
+        }
+        .btn-primary:hover {
+          background: linear-gradient(135deg, #4338ca 0%, #6d28d9 100%);
+        }
+
+        .main-content-grid {
           display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-          gap: 16px;
+          grid-template-columns: 2fr 1fr;
+          gap: 24px;
+          align-items: flex-start;
+          padding: 0 32px 32px;
+          max-width: 1400px;
+          margin: 0 auto;
+        }
+
+        .left-column {
+          display: flex;
+          flex-direction: column;
+          gap: 24px;
+        }
+        .right-column {
+          position: sticky;
+          top: 24px;
+        }
+
+        .section-card {
+          background: white;
+          border-radius: 12px;
+          padding: 24px;
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+          border: 1px solid rgba(226, 232, 240, 0.6);
+        }
+        :global(.dark-mode) .section-card {
+          background: #161b22;
+          border-color: rgba(48, 54, 61, 0.6);
+        }
+
+        .section-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding-bottom: 16px;
+          margin-bottom: 24px;
+          border-bottom: 1px solid #f1f5f9;
+        }
+        :global(.dark-mode) .section-header {
+          border-color: #30363d;
+        }
+
+        .section-title-group {
+          display: flex;
+          flex-direction: column;
         }
         
-          .input-group {
-          position: relative;
-          display: flex;
-          align-items: center;
+        .section-title {
+          font-size: 18px;
+          font-weight: 600;
+          color: #1e293b;
+          margin: 0;
+        }
+        :global(.dark-mode) .section-title {
+          color: #f0f6fc;
         }
 
-          .input-prefix {
+        .section-subtitle {
+          font-size: 14px;
+          color: #64748b;
+          margin-top: 4px;
+        }
+        :global(.dark-mode) .section-subtitle {
+          color: #8b949e;
+        }
+        
+        .room-form {
+          display: grid;
+          gap: 24px;
+        }
+
+        .form-row {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+          gap: 16px;
+        }
+
+        .form-group {
+          display: flex;
+          flex-direction: column;
+        }
+
+        .form-label {
+          font-size: 14px;
+          font-weight: 500;
+          color: #374151;
+          margin-bottom: 8px;
+        }
+        :global(.dark-mode) .form-label {
+          color: #c9d1d9;
+        }
+
+        .form-label.required::after {
+          content: ' *';
+          color: #ef4444;
+        }
+        
+        .form-input, .form-select {
+          width: 100%;
+          padding: 10px 12px;
+          border-radius: 6px;
+          border: 1px solid #cbd5e1;
+          background-color: white;
+          font-size: 14px;
+          color: #1e293b;
+          transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        :global(.dark-mode) .form-input, 
+        :global(.dark-mode) .form-select {
+          background-color: #0d1117;
+          border-color: #30363d;
+          color: #c9d1d9;
+        }
+
+        .form-input:focus, .form-select:focus {
+          outline: none;
+          border-color: #4f46e5;
+          box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        .form-hint {
+          font-size: 12px;
+          color: #64748b;
+          margin-top: 6px;
+        }
+        :global(.dark-mode) .form-hint {
+          color: #8b949e;
+        }
+        
+        .input-group {
+          position: relative;
+        }
+        
+        .input-prefix {
           position: absolute;
           left: 12px;
-          color: #6b7280;
-            font-weight: 500;
-            z-index: 10;
-          pointer-events: none;
-        }
-
-          .input-group .form-input {
-            padding-left: 32px;
-        }
-
-          .checkbox-group {
-          display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-          .checkbox-label {
+          top: 50%;
+          transform: translateY(-50%);
+          color: #64748b;
           font-size: 14px;
-            color: #374151;
-          cursor: pointer;
-          }
-
-          .features-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-          gap: 12px;
-            margin-top: 8px;
         }
 
-          .feature-checkbox {
+        .input-group .form-input {
+          padding-left: 28px;
+        }
+        
+        .features-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+          gap: 12px;
+          margin-top: 8px;
+        }
+        .feature-checkbox {
           display: flex;
           align-items: center;
-            gap: 8px;
+          gap: 8px;
         }
-
-          .feature-label {
-            font-size: 14px;
-            color: #374151;
-            cursor: pointer;
+        .feature-label {
+          font-size: 14px;
+          color: #374151;
+          cursor: pointer;
         }
-
-          .form-suggestion {
-            margin-top: 4px;
-        }
-
-          .suggestion-btn {
-          font-size: 12px;
-            color: #2563eb;
-            background: none;
-            border: none;
-            cursor: pointer;
-            text-decoration: underline;
-            padding: 0;
-        }
-
-          .suggestion-btn:hover {
-            color: #1d4ed8;
-        }
-
-        @media (max-width: 768px) {
-            .form-row {
-            grid-template-columns: 1fr;
-          }
-
-            .features-grid {
-              grid-template-columns: 1fr 1fr;
-          }
+        :global(.dark-mode) .feature-label {
+          color: #c9d1d9;
         }
       `}</style>
-      </DashboardLayout>
-    </>
+    </DashboardLayout>
   );
 } 

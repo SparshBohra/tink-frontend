@@ -283,18 +283,38 @@ export default function PropertyRooms() {
             <td>{lease ? formatCurrency(lease.monthly_rent) : '-'}</td>
             <td>
                 <div className="action-buttons">
-                    {lease ? (
-                        <Link href={`/leases/${lease.id}`} className="btn-action view">View Lease</Link>
-                    ) : (
-                        <button onClick={() => handleAssignTenant(room)} className="btn-action assign">Assign Tenant</button>
-                    )}
-                    <div className="more-actions">
-                        <button className="btn-action more">•••</button>
-                        <div className="dropdown-menu">
-                            <Link href={`/properties/${id}/edit-room/${room.id}`}>Edit Room</Link>
-                            <button onClick={() => handleDeleteRoom(room.id, room.name)} className="delete">Delete Room</button>
-        </div>
-                    </div>
+                    <button 
+                        onClick={() => handleAssignTenant(room)} 
+                        className="btn-action assign"
+                        title="Assign Tenant"
+                    >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                            <circle cx="12" cy="7" r="4"/>
+                        </svg>
+                    </button>
+                    <button 
+                        onClick={() => router.push(`/properties/${id}/edit-room/${room.id}`)}
+                        className="btn-action edit"
+                        title="Edit Room"
+                    >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                        </svg>
+                    </button>
+                    <button 
+                        onClick={() => handleDeleteRoom(room.id, room.name)} 
+                        className="btn-action delete"
+                        title="Delete Room"
+                    >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <polyline points="3,6 5,6 21,6"/>
+                            <path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2V6"/>
+                            <line x1="10" y1="11" x2="10" y2="17"/>
+                            <line x1="14" y1="11" x2="14" y2="17"/>
+                        </svg>
+                    </button>
         </div>
             </td>
         </tr>
@@ -318,72 +338,128 @@ export default function PropertyRooms() {
       <Head>
         <title>{property.name} - Rooms | Tink</title>
       </Head>
-      <div className="property-rooms-page">
-        {/* Header */}
-        <div className="page-header">
+      <div className="dashboard-container">
+        {/* Custom Header matching landlord dashboard */}
+        <div className="dashboard-header">
+          <div className="header-content">
               <div className="header-left">
                 <button onClick={() => router.push('/properties')} className="back-button">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M19 12H5m7-7l-7 7 7 7"/></svg>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M19 12H5m7-7l-7 7 7 7"/>
+                </svg>
                 </button>
                 <div>
-                    <h1 className="page-title">{property.name}</h1>
-                    <p className="page-subtitle">{property.full_address}</p>
+                <h1 className="dashboard-title">{property.name}</h1>
+                <div className="subtitle-container">
+                  <p className="welcome-message">
+                    <span className="message-text">{property.full_address}</span>
+                  </p>
+                </div>
                 </div>
               </div>
               <div className="header-right">
-                <button className="btn btn-secondary" onClick={() => setIsNewApplicationModalOpen(true)}>New Application</button>
-                <Link href={`/properties/${property.id}/edit`} className="btn btn-primary">Edit Property</Link>
+              <button className="btn btn-primary" onClick={() => setIsNewApplicationModalOpen(true)}>
+                New Application
+              </button>
+              <Link href={`/properties/${property.id}/edit`} className="btn btn-primary">
+                Edit Property
+              </Link>
+            </div>
             </div>
           </div>
 
-        {/* Metrics */}
+        {/* Main Content Grid Layout matching tenants page */}
+        <div className="main-content-grid">
+          <div className="left-column">
+            {/* Compact Metrics Grid */}
           <div className="metrics-grid">
             <div className="metric-card">
               <div className="metric-header">
+                  <div className="metric-info">
                   <h3 className="metric-title">Total Rooms</h3>
-                    <div className="metric-icon" style={{background: '#ede9fe'}}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" strokeWidth="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
+                    <div className="metric-icon">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                        <polyline points="9 22 9 12 15 12 15 22"/>
+                      </svg>
                   </div>
+                  </div>
+                </div>
+                <div className="metric-content">
                 <div className="metric-value">{totalRooms}</div>
-                <div className="metric-footer">
-                    <span className="footer-item">{vacantRooms} vacant</span>
-                    <span className="footer-item">{occupiedRooms} occupied</span>
+                  <div className="metric-subtitle">in this property</div>
+                  <div className="metric-progress">
+                    <span className="metric-label">{vacantRooms} vacant</span>
+                    <span className="metric-change neutral">{occupiedRooms} occupied</span>
                 </div>
               </div>
+              </div>
+
             <div className="metric-card">
               <div className="metric-header">
-                  <h3 className="metric-title">Current Occupancy</h3>
-                    <div className="metric-icon" style={{background: '#dcfce7'}}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+                  <div className="metric-info">
+                    <h3 className="metric-title">Occupancy Rate</h3>
+                    <div className="metric-icon">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                        <circle cx="9" cy="7" r="4"/>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                      </svg>
                   </div>
+                  </div>
+                </div>
+                <div className="metric-content">
                 <div className="metric-value">{occupancyRate}%</div>
-                <div className="metric-footer">
-                    <span className="footer-item">{occupiedRooms} active tenants</span>
+                  <div className="metric-subtitle">current occupancy</div>
+                  <div className="metric-progress">
+                    <span className="metric-label">{occupiedRooms} tenants</span>
+                    <span className="metric-change positive">active</span>
                 </div>
               </div>
+              </div>
+
             <div className="metric-card">
               <div className="metric-header">
+                  <div className="metric-info">
                   <h3 className="metric-title">Monthly Revenue</h3>
-                    <div className="metric-icon" style={{background: '#dbeafe'}}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+                    <div className="metric-icon">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <line x1="12" y1="1" x2="12" y2="23"/>
+                        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                      </svg>
                   </div>
+                  </div>
+                </div>
+                <div className="metric-content">
                 <div className="metric-value">{formatCurrency(totalRevenue)}</div>
-                <div className="metric-footer">
-                    <span className="footer-item">from all rooms</span>
+                  <div className="metric-subtitle">from all rooms</div>
+                  <div className="metric-progress">
+                    <span className="metric-label">monthly income</span>
+                    <span className="metric-change positive">stable</span>
+                  </div>
               </div>
             </div>
           </div>
 
-            <div className="content-grid">
-              <div className="left-column">
-                {/* Room Details Section */}
+            {/* Room Management Section */}
                 {property.rent_type === 'per_room' && (
-                    <div className="card">
-                        <div className="card-header">
-                            <div>
-                                <h2 className="card-title">Room Details ({rooms.length})</h2>
-                                <p className="card-subtitle">Overview of all rooms in this property</p>
+              <div className="section-card">
+                <div className="section-header">
+                  <div className="section-title-group">
+                    <h2 className="section-title">Room Management</h2>
+                    <p className="section-subtitle">{rooms.length} rooms in this property</p>
                     </div>
-                            <Link href={`/properties/${id}/add-room`} className="btn btn-primary">Add New Room</Link>
+                  <Link href={`/properties/${id}/add-room`} className="btn btn-primary">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <line x1="12" y1="5" x2="12" y2="19"/>
+                      <line x1="5" y1="12" x2="19" y2="12"/>
+                    </svg>
+                    Add New Room
+                  </Link>
                   </div>
                   {rooms.length > 0 ? (
+                  <div className="rooms-table-container">
                             <DataTable
                                 columns={[
                                     { header: 'Room Name', key: 'name' },
@@ -395,6 +471,7 @@ export default function PropertyRooms() {
                                 data={rooms}
                                 renderRow={renderRoomRow}
                             />
+                  </div>
                   ) : (
                     <EmptyState
                       title="No Rooms Found"
@@ -408,11 +485,11 @@ export default function PropertyRooms() {
                 
                 {/* Property-level lease Section */}
                 {property.rent_type === 'per_property' && (
-                  <div className="card">
-                    <div className="card-header">
-                      <div>
-                        <h2 className="card-title">Lease Details</h2>
-                        <p className="card-subtitle">This property is leased as a whole unit.</p>
+              <div className="section-card">
+                <div className="section-header">
+                  <div className="section-title-group">
+                    <h2 className="section-title">Lease Details</h2>
+                    <p className="section-subtitle">This property is leased as a whole unit</p>
                       </div>
                       {!propertyLevelLease && (
                         <button onClick={openPropertyAssignment} className="btn btn-primary">
@@ -450,13 +527,12 @@ export default function PropertyRooms() {
                   </div>
                 )}
 
-
                 {/* Property History Section */}
-                <div className="card">
-                    <div className="card-header">
-                        <div>
-                            <h2 className="card-title">Property History</h2>
-                            <p className="card-subtitle">Tenant and rent collection history</p>
+            <div className="section-card">
+              <div className="section-header">
+                <div className="section-title-group">
+                  <h2 className="section-title">Property History</h2>
+                  <p className="section-subtitle">Tenant and rent collection history</p>
                   </div>
                         <div className="history-tabs">
                             <button 
@@ -475,6 +551,7 @@ export default function PropertyRooms() {
                     </div>
                     {activeHistoryTab === 'tenant' && (
                         leases.length > 0 ? (
+                  <div className="history-table-container">
                   <DataTable
                     columns={[
                                     { header: 'Tenant', key: 'tenant' },
@@ -486,6 +563,7 @@ export default function PropertyRooms() {
                                 data={leases}
                                 renderRow={renderTenantHistoryRow}
                             />
+                  </div>
                         ) : (
                             <EmptyState
                                 title="No Tenant History"
@@ -503,92 +581,129 @@ export default function PropertyRooms() {
               </div>
 
               <div className="right-column">
-                {/* Property Information Section */}
-                <div className="card">
-                    <div className="card-header no-border">
+            {/* Quick Actions Section */}
+            <div className="quick-actions-section">
+              <div className="section-header">
                     <div>
-                            <h2 className="card-title">Property Information</h2>
-                            <p className="card-subtitle">Basic property details and configuration</p>
+                  <h2 className="section-title">Quick Actions</h2>
+                  <p className="section-subtitle">Frequently used actions</p>
                     </div>
                   </div>
-                    <div className="info-grid">
-                        <div className="info-item">
-                            <div className="info-icon-wrapper"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
-                            <div>
-                                <h4 className="info-label">Address</h4>
-                      <p className="info-value">{property.full_address}</p>
+              
+              <div className="actions-grid">
+                <div 
+                  className="action-card blue"
+                  onClick={() => router.push(`/properties/${property.id}/add-room`)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <div className="action-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M12 5v14m-7-7h14"/>
+                    </svg>
                     </div>
+                  <div className="action-content">
+                    <h3 className="action-title">Add New Room</h3>
+                    <p className="action-subtitle">Create a new room</p>
                         </div>
-                        <div className="info-item">
-                            <div className="info-icon-wrapper"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
-                            <div>
-                                <h4 className="info-label">Property Type</h4>
-                                <p className="info-value">{property.rent_type === 'per_property' ? 'Single Lease House' : 'Co-living / Per Room'}</p>
                       </div>
+                
+                <div 
+                  className="action-card purple"
+                  onClick={() => setConversionWizardOpen(true)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <div className="action-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+                    </svg>
                     </div>
-                        <div className="info-item">
-                            <div className="info-icon-wrapper"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
-                            <div>
-                                <h4 className="info-label">Landlord</h4>
-                      <p className="info-value">{property.landlord_name}</p>
+                  <div className="action-content">
+                    <h3 className="action-title">Convert Rent Type</h3>
+                    <p className="action-subtitle">Change pricing model</p>
                             </div>
                     </div>
+
+                <div 
+                  className="action-card green"
+                  onClick={() => setRoomCountEditorOpen(true)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <div className="action-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="3" y="3" width="7" height="7"/>
+                      <rect x="14" y="3" width="7" height="7"/>
+                      <rect x="14" y="14" width="7" height="7"/>
+                      <rect x="3" y="14" width="7" height="7"/>
+                    </svg>
+                  </div>
+                  <div className="action-content">
+                    <h3 className="action-title">Manage Rooms</h3>
+                    <p className="action-subtitle">Edit room structure</p>
                   </div>
                 </div>
 
-                {/* Quick Actions Card */}
-                <div className="card">
-                    <div className="card-header no-border">
-                       <div>
-                            <h2 className="card-title">Quick Actions</h2>
-                            <p className="card-subtitle">Common property management tasks</p>
+                <div 
+                  className="action-card orange"
+                  onClick={() => setIsNewApplicationModalOpen(true)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <div className="action-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                      <polyline points="14 2 14 8 20 8"/>
+                    </svg>
                           </div>
+                  <div className="action-content">
+                    <h3 className="action-title">New Application</h3>
+                    <p className="action-subtitle">Add applicant</p>
                     </div>
-                    <div className="quick-actions-grid">
-                        <Link href={`/properties/${property.id}/add-room`} className="quick-action-item">
-                            <div className="quick-action-icon" style={{background: '#eff6ff', color: '#3b82f6'}}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14m-7-7h14"/></svg></div>
-                            <div className="quick-action-text">
-                            <h4>Add New Room</h4>
-                            <p>Create a new room in this property</p>
                           </div>
-                      </Link>
-                        <button onClick={() => setConversionWizardOpen(true)} className="quick-action-item">
-                            <div className="quick-action-icon" style={{background: '#f0f9ff', color: '#8b5cf6'}}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/><path d="M12 8v8m-4-4h8"/></svg></div>
-                            <div className="quick-action-text">
-                            <h4>Convert Rent Type</h4>
-                            <p>Change between per-property and per-room</p>
+
+                <div 
+                  className="action-card blue"
+                  onClick={() => router.push('/inventory')}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <div className="action-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                      <line x1="9" y1="3" x2="9" y2="21"/>
+                      <line x1="15" y1="3" x2="15" y2="21"/>
+                    </svg>
                           </div>
-                        </button>
-                        <button onClick={() => setRoomCountEditorOpen(true)} className="quick-action-item">
-                            <div className="quick-action-icon" style={{background: '#ecfdf5', color: '#059669'}}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></div>
-                            <div className="quick-action-text">
-                            <h4>Manage Rooms</h4>
-                            <p>Edit room count and structure</p>
+                  <div className="action-content">
+                    <h3 className="action-title">Manage Inventory</h3>
+                    <p className="action-subtitle">Track items</p>
                           </div>
-                        </button>
-                        <button onClick={() => setIsNewApplicationModalOpen(true)} className="quick-action-item">
-                           <div className="quick-action-icon" style={{background: '#f0fdf4', color: '#22c55e'}}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
-                           <div className="quick-action-text">
-                            <h4>Review Applications</h4>
-                            <p>Check pending applications</p>
                           </div>
-                        </button>
-                        <Link href="/inventory" className="quick-action-item">
-                          <div className="quick-action-icon" style={{background: '#faf5ff', color: '#a855f7'}}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/></svg></div>
-                           <div className="quick-action-text">
-                            <h4>Manage Inventory</h4>
-                            <p>Track property items</p>
+
+                <div 
+                  className="action-card green"
+                  onClick={() => router.push('/leases')}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <div className="action-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+                      <polyline points="14 2 14 8 20 8"/>
+                    </svg>
                           </div>
-                        </Link>
-                        <Link href="/leases" className="quick-action-item">
-                           <div className="quick-action-icon" style={{background: '#fffbeb', color: '#f59e0b'}}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="m10.4 12.6 2.8 2.8-2.8 2.8"/></svg></div>
-                           <div className="quick-action-text">
-                            <h4>View Leases</h4>
-                            <p>Manage lease agreements</p>
+                  <div className="action-content">
+                    <h3 className="action-title">View Leases</h3>
+                    <p className="action-subtitle">Manage agreements</p>
                           </div>
-                      </Link>
                   </div>
                 </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Main Content Grid */}
+        <div className="content-grid">
+  
+          {/* Sidebar */}
+          <div className="sidebar">
+            {/* Property Details Section Removed */}
               </div>
             </div>
           </div>
@@ -670,217 +785,719 @@ export default function PropertyRooms() {
       )}
 
       <style jsx>{`
-        .property-rooms-page {
-          padding: 24px;
-          background-color: #f8fafc;
+        .dashboard-container {
+          padding: 0;
+          background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
           min-height: 100vh;
+          font-family: 'Inter', system-ui, sans-serif;
         }
-        :global(.dark-mode) .property-rooms-page {
-            background-color: #0d1117;
+        :global(.dark-mode) .dashboard-container {
+          background: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
         }
-        .page-header {
+
+        /* Header Styles */
+        .dashboard-header {
+          background: transparent;
+          backdrop-filter: none;
+          border-bottom: none;
+          padding: 24px 32px;
+          position: relative;
+          z-index: 100;
+        }
+        :global(.dark-mode) .dashboard-header {
+          background: transparent;
+          border-bottom: none;
+        }
+
+        .header-content {
           display: flex;
           justify-content: space-between;
             align-items: center;
-            margin-bottom: 24px;
         }
+
         .header-left {
             display: flex;
             align-items: center;
-            gap: 16px;
+          gap: 20px;
         }
+
         .back-button {
-            background: white;
-            border: 1px solid #e2e8f0;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
+          background: rgba(255, 255, 255, 0.9);
+          border: 1px solid rgba(226, 232, 240, 0.8);
+          border-radius: 12px;
+          width: 44px;
+          height: 44px;
           display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            color: #475569;
+          color: #64748b;
+          transition: all 0.2s ease;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        }
+        .back-button:hover {
+          background: #f8fafc;
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
         :global(.dark-mode) .back-button {
-            background-color: #161b22;
-            border-color: #30363d;
-            color: #c9d1d9;
+          background: rgba(22, 27, 34, 0.9);
+          border-color: rgba(48, 54, 61, 0.8);
+          color: #8b949e;
         }
-        .page-title {
-            font-size: 24px;
-          font-weight: 700;
+        :global(.dark-mode) .back-button:hover {
+          background: #21262d;
+        }
+
+        .dashboard-title {
+          font-size: 32px;
+          font-weight: 800;
+          background: linear-gradient(135deg, #1e293b 0%, #475569 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
             margin: 0;
-          color: #1e293b;
+          letter-spacing: -0.02em;
         }
-        :global(.dark-mode) .page-title {
-            color: #f0f6fc;
+        :global(.dark-mode) .dashboard-title {
+          background: linear-gradient(135deg, #f0f6fc 0%, #c9d1d9 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
         }
-        .page-subtitle {
-          font-size: 14px;
+
+        .subtitle-container {
+          margin-top: 4px;
+        }
+
+        .welcome-message {
+          font-size: 15px;
             color: #64748b;
           margin: 0;
+          font-weight: 500;
+          letter-spacing: 0.01em;
         }
-        :global(.dark-mode) .page-subtitle {
+        :global(.dark-mode) .welcome-message {
             color: #8b949e;
         }
+
+        .message-text {
+          display: inline-block;
+        }
+
         .header-right {
             display: flex;
+          align-items: center;
             gap: 12px;
         }
+
         .btn {
-          padding: 10px 16px;
-          border-radius: 6px;
+          padding: 12px 20px;
+          border-radius: 10px;
           font-size: 14px;
           font-weight: 600;
           cursor: pointer;
           border: none;
-            transition: all 0.2s;
+          transition: all 0.2s ease;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          text-decoration: none;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
         }
-        .btn-primary {
-            background-color: #4f46e5;
-          color: white;
+        .btn:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
+
         .btn-secondary {
-            background-color: white;
+          background: rgba(255, 255, 255, 0.9);
             color: #475569;
-          border: 1px solid #e2e8f0;
+          border: 1px solid rgba(226, 232, 240, 0.8);
+        }
+        .btn-secondary:hover {
+          background: #f8fafc;
         }
         :global(.dark-mode) .btn-secondary {
-            background-color: #21262d;
+          background: rgba(33, 38, 45, 0.9);
             color: #c9d1d9;
-            border-color: #30363d;
+          border-color: rgba(48, 54, 61, 0.8);
         }
+        :global(.dark-mode) .btn-secondary:hover {
+          background: #21262d;
+        }
+        /* Main Content Grid Layout */
+        .main-content-grid {
+          display: grid;
+          grid-template-columns: 2.5fr 1fr;
+          gap: 24px;
+          align-items: flex-start;
+          padding: 16px 32px 32px;
+        }
+
+        .left-column, .right-column {
+          display: flex;
+          flex-direction: column;
+          gap: 24px;
+        }
+
+        /* Compact Metrics Grid */
         .metrics-grid {
           display: grid;
-            grid-template-columns: repeat(4, 1fr);
+          grid-template-columns: repeat(3, 1fr);
             gap: 16px;
-          margin-bottom: 20px;
         }
+
+        /* Quick Actions Section */
+        .quick-actions-section {
+          background: white;
+          border-radius: 6px;
+          padding: 16px;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+          border: 1px solid #e2e8f0;
+          height: fit-content;
+          display: flex;
+          flex-direction: column;
+        }
+        :global(.dark-mode) .quick-actions-section {
+          background: #1a1a1a;
+          border-color: #333333;
+        }
+
+        .quick-actions-section .section-header {
+          margin-bottom: 12px;
+        }
+
+        .quick-actions-section .section-title {
+          font-size: 14px;
+          font-weight: 700;
+          color: #1e293b;
+          margin: 0 0 3px 0;
+        }
+        :global(.dark-mode) .quick-actions-section .section-title {
+          color: #f0f6fc;
+        }
+
+        .quick-actions-section .section-subtitle {
+          font-size: 12px;
+          color: #64748b;
+          margin: 0;
+        }
+        :global(.dark-mode) .quick-actions-section .section-subtitle {
+          color: #8b949e;
+        }
+
+        .actions-grid {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          flex: 1;
+          justify-content: flex-start;
+        }
+
+        .action-card {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 12px;
+          border-radius: 5px;
+          border: 1px solid #e2e8f0;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          text-decoration: none;
+          color: inherit;
+        }
+
+        .action-card:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .action-card.blue {
+          background: #eff6ff;
+          border-color: #dbeafe;
+        }
+
+        .action-card.green {
+          background: #f0fdf4;
+          border-color: #dcfce7;
+        }
+
+        .action-card.purple {
+          background: #faf5ff;
+          border-color: #e9d5ff;
+        }
+
+        .action-card.orange {
+          background: #fff7ed;
+          border-color: #fed7aa;
+        }
+
+        .action-icon {
+          width: 40px;
+          height: 40px;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+
+        .action-card.blue .action-icon {
+          background: #3b82f6;
+          color: white;
+        }
+
+        .action-card.green .action-icon {
+          background: #10b981;
+          color: white;
+        }
+
+        .action-card.purple .action-icon {
+          background: #8b5cf6;
+          color: white;
+        }
+
+        .action-card.orange .action-icon {
+          background: #f97316;
+          color: white;
+        }
+
+        .action-content {
+          flex: 1;
+        }
+
+        .action-title {
+          font-size: 14px;
+          font-weight: 600;
+          color: #1e293b;
+          margin: 0 0 3px 0;
+        }
+
+        .action-subtitle {
+          font-size: 12px;
+          color: #64748b;
+          margin: 0;
+        }
+
+        /* Dark mode for action cards */
+        :global(.dark-mode) .action-card {
+          background: #111111 !important;
+          border: 1px solid #333333 !important;
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4) !important;
+        }
+        :global(.dark-mode) .action-card:hover {
+          background: #222222 !important;
+          border-color: #ffffff !important;
+        }
+        :global(.dark-mode) .action-title {
+          color: #f0f6fc !important;
+        }
+        :global(.dark-mode) .action-subtitle {
+          color: #8b949e !important;
+        }
+        :global(.dark-mode) .action-card.blue .action-icon { background: rgba(59, 130, 246, 0.3); }
+        :global(.dark-mode) .action-card.green .action-icon { background: rgba(34, 197, 94, 0.3); }
+        :global(.dark-mode) .action-card.purple .action-icon { background: rgba(139, 92, 246, 0.3); }
+        :global(.dark-mode) .action-card.orange .action-icon { background: rgba(249, 115, 22, 0.3); }
+
         .metric-card {
           background: white;
           border-radius: 6px;
           padding: 14px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
           border: 1px solid #e2e8f0;
           transition: all 0.2s ease;
         }
         .metric-card:hover {
           transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
         :global(.dark-mode) .metric-card {
-            background-color: #161b22;
-            border-color: #30363d;
+          background: #111111;
+          border-color: #333333;
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
         }
+        :global(.dark-mode) .metric-card:hover {
+          background: #222222;
+          border-color: #ffffff;
+        }
+
         .metric-header {
           display: flex;
           justify-content: space-between;
-          align-items: center;
-            margin-bottom: 8px;
+          align-items: flex-start;
+          margin-bottom: 12px;
         }
+
+        .metric-info {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          width: 100%;
+        }
+
         .metric-title {
           font-size: 11px;
           font-weight: 600;
-            color: #475569;
+          color: #64748b;
           margin: 0;
         }
         :global(.dark-mode) .metric-title {
             color: #8b949e;
         }
+
         .metric-icon {
-            width: 36px;
-            height: 36px;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+          width: 20px;
+          height: 20px;
+          color: #64748b;
         }
+        :global(.dark-mode) .metric-icon {
+          color: #8b949e;
+        }
+
+        .metric-content {
+          margin-top: 8px;
+        }
+
         .metric-value {
           font-size: 20px;
           font-weight: 700;
           color: #1e293b;
+          margin-bottom: 3px;
+          line-height: 1;
         }
         :global(.dark-mode) .metric-value {
             color: #f0f6fc;
         }
-        .metric-footer {
+
+        .metric-subtitle {
+          font-size: 11px;
+          color: #64748b;
+          margin-bottom: 10px;
+        }
+        :global(.dark-mode) .metric-subtitle {
+          color: #8b949e;
+        }
+
+        .metric-progress {
+            display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+
+        .metric-label {
           font-size: 12px;
           color: #64748b;
-            display: flex;
-            gap: 12px;
-            margin-top: 8px;
         }
-        :global(.dark-mode) .metric-footer {
+        :global(.dark-mode) .metric-label {
             color: #8b949e;
         }
         
-        .content-grid {
-          display: grid;
-          grid-template-columns: 2fr 1fr;
+        .metric-change {
+          font-size: 12px;
+          font-weight: 600;
+        }
+        .metric-change.positive {
+          color: #10b981;
+        }
+        .metric-change.neutral {
+          color: #64748b;
+        }
+        :global(.dark-mode) .metric-change.positive {
+          color: #4ade80;
+        }
+
+        .main-content {
+          display: flex;
+          flex-direction: column;
           gap: 24px;
-          align-items: flex-start;
         }
-        .card {
-            background: white;
-            border-radius: 8px;
-            border: 1px solid #e2e8f0;
+        /* Section Cards */
+        .section-card {
+          background: rgba(255, 255, 255, 0.9);
+          backdrop-filter: blur(10px);
+          border: 1px solid rgba(226, 232, 240, 0.6);
+          border-radius: 6px;
             overflow: hidden;
-            margin-bottom: 24px;
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
         }
-        :global(.dark-mode) .card {
-            background-color: #161b22;
-            border-color: #30363d;
+        :global(.dark-mode) .section-card {
+          background: rgba(22, 27, 34, 0.9);
+          border-color: rgba(48, 54, 61, 0.6);
         }
-        .card-header {
-            padding: 20px;
+
+        .section-header {
+          padding: 24px 28px;
+          border-bottom: 1px solid rgba(226, 232, 240, 0.6);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 1px solid #e2e8f0;
         }
-        .card-header.no-border {
-            border-bottom: none;
-            padding-bottom: 12px;
+        :global(.dark-mode) .section-header {
+          border-bottom-color: rgba(48, 54, 61, 0.6);
         }
-        :global(.dark-mode) .card-header {
-            border-color: #30363d;
+
+        .section-title-group {
+          flex: 1;
         }
-        .card-title {
-          font-size: 18px;
-          font-weight: 600;
-            margin: 0;
+
+        .section-title {
+          font-size: 20px;
+          font-weight: 700;
             color: #1e293b;
+          margin: 0 0 4px 0;
+          letter-spacing: -0.01em;
         }
-        :global(.dark-mode) .card-title {
+        :global(.dark-mode) .section-title {
             color: #f0f6fc;
         }
-        .card-subtitle {
+
+        .section-subtitle {
           font-size: 14px;
           color: #64748b;
-            margin: 4px 0 0;
+          margin: 0;
+          font-weight: 500;
         }
-        :global(.dark-mode) .card-subtitle {
+        :global(.dark-mode) .section-subtitle {
             color: #8b949e;
         }
         
-        /* Table Styles */
-        .room-row td { padding: 16px 20px; vertical-align: middle; }
-        .room-name { font-weight: 600; color: #1e293b; }
-        .room-type { font-size: 12px; color: #64748b; }
-        :global(.dark-mode) .room-name { color: #f0f6fc; }
-        :global(.dark-mode) .room-type { color: #8b949e; }
-        .tenant-info { display: flex; align-items: center; gap: 8px; }
-        .tenant-avatar { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 12px; }
-        .action-buttons { display: flex; justify-content: flex-end; align-items: center; gap: 8px; }
-        .btn-action { font-size: 12px; font-weight: 600; padding: 6px 12px; border-radius: 6px; cursor: pointer; }
-        .btn-action.assign { background: #eff6ff; color: #3b82f6; }
-        .btn-action.view { background: #f0fdf4; color: #22c55e; }
-        .more-actions { position: relative; }
-        .dropdown-menu { display: none; position: absolute; right: 0; top: 100%; background: white; border: 1px solid #e2e8f0; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 10; padding: 4px; }
-        .more-actions:hover .dropdown-menu { display: block; }
-        .dropdown-menu button, .dropdown-menu a { display: block; width: 100%; text-align: left; padding: 8px 12px; font-size: 14px; background: none; border: none; cursor: pointer; }
-        .dropdown-menu a { text-decoration: none; color: #1e293b; }
-        .dropdown-menu button.delete { color: #ef4444; }
+        .rooms-table-container,
+        .history-table-container {
+          width: 100%;
+          overflow-x: auto;
+          border-radius: 6px;
+          background: white;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        }
+
+        .rooms-table-container :global(.data-table),
+        .history-table-container :global(.data-table) {
+          width: 100%;
+          border-collapse: collapse;
+          table-layout: fixed;
+        }
+        
+        .rooms-table-container :global(.data-table tbody tr),
+        .history-table-container :global(.data-table tbody tr) {
+          transition: background-color 0.2s ease;
+        }
+
+        .rooms-table-container :global(.data-table tbody tr:hover),
+        .history-table-container :global(.data-table tbody tr:hover) {
+          background-color: #f9fafb;
+        }
+
+        .rooms-table-container :global(.data-table th),
+        .history-table-container :global(.data-table th) {
+          position: sticky;
+          top: 0;
+          background: #ffffff;
+          z-index: 2;
+          font-size: 12px;
+          font-weight: 600;
+          color: #9ca3af;
+          padding: 12px 16px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          border-bottom: 1px solid #e5e7eb;
+          text-align: left;
+        }
+
+        .rooms-table-container :global(.data-table td),
+        .history-table-container :global(.data-table td) {
+          padding: 12px 16px;
+          vertical-align: middle;
+          height: 48px;
+          border-bottom: 1px solid #f1f5f9;
+          font-size: 14px;
+          color: #374151;
+        }
+
+        :global(.dark-mode) .rooms-table-container,
+        :global(.dark-mode) .history-table-container {
+          background: #1a1a1a;
+          border-color: #333333;
+        }
+
+        :global(.dark-mode) .rooms-table-container :global(.data-table th),
+        :global(.dark-mode) .history-table-container :global(.data-table th) {
+          background: #1a1a1a;
+          color: #9ca3af;
+          border-color: #333333;
+        }
+
+        :global(.dark-mode) .rooms-table-container :global(.data-table td),
+        :global(.dark-mode) .history-table-container :global(.data-table td) {
+          color: #e5e7eb;
+          border-color: #333333;
+        }
+
+        :global(.dark-mode) .rooms-table-container :global(.data-table tbody tr:hover),
+        :global(.dark-mode) .history-table-container :global(.data-table tbody tr:hover) {
+          background-color: #2a2a2a;
+        }
+
+        /* Action Buttons */
+        .action-buttons {
+          display: flex;
+          gap: 8px;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .btn-action {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 32px;
+          height: 32px;
+          border-radius: 6px;
+          border: none;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          background: transparent;
+          color: #64748b;
+        }
+
+        .btn-action:hover {
+          transform: scale(1.1);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-action.assign {
+          background: #eff6ff;
+          color: #3b82f6;
+        }
+
+        .btn-action.assign:hover {
+          background: #dbeafe;
+          color: #2563eb;
+        }
+
+        .btn-action.edit {
+          background: #f0fdf4;
+          color: #22c55e;
+        }
+
+        .btn-action.edit:hover {
+          background: #dcfce7;
+          color: #16a34a;
+        }
+
+        .btn-action.delete {
+          background: #fef2f2;
+          color: #ef4444;
+        }
+
+        .btn-action.delete:hover {
+          background: #fee2e2;
+          color: #dc2626;
+        }
+
+        :global(.dark-mode) .btn-action {
+          background: rgba(255, 255, 255, 0.1);
+          color: #8b949e;
+        }
+
+        :global(.dark-mode) .btn-action.assign {
+          background: rgba(59, 130, 246, 0.2);
+          color: #60a5fa;
+        }
+
+        :global(.dark-mode) .btn-action.assign:hover {
+          background: rgba(59, 130, 246, 0.3);
+          color: #3b82f6;
+        }
+
+        :global(.dark-mode) .btn-action.edit {
+          background: rgba(34, 197, 94, 0.2);
+          color: #4ade80;
+        }
+
+        :global(.dark-mode) .btn-action.edit:hover {
+          background: rgba(34, 197, 94, 0.3);
+          color: #22c55e;
+        }
+
+        :global(.dark-mode) .btn-action.delete {
+          background: rgba(239, 68, 68, 0.2);
+          color: #f87171;
+        }
+
+        :global(.dark-mode) .btn-action.delete:hover {
+          background: rgba(239, 68, 68, 0.3);
+          color: #ef4444;
+        }
+
+
+        .action-item {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 12px 16px;
+          border-radius: 12px;
+          text-decoration: none;
+          color: inherit;
+          transition: all 0.2s ease;
+          cursor: pointer;
+          border: 1px solid rgba(226, 232, 240, 0.6);
+          background: rgba(248, 250, 252, 0.5);
+        }
+        .action-item:hover {
+          background: rgba(248, 250, 252, 0.8);
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+        }
+        :global(.dark-mode) .action-item {
+          border-color: rgba(48, 54, 61, 0.6);
+          background: rgba(33, 38, 45, 0.5);
+        }
+        :global(.dark-mode) .action-item:hover {
+          background: rgba(33, 38, 45, 0.8);
+        }
+
+        .action-icon {
+          width: 32px;
+          height: 32px;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+        .action-icon.blue { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+        .action-icon.purple { background: rgba(139, 92, 246, 0.1); color: #8b5cf6; }
+        .action-icon.green { background: rgba(34, 197, 94, 0.1); color: #22c55e; }
+        .action-icon.orange { background: rgba(249, 115, 22, 0.1); color: #f97316; }
+        .action-icon.violet { background: rgba(168, 85, 247, 0.1); color: #a855f7; }
+        .action-icon.yellow { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+
+        .action-content {
+          flex: 1;
+          min-width: 0;
+        }
+
+        .action-title {
+          display: block;
+          font-size: 13px;
+          font-weight: 600;
+          color: #1e293b;
+          margin: 0 0 2px 0;
+        }
+        :global(.dark-mode) .action-title {
+          color: #f0f6fc;
+        }
+
+        .action-subtitle {
+          display: block;
+          font-size: 11px;
+          color: #64748b;
+          margin: 0;
+          font-weight: 500;
+        }
+        :global(.dark-mode) .action-subtitle {
+          color: #8b949e;
+        }
 
         /* History Tabs */
         .history-tabs { display: flex; gap: 4px; background: #f1f5f9; padding: 4px; border-radius: 6px; }
@@ -925,14 +1542,23 @@ export default function PropertyRooms() {
         :global(.dark-mode) .item-value.tenant-name { color: #7c66f9; }
 
         /* Responsive */
-        @media (max-width: 1024px) {
-            .content-grid { grid-template-columns: 1fr; }
+        @media (max-width: 1200px) {
+          .main-content-grid {
+            grid-template-columns: 1fr;
+            gap: 24px;
+          }
         }
         @media (max-width: 768px) {
-            .metrics-grid { grid-template-columns: 1fr; }
+          .metrics-grid {
+            grid-template-columns: 1fr;
+            gap: 16px;
+          }
             .page-header { flex-direction: column; align-items: flex-start; gap: 16px; }
             .header-right { width: 100%; }
-            .quick-actions-grid { grid-template-columns: 1fr; }
+          .quick-actions-section { padding: 16px; }
+          .main-content-grid {
+            padding: 24px 16px;
+          }
         }
         
         /* ... (existing styles for modals, etc.) */
@@ -1047,16 +1673,17 @@ export default function PropertyRooms() {
 
         /* Enhanced Quick Actions */
         .quick-actions-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-          gap: 12px;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          padding: 0 4px;
         }
 
         .quick-action-item {
           display: flex;
-          align-items: center;
+          align-items: flex-start;
           gap: 12px;
-          padding: 16px;
+          padding: 14px;
           background: white;
           border: 1px solid #e2e8f0;
           border-radius: 8px;
@@ -1064,6 +1691,9 @@ export default function PropertyRooms() {
           color: inherit;
           transition: all 0.2s ease;
           cursor: pointer;
+          width: 100%;
+          box-sizing: border-box;
+          min-height: 60px;
         }
 
         .quick-action-item:hover {
@@ -1072,32 +1702,110 @@ export default function PropertyRooms() {
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
         }
 
+        :global(.dark-mode) .quick-action-item {
+          background: #21262d;
+          border-color: #30363d;
+          color: #c9d1d9;
+        }
+
+        :global(.dark-mode) .quick-action-item:hover {
+          border-color: #444c56;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
         .quick-action-icon {
-          width: 40px;
-          height: 40px;
+          width: 36px;
+          height: 36px;
           border-radius: 8px;
           display: flex;
           align-items: center;
           justify-content: center;
           flex-shrink: 0;
+          margin-top: 2px;
+        }
+
+        .quick-action-text {
+          flex: 1;
+          min-width: 0;
+          display: flex;
+          flex-direction: column;
+          gap: 3px;
         }
 
         .quick-action-text h4 {
-          font-size: 14px;
+          font-size: 13px;
           font-weight: 600;
           color: #1e293b;
-          margin: 0 0 4px 0;
+          margin: 0;
+          line-height: 1.3;
+          word-wrap: break-word;
+          overflow-wrap: break-word;
         }
 
         .quick-action-text p {
-          font-size: 12px;
+          font-size: 11px;
           color: #64748b;
           margin: 0;
+          line-height: 1.4;
+          word-wrap: break-word;
+          overflow-wrap: break-word;
+        }
+
+        :global(.dark-mode) .quick-action-text h4 {
+          color: #f0f6fc;
+        }
+
+        :global(.dark-mode) .quick-action-text p {
+          color: #8b949e;
+        }
+
+        @media (max-width: 1024px) {
+          .content-grid {
+            grid-template-columns: 1fr;
+          }
+          
+          .quick-actions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 12px;
+          }
+          
+          .quick-action-item {
+            padding: 16px;
+            min-height: 70px;
+          }
+          
+          .quick-action-icon {
+            width: 40px;
+            height: 40px;
+          }
+          
+          .quick-action-text h4 {
+            font-size: 14px;
+          }
+          
+          .quick-action-text p {
+            font-size: 12px;
+          }
         }
 
         @media (max-width: 768px) {
           .quick-actions-grid {
             grid-template-columns: 1fr;
+            gap: 8px;
+          }
+          
+          .quick-action-item {
+            padding: 16px;
+            min-height: auto;
+          }
+          
+          .quick-action-text h4 {
+            font-size: 15px;
+          }
+          
+          .quick-action-text p {
+            font-size: 13px;
           }
         }
       `}</style>

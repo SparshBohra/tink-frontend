@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { apiClient } from '../../../lib/api';
 import { Property } from '../../../lib/types';
 import DashboardLayout from '../../../components/DashboardLayout';
+import { withAuth } from '../../../lib/auth-context';
 
 // Updated to match backend API specifications
 const ROOM_TYPES = [
@@ -22,7 +23,7 @@ const COMMON_ROOM_FEATURES = [
   'closet', 'desk', 'window', 'hardwood', 'carpet'
 ];
 
-export default function AddRoom() {
+function AddRoom() {
   const router = useRouter();
   const { id } = router.query;
   const propertyId = id ? parseInt(Array.isArray(id) ? id[0] : String(id), 10) : null;
@@ -562,51 +563,82 @@ export default function AddRoom() {
             {/* Quick Actions Sidebar */}
             <div className="quick-actions-section">
               <div className="section-header">
-                <h3 className="section-title">Quick Actions</h3>
-                <p className="section-subtitle">Related actions and shortcuts</p>
+                <div>
+                  <h2 className="section-title">Quick Actions</h2>
+                  <p className="section-subtitle">Frequently used actions</p>
+                </div>
               </div>
               
               <div className="actions-grid">
-                <Link href={`/properties/${propertyId}/rooms`} className="action-card blue">
+                <div 
+                  className="action-card blue"
+                  onClick={() => router.push(`/properties/${propertyId}/rooms`)}
+                  style={{ cursor: 'pointer' }}
+                >
                   <div className="action-icon">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
                       <line x1="8" y1="21" x2="16" y2="21"/>
                       <line x1="12" y1="17" x2="12" y2="21"/>
                     </svg>
                   </div>
                   <div className="action-content">
-                    <div className="action-title">View All Rooms</div>
-                    <div className="action-subtitle">See existing rooms</div>
+                    <h3 className="action-title">View All Rooms</h3>
+                    <p className="action-subtitle">See existing rooms</p>
                   </div>
-                </Link>
+                </div>
                 
-                <Link href={`/properties/${propertyId}`} className="action-card green">
+                <div 
+                  className="action-card green"
+                  onClick={() => router.push(`/properties/${propertyId}`)}
+                  style={{ cursor: 'pointer' }}
+                >
                   <div className="action-icon">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M3 21h18"/>
                       <path d="M5 21V7l8-4v18"/>
                       <path d="M19 21V11l-6-4"/>
                     </svg>
                   </div>
                   <div className="action-content">
-                    <div className="action-title">Property Details</div>
-                    <div className="action-subtitle">View property info</div>
+                    <h3 className="action-title">Property Details</h3>
+                    <p className="action-subtitle">View property info</p>
                   </div>
-                </Link>
+                </div>
                 
-                <Link href={`/properties/${propertyId}/edit`} className="action-card purple">
+                <div 
+                  className="action-card purple"
+                  onClick={() => router.push(`/properties/${propertyId}/edit`)}
+                  style={{ cursor: 'pointer' }}
+                >
                   <div className="action-icon">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                       <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                     </svg>
                   </div>
                   <div className="action-content">
-                    <div className="action-title">Edit Property</div>
-                    <div className="action-subtitle">Modify property details</div>
+                    <h3 className="action-title">Edit Property</h3>
+                    <p className="action-subtitle">Modify property details</p>
                   </div>
-                </Link>
+                </div>
+                
+                <div 
+                  className="action-card orange"
+                  onClick={() => router.push('/tenants')}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <div className="action-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                      <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                  </div>
+                  <div className="action-content">
+                    <h3 className="action-title">Manage Tenants</h3>
+                    <p className="action-subtitle">View and manage tenants</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -644,7 +676,17 @@ export default function AddRoom() {
           .alert-success { background-color: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
 
           .main-content-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; align-items: flex-start; }
-          .form-section, .quick-actions-section { background: white; border-radius: 6px; padding: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e2e8f0; height: fit-content; }
+          .form-section { background: white; border-radius: 6px; padding: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e2e8f0; height: fit-content; }
+          .quick-actions-section {
+            background: white;
+            border-radius: 6px;
+            padding: 18px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e2e8f0;
+            height: 400px;
+            display: flex;
+            flex-direction: column;
+          }
           .section-header { margin-bottom: 16px; }
           .section-title { font-size: 14px; font-weight: 700; color: #1e293b; margin: 0 0 3px 0; }
           .section-subtitle { font-size: 12px; color: #64748b; margin: 0; }
@@ -663,8 +705,8 @@ export default function AddRoom() {
           .form-section-subtitle { font-size: 12px; color: #64748b; margin: 0; }
 
           .input-group { position: relative; display: flex; align-items: center; }
-          .input-prefix { position: absolute; left: 12px; color: #6b7280; font-weight: 500; z-index: 10; pointer-events: none; }
-          .currency-input { padding-left: 28px; }
+          .input-prefix { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #6b7280; font-weight: 500; z-index: 10; pointer-events: none; font-size: 14px; line-height: 1; }
+          .currency-input { padding-left: 48px; }
 
           .checkbox-wrapper { display: flex; align-items: center; gap: 8px; }
           .form-checkbox { width: 16px; height: 16px; accent-color: #4f46e5; cursor: pointer; }
@@ -688,19 +730,96 @@ export default function AddRoom() {
           .btn-secondary:hover { background: #e2e8f0; }
           .btn-spinner { width: 16px; height: 16px; border: 2px solid transparent; border-top: 2px solid currentColor; border-radius: 50%; animation: spin 1s linear infinite; }
 
-          .actions-grid { display: flex; flex-direction: column; gap: 12px; }
-          .action-card { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 5px; border: 1px solid #e2e8f0; cursor: pointer; transition: all 0.2s ease; text-decoration: none; }
-          .action-card:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-          .action-card.blue { background: #eff6ff; border-color: #dbeafe; }
-          .action-card.green { background: #f0fdf4; border-color: #dcfce7; }
-          .action-card.purple { background: #faf5ff; border-color: #e9d5ff; }
-          .action-icon { width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: white; }
-          .action-card.blue .action-icon { background: #3b82f6; }
-          .action-card.green .action-icon { background: #10b981; }
-          .action-card.purple .action-icon { background: #8b5cf6; }
-          .action-content { flex: 1; }
-          .action-title { font-size: 13px; font-weight: 600; color: #1e293b; margin: 0 0 2px 0; }
-          .action-subtitle { font-size: 11px; color: #64748b; margin: 0; }
+          .actions-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            flex: 1;
+            justify-content: flex-start;
+          }
+
+          .action-card {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            border-radius: 5px;
+            border: 1px solid #e2e8f0;
+            cursor: pointer;
+            transition: all 0.2s ease;
+          }
+
+          .action-card:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+          }
+
+          .action-card.blue {
+            background: #eff6ff;
+            border-color: #dbeafe;
+          }
+
+          .action-card.green {
+            background: #f0fdf4;
+            border-color: #dcfce7;
+          }
+
+          .action-card.purple {
+            background: #faf5ff;
+            border-color: #e9d5ff;
+          }
+
+          .action-card.orange {
+            background: #fff7ed;
+            border-color: #fed7aa;
+          }
+
+          .action-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+          }
+
+          .action-card.blue .action-icon {
+            background: #3b82f6;
+            color: white;
+          }
+
+          .action-card.green .action-icon {
+            background: #10b981;
+            color: white;
+          }
+
+          .action-card.purple .action-icon {
+            background: #8b5cf6;
+            color: white;
+          }
+
+          .action-card.orange .action-icon {
+            background: #f97316;
+            color: white;
+          }
+
+          .action-content {
+            flex: 1;
+          }
+
+          .action-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1e293b;
+            margin: 0 0 3px 0;
+          }
+
+          .action-subtitle {
+            font-size: 12px;
+            color: #64748b;
+            margin: 0;
+          }
 
           .error-section { text-align: center; padding: 40px 20px; }
           .actions-container { margin-top: 20px; }
@@ -723,3 +842,5 @@ export default function AddRoom() {
     </>
   );
 } 
+
+export default withAuth(AddRoom); 

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { apiClient } from '../lib/api';
 import { Tenant, Application, Room, LeaseFormData, ApplicationFormData } from '../lib/types';
-import { formatCurrency } from '../lib/utils';
+import { formatCurrency, phoneUtils } from '../lib/utils';
 
 interface TenantAssignmentModalProps {
   room: Room;
@@ -45,6 +45,8 @@ export default function TenantAssignmentModal({
     current_address: ''
   });
   const [creatingTenant, setCreatingTenant] = useState(false);
+  const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [emergencyPhoneError, setEmergencyPhoneError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -81,10 +83,35 @@ export default function TenantAssignmentModal({
   };
 
   const handleNewTenantFormChange = (field: string, value: string) => {
-    setNewTenantForm(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    if (field === 'phone') {
+      const formattedPhone = phoneUtils.formatPhoneNumber(value);
+      setNewTenantForm(prev => ({
+        ...prev,
+        [field]: formattedPhone
+      }));
+      
+      const phoneErrorMsg = phoneUtils.getPhoneErrorMessage(formattedPhone);
+      setPhoneError(phoneErrorMsg);
+    } else if (field === 'emergency_contact_phone') {
+      const formattedPhone = phoneUtils.formatPhoneNumber(value);
+      setNewTenantForm(prev => ({
+        ...prev,
+        [field]: formattedPhone
+      }));
+      
+      // Only validate if there's a value (emergency phone is optional)
+      if (formattedPhone.trim()) {
+        const phoneErrorMsg = phoneUtils.getPhoneErrorMessage(formattedPhone);
+        setEmergencyPhoneError(phoneErrorMsg);
+      } else {
+        setEmergencyPhoneError(null);
+      }
+    } else {
+      setNewTenantForm(prev => ({
+        ...prev,
+        [field]: value
+      }));
+    }
   };
 
   const handleCreateNewTenant = async () => {
@@ -536,10 +563,20 @@ export default function TenantAssignmentModal({
                               type="tel"
                               value={newTenantForm.phone}
                               onChange={(e) => handleNewTenantFormChange('phone', e.target.value)}
-                              className="form-input"
-                              placeholder="Enter phone number"
+                              className={`form-input ${phoneError ? 'error' : ''}`}
+                              placeholder="(555) 123-4567"
                               required
                             />
+                            {phoneError && (
+                              <div className="field-error">
+                                {phoneError}
+                              </div>
+                            )}
+                            {newTenantForm.phone && !phoneError && (
+                              <div className="field-success">
+                                ✓ Valid phone number
+                              </div>
+                            )}
                           </div>
                           
                           <div className="form-group">
@@ -629,9 +666,19 @@ export default function TenantAssignmentModal({
                               type="tel"
                               value={newTenantForm.emergency_contact_phone}
                               onChange={(e) => handleNewTenantFormChange('emergency_contact_phone', e.target.value)}
-                              className="form-input"
-                              placeholder="Enter emergency contact phone"
+                              className={`form-input ${emergencyPhoneError ? 'error' : ''}`}
+                              placeholder="(555) 987-6543"
                             />
+                            {emergencyPhoneError && (
+                              <div className="field-error">
+                                {emergencyPhoneError}
+                              </div>
+                            )}
+                            {newTenantForm.emergency_contact_phone && !emergencyPhoneError && (
+                              <div className="field-success">
+                                ✓ Valid phone number
+                              </div>
+                            )}
                           </div>
                           
                           <div className="form-group">

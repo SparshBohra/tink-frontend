@@ -4,6 +4,7 @@ import Link from 'next/link';
 import DashboardLayout from '../components/DashboardLayout';
 import { withAuth } from '../lib/auth-context';
 import { apiClient } from '../lib/api';
+import { phoneUtils } from '../lib/utils';
 
 interface ChatMessage {
   id: number;
@@ -70,6 +71,7 @@ function CommunicationPage() {
   });
   const [newMessage, setNewMessage] = useState('');
   const [sending, setSending] = useState(false);
+  const [phoneError, setPhoneError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchMessages();
@@ -880,12 +882,27 @@ function CommunicationPage() {
                             type="tel"
                             id="phone"
                             value={messageForm.phone}
-                            onChange={(e) => setMessageForm({ ...messageForm, phone: e.target.value })}
-                            placeholder="+1234567890"
+                            onChange={(e) => {
+                              const formattedPhone = phoneUtils.formatPhoneNumber(e.target.value);
+                              setMessageForm({ ...messageForm, phone: formattedPhone });
+                              const phoneErrorMsg = phoneUtils.getPhoneErrorMessage(formattedPhone);
+                              setPhoneError(phoneErrorMsg);
+                            }}
+                            placeholder="(555) 123-4567"
                             required
-                      className="form-input"
-                    />
-                  </div>
+                            className={`form-input ${phoneError ? 'error' : ''}`}
+                          />
+                          {phoneError && (
+                            <div className="field-error">
+                              {phoneError}
+                            </div>
+                          )}
+                          {messageForm.phone && !phoneError && (
+                            <div className="field-success">
+                              ✓ Valid phone number
+                            </div>
+                          )}
+                        </div>
                       )}
                     </>
                   )}
@@ -2831,4 +2848,4 @@ function CommunicationPage() {
   );
 }
 
-export default withAuth(CommunicationPage, ['manager']); 
+export default withAuth(CommunicationPage, ['manager', 'owner']); 

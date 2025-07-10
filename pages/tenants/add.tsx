@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { apiClient } from '../../lib/api';
 import { Property, Room } from '../../lib/types';
 import Navigation from '../../components/Navigation';
+import { phoneUtils } from '../../lib/utils';
 
 export default function AddTenant() {
   const router = useRouter();
@@ -28,6 +29,7 @@ export default function AddTenant() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [phoneError, setPhoneError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -76,10 +78,24 @@ export default function AddTenant() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    
+    if (name === 'phone') {
+      // Format phone number as user types
+      const formattedPhone = phoneUtils.formatPhoneNumber(value);
+      setFormData(prev => ({
+        ...prev,
+        [name]: formattedPhone
+      }));
+      
+      // Validate phone number
+      const phoneErrorMsg = phoneUtils.getPhoneErrorMessage(formattedPhone);
+      setPhoneError(phoneErrorMsg);
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -283,13 +299,32 @@ export default function AddTenant() {
                 name="phone"
                 value={formData.phone}
                 onChange={handleChange}
+                placeholder="(555) 123-4567"
                 style={{
                   width: '100%',
                   padding: '10px',
                   borderRadius: '4px',
-                  border: '1px solid #ddd'
+                  border: phoneError ? '1px solid #dc3545' : '1px solid #ddd'
                 }}
               />
+              {phoneError && (
+                <div style={{ 
+                  color: '#dc3545', 
+                  fontSize: '0.875rem', 
+                  marginTop: '5px' 
+                }}>
+                  {phoneError}
+                </div>
+              )}
+              {formData.phone && !phoneError && (
+                <div style={{ 
+                  color: '#28a745', 
+                  fontSize: '0.875rem', 
+                  marginTop: '5px' 
+                }}>
+                  ✓ Valid phone number
+                </div>
+              )}
             </div>
           </div>
 

@@ -216,39 +216,57 @@ export default function EditProperty() {
   }
 
   return (
-    <>
+    <DashboardLayout>
       <Head>
         <title>Edit Property - {property?.name || ''} - Tink</title>
       </Head>
-      <DashboardLayout title="">
-        <div className="dashboard-container">
-          <div className="dashboard-header">
-            <div className="header-content">
-              <div className="header-left">
+      <div className="dashboard-container">
+        {/* Custom Header */}
+        <div className="dashboard-header">
+          <div className="header-content">
+            <div className="header-left">
+              <button onClick={() => router.push(`/properties/${id}/rooms`)} className="back-button">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M19 12H5m7-7l-7 7 7 7"/>
+                </svg>
+              </button>
+              <div>
                 <h1 className="dashboard-title">Edit Property</h1>
-                <p className="welcome-message">Update details for {property?.name}.</p>
-              </div>
-              <div className="header-right">
-                <button onClick={() => router.back()} className="back-btn">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5m7 7l-7-7 7-7"/></svg>
-                  Back
-                </button>
+                <div className="subtitle-container">
+                  <p className="welcome-message">
+                    <span className="message-text">Update details for {property?.name}</span>
+                  </p>
+                </div>
               </div>
             </div>
+            <div className="header-right">
+              <button
+                type="submit"
+                form="property-form"
+                className="btn btn-primary"
+                disabled={loading}
+              >
+                {loading ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
           </div>
+        </div>
 
-          {error && <div className="alert alert-error"><strong>Error:</strong> {error}</div>}
-          {success && <div className="alert alert-success"><strong>Success:</strong> {success}</div>}
-
-          <div className="main-content-grid">
-            <div className="form-section">
+        {/* Main Content */}
+        <div className="main-content-grid">
+          <div className="left-column">
+            <div className="section-card">
               <div className="section-header">
+                <div className="section-title-group">
                   <h2 className="section-title">Property Details</h2>
-                <p className="section-subtitle">Update the information for your property.</p>
+                  <p className="section-subtitle">Update the core information for your property.</p>
+                </div>
               </div>
+              
+              {error && <div className="alert alert-error" style={{ marginBottom: '16px' }}><strong>Error:</strong> {error}</div>}
+              {success && <div className="alert alert-success" style={{ marginBottom: '16px' }}><strong>Success:</strong> {success}</div>}
 
-              <form onSubmit={handleSubmit} className="property-form">
-                {/* Basic Information */}
+              <form id="property-form" onSubmit={handleSubmit} className="property-form">
                 <div className="form-group">
                   <label htmlFor="name" className="form-label required">Property Name</label>
                   <input
@@ -263,7 +281,7 @@ export default function EditProperty() {
                     required
                   />
                   <div className="form-hint">Maximum 200 characters</div>
-                  </div>
+                </div>
 
                 {/* Property Type */}
                   <div className="form-group">
@@ -285,7 +303,7 @@ export default function EditProperty() {
                   <div className="form-hint">
                     {PROPERTY_TYPES.find(t => t.value === formData.property_type)?.description}
                   </div>
-                  </div>
+                </div>
 
                 {/* Rent Structure */}
                   <div className="form-group">
@@ -307,14 +325,8 @@ export default function EditProperty() {
                   <div className="form-hint">
                     {RENT_TYPES.find(t => t.value === formData.rent_type)?.description}
                   </div>
-                  {formData.rent_type !== property?.rent_type && (
-                    <div className="form-warning">
-                      <strong>Warning:</strong> Changing the rent structure may affect existing room configurations and pricing.
-                            </div>
-                  )}
-                          </div>
+                </div>
 
-                {/* Conditional Fields based on Rent Type */}
                 {formData.rent_type === 'per_property' && (
                   <>
                     <div className="form-group">
@@ -353,9 +365,9 @@ export default function EditProperty() {
                       <div className="form-hint">Total monthly rent for the entire property</div>
                     </div>
                   </>
-                  )}
+                )}
 
-                  {formData.rent_type === 'per_room' && (
+                {formData.rent_type === 'per_room' && (
                   <div className="info-box">
                         <div className="info-icon">
                           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -395,7 +407,7 @@ export default function EditProperty() {
                     value={formData.address_line2}
                     onChange={handleChange}
                     className="form-input"
-                    placeholder="Apartment, suite, unit, building, floor, etc."
+                    placeholder="Apt, suite, etc."
                   />
                 </div>
 
@@ -481,104 +493,299 @@ export default function EditProperty() {
                     {TIMEZONE_OPTIONS.find(t => t.value === formData.timezone)?.description}
                   </div>
                 </div>
-
-                <div className="form-actions">
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="btn btn-primary"
-                  >
-                    {loading ? (
-                      <>
-                        <div className="btn-spinner"></div>
-                        Updating Property...
-                      </>
-                    ) : (
-                      'Update Property'
-                    )}
-                  </button>
-                  
-                  <Link href={`/properties/${id}/rooms`} className="btn btn-secondary">
-                    Manage Rooms
-                  </Link>
-                </div>
               </form>
             </div>
           </div>
+
+          <div className="right-column">
+            {/* Placeholder for future content */}
+          </div>
         </div>
-
+      </div>
       <style jsx>{`
-          .info-box {
+        .dashboard-container {
+          padding: 0;
+          background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+          min-height: 100vh;
+          font-family: 'Inter', system-ui, sans-serif;
+        }
+        :global(.dark-mode) .dashboard-container {
+          background: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
+        }
+
+        /* Header Styles */
+        .dashboard-header {
+          background: transparent;
+          backdrop-filter: none;
+          border-bottom: none;
+          padding: 24px 32px;
+          position: relative;
+          z-index: 100;
+        }
+        :global(.dark-mode) .dashboard-header {
+          background: transparent;
+          border-bottom: none;
+        }
+
+        .header-content {
           display: flex;
-          padding: 16px;
-            background: #f0f9ff;
-            border: 1px solid #e0f2fe;
-          border-radius: 8px;
-            margin: 16px 0;
-          }
+          justify-content: space-between;
+          align-items: center;
+          max-width: 1400px;
+          margin: 0 auto;
+        }
 
-          .info-icon {
-          flex-shrink: 0;
-            margin-right: 12px;
-            color: #0369a1;
-        }
-        
-          .info-content h4 {
-            margin: 0 0 4px 0;
-          font-size: 14px;
-          font-weight: 600;
-            color: #0369a1;
-        }
-        
-          .info-content p {
-          margin: 0;
-            font-size: 14px;
-            color: #075985;
-          line-height: 1.4;
-        }
-        
-          .form-warning {
-            margin-top: 8px;
-            padding: 12px;
-            background: #fef3c7;
-            border: 1px solid #f59e0b;
-            border-radius: 6px;
-          font-size: 14px;
-            color: #92400e;
-          }
-
-          .input-group {
-            position: relative;
+        .header-left {
           display: flex;
           align-items: center;
-          }
+          gap: 20px;
+        }
 
-          .input-prefix {
-            position: absolute;
-            left: 12px;
-            color: #6b7280;
-            font-weight: 500;
-            z-index: 10;
-            pointer-events: none;
-          }
+        .back-button {
+          background: rgba(255, 255, 255, 0.9);
+          border: 1px solid rgba(226, 232, 240, 0.8);
+          border-radius: 12px;
+          width: 44px;
+          height: 44px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          color: #64748b;
+          transition: all 0.2s ease;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        }
+        .back-button:hover {
+          background: #f8fafc;
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        :global(.dark-mode) .back-button {
+          background: rgba(22, 27, 34, 0.9);
+          border-color: rgba(48, 54, 61, 0.8);
+          color: #8b949e;
+        }
+        :global(.dark-mode) .back-button:hover {
+          background: #21262d;
+        }
 
-          .input-group .form-input {
-            padding-left: 32px;
-          }
+        .dashboard-title {
+          font-size: 32px;
+          font-weight: 800;
+          background: linear-gradient(135deg, #1e293b 0%, #475569 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          margin: 0;
+          letter-spacing: -0.02em;
+        }
+        :global(.dark-mode) .dashboard-title {
+          background: linear-gradient(135deg, #f0f6fc 0%, #c9d1d9 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+        }
 
-          .form-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 16px;
+        .subtitle-container {
+          margin-top: 4px;
+        }
+
+        .welcome-message {
+          font-size: 15px;
+          color: #64748b;
+          margin: 0;
+          font-weight: 500;
+          letter-spacing: 0.01em;
+        }
+        :global(.dark-mode) .welcome-message {
+          color: #8b949e;
+        }
+
+        .header-right {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .btn {
+          padding: 12px 20px;
+          border-radius: 10px;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          border: none;
+          transition: all 0.2s ease;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          text-decoration: none;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        }
+        .btn:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-primary {
+          background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+          color: white;
+        }
+        .btn-primary:hover {
+          background: linear-gradient(135deg, #4338ca 0%, #6d28d9 100%);
+        }
+
+        .main-content-grid {
+          display: grid;
+          grid-template-columns: 2fr 1fr;
+          gap: 24px;
+          align-items: flex-start;
+          padding: 0 32px 32px;
+          max-width: 1400px;
+          margin: 0 auto;
+        }
+
+        .left-column {
+          display: flex;
+          flex-direction: column;
+          gap: 24px;
+        }
+        .right-column {
+          position: sticky;
+          top: 24px;
+        }
+
+        .section-card {
+          background: white;
+          border-radius: 12px;
+          padding: 24px;
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+          border: 1px solid rgba(226, 232, 240, 0.6);
+        }
+        :global(.dark-mode) .section-card {
+          background: #161b22;
+          border-color: rgba(48, 54, 61, 0.6);
+        }
+
+        .section-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding-bottom: 16px;
+          margin-bottom: 24px;
+          border-bottom: 1px solid #f1f5f9;
+        }
+        :global(.dark-mode) .section-header {
+          border-color: #30363d;
+        }
+
+        .section-title-group {
+          display: flex;
+          flex-direction: column;
         }
         
-        @media (max-width: 768px) {
-            .form-row {
-            grid-template-columns: 1fr;
-          }
+        .section-title {
+          font-size: 18px;
+          font-weight: 600;
+          color: #1e293b;
+          margin: 0;
+        }
+        :global(.dark-mode) .section-title {
+          color: #f0f6fc;
+        }
+
+        .section-subtitle {
+          font-size: 14px;
+          color: #64748b;
+          margin-top: 4px;
+        }
+        :global(.dark-mode) .section-subtitle {
+          color: #8b949e;
+        }
+        
+        .property-form {
+          display: grid;
+          gap: 24px;
+        }
+
+        .form-row {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+          gap: 16px;
+        }
+
+        .form-group {
+          display: flex;
+          flex-direction: column;
+        }
+
+        .form-label {
+          font-size: 14px;
+          font-weight: 500;
+          color: #374151;
+          margin-bottom: 8px;
+        }
+        :global(.dark-mode) .form-label {
+          color: #c9d1d9;
+        }
+
+        .form-label.required::after {
+          content: ' *';
+          color: #ef4444;
+        }
+        
+        .form-input, .form-select {
+          width: 100%;
+          padding: 10px 12px;
+          border-radius: 6px;
+          border: 1px solid #cbd5e1;
+          background-color: white;
+          font-size: 14px;
+          color: #1e293b;
+          transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        :global(.dark-mode) .form-input, 
+        :global(.dark-mode) .form-select {
+          background-color: #0d1117;
+          border-color: #30363d;
+          color: #c9d1d9;
+        }
+
+        .form-input:focus, .form-select:focus {
+          outline: none;
+          border-color: #4f46e5;
+          box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        .form-hint {
+          font-size: 12px;
+          color: #64748b;
+          margin-top: 6px;
+        }
+        :global(.dark-mode) .form-hint {
+          color: #8b949e;
+        }
+        
+        .input-group {
+          position: relative;
+        }
+        
+        .input-prefix {
+          position: absolute;
+          left: 12px;
+          top: 50%;
+          transform: translateY(-50%);
+          color: #64748b;
+          font-size: 14px;
+        }
+
+        .input-group .form-input {
+          padding-left: 28px;
+        }
+
+        .alert {
+          border-radius: 8px;
+          padding: 16px;
+          font-size: 14px;
         }
       `}</style>
-      </DashboardLayout>
-    </>
+    </DashboardLayout>
   );
 } 

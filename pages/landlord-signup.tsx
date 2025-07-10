@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { useAuth } from '../lib/auth-context';
+import { phoneUtils } from '../lib/utils';
 
 export default function LandlordSignup() {
   const router = useRouter();
@@ -19,10 +20,27 @@ export default function LandlordSignup() {
   });
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
+  const [phoneError, setPhoneError] = useState<string | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    if (name === 'contact_phone') {
+      // Format phone number as user types
+      const formattedPhone = phoneUtils.formatPhoneNumber(value);
+      setFormData(prev => ({ ...prev, [name]: formattedPhone }));
+      
+      // Only validate if there's a value (since phone is optional)
+      if (formattedPhone.trim()) {
+        const phoneErrorMsg = phoneUtils.getPhoneErrorMessage(formattedPhone);
+        setPhoneError(phoneErrorMsg);
+      } else {
+        setPhoneError(null);
+      }
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    }
+    
     clearError();
   };
 
@@ -123,10 +141,20 @@ export default function LandlordSignup() {
                     type="tel" 
                     value={formData.contact_phone} 
                     onChange={handleChange} 
-                    placeholder="+1 (555) 123-4567"
+                    placeholder="(555) 123-4567"
                     disabled={loading} 
-                    className="form-input" 
+                    className={`form-input ${phoneError ? 'error' : ''}`}
                   />
+                  {phoneError && (
+                    <div className="field-error">
+                      {phoneError}
+                    </div>
+                  )}
+                  {formData.contact_phone && !phoneError && (
+                    <div className="field-success">
+                      ✓ Valid phone number
+                    </div>
+                  )}
                 </div>
               </div>
 

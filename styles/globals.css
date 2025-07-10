@@ -14,8 +14,8 @@
   --font-size-base: 14px;
 
   /* Global Design Tokens */
-  --primary-blue: #2563eb;
-  --primary-blue-dark: #1d4ed8;
+  --primary-blue: #4f46e5;
+  --primary-blue-dark: #4338ca;
   --primary-blue-light: #dbeafe;
   
   --success-green: #10b981;
@@ -383,9 +383,9 @@ select {
 }
 
 .btn-primary {
-  color: white;
   background-color: var(--primary-blue);
-  border-color: var(--primary-blue);
+  color: white;
+  border: 1px solid var(--primary-blue);
 }
 
 .btn-primary:hover, .btn-primary:focus {
@@ -953,16 +953,19 @@ select {
 
 .input-prefix {
   position: absolute;
-  left: 12px;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
   color: #6b7280;
   font-weight: 500;
   z-index: 10;
   pointer-events: none;
   font-size: 14px;
+  line-height: 1;
 }
 
 .input-group .form-input {
-  padding-left: 32px;
+  padding-left: 48px;
 }
 
 /* Form row styling */
@@ -1391,6 +1394,26 @@ select {
   .add-room-type-btn {
     transition: none;
   }
+}
+
+/* Phone validation styles */
+.form-input.error {
+  border-color: var(--error-red) !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1) !important;
+}
+
+.field-error {
+  color: var(--error-red);
+  font-size: var(--text-small);
+  margin-top: var(--spacing-xs);
+  font-weight: var(--font-weight-medium);
+}
+
+.field-success {
+  color: var(--success-green);
+  font-size: var(--text-small);
+  margin-top: var(--spacing-xs);
+  font-weight: var(--font-weight-medium);
 }
  
  

@@ -181,6 +181,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         { path: '/leases', label: 'Leases', icon: <LeasesIcon /> },
         { path: '/tenants', label: 'Tenants', icon: <TenantsIcon /> },
         { path: '/accounting', label: 'Accounting', icon: <AccountingIcon /> },
+        { path: '/communication', label: 'Communication', icon: <CommunicationIcon /> },
         { path: '/managers', label: 'Managers', icon: <ManagersIcon /> },
       ];
     }

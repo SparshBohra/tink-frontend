@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Application, ApplicationViewing } from '../lib/types';
+import { phoneUtils } from '../lib/utils';
 
 interface ViewingSchedulerModalProps {
   isOpen: boolean;
@@ -29,6 +30,7 @@ export default function ViewingSchedulerModal({
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [phoneError, setPhoneError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,10 +56,22 @@ export default function ViewingSchedulerModal({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value,
-    }));
+    
+    if (name === 'contact_phone') {
+      const formattedPhone = phoneUtils.formatPhoneNumber(value);
+      setFormData(prev => ({
+        ...prev,
+        [name]: formattedPhone,
+      }));
+      
+      const phoneErrorMsg = phoneUtils.getPhoneErrorMessage(formattedPhone);
+      setPhoneError(phoneErrorMsg);
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value,
+      }));
+    }
   };
 
   const handleOverlayClick = (e: React.MouseEvent) => {
@@ -173,10 +187,20 @@ export default function ViewingSchedulerModal({
                 name="contact_phone"
                 value={formData.contact_phone}
                 onChange={handleChange}
-                placeholder="+1 (555) 123-4567"
+                placeholder="(555) 123-4567"
                 required
-                className="form-input"
+                className={`form-input ${phoneError ? 'error' : ''}`}
               />
+              {phoneError && (
+                <div className="field-error">
+                  {phoneError}
+                </div>
+              )}
+              {formData.contact_phone && !phoneError && (
+                <div className="field-success">
+                  ✓ Valid phone number
+                </div>
+              )}
             </div>
 
             <div className="form-group">

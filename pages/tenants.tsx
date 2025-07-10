@@ -8,6 +8,7 @@ import { useAuth, withAuth } from '../lib/auth-context';
 import { apiClient } from '../lib/api';
 import { Tenant, TenantFormData, Application, Lease, Property, Room } from '../lib/types';
 import ApplicationDetailModal from '../components/ApplicationDetailModal';
+import { phoneUtils } from '../lib/utils';
 
 function Tenants() {
   const router = useRouter();
@@ -33,6 +34,10 @@ function Tenants() {
   // Application Detail Modal State
   const [isApplicationDetailOpen, setIsApplicationDetailOpen] = useState(false);
   const [selectedApplicationForDetail, setSelectedApplicationForDetail] = useState<Application | null>(null);
+  
+  // Phone validation states
+  const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [emergencyPhoneError, setEmergencyPhoneError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchTenants();
@@ -576,11 +581,26 @@ function Tenants() {
                           name="phone"
                           type="tel"
                           value={formData.phone}
-                          onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                          onChange={(e) => {
+                            const formattedPhone = phoneUtils.formatPhoneNumber(e.target.value);
+                            setFormData({...formData, phone: formattedPhone});
+                            const phoneErrorMsg = phoneUtils.getPhoneErrorMessage(formattedPhone);
+                            setPhoneError(phoneErrorMsg);
+                          }}
                           required
-                          className="form-input"
-                          placeholder="+1 (555) 123-4567"
+                          className={`form-input ${phoneError ? 'error' : ''}`}
+                          placeholder="(555) 123-4567"
                         />
+                        {phoneError && (
+                          <div className="field-error">
+                            {phoneError}
+                          </div>
+                        )}
+                        {formData.phone && !phoneError && (
+                          <div className="field-success">
+                            ✓ Valid phone number
+                          </div>
+                        )}
                       </div>
 
                       <div className="form-group">
@@ -607,10 +627,31 @@ function Tenants() {
                           name="emergency_contact_phone"
                           type="tel"
                           value={formData.emergency_contact_phone || ''}
-                          onChange={(e) => setFormData({...formData, emergency_contact_phone: e.target.value})}
-                          className="form-input"
-                          placeholder="+1 (555) 987-6543"
+                          onChange={(e) => {
+                            const formattedPhone = phoneUtils.formatPhoneNumber(e.target.value);
+                            setFormData({...formData, emergency_contact_phone: formattedPhone});
+                            
+                            // Only validate if there's a value (emergency phone is optional)
+                            if (formattedPhone.trim()) {
+                              const phoneErrorMsg = phoneUtils.getPhoneErrorMessage(formattedPhone);
+                              setEmergencyPhoneError(phoneErrorMsg);
+                            } else {
+                              setEmergencyPhoneError(null);
+                            }
+                          }}
+                          className={`form-input ${emergencyPhoneError ? 'error' : ''}`}
+                          placeholder="(555) 987-6543"
                         />
+                        {emergencyPhoneError && (
+                          <div className="field-error">
+                            {emergencyPhoneError}
+                          </div>
+                        )}
+                        {formData.emergency_contact_phone && !emergencyPhoneError && (
+                          <div className="field-success">
+                            ✓ Valid phone number
+                          </div>
+                        )}
                       </div>
                     </div>
 

@@ -181,6 +181,15 @@ export default function Navigation() {
                 <span className="nav-text">Properties</span>
               </Link>
               <Link 
+                href="/communication" 
+                className={`nav-link ${isActive('/communication') ? 'active' : ''}`}
+              >
+                <svg className="nav-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
+                <span className="nav-text">Communication</span>
+              </Link>
+              <Link 
                 href="/managers" 
                 className={`nav-link ${isActive('/managers') ? 'active' : ''}`}
               >
@@ -236,7 +245,9 @@ export default function Navigation() {
                 href="/communication" 
                 className={`nav-link ${isActive('/communication') ? 'active' : ''}`}
               >
-                <span className="nav-icon communication-icon"></span>
+                <svg className="nav-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
                 <span className="nav-text">Communication</span>
               </Link>
               <Link 

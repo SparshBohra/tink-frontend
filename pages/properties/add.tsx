@@ -857,6 +857,7 @@ export default function AddProperty() {
         .form-group.full-width { grid-column: 1 / -1; }
         .form-label { font-weight: 600; color: #374151; font-size: 14px; }
         .form-input { padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; transition: all 0.2s ease; box-sizing: border-box; }
+        .input-group .form-input { padding-left: 48px; }
         .form-input:focus { outline: none; border-color: #4f46e5; box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); }
         .form-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 16px; padding-top: 16px; border-top: 1px solid #e2e8f0; }
         .btn { padding: 10px 16px; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s ease; text-decoration: none; border: none; }
@@ -968,7 +969,7 @@ export default function AddProperty() {
         }
         
         .currency-input {
-          padding-left: 28px;
+          padding-left: 48px;
         }
         
         .form-help {

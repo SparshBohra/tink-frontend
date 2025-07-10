@@ -74,6 +74,7 @@ export default function PropertyDeletionModal({
         console.log('Backend inconsistency check not available');
         if (inconsErr.response?.status !== 404) {
           console.error('Inconsistency check failed:', inconsErr);
+          setError('Could not verify property data integrity. Please try again.');
         }
       }
 
