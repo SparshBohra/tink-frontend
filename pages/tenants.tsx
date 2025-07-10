@@ -81,14 +81,21 @@ function Tenants() {
       setError(null);
       setSuccess(null);
       
+      // Format phone numbers to E.164 format for API
+      const apiFormData = {
+        ...formData,
+        phone: formData.phone ? phoneUtils.toE164Format(formData.phone) : '',
+        emergency_contact_phone: formData.emergency_contact_phone ? phoneUtils.toE164Format(formData.emergency_contact_phone) : ''
+      };
+      
       if (editingTenant) {
         // Update existing tenant
-        const updatedTenant = await apiClient.updateTenant(editingTenant.id, formData);
+        const updatedTenant = await apiClient.updateTenant(editingTenant.id, apiFormData);
         setTenants(tenants.map(t => t.id === editingTenant.id ? updatedTenant : t));
         setSuccess(`Tenant "${updatedTenant.full_name}" updated successfully!`);
       } else {
         // Create new tenant
-        const newTenant = await apiClient.createTenant(formData);
+        const newTenant = await apiClient.createTenant(apiFormData);
         setTenants([...tenants, newTenant]);
         setSuccess(`Tenant "${newTenant.full_name}" created successfully!`);
       }
@@ -108,7 +115,23 @@ function Tenants() {
       setTimeout(() => setSuccess(null), 3000);
       
     } catch (error: any) {
+      console.error('Failed to save tenant:', error);
+      
+      // Handle specific API errors
+      if (error?.response?.data) {
+        const errorData = error.response.data;
+        if (errorData.phone) {
+          setError(`Phone number error: ${Array.isArray(errorData.phone) ? errorData.phone.join(', ') : errorData.phone}`);
+        } else if (errorData.emergency_contact_phone) {
+          setError(`Emergency phone error: ${Array.isArray(errorData.emergency_contact_phone) ? errorData.emergency_contact_phone.join(', ') : errorData.emergency_contact_phone}`);
+        } else if (errorData.email) {
+          setError(`Email error: ${Array.isArray(errorData.email) ? errorData.email.join(', ') : errorData.email}`);
+        } else {
       setError(error?.message || 'Failed to save tenant');
+        }
+      } else {
+        setError(error?.message || 'Failed to save tenant');
+      }
     }
   };
 

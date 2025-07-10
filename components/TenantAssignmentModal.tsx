@@ -133,10 +133,33 @@ export default function TenantAssignmentModal({
         return;
       }
       
-      // Create the new tenant
+      // Validate phone number format
+      if (phoneError) {
+        setError(`Phone number error: ${phoneError}`);
+        return;
+      }
+      
+      // Validate emergency phone if provided
+      if (newTenantForm.emergency_contact_phone && emergencyPhoneError) {
+        setError(`Emergency phone number error: ${emergencyPhoneError}`);
+        return;
+      }
+      
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(newTenantForm.email)) {
+        setError('Please enter a valid email address');
+        return;
+      }
+      
+      // Create the new tenant - only include fields that are supported by the API
       const tenantData = {
-        ...newTenantForm,
-        monthly_income: newTenantForm.monthly_income ? parseFloat(newTenantForm.monthly_income) : null
+        full_name: newTenantForm.full_name,
+        email: newTenantForm.email,
+        phone: newTenantForm.phone ? phoneUtils.toE164Format(newTenantForm.phone) : '',
+        emergency_contact_name: newTenantForm.emergency_contact_name || undefined,
+        emergency_contact_phone: newTenantForm.emergency_contact_phone ? phoneUtils.toE164Format(newTenantForm.emergency_contact_phone) : undefined,
+        current_address: newTenantForm.current_address || undefined
       };
       
       const newTenant = await apiClient.createTenant(tenantData);
@@ -168,7 +191,19 @@ export default function TenantAssignmentModal({
       
     } catch (err: any) {
       console.error('Error creating tenant:', err);
-      setError(err?.message || 'Failed to create tenant');
+      
+      // Provide more specific error messages
+      if (err.message.includes('Email') || err.message.includes('email')) {
+        setError('Email address is already in use or invalid. Please use a different email.');
+      } else if (err.message.includes('Phone') || err.message.includes('phone')) {
+        setError('Phone number is already in use or invalid. Please use a different phone number.');
+      } else if (err.message.includes('required')) {
+        setError('Please fill in all required fields (Name, Email, Phone).');
+      } else if (err.message.includes('permission')) {
+        setError('You do not have permission to create tenants. Please contact your administrator.');
+      } else {
+        setError(err?.message || 'Failed to create tenant. Please check your information and try again.');
+      }
     } finally {
       setCreatingTenant(false);
     }
@@ -261,6 +296,21 @@ export default function TenantAssignmentModal({
     try {
       console.log('Creating direct lease...');
       
+      const currentUser = await apiClient.getProfile();
+
+      // For a direct lease, we still need to create a placeholder application
+      const applicationData: ApplicationFormData = {
+        tenant: selectedTenant!,
+        property_ref: room.property_ref,
+        room: room.id,
+        desired_move_in_date: leaseData.start_date!,
+        desired_lease_duration: 12, // Default duration
+        rent_budget: Number(leaseData.monthly_rent) || 0,
+        message: "Direct lease creation by manager.",
+        special_requests: "Direct lease creation.",
+      };
+      const application = await apiClient.createApplication(applicationData);
+
       const directLeaseData = {
         tenant: selectedTenant!,
         room: room.id,
@@ -269,11 +319,13 @@ export default function TenantAssignmentModal({
         end_date: leaseData.end_date!,
         monthly_rent: Number(leaseData.monthly_rent!),
         security_deposit: Number(leaseData.security_deposit!),
-        status: 'active'
+        status: 'active',
+        application: application.id,
+        created_by: currentUser.id,
       };
       
       console.log('Direct lease data:', directLeaseData);
-      const lease = await apiClient.createLease(directLeaseData);
+      const lease = await apiClient.createLease(directLeaseData as any);
       console.log('Direct lease created successfully:', lease);
       
       return lease;
@@ -284,6 +336,12 @@ export default function TenantAssignmentModal({
   };
 
   const handleSave = async () => {
+    // Explicitly re-validate that a tenant is selected before any action.
+    if (selectedTenant === null) {
+      setError("No tenant selected. Please select or create a tenant before creating a lease.");
+      return;
+    }
+    
     if (!validateLeaseData()) {
       return;
     }
@@ -421,6 +479,19 @@ export default function TenantAssignmentModal({
             </div>
           </div>
 
+          {/* Step Indicator */}
+          <div className="step-indicator">
+            <div className={`step ${selectedTenant ? 'completed' : 'active'}`}>
+              <div className="step-number">1</div>
+              <div className="step-label">Select or Create Tenant</div>
+            </div>
+            <div className="step-divider"></div>
+            <div className={`step ${selectedTenant ? 'active' : 'inactive'}`}>
+              <div className="step-number">2</div>
+              <div className="step-label">Create Lease</div>
+            </div>
+          </div>
+
           {loading ? (
             <div className="loading-indicator">
               <div className="loading-spinner" />
@@ -530,6 +601,20 @@ export default function TenantAssignmentModal({
                   ) : (
                     /* Create New Tenant Form */
                     <div className="create-tenant-form">
+                      <div className="create-tenant-header">
+                        <div className="info-banner">
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <path d="M12 16v-4"/>
+                            <path d="M12 8h.01"/>
+                          </svg>
+                          <div>
+                            <strong>Create New Tenant</strong>
+                            <p>Fill out the form below to create a new tenant. After creation, the tenant will be automatically selected for lease assignment.</p>
+                          </div>
+                        </div>
+                      </div>
+                      
                       <div className="form-section">
                         <h4>Basic Information</h4>
                         <div className="form-grid">
@@ -707,18 +792,33 @@ export default function TenantAssignmentModal({
                       
                       <div className="create-tenant-actions">
                         <button 
-                          className="btn btn-primary"
-                          onClick={handleCreateNewTenant}
-                          disabled={creatingTenant}
-                        >
-                          {creatingTenant ? 'Creating Tenant...' : 'Create & Select Tenant'}
-                        </button>
-                        <button 
                           className="btn btn-secondary"
                           onClick={() => setActiveTab('tenants')}
                           disabled={creatingTenant}
                         >
                           Cancel
+                        </button>
+                        <button 
+                          className="btn btn-success create-tenant-btn"
+                          onClick={handleCreateNewTenant}
+                          disabled={creatingTenant}
+                        >
+                          {creatingTenant ? (
+                            <>
+                              <div className="btn-spinner"></div>
+                              Creating Tenant...
+                            </>
+                          ) : (
+                            <>
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                                <circle cx="12" cy="7" r="4"/>
+                                <line x1="12" y1="2" x2="12" y2="6"/>
+                                <line x1="10" y1="4" x2="14" y2="4"/>
+                              </svg>
+                              Create New Tenant
+                            </>
+                          )}
                         </button>
                       </div>
                     </div>
@@ -729,7 +829,15 @@ export default function TenantAssignmentModal({
               {/* Lease Details Form */}
               {selectedTenant && (
                 <div className="lease-form-section">
+                  <div className="section-header-with-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                      <polyline points="14,2 14,8 20,8"/>
+                      <line x1="16" y1="13" x2="8" y2="13"/>
+                      <line x1="16" y1="17" x2="8" y2="17"/>
+                    </svg>
                   <h4>Lease Details</h4>
+                  </div>
                   
                   {selectedTenantData && (
                     <div className="selected-tenant-summary">
@@ -816,11 +924,27 @@ export default function TenantAssignmentModal({
             Cancel
           </button>
           <button 
-            className="btn btn-primary" 
+            className="btn btn-primary create-lease-btn" 
             onClick={handleSave}
             disabled={saving || loading || !selectedTenant}
           >
-{saving ? 'Assigning Tenant...' : 'Create Lease & Assign'}
+            {saving ? (
+              <>
+                <div className="btn-spinner"></div>
+                Assigning Tenant...
+              </>
+            ) : (
+              <>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                  <polyline points="14,2 14,8 20,8"/>
+                  <line x1="16" y1="13" x2="8" y2="13"/>
+                  <line x1="16" y1="17" x2="8" y2="17"/>
+                  <polyline points="10,9 9,9 8,9"/>
+                </svg>
+                Create Lease & Assign
+              </>
+            )}
           </button>
         </div>
       </div>
@@ -843,9 +967,9 @@ export default function TenantAssignmentModal({
           background: white;
           border-radius: var(--radius-lg);
           box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-          max-width: 700px;
+          max-width: 900px;
           width: 95%;
-          max-height: 90vh;
+          max-height: 95vh;
           overflow: hidden;
           display: flex;
           flex-direction: column;
@@ -1097,9 +1221,79 @@ export default function TenantAssignmentModal({
         }
 
         .create-tenant-form {
-          max-height: 400px;
+          max-height: 500px;
           overflow-y: auto;
           padding: var(--spacing-md);
+        }
+
+        .create-tenant-header {
+          background: #f8f9fa;
+          border: 1px solid #e9ecef;
+          border-radius: 8px;
+          padding: 16px;
+          margin-bottom: 20px;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .info-banner {
+          display: flex;
+          align-items: flex-start;
+          gap: 12px;
+          padding: 16px;
+          background: #eff6ff;
+          border: 1px solid #bfdbfe;
+          border-radius: 8px;
+          margin-bottom: 24px;
+        }
+
+        .info-banner svg {
+          color: #3b82f6;
+          margin-top: 2px;
+          flex-shrink: 0;
+        }
+
+        .info-banner strong {
+          color: #1e40af;
+          font-size: 14px;
+          display: block;
+          margin-bottom: 4px;
+        }
+
+        .info-banner p {
+          color: #1e40af;
+          font-size: 13px;
+          margin: 0;
+          line-height: 1.4;
+        }
+
+        .field-error {
+          color: #dc2626;
+          font-size: 12px;
+          margin-top: 4px;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+        }
+
+        .field-success {
+          color: #16a34a;
+          font-size: 12px;
+          margin-top: 4px;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+        }
+
+        .form-input.error {
+          border-color: #dc2626;
+          box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+        }
+
+        .form-input.success {
+          border-color: #16a34a;
+          box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.1);
         }
 
         .form-section {
@@ -1126,6 +1320,69 @@ export default function TenantAssignmentModal({
           margin-top: var(--spacing-lg);
           padding-top: var(--spacing-md);
           border-top: 1px solid var(--gray-200);
+        }
+
+        .create-tenant-btn {
+          background: #16a34a !important;
+          color: white !important;
+          border: none !important;
+          padding: 12px 20px !important;
+          border-radius: 8px !important;
+          font-weight: 600 !important;
+          display: flex !important;
+          align-items: center !important;
+          gap: 8px !important;
+          transition: all 0.2s ease !important;
+          box-shadow: 0 2px 4px rgba(22, 163, 74, 0.2) !important;
+        }
+
+        .create-tenant-btn:hover:not(:disabled) {
+          background: #15803d !important;
+          transform: translateY(-1px) !important;
+          box-shadow: 0 4px 8px rgba(22, 163, 74, 0.3) !important;
+        }
+
+        .create-tenant-btn:disabled {
+          background: #9ca3af !important;
+          cursor: not-allowed !important;
+          transform: none !important;
+          box-shadow: none !important;
+        }
+
+        .create-lease-btn {
+          background: #3b82f6 !important;
+          color: white !important;
+          border: none !important;
+          padding: 12px 20px !important;
+          border-radius: 8px !important;
+          font-weight: 600 !important;
+          display: flex !important;
+          align-items: center !important;
+          gap: 8px !important;
+          transition: all 0.2s ease !important;
+          box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2) !important;
+        }
+
+        .create-lease-btn:hover:not(:disabled) {
+          background: #2563eb !important;
+          transform: translateY(-1px) !important;
+          box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3) !important;
+        }
+
+        .create-lease-btn:disabled {
+          background: #9ca3af !important;
+          cursor: not-allowed !important;
+          transform: none !important;
+          box-shadow: none !important;
+        }
+
+        .btn-spinner {
+          width: 16px;
+          height: 16px;
+          border: 2px solid rgba(255, 255, 255, 0.3);
+          border-top-color: white;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
         }
 
         .tab-button {
@@ -1177,6 +1434,97 @@ export default function TenantAssignmentModal({
           color: #6c757d;
           font-size: 14px;
           line-height: 1.4;
+        }
+
+        .step-indicator {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin: 24px 0;
+          padding: 16px;
+          background: #f8f9fa;
+          border-radius: 8px;
+          border: 1px solid #e9ecef;
+        }
+
+        .step {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          transition: all 0.2s ease;
+        }
+
+        .step-number {
+          width: 28px;
+          height: 28px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 600;
+          font-size: 14px;
+          transition: all 0.2s ease;
+        }
+
+        .step-label {
+          font-weight: 500;
+          font-size: 14px;
+          transition: all 0.2s ease;
+        }
+
+        .step-divider {
+          width: 40px;
+          height: 2px;
+          background: #dee2e6;
+          margin: 0 16px;
+          border-radius: 1px;
+        }
+
+        .step.active .step-number {
+          background: #3b82f6;
+          color: white;
+        }
+
+        .step.active .step-label {
+          color: #3b82f6;
+        }
+
+        .step.completed .step-number {
+          background: #16a34a;
+          color: white;
+        }
+
+        .step.completed .step-label {
+          color: #16a34a;
+        }
+
+        .step.inactive .step-number {
+          background: #e9ecef;
+          color: #6c757d;
+        }
+
+        .step.inactive .step-label {
+          color: #6c757d;
+        }
+
+        .section-header-with-icon {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-bottom: 16px;
+          padding-bottom: 8px;
+          border-bottom: 2px solid #e9ecef;
+        }
+
+        .section-header-with-icon svg {
+          color: #3b82f6;
+        }
+
+        .section-header-with-icon h4 {
+          margin: 0;
+          color: #1f2937;
+          font-size: 16px;
+          font-weight: 600;
         }
       `}</style>
     </div>

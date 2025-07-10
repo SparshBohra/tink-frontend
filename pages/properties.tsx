@@ -4,14 +4,17 @@ import Link from 'next/link';
 import DashboardLayout from '../components/DashboardLayout';
 import LoadingSpinner from '../components/LoadingSpinner';
 import PropertyDeletionModal from '../components/PropertyDeletionModal';
+import PropertyTenantAssignmentModal from '../components/PropertyTenantAssignmentModal';
 import { useRouter } from 'next/router';
 import { withAuth } from '../lib/auth-context';
 import { apiClient } from '../lib/api';
-import { Property } from '../lib/types';
+import { Property, Room, Lease } from '../lib/types';
 
 function Properties() {
   const router = useRouter();
   const [properties, setProperties] = useState<Property[]>([]);
+  const [propertyRooms, setPropertyRooms] = useState<{ [key: number]: Room[] }>({});
+  const [propertyLeases, setPropertyLeases] = useState<{ [key: number]: Lease[] }>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showListingModal, setShowListingModal] = useState(false);
@@ -57,6 +60,28 @@ function Properties() {
       const propertiesResponse = await apiClient.getProperties();
       const sorted = applySort(propertiesResponse.results || [], sortOption);
       setProperties(sorted);
+      
+      // Fetch room and lease data for each property
+      const roomsData: { [key: number]: Room[] } = {};
+      const leasesData: { [key: number]: Lease[] } = {};
+      
+      for (const property of sorted) {
+        try {
+          const [rooms, leases] = await Promise.all([
+            apiClient.getPropertyRooms(property.id),
+            apiClient.getLeases({ property: property.id })
+          ]);
+          roomsData[property.id] = rooms;
+          leasesData[property.id] = leases.results || [];
+        } catch (err) {
+          console.error(`Failed to fetch rooms/leases for property ${property.id}:`, err);
+          roomsData[property.id] = [];
+          leasesData[property.id] = [];
+        }
+      }
+      
+      setPropertyRooms(roomsData);
+      setPropertyLeases(leasesData);
     } catch (error: any) {
       console.error('Failed to fetch properties data:', error);
       setError(error?.message || 'Failed to load properties data');
@@ -66,9 +91,34 @@ function Properties() {
   };
 
   const getPropertyStats = (property: Property) => {
-    const totalRooms = property.total_rooms || 0;
-    const vacantRooms = property.vacant_rooms || 0;
-    const occupiedRooms = totalRooms - vacantRooms;
+    const rooms = propertyRooms[property.id] || [];
+    const leases = propertyLeases[property.id] || [];
+    
+    // Calculate accurate room statistics
+    const totalRooms = rooms.length || property.total_rooms || 0;
+    
+    // Count occupied rooms based on active leases
+    const activeLeases = leases.filter(lease => {
+      const today = new Date();
+      const startDate = new Date(lease.start_date);
+      const endDate = lease.end_date ? new Date(lease.end_date) : null;
+      
+      return lease.status === 'active' && 
+             startDate <= today && 
+             (!endDate || endDate >= today);
+    });
+    
+    let occupiedRooms = 0;
+    if (property.rent_type === 'per_room') {
+      // For per-room properties, count rooms with active leases
+      const occupiedRoomIds = new Set(activeLeases.filter(l => l.room && l.room > 0).map(l => l.room));
+      occupiedRooms = occupiedRoomIds.size;
+    } else {
+      // For per-property properties, property is occupied if there's any active lease
+      occupiedRooms = activeLeases.length > 0 ? 1 : 0;
+    }
+    
+    const vacantRooms = totalRooms - occupiedRooms;
     const occupancyRate = totalRooms > 0 ? 
       Math.round((occupiedRooms / totalRooms) * 100) : 0;
     
@@ -78,6 +128,33 @@ function Properties() {
       vacantRooms,
       occupancyRate
     };
+  };
+
+  const canAssignTenant = (property: Property) => {
+    const leases = propertyLeases[property.id] || [];
+    const rooms = propertyRooms[property.id] || [];
+    
+    // Check for active leases
+    const activeLeases = leases.filter(lease => {
+      const today = new Date();
+      const startDate = new Date(lease.start_date);
+      const endDate = lease.end_date ? new Date(lease.end_date) : null;
+      
+      return lease.status === 'active' && 
+             startDate <= today && 
+             (!endDate || endDate >= today);
+    });
+    
+    if (property.rent_type === 'per_property') {
+      // For per-property, can only assign if no active lease exists
+      return activeLeases.length === 0;
+    } else {
+      // For per-room, can assign if there are vacant rooms
+      if (rooms.length === 0) return false;
+      
+      const occupiedRoomIds = new Set(activeLeases.filter(l => l.room && l.room > 0).map(l => l.room));
+      return occupiedRoomIds.size < rooms.length;
+    }
   };
 
   const downloadPropertiesReport = () => {
@@ -104,10 +181,19 @@ function Properties() {
     a.click();
   };
 
-  // Calculate portfolio summary
-  const totalRooms = properties.reduce((sum, property) => sum + (property.total_rooms || 0), 0);
-  const totalVacantRooms = properties.reduce((sum, property) => sum + (property.vacant_rooms || 0), 0);
-  const occupiedRooms = totalRooms - totalVacantRooms;
+  // Calculate portfolio summary using accurate data
+  const portfolioStats = properties.reduce((acc, property) => {
+    const stats = getPropertyStats(property);
+    return {
+      totalRooms: acc.totalRooms + stats.totalRooms,
+      occupiedRooms: acc.occupiedRooms + stats.occupiedRooms,
+      vacantRooms: acc.vacantRooms + stats.vacantRooms
+    };
+  }, { totalRooms: 0, occupiedRooms: 0, vacantRooms: 0 });
+  
+  const totalRooms = portfolioStats.totalRooms;
+  const totalVacantRooms = portfolioStats.vacantRooms;
+  const occupiedRooms = portfolioStats.occupiedRooms;
   const overallOccupancyRate = totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0;
 
   const handleCreateListing = () => {
@@ -263,6 +349,13 @@ function Properties() {
   const handleManageProperty = (propertyId: number) => {
     router.push(`/properties/${propertyId}/rooms`);
     setActiveDropdown(null);
+  };
+
+  const handleTenantAssignmentSave = async () => {
+    // Refresh the data after tenant assignment
+    await fetchData();
+    setShowTenantAssignModal(false);
+    setSelectedPropertyForAssign(null);
   };
 
   const handleCloseTenantAssignModal = () => {
@@ -553,17 +646,63 @@ function Properties() {
                             </td>
                             <td className="table-center">
                               <div className="action-buttons">
-                                <button 
-                                  onClick={() => router.push(`/properties/${property.id}/rooms`)} 
-                                  className="manage-btn"
-                                >
-                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <path d="M3 21h18"/>
-                                    <path d="M5 21V7l8-4v18"/>
-                                    <path d="M19 21V11l-6-4"/>
-                                  </svg>
-                                  Manage
-                                </button>
+                                <div className="dropdown-container">
+                                  <button 
+                                    onClick={(e) => handleManageClick(e, property.id)} 
+                                    className="manage-btn"
+                                  >
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                      <path d="M3 21h18"/>
+                                      <path d="M5 21V7l8-4v18"/>
+                                      <path d="M19 21V11l-6-4"/>
+                                    </svg>
+                                    Manage
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                      <polyline points="6,9 12,15 18,9"/>
+                                    </svg>
+                                  </button>
+                                  
+                                  {activeDropdown === property.id && (
+                                    <div className="dropdown-menu">
+                                      <button 
+                                        onClick={() => handleManageProperty(property.id)}
+                                        className="dropdown-item"
+                                      >
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                          <path d="M3 21h18"/>
+                                          <path d="M5 21V7l8-4v18"/>
+                                          <path d="M19 21V11l-6-4"/>
+                                        </svg>
+                                        View Rooms
+                                      </button>
+                                      
+                                      {canAssignTenant(property) && (
+                                      <button 
+                                        onClick={() => handleAssignTenant(property)}
+                                        className="dropdown-item"
+                                      >
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                                          <circle cx="12" cy="7" r="4"/>
+                                        </svg>
+                                        Assign Tenant
+                                      </button>
+                                      )}
+                                      
+                                      <button 
+                                        onClick={() => router.push(`/properties/${property.id}/edit`)}
+                                        className="dropdown-item"
+                                      >
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                        </svg>
+                                        Edit Property
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                                
                                 <button 
                                   onClick={() => handleDeleteProperty(property.id, property.name)} 
                                   className="icon-btn delete-icon-btn"
@@ -779,42 +918,12 @@ function Properties() {
 
       {/* Tenant Assignment Modal */}
       {showTenantAssignModal && selectedPropertyForAssign && (
-        <div className="tenant-assign-modal">
-          <div className="modal-content tenant-assign-modal-content">
-            <div className="modal-header">
-              <h2>Assign Tenant to {selectedPropertyForAssign.name}</h2>
-              <button 
-                className="modal-close"
-                onClick={handleCloseTenantAssignModal}
-              >
-                ×
-              </button>
-            </div>
-
-            <div className="modal-section">
-              <p>This feature will be implemented to assign tenants to specific rooms in the property.</p>
-              <p><strong>Property:</strong> {selectedPropertyForAssign.name}</p>
-              <p><strong>Address:</strong> {selectedPropertyForAssign.full_address}</p>
-              <p><strong>Total Rooms:</strong> {selectedPropertyForAssign.total_rooms}</p>
-              <p><strong>Vacant Rooms:</strong> {selectedPropertyForAssign.vacant_rooms}</p>
-            </div>
-
-            <div className="modal-actions">
-              <button 
-                onClick={handleCloseTenantAssignModal}
-                className="cancel-btn"
-              >
-                Close
-              </button>
-              <button 
-                onClick={() => router.push(`/properties/${selectedPropertyForAssign.id}/rooms`)}
-                className="assign-btn"
-              >
-                Go to Rooms
-              </button>
-            </div>
-          </div>
-        </div>
+        <PropertyTenantAssignmentModal
+          property={selectedPropertyForAssign}
+          isOpen={showTenantAssignModal}
+          onClose={handleCloseTenantAssignModal}
+          onSave={handleTenantAssignmentSave}
+        />
       )}
 
       <style jsx>{`
@@ -1709,12 +1818,74 @@ function Properties() {
           background: #222222 !important;
         }
 
+        /* Dark mode dropdown styles */
+        :global(.dark-mode) .dropdown-menu {
+          background: #1a1a1a !important;
+          border-color: #333333 !important;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+        }
+
+        :global(.dark-mode) .dropdown-item {
+          color: #e2e8f0 !important;
+        }
+
+        :global(.dark-mode) .dropdown-item:hover {
+          background-color: #2a2a2a !important;
+        }
+
+        :global(.dark-mode) .dropdown-item svg {
+          color: #9ca3af !important;
+        }
+
         /* Action Buttons */
         .action-buttons {
           display: flex;
           gap: 4px;
           justify-content: center;
           align-items: center;
+        }
+
+        .dropdown-container {
+          position: relative;
+        }
+
+        .dropdown-menu {
+          position: absolute;
+          top: 100%;
+          right: 0;
+          background: white;
+          border: 1px solid #e2e8f0;
+          border-radius: 6px;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+          z-index: 1000;
+          min-width: 160px;
+          padding: 4px 0;
+          margin-top: 4px;
+        }
+
+        .dropdown-item {
+          width: 100%;
+          padding: 8px 12px;
+          border: none;
+          background: none;
+          text-align: left;
+          cursor: pointer;
+          font-size: 14px;
+          color: #374151;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          transition: background-color 0.2s ease;
+        }
+
+        .dropdown-item:hover {
+          background-color: #f3f4f6;
+        }
+
+        .dropdown-item svg {
+          width: 16px;
+          height: 16px;
+          color: #6b7280;
         }
 
         /* Icon Button Styles */

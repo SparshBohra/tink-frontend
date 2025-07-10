@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { apiClient } from '../lib/api';
 import { Tenant, Application, ApplicationFormData, Property, LeaseFormData, TenantFormData } from '../lib/types';
+import { phoneUtils } from '../lib/utils';
 
 interface PropertyTenantAssignmentModalProps {
   property: Property | null;
@@ -160,16 +161,45 @@ export default function PropertyTenantAssignmentModal({
       setError('Name and email are required for new tenant');
       return;
     }
+    
+    // Validate phone number if provided
+    if (newTenantForm.phone && !phoneUtils.validatePhoneNumber(newTenantForm.phone)) {
+      setError('Please enter a valid 10-digit phone number');
+      return;
+    }
+    
     try {
       setSaving(true);
-      const tenant = await apiClient.createTenant(newTenantForm);
+      
+      // Format phone number for API (E.164 format)
+      const tenantData = {
+        full_name: newTenantForm.full_name,
+        email: newTenantForm.email,
+        phone: newTenantForm.phone ? phoneUtils.toE164Format(newTenantForm.phone) : '',
+      };
+      
+      const tenant = await apiClient.createTenant(tenantData);
       setTenants(prev => [...prev, tenant]);
       setError(null);
       setSelectedTenant(tenant.id);
       setActiveTab('tenants');
       setNewTenantForm({ full_name: '', email: '', phone: '' });
     } catch (e:any) {
-      setError(e.message || 'Failed to create tenant');
+      console.error('Failed to create tenant:', e);
+      
+      // Handle specific API errors
+      if (e?.response?.data) {
+        const errorData = e.response.data;
+        if (errorData.phone) {
+          setError(`Phone number error: ${Array.isArray(errorData.phone) ? errorData.phone.join(', ') : errorData.phone}`);
+        } else if (errorData.email) {
+          setError(`Email error: ${Array.isArray(errorData.email) ? errorData.email.join(', ') : errorData.email}`);
+        } else {
+          setError(e.message || 'Failed to create tenant');
+        }
+      } else {
+        setError(e.message || 'Failed to create tenant');
+      }
     } finally {
       setSaving(false);
     }
@@ -284,8 +314,12 @@ export default function PropertyTenantAssignmentModal({
                       <input
                         type="text"
                         value={newTenantForm.phone}
-                        onChange={e => handleNewTenantFormChange('phone', e.target.value)}
+                        onChange={e => {
+                          const formattedPhone = phoneUtils.formatPhoneNumber(e.target.value);
+                          handleNewTenantFormChange('phone', formattedPhone);
+                        }}
                         className="form-input"
+                        placeholder="(555) 123-4567"
                       />
                     </div>
                   </div>

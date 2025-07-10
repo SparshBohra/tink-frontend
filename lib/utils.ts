@@ -370,5 +370,28 @@ export const phoneUtils = {
       return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
     }
     return phoneNumber; // Return as-is if not 10 digits
+  },
+
+  // Convert phone number to E.164 format for API (e.g., +15551234567)
+  toE164Format: (phoneNumber: string, countryCode: string = '+1'): string => {
+    const cleaned = phoneNumber.replace(/\D/g, '');
+    
+    // If it's already in E.164 format, return as-is
+    if (phoneNumber.startsWith('+')) {
+      return phoneNumber;
+    }
+    
+    // For US numbers, add +1 prefix
+    if (cleaned.length === 10) {
+      return `${countryCode}${cleaned}`;
+    }
+    
+    // If it's 11 digits and starts with 1, format it
+    if (cleaned.length === 11 && cleaned.startsWith('1')) {
+      return `+${cleaned}`;
+    }
+    
+    // Return original if we can't format it
+    return phoneNumber;
   }
 }; 

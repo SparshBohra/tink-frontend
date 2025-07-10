@@ -105,12 +105,12 @@ export default function AddTenant() {
     setSuccess(null);
 
     try {
-      // First create the tenant
+      // Create the tenant first
       const tenantData = {
         first_name: formData.first_name,
         last_name: formData.last_name,
         email: formData.email,
-        phone: formData.phone,
+        phone: formData.phone ? phoneUtils.toE164Format(formData.phone) : '',
         notes: formData.notes
       };
       
