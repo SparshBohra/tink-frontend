@@ -6,7 +6,8 @@ import DashboardLayout from '../components/DashboardLayout';
 import { withAuth } from '../lib/auth-context';
 import { useAuth } from '../lib/auth-context';
 import ApplicationDetailModal from '../components/ApplicationDetailModal';
-import { Application, Property, Room } from '../lib/types';
+import { Application, Property, Room, DashboardStats } from '../lib/types';
+import { apiClient } from '../lib/api';
 
 // Icon Components
 const SparklesIcon = () => (
@@ -77,6 +78,9 @@ function LandlordDashboard() {
   const { user, isLandlord, isManager, isAdmin } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [statsError, setStatsError] = useState<string | null>(null);
   const [propertyFilter, setPropertyFilter] = useState('All');
   const [isTyping, setIsTyping] = useState(true);
   const [messageIndex, setMessageIndex] = useState(0);
@@ -87,6 +91,37 @@ function LandlordDashboard() {
   // Application modal state
   const [isApplicationDetailOpen, setIsApplicationDetailOpen] = useState(false);
   const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
+  
+  // Fetch dashboard stats
+  useEffect(() => {
+    const fetchDashboardStats = async () => {
+      try {
+        setStatsLoading(true);
+        setStatsError(null);
+        const stats = await apiClient.getDashboardStats();
+        setDashboardStats(stats);
+      } catch (error: any) {
+        console.error('Failed to fetch dashboard stats:', error);
+        setStatsError('Failed to load dashboard statistics');
+        // Set fallback stats on error
+        setDashboardStats({
+          properties: { total: 0, occupied: 0, vacant: 0 },
+          rooms: { total: 0, occupied: 0, vacant: 0, occupancy_rate: 0 },
+          tenants: { total: 0, active: 0 },
+          revenue: { monthly: 0, projected_annual: 0 },
+          applications: { total: 0, pending: 0, approved: 0, rejected: 0 },
+          leases: { total: 0, active: 0, draft: 0, expired: 0 },
+          managers: { total: 0, active: 0 }
+        });
+      } finally {
+        setStatsLoading(false);
+      }
+    };
+
+    if (user) {
+      fetchDashboardStats();
+    }
+  }, [user]);
   
   const welcomeMessage = `Welcome back, ${user?.full_name || 'User'}! Here's an overview of your business operations.`;
   
@@ -99,16 +134,25 @@ function LandlordDashboard() {
     </p>
   ), [currentMessage.text, currentMessage.icon, isFading, isTyping]);
 
-  const notificationMessages = [
-    { text: "Here's what's happening with your properties.", icon: <SparklesIcon /> },
-    { text: "You have 3 pending applications to review.", icon: <BriefcaseIcon /> },
-    { text: "Downtown Hub is at 86% occupancy.", icon: <HouseIcon /> },
-    { text: "2 maintenance requests are overdue.", icon: <LightningIcon /> },
-    { text: "Revenue is 5% above target this month.", icon: <ChartIcon /> },
-    { text: "Lease renewals start next week.", icon: <BellIcon /> },
-    { text: "Your portfolio performance is excellent.", icon: <TrendingUpIcon /> },
-    { text: "All critical tasks are on track.", icon: <TargetIcon /> }
-  ];
+  // Update notification messages to use real data
+  const notificationMessages = useMemo(() => {
+    if (!dashboardStats) {
+      return [
+        { text: "Loading your business data...", icon: <SparklesIcon /> }
+      ];
+    }
+    
+    return [
+      { text: "Here's what's happening with your properties.", icon: <SparklesIcon /> },
+      { text: `You have ${dashboardStats.applications.pending} pending applications to review.`, icon: <BriefcaseIcon /> },
+      { text: `Your portfolio has ${dashboardStats.rooms.occupancy_rate}% occupancy rate.`, icon: <HouseIcon /> },
+      { text: `${dashboardStats.applications.total} total applications this period.`, icon: <LightningIcon /> },
+      { text: `Monthly revenue: $${dashboardStats.revenue.monthly.toLocaleString()}.`, icon: <ChartIcon /> },
+      { text: `${dashboardStats.leases.active} active leases across your properties.`, icon: <BellIcon /> },
+      { text: "Your portfolio performance is excellent.", icon: <TrendingUpIcon /> },
+      { text: "All business operations are on track.", icon: <TargetIcon /> }
+    ];
+  }, [dashboardStats]);
 
   // Add user interaction detection
   useEffect(() => {
@@ -216,19 +260,50 @@ function LandlordDashboard() {
     });
   };
 
-  // Counter animations for metrics
-  const propertiesCount = useCounterAnimation(12, 1500);
-  const occupancyRate = useCounterAnimation(92, 2000);
-  const teamCount = useCounterAnimation(4, 1800);
-  const revenueValue = useCounterAnimation(45600, 2200, true);
+  // Counter animations for metrics - use real data or fallback to 0
+  const propertiesCount = useCounterAnimation(dashboardStats?.properties.total || 0, 1500);
+  const occupancyRate = useCounterAnimation(dashboardStats?.rooms.occupancy_rate || 0, 2000);
+  const teamCount = useCounterAnimation(dashboardStats?.managers.total || 0, 1800);
+  const revenueValue = useCounterAnimation(dashboardStats?.revenue.monthly || 0, 2200, true);
   
-  // Demo data for Landlord
-  const metrics = {
-    properties: { value: 12, subtitle: 'Total Properties', change: '+2', changeType: 'positive' },
-    occupancy: { value: 92, subtitle: 'Occupancy Rate', change: '+5%', changeType: 'positive' },
-    team: { value: 4, subtitle: 'Active Team Members', change: '+1', changeType: 'positive' },
-    revenue: { value: '$45,600', subtitle: 'Monthly Revenue', change: '+8%', changeType: 'positive' }
-  };
+  // Dynamic metrics based on real data
+  const metrics = useMemo(() => {
+    if (!dashboardStats) {
+      return {
+        properties: { value: 0, subtitle: 'Loading...', change: '', changeType: 'neutral' },
+        occupancy: { value: 0, subtitle: 'Loading...', change: '', changeType: 'neutral' },
+        team: { value: 0, subtitle: 'Loading...', change: '', changeType: 'neutral' },
+        revenue: { value: '$0', subtitle: 'Loading...', change: '', changeType: 'neutral' }
+      };
+    }
+    
+    return {
+      properties: { 
+        value: dashboardStats.properties.total, 
+        subtitle: 'Total Properties', 
+        change: `${dashboardStats.properties.vacant} vacant`, 
+        changeType: dashboardStats.properties.vacant > 0 ? 'warning' : 'positive' 
+      },
+      occupancy: { 
+        value: Math.round(dashboardStats.rooms.occupancy_rate), 
+        subtitle: 'Occupancy Rate', 
+        change: `${dashboardStats.rooms.occupied}/${dashboardStats.rooms.total} rooms`, 
+        changeType: dashboardStats.rooms.occupancy_rate > 80 ? 'positive' : 'warning' 
+      },
+      team: { 
+        value: dashboardStats.managers.total, 
+        subtitle: 'Active Team Members', 
+        change: `${dashboardStats.managers.active} active`, 
+        changeType: 'positive' 
+      },
+      revenue: { 
+        value: `$${dashboardStats.revenue.monthly.toLocaleString()}`, 
+        subtitle: 'Monthly Revenue', 
+        change: `$${(dashboardStats.revenue.projected_annual / 1000).toFixed(0)}k annual`, 
+        changeType: 'positive' 
+      }
+    };
+  }, [dashboardStats]);
 
   const tasks = [
     { 
@@ -822,8 +897,30 @@ function LandlordDashboard() {
             </div>
           </div>
         </div>
-          {/* Top Metrics Row */}
-          <div className="metrics-grid">
+        
+        {/* Stats Error Display */}
+        {statsError && (
+          <div style={{ 
+            backgroundColor: '#fee2e2', 
+            border: '1px solid #fecaca', 
+            borderRadius: '8px', 
+            padding: '12px 16px', 
+            marginBottom: '24px',
+            color: '#dc2626'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="15" y1="9" x2="9" y2="15"/>
+                <line x1="9" y1="9" x2="15" y2="15"/>
+              </svg>
+              <span>Unable to load dashboard statistics. Showing default values.</span>
+            </div>
+          </div>
+        )}
+        
+        {/* Top Metrics Row */}
+        <div className="metrics-grid">
           <div className="metric-card">
             <div className="metric-header">
               <div className="metric-info">
@@ -834,15 +931,20 @@ function LandlordDashboard() {
                     <path d="M5 21V7l8-4v18"/>
                     <path d="M19 21V11l-6-4"/>
                   </svg>
-          </div>
+                </div>
               </div>
             </div>
             <div className="metric-content">
-              <div className="metric-value">{propertiesCount}</div>
+              <div className="metric-value">{statsLoading ? '...' : propertiesCount}</div>
               <div className="metric-subtitle">{metrics.properties.subtitle}</div>
               <div className="metric-progress">
-                <span className="metric-label">vs last quarter</span>
-                <span className="metric-change positive">{metrics.properties.change}</span>
+                <span className="metric-label">
+                  {statsLoading ? 'Loading...' : 
+                   dashboardStats ? `${dashboardStats.properties.occupied} occupied` : 'N/A'}
+                </span>
+                <span className={`metric-change ${metrics.properties.changeType}`}>
+                  {metrics.properties.change}
+                </span>
               </div>
             </div>
           </div>
@@ -857,18 +959,22 @@ function LandlordDashboard() {
                     <path d="M5 21V7l8-4v18"/>
                     <path d="M19 21V11l-6-4"/>
                   </svg>
-                    </div>
-                      </div>
                 </div>
+              </div>
+            </div>
             <div className="metric-content">
-              <div className="metric-value">{occupancyRate}%</div>
+              <div className="metric-value">{statsLoading ? '...' : `${occupancyRate}%`}</div>
               <div className="metric-subtitle">{metrics.occupancy.subtitle}</div>
               <div className="metric-progress">
-                <span className="metric-label">across portfolio</span>
-                <span className="metric-change positive">{metrics.occupancy.change}</span>
-                </div>
-                    </div>
+                <span className="metric-label">
+                  {statsLoading ? 'Loading...' : 'across portfolio'}
+                </span>
+                <span className={`metric-change ${metrics.occupancy.changeType}`}>
+                  {metrics.occupancy.change}
+                </span>
               </div>
+            </div>
+          </div>
           
           <div className="metric-card">
             <div className="metric-header">
@@ -885,11 +991,15 @@ function LandlordDashboard() {
               </div>
             </div>
             <div className="metric-content">
-              <div className="metric-value">{teamCount}</div>
+              <div className="metric-value">{statsLoading ? '...' : teamCount}</div>
               <div className="metric-subtitle">{metrics.team.subtitle}</div>
               <div className="metric-progress">
-                <span className="metric-label">active</span>
-                <span className="metric-change positive">{metrics.team.change}</span>
+                <span className="metric-label">
+                  {statsLoading ? 'Loading...' : 'managers'}
+                </span>
+                <span className={`metric-change ${metrics.team.changeType}`}>
+                  {metrics.team.change}
+                </span>
               </div>
             </div>
           </div>
@@ -907,11 +1017,17 @@ function LandlordDashboard() {
               </div>
             </div>
             <div className="metric-content">
-              <div className="metric-value">{revenueValue}</div>
+              <div className="metric-value">{statsLoading ? '...' : revenueValue}</div>
               <div className="metric-subtitle">{metrics.revenue.subtitle}</div>
               <div className="metric-progress">
-                <span className="metric-label">vs last month</span>
-                <span className="metric-change positive">{metrics.revenue.change}</span>
+                <span className="metric-label">
+                  {statsLoading ? 'Loading...' : 
+                   dashboardStats && dashboardStats.leases.active > 0 ? 
+                   `${dashboardStats.leases.active} active leases` : 'No active leases'}
+                </span>
+                <span className={`metric-change ${metrics.revenue.changeType}`}>
+                  {metrics.revenue.change}
+                </span>
               </div>
             </div>
           </div>
