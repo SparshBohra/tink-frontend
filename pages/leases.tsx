@@ -108,6 +108,25 @@ function Leases() {
         is_active: true,
       };
       await apiClient.updateLease(lease.id, payload);
+      try {
+        if (lease.application) {
+          await apiClient.updateApplication(lease.application, { status: 'moved_in' } as any);
+        } else {
+          // attempt to locate the related application (still in lease_created)
+          const appSearch = await apiClient.getApplications({
+            tenant: lease.tenant,
+            property: lease.property_ref,
+            status: 'lease_created'
+          } as any);
+
+          const foundApp = appSearch.results?.[0];
+          if (foundApp) {
+            await apiClient.updateApplication(foundApp.id, { status: 'moved_in', lease: lease.id } as any);
+          }
+        }
+      } catch (linkErr) {
+        console.warn('Failed to update application to active', linkErr);
+      }
       await fetchData();
     } catch (e:any) {
       setError(e.message || 'Failed to activate lease');

@@ -85,13 +85,24 @@ function Applications() {
       setLoading(true);
       setError(null);
       
-      const [applicationsResponse, propertiesResponse, roomsResponse] = await Promise.all([
+      const [applicationsResponse, propertiesResponse, roomsResponse, leasesResponse] = await Promise.all([
         apiClient.getApplications(),
         apiClient.getProperties(),
-        apiClient.getRooms()
+        apiClient.getRooms(),
+        apiClient.getLeases()
       ]);
 
-      const apps = applicationsResponse.results || [];
+      const activeLeases = (leasesResponse.results || []).filter((l:any) => l.status === 'active' || l.is_active);
+
+      const apps = (applicationsResponse.results || []).map((app:any) => {
+        if (['lease_created','lease_signed','approved'].includes(app.status)) {
+          const hasActiveLease = activeLeases.some((l:any) => l.tenant === app.tenant && l.property_ref === app.property_ref);
+          if (hasActiveLease) {
+            return { ...app, status: 'moved_in' };
+          }
+        }
+        return app;
+      });
       setApplications(apps);
       setFilteredApplications(apps);
       setProperties(propertiesResponse.results || []);

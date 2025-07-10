@@ -17,6 +17,7 @@ export default function TenantAssignmentModal({
   onSave 
 }: TenantAssignmentModalProps) {
   const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [filteredTenants, setFilteredTenants] = useState<Tenant[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
   const [selectedTenant, setSelectedTenant] = useState<number | null>(null);
   const [leaseData, setLeaseData] = useState<Partial<LeaseFormData>>({
@@ -59,16 +60,29 @@ export default function TenantAssignmentModal({
       setLoading(true);
       setError(null);
       
-      // Fetch pending applications for this property
-      const applicationsResponse = await apiClient.getApplications({ 
-        property: room.property_ref,
-        status: 'pending'
-      });
+      const [applicationsResponse, tenantsResponse, leaseRes] = await Promise.all([
+        apiClient.getApplications({ 
+          property: room.property_ref,
+          status: 'pending'
+        }),
+        apiClient.getTenants(),
+        apiClient.getLeases()
+      ]);
+
       setApplications(applicationsResponse.results || []);
       
-      // Fetch all tenants
-      const tenantsResponse = await apiClient.getTenants();
-      setTenants(tenantsResponse.results || []);
+      const allTenants = tenantsResponse.results || [];
+      const leases = leaseRes.results || [];
+      const tenantsWithLeases = new Set(
+        leases
+          .filter(lease => lease.status === 'active' || lease.status === 'draft')
+          .map(lease => lease.tenant)
+      );
+
+      const availableTenants = allTenants.filter(tenant => !tenantsWithLeases.has(tenant.id));
+      
+      setTenants(allTenants);
+      setFilteredTenants(availableTenants);
       
     } catch (err: any) {
       console.error('Error fetching data:', err);
@@ -303,6 +317,7 @@ export default function TenantAssignmentModal({
         tenant: selectedTenant!,
         property_ref: room.property_ref,
         room: room.id,
+        status: 'lease_created',
         desired_move_in_date: leaseData.start_date!,
         desired_lease_duration: 12, // Default duration
         rent_budget: Number(leaseData.monthly_rent) || 0,
@@ -327,6 +342,13 @@ export default function TenantAssignmentModal({
       console.log('Direct lease data:', directLeaseData);
       const lease = await apiClient.createLease(directLeaseData as any);
       console.log('Direct lease created successfully:', lease);
+
+      // link lease to application
+      try {
+        await apiClient.updateApplication(application.id, { lease: lease.id, status: 'lease_created' } as any);
+      } catch (linkErr) {
+        console.warn('Failed to link lease to application', linkErr);
+      }
       
       return lease;
     } catch (error) {
@@ -396,6 +418,7 @@ export default function TenantAssignmentModal({
           tenant: selectedTenant!,
           property_ref: room.property_ref,
           room: room.id,
+          status: 'lease_created',
           desired_move_in_date: leaseData.start_date!,
           desired_lease_duration: leaseDurationMonths,
           rent_budget: rentBudget,
@@ -406,6 +429,8 @@ export default function TenantAssignmentModal({
         console.log('Creating application with data:', applicationData);
         application = await apiClient.createApplication(applicationData);
         console.log('Application created successfully:', application);
+
+        await createDirectLease();
       }
       
       // Now approve the application to create the lease
@@ -581,7 +606,7 @@ export default function TenantAssignmentModal({
                     </div>
                   ) : activeTab === 'tenants' ? (
                     <div className="tenant-list">
-                      {tenants.map(tenant => (
+                      {filteredTenants.map(tenant => (
                         <label key={tenant.id} className="tenant-item">
                           <input
                             type="radio"

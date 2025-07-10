@@ -17,6 +17,7 @@ export default function PropertyTenantAssignmentModal({
   onSave,
 }: PropertyTenantAssignmentModalProps) {
   const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [filteredTenants, setFilteredTenants] = useState<Tenant[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
   const [selectedTenant, setSelectedTenant] = useState<number | null>(null);
   const [leaseData, setLeaseData] = useState<Partial<LeaseFormData>>({
@@ -57,14 +58,27 @@ export default function PropertyTenantAssignmentModal({
     
     try {
       setLoading(true);
-      const [tenantRes, appRes] = await Promise.all([
+      const [tenantRes, appRes, leaseRes] = await Promise.all([
         apiClient.getTenants(),
         apiClient.getApplications({ status: 'pending', property: property.id }),
+        apiClient.getLeases(),
       ]);
-      setTenants(tenantRes.results || []);
+
+      const allTenants = tenantRes.results || [];
+      const leases = leaseRes.results || [];
+      const tenantsWithLeases = new Set(
+        leases
+          .filter(lease => lease.status === 'active' || lease.status === 'draft')
+          .map(lease => lease.tenant)
+      );
+
+      const availableTenants = allTenants.filter(tenant => !tenantsWithLeases.has(tenant.id));
+      
+      setTenants(allTenants);
+      setFilteredTenants(availableTenants);
       setApplications(appRes.results || []);
     } catch (err: any) {
-      console.error('Failed to load tenants/applications:', err);
+      console.error('Failed to load data:', err);
       setError(err.message || 'Failed to load data');
     } finally {
       setLoading(false);
@@ -109,6 +123,7 @@ export default function PropertyTenantAssignmentModal({
           tenant: selectedTenant!,
           property_ref: property.id,
           room: undefined,
+          status: 'lease_created',
           desired_move_in_date: leaseData.start_date!,
           desired_lease_duration: durationMonths,
           rent_budget: leaseData.monthly_rent!,
@@ -132,7 +147,14 @@ export default function PropertyTenantAssignmentModal({
         created_by: currentUser.id,
       } as any;
 
-      await apiClient.createLease(leasePayload as any);
+      const lease = await apiClient.createLease(leasePayload as any);
+
+      // Link the lease back to the application so later activation works
+      try {
+        await apiClient.updateApplication(app.id, { lease: lease.id, status: 'lease_created' } as any);
+      } catch (linkErr) {
+        console.warn('Failed to link lease to application', linkErr);
+      }
 
       onSave();
       onClose();
