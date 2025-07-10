@@ -42,6 +42,7 @@ export default function PropertyRooms() {
   const [isNewApplicationModalOpen, setIsNewApplicationModalOpen] = useState(false);
   const [conversionWizardOpen, setConversionWizardOpen] = useState(false);
   const [roomCountEditorOpen, setRoomCountEditorOpen] = useState(false);
+  const [showAllHistory, setShowAllHistory] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -254,6 +255,10 @@ export default function PropertyRooms() {
   const { totalRooms, occupiedRooms, vacantRooms, occupancyRate } = getPropertyOccupancyStats();
   const totalRevenue = getTotalRevenue();
   const propertyLevelLease = getPropertyLevelLease();
+
+  const propertyHistoryLeases = showAllHistory
+    ? leases
+    : leases.filter(l => property && l.property_ref === property.id);
 
   const renderRoomRow = (rowData: any, index: number) => {
     const room = rowData as Room;
@@ -559,23 +564,34 @@ export default function PropertyRooms() {
                   <h2 className="section-title">Property History</h2>
                   <p className="section-subtitle">Tenant and rent collection history</p>
                   </div>
-                        <div className="history-tabs">
-                            <button 
-                                className={`tab-btn ${activeHistoryTab === 'tenant' ? 'active' : ''}`}
-                                onClick={() => setActiveHistoryTab('tenant')}
-                            >
-                                Tenant History
-                            </button>
-                            <button 
-                                className={`tab-btn ${activeHistoryTab === 'rent' ? 'active' : ''}`}
-                                onClick={() => setActiveHistoryTab('rent')}
-                            >
-                                Rent Collection
-                            </button>
+                        <div className="history-controls">
+                          <div className="history-tabs">
+                              <button 
+                                  className={`tab-btn ${activeHistoryTab === 'tenant' ? 'active' : ''}`}
+                                  onClick={() => setActiveHistoryTab('tenant')}
+                              >
+                                  Tenant History
+                              </button>
+                              <button 
+                                  className={`tab-btn ${activeHistoryTab === 'rent' ? 'active' : ''}`}
+                                  onClick={() => setActiveHistoryTab('rent')}
+                              >
+                                  Rent Collection
+                              </button>
+                          </div>
+                          <div className="toggle-switch">
+                            <input 
+                              id="history-toggle"
+                              type="checkbox" 
+                              checked={showAllHistory} 
+                              onChange={(e) => setShowAllHistory(e.target.checked)} 
+                            />
+                            <label htmlFor="history-toggle">Show all properties</label>
+                          </div>
                         </div>
                     </div>
                     {activeHistoryTab === 'tenant' && (
-                        leases.length > 0 ? (
+                        propertyHistoryLeases.length > 0 ? (
                   <div className="history-table-container">
                   <DataTable
                     columns={[
@@ -585,7 +601,7 @@ export default function PropertyRooms() {
                                     { header: 'Move Out', key: 'move_out' },
                                     { header: 'Status', key: 'status' },
                                 ]}
-                                data={leases}
+                                data={propertyHistoryLeases}
                                 renderRow={renderTenantHistoryRow}
                             />
                   </div>
@@ -1525,6 +1541,7 @@ export default function PropertyRooms() {
         }
 
         /* History Tabs */
+        .history-controls { display: flex; align-items: center; gap: 24px; }
         .history-tabs { display: flex; gap: 4px; background: #f1f5f9; padding: 4px; border-radius: 6px; }
         :global(.dark-mode) .history-tabs { background: #21262d; }
         .tab-btn { background: transparent; border: none; padding: 6px 12px; border-radius: 4px; font-size: 14px; font-weight: 600; color: #475569; cursor: pointer; }
@@ -1532,6 +1549,12 @@ export default function PropertyRooms() {
         .tab-btn.active { background: white; color: #1e293b; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
         :global(.dark-mode) .tab-btn.active { background: #30363d; color: #f0f6fc; }
         .history-row td { padding: 12px 20px; font-size: 14px; }
+        .toggle-switch { display: flex; align-items: center; gap: 8px; }
+        .toggle-switch label { font-size: 14px; font-weight: 500; color: #64748b; cursor: pointer; user-select: none;}
+        :global(.dark-mode) .toggle-switch label { color: #8b949e; }
+        .toggle-switch input {
+          cursor: pointer;
+        }
         
         /* Right Column */
         .info-grid { display: flex; flex-direction: column; gap: 16px; padding: 20px; }
