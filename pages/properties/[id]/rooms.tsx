@@ -353,42 +353,18 @@ export default function PropertyRooms() {
     <DashboardLayout
       title={property.name}
       subtitle={property.full_address}
-      headerContent={
-        <div className="header-right">
-          <button className="btn btn-primary" onClick={() => setIsNewApplicationModalOpen(true)}>
-            New Application
-          </button>
-          <Link href={`/properties/${property.id}/edit`} className="btn btn-primary">
-            Edit Property
-          </Link>
-        </div>
+      icon={
+        <button onClick={() => router.push('/properties')} className="back-button">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <path d="M19 12H5m7-7l-7 7 7 7" />
+          </svg>
+        </button>
       }
     >
       <Head>
         <title>{property.name} - Rooms | Tink</title>
       </Head>
       <div className="dashboard-container">
-        {/* Custom Header matching landlord dashboard */}
-        <div className="dashboard-header">
-          <div className="header-content">
-              <div className="header-left">
-                <button onClick={() => router.push('/properties')} className="back-button">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <path d="M19 12H5m7-7l-7 7 7 7"/>
-                </svg>
-                </button>
-                <div>
-                <h1 className="dashboard-title">{property.name}</h1>
-                <div className="subtitle-container">
-                  <p className="welcome-message">
-                    <span className="message-text">{property.full_address}</span>
-                  </p>
-                </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
         {/* Main Content Grid Layout matching tenants page */}
         <div className="main-content-grid">
           <div className="left-column">
@@ -497,8 +473,11 @@ export default function PropertyRooms() {
                     <EmptyState
                       title="No Rooms Found"
                       description="This property is configured for per-room renting, but no rooms have been added yet."
-                      buttonText="Add Rooms"
-                      onButtonClick={() => setRoomCountEditorOpen(true)}
+                      action={
+                        <button onClick={() => setRoomCountEditorOpen(true)} className="btn btn-primary">
+                          Add Rooms
+                        </button>
+                      }
                     />
                   )}
                 </div>
@@ -550,8 +529,11 @@ export default function PropertyRooms() {
                       <EmptyState
                         title="No Active Lease"
                         description="This property is currently vacant."
-                        actionText="Assign Tenant"
-                        onAction={openPropertyAssignment}
+                        action={
+                          <button onClick={openPropertyAssignment} className="btn btn-primary">
+                            Assign Tenant
+                          </button>
+                        }
                       />
                     )}
                   </div>
@@ -629,6 +611,14 @@ export default function PropertyRooms() {
                   <h2 className="section-title">Quick Actions</h2>
                   <p className="section-subtitle">Frequently used actions</p>
                     </div>
+                      <div className="header-actions">
+                          <button className="btn btn-primary" onClick={() => setIsNewApplicationModalOpen(true)}>
+                              New Application
+                          </button>
+                          <Link href={`/properties/${property.id}/edit`} className="btn btn-secondary">
+                              Edit Property
+                          </Link>
+                      </div>
                   </div>
               
               <div className="actions-grid">
@@ -865,16 +855,17 @@ export default function PropertyRooms() {
         .back-button {
           background: rgba(255, 255, 255, 0.9);
           border: 1px solid rgba(226, 232, 240, 0.8);
-          border-radius: 12px;
-          width: 44px;
-          height: 44px;
+          border-radius: 8px;
+          width: 36px;
+          height: 36px;
           display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
           color: #64748b;
           transition: all 0.2s ease;
           box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+          margin-right: 16px;
         }
         .back-button:hover {
           background: #f8fafc;
@@ -1538,6 +1529,29 @@ export default function PropertyRooms() {
         }
         :global(.dark-mode) .action-subtitle {
           color: #8b949e;
+        }
+
+        .header-right-actions {
+          position: absolute;
+          top: 20px;
+          right: 20px;
+          display: flex;
+          gap: 12px;
+          z-index: 100;
+        }
+
+        .header-actions {
+          display: flex;
+          gap: 10px;
+          margin-left: auto;
+          flex-wrap: nowrap;
+        }
+        .header-actions .btn {
+          white-space: nowrap;
+        }
+
+        .header-right-actions {
+          display: none;
         }
 
         /* History Tabs */
