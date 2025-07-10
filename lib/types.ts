@@ -354,8 +354,6 @@ export interface ApplicationFormData {
   tenant: number;
   property_ref: number;
   room?: number;
-  status?: string;
-  lease?: number;
   desired_move_in_date: string;
   desired_lease_duration: number;
   rent_budget: number;
@@ -370,12 +368,6 @@ export interface LeaseFormData {
   end_date: string;
   monthly_rent: number;
   security_deposit: number;
-}
-
-export interface ListingFormData {
-  property_id: number;
-  room_id?: number;
-  platforms: string;
 }
 
 export interface DashboardStats {
