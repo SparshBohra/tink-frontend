@@ -89,10 +89,10 @@ export default function PropertyRooms() {
   };
 
   const getRoomOccupancy = (roomId: number) => {
-    const activeLease = leases.find(lease => 
-      lease.room === roomId && (lease.is_active || lease.status === 'active')
+    const relevantLease = leases.find(lease => 
+      lease.room === roomId && (lease.status === 'active' || lease.status === 'draft' || lease.is_active)
     );
-    return activeLease;
+    return relevantLease;
   };
 
   const getPropertyOccupancyStats = () => {
@@ -247,9 +247,9 @@ export default function PropertyRooms() {
     { id: 'zumper', name: 'Zumper' },
   ];
 
-  if (loading) return <DashboardLayout><div className="loading-state">Loading property details...</div></DashboardLayout>;
-  if (error) return <DashboardLayout><div className="error-state">Error: {error}</div></DashboardLayout>;
-  if (!property) return <DashboardLayout><div className="empty-state">Property not found.</div></DashboardLayout>;
+  if (loading) return <DashboardLayout title="Loading"><div className="loading-state">Loading property details...</div></DashboardLayout>;
+  if (error) return <DashboardLayout title="Error"><div className="error-state">{error}</div></DashboardLayout>;
+  if (!property) return <DashboardLayout title="Not Found"><EmptyState title="Property Not Found" description="The property you are looking for does not exist." /></DashboardLayout>;
 
   const { totalRooms, occupiedRooms, vacantRooms, occupancyRate } = getPropertyOccupancyStats();
   const totalRevenue = getTotalRevenue();
@@ -268,7 +268,18 @@ export default function PropertyRooms() {
                 </Link>
       </td>
             <td>
-                <StatusBadge status={lease ? 'occupied' : 'vacant'} />
+                {lease ? (
+                  <StatusBadge
+                    status={lease.status}
+                    text={
+                      lease.status === 'draft' ? 'Draft Lease' :
+                      lease.status === 'active' ? 'Occupied' :
+                      lease.status
+                    }
+                  />
+                ) : (
+                  <StatusBadge status="vacant" text="Vacant" />
+                )}
       </td>
             <td>
                 {lease ? (
@@ -334,7 +345,20 @@ export default function PropertyRooms() {
   );
 
   return (
-    <DashboardLayout>
+    <DashboardLayout
+      title={property.name}
+      subtitle={property.full_address}
+      headerContent={
+        <div className="header-right">
+          <button className="btn btn-primary" onClick={() => setIsNewApplicationModalOpen(true)}>
+            New Application
+          </button>
+          <Link href={`/properties/${property.id}/edit`} className="btn btn-primary">
+            Edit Property
+          </Link>
+        </div>
+      }
+    >
       <Head>
         <title>{property.name} - Rooms | Tink</title>
       </Head>
@@ -357,14 +381,6 @@ export default function PropertyRooms() {
                 </div>
                 </div>
               </div>
-              <div className="header-right">
-              <button className="btn btn-primary" onClick={() => setIsNewApplicationModalOpen(true)}>
-                New Application
-              </button>
-              <Link href={`/properties/${property.id}/edit`} className="btn btn-primary">
-                Edit Property
-              </Link>
-            </div>
             </div>
           </div>
 
@@ -475,9 +491,9 @@ export default function PropertyRooms() {
                   ) : (
                     <EmptyState
                       title="No Rooms Found"
-                      description="No rooms have been added to this property yet."
-                                actionText="Add New Room"
-                                onAction={() => router.push(`/properties/${id}/add-room`)}
+                      description="This property is configured for per-room renting, but no rooms have been added yet."
+                      buttonText="Add Rooms"
+                      onButtonClick={() => setRoomCountEditorOpen(true)}
                     />
                   )}
                 </div>
@@ -513,7 +529,16 @@ export default function PropertyRooms() {
                         </div>
                         <div className="lease-detail-item">
                           <span className="item-label">Status</span>
-                          <span className="item-value"><StatusBadge status={propertyLevelLease.status as any} /></span>
+                          <span className="item-value">
+                            <StatusBadge
+                              status={propertyLevelLease.status as any}
+                              text={
+                                propertyLevelLease.status === 'draft' ? 'Draft Lease' :
+                                propertyLevelLease.status === 'active' ? 'Occupied' :
+                                (propertyLevelLease.status.charAt(0).toUpperCase() + propertyLevelLease.status.slice(1))
+                              }
+                            />
+                          </span>
                         </div>
                       </div>
                     ) : (

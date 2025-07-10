@@ -372,6 +372,12 @@ export interface LeaseFormData {
   security_deposit: number;
 }
 
+export interface ListingFormData {
+  property_id: number;
+  room_id?: number;
+  platforms: string;
+}
+
 export interface DashboardStats {
   properties: {
     total: number;

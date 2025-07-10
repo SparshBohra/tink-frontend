@@ -30,7 +30,6 @@ export default function TenantAssignmentModal({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'tenants' | 'applications' | 'create'>('applications');
-  const [skipApplication, setSkipApplication] = useState(false);
   const [newTenantForm, setNewTenantForm] = useState({
     full_name: '',
     email: '',
@@ -63,7 +62,6 @@ export default function TenantAssignmentModal({
       const [applicationsResponse, tenantsResponse, leaseRes] = await Promise.all([
         apiClient.getApplications({ 
           property: room.property_ref,
-          status: 'pending'
         }),
         apiClient.getTenants(),
         apiClient.getLeases()
@@ -312,19 +310,30 @@ export default function TenantAssignmentModal({
       
       const currentUser = await apiClient.getProfile();
 
-      // For a direct lease, we still need to create a placeholder application
-      const applicationData: ApplicationFormData = {
-        tenant: selectedTenant!,
-        property_ref: room.property_ref,
-        room: room.id,
-        status: 'lease_created',
-        desired_move_in_date: leaseData.start_date!,
-        desired_lease_duration: 12, // Default duration
-        rent_budget: Number(leaseData.monthly_rent) || 0,
-        message: "Direct lease creation by manager.",
-        special_requests: "Direct lease creation.",
-      };
-      const application = await apiClient.createApplication(applicationData);
+      // Find an existing application for this tenant on this property, otherwise create one.
+      let application = applications.find(app => app.tenant === selectedTenant && app.property_ref === room.property_ref);
+
+      if (!application) {
+        console.log("No existing application found. Creating a new one.");
+        const applicationData: ApplicationFormData = {
+          tenant: selectedTenant!,
+          property_ref: room.property_ref,
+          room: room.id,
+          desired_move_in_date: leaseData.start_date!,
+          desired_lease_duration: 12, // Default duration
+          rent_budget: Number(leaseData.monthly_rent) || 0,
+          message: "Direct lease creation by manager.",
+          special_requests: "Direct lease creation.",
+        };
+        application = await apiClient.createApplication(applicationData);
+        console.log("New application created:", application);
+      } else {
+        console.log("Found existing application:", application);
+      }
+      
+      if (!application) {
+          throw new Error("Fatal: Could not find or create an application.");
+      }
 
       const directLeaseData = {
         tenant: selectedTenant!,
@@ -334,18 +343,24 @@ export default function TenantAssignmentModal({
         end_date: leaseData.end_date!,
         monthly_rent: Number(leaseData.monthly_rent!),
         security_deposit: Number(leaseData.security_deposit!),
-        status: 'active',
+        status: 'draft',
         application: application.id,
         created_by: currentUser.id,
+        is_active: false,
       };
       
       console.log('Direct lease data:', directLeaseData);
       const lease = await apiClient.createLease(directLeaseData as any);
       console.log('Direct lease created successfully:', lease);
-
+      
       // link lease to application
       try {
-        await apiClient.updateApplication(application.id, { lease: lease.id, status: 'lease_created' } as any);
+        console.log(`Updating application ${application.id} with lease ${lease.id}`);
+        await apiClient.updateApplication(application.id, { 
+            lease: lease.id, 
+            status: 'lease_created',
+            room: room.id 
+        } as any);
       } catch (linkErr) {
         console.warn('Failed to link lease to application', linkErr);
       }
@@ -372,89 +387,8 @@ export default function TenantAssignmentModal({
       setSaving(true);
       setError(null);
       
-      console.log('Starting tenant assignment process...');
-      console.log('Selected tenant:', selectedTenant);
-      console.log('Room:', room);
-      console.log('Lease data:', leaseData);
-      
-      // If skip application is enabled, create lease directly
-      if (skipApplication) {
-        console.log('Skipping application process, creating lease directly');
-        await createDirectLease();
-        onSave();
-        onClose();
-        return;
-      }
-      
-      // Check if tenant already has an application for this property/room
-      let application = applications.find(app => 
-        app.tenant === selectedTenant && 
-        (app.room === room.id || app.property_ref === room.property_ref)
-      );
-      
-      // If no application exists, create one first
-      if (!application) {
-        // Calculate lease duration in months more accurately
-        const startDate = new Date(leaseData.start_date!);
-        const endDate = new Date(leaseData.end_date!);
-        
-        // Calculate months between dates
-        let leaseDurationMonths = (endDate.getFullYear() - startDate.getFullYear()) * 12;
-        leaseDurationMonths += endDate.getMonth() - startDate.getMonth();
-        
-        // Ensure minimum 1 month duration
-        if (leaseDurationMonths <= 0) {
-          leaseDurationMonths = 1;
-        }
-        
-        // Ensure rent budget is a valid number
-        const rentBudget = Number(leaseData.monthly_rent) || 0;
-        if (rentBudget <= 0) {
-          setError('Monthly rent must be greater than 0');
-          return;
-        }
-        
-        const applicationData: ApplicationFormData = {
-          tenant: selectedTenant!,
-          property_ref: room.property_ref,
-          room: room.id,
-          status: 'lease_created',
-          desired_move_in_date: leaseData.start_date!,
-          desired_lease_duration: leaseDurationMonths,
-          rent_budget: rentBudget,
-          message: `Application created automatically for room assignment to ${room.name}`,
-          special_requests: 'Direct assignment by property manager'
-        };
-        
-        console.log('Creating application with data:', applicationData);
-        application = await apiClient.createApplication(applicationData);
-        console.log('Application created successfully:', application);
-
-        await createDirectLease();
-      }
-      
-      // Now approve the application to create the lease
-      const decisionData = {
-        decision: 'approve' as const,
-        start_date: leaseData.start_date!,
-        end_date: leaseData.end_date!,
-        monthly_rent: Number(leaseData.monthly_rent!),
-        security_deposit: Number(leaseData.security_deposit!),
-        decision_notes: `Lease created via direct tenant assignment to ${room.name}`
-      };
-      
-      console.log('Approving application with decision data:', decisionData);
-      
-      try {
-        await apiClient.decideApplication(application.id, decisionData);
-        console.log('Application approved successfully');
-      } catch (decisionError: any) {
-        console.warn('Application decision failed, trying direct lease creation:', decisionError);
-        
-        // If application decision fails, try creating lease directly
-        await createDirectLease();
-        console.log('Direct lease created as fallback');
-      }
+      console.log('Starting tenant assignment process for room...');
+      await createDirectLease();
       
       onSave();
       onClose();
@@ -524,24 +458,6 @@ export default function TenantAssignmentModal({
             </div>
           ) : (
             <>
-              {/* Assignment Options */}
-              <div className="assignment-options">
-                <label className="checkbox-label">
-                  <input
-                    type="checkbox"
-                    checked={skipApplication}
-                    onChange={(e) => setSkipApplication(e.target.checked)}
-                  />
-                  <span>Skip application process and create lease directly</span>
-                </label>
-                <small className="text-muted">
-                  {skipApplication 
-                    ? 'Lease will be created immediately without going through application approval.' 
-                    : 'An application will be created first, then automatically approved to create the lease.'
-                  }
-                </small>
-              </div>
-
               {/* Tenant Selection Tabs */}
               <div className="tab-container">
                 <div className="tab-buttons">

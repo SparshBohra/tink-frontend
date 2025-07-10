@@ -26,7 +26,8 @@ import {
   ManagerWithProperties,
   ManagerPropertyAssignment,
   ManagerFormData,
-  ManagerLandlordRelationship
+  ManagerLandlordRelationship,
+  ListingFormData
 } from './types';
 
 // Smart environment-based API URL configuration
@@ -667,7 +668,7 @@ class ApiClient {
   }
 
   async updateApplication(id: number, data: Partial<ApplicationFormData>): Promise<Application> {
-    const response = await this.api.put(`/applications/${id}/`, data);
+    const response = await this.api.patch<Application>(`/applications/${id}/`, data);
     return response.data;
   }
 
@@ -860,28 +861,14 @@ class ApiClient {
     return response.data;
   }
 
-  async createLease(data: any): Promise<Lease> {
-    try {
-      console.log('Creating lease with data:', data);
-    const response = await this.api.post('/leases/', data);
-      console.log('Lease created successfully:', response.data);
+  async createLease(data: LeaseFormData): Promise<Lease> {
+    const response = await this.api.post<Lease>('/leases/', data);
     return response.data;
-    } catch (error: any) {
-      console.error('Lease creation failed:', error);
-      console.error('Error response:', error.response?.data);
-      
-      if (error.response?.status === 400) {
-        const details = error.response?.data?.detail || error.response?.data?.message || JSON.stringify(error.response?.data);
-        throw new Error(`Invalid lease data: ${details}`);
-      }
-      if (error.response?.status === 403) {
-        throw new Error('You do not have permission to create leases. Please contact your administrator.');
-      }
-      if (error.response?.status === 500) {
-        throw new Error('Server error occurred while creating lease. Please try again or contact support.');
-      }
-      throw new Error(error.message || 'Failed to create lease');
-    }
+  }
+
+  async createListing(data: ListingFormData): Promise<any> {
+    const response = await this.api.post('/listings/', data);
+    return response.data;
   }
 
   async updateLease(id: number, data: Partial<LeaseFormData>): Promise<Lease> {
