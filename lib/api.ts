@@ -581,7 +581,15 @@ class ApiClient {
     return response.data;
   }
 
-  async getRoom(id: number): Promise<Room> {
+  async getRoom(id: number, propertyId?: number): Promise<Room> {
+    if (propertyId) {
+      const rooms = await this.getPropertyRooms(propertyId);
+      const room = rooms.find(r => r.id === id);
+      if (!room) {
+        throw new Error(`Room with ID ${id} not found in property ${propertyId}`);
+      }
+      return room;
+    }
     const response = await this.api.get(`/rooms/${id}/`);
     return response.data;
   }

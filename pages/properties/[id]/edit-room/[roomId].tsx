@@ -60,7 +60,7 @@ export default function EditRoom() {
       setFetchLoading(true);
       const [propertyData, roomData] = await Promise.all([
         apiClient.getProperty(propertyId as number),
-        apiClient.getRoom(roomIdNum as number)
+        apiClient.getRoom(roomIdNum as number, propertyId as number)
       ]);
       
       setProperty(propertyData);
@@ -230,7 +230,7 @@ export default function EditRoom() {
         <Head>
           <title>Edit Room - Invalid Parameters - Tink Property Management</title>
         </Head>
-        <DashboardLayout title="">
+        <DashboardLayout title="Invalid Parameters">
           <div className="dashboard-container">
             <div className="dashboard-header">
               <div className="header-content">
