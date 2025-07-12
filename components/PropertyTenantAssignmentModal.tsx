@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { apiClient } from '../lib/api';
-import { Tenant, Application, ApplicationFormData, Property, LeaseFormData, TenantFormData } from '../lib/types';
+import { Tenant, Application, ApplicationFormData, Property, LeaseFormData, TenantFormData, Room } from '../lib/types';
 import { phoneUtils } from '../lib/utils';
 
 interface PropertyTenantAssignmentModalProps {
   property: Property | null;
+  room?: Room | null;
   isOpen: boolean;
   onClose: () => void;
   onSave: () => void;
@@ -12,6 +13,7 @@ interface PropertyTenantAssignmentModalProps {
 
 export default function PropertyTenantAssignmentModal({
   property,
+  room,
   isOpen,
   onClose,
   onSave,
@@ -23,8 +25,8 @@ export default function PropertyTenantAssignmentModal({
   const [leaseData, setLeaseData] = useState<Partial<LeaseFormData>>({
     start_date: '',
     end_date: '',
-    monthly_rent: Number(property?.monthly_rent) || 0,
-    security_deposit: Number(property?.monthly_rent) || 0,
+    monthly_rent: Number(room?.monthly_rent || property?.monthly_rent) || 0,
+    security_deposit: Number(room?.monthly_rent || property?.monthly_rent) || 0,
   });
   const [activeTab, setActiveTab] = useState<'applications' | 'tenants' | 'create'>('applications');
   const [newTenantForm, setNewTenantForm] = useState<TenantFormData>({
@@ -36,16 +38,17 @@ export default function PropertyTenantAssignmentModal({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Update lease data when property changes
+  // Update lease data when property or room changes
   useEffect(() => {
-    if (property) {
+    if (room || property) {
+      const rent = Number(room?.monthly_rent || property?.monthly_rent) || 0;
       setLeaseData(prev => ({
         ...prev,
-        monthly_rent: Number(property.monthly_rent) || 0,
-        security_deposit: Number(property.monthly_rent) || 0,
+        monthly_rent: rent,
+        security_deposit: rent,
       }));
     }
-  }, [property]);
+  }, [property, room]);
 
   useEffect(() => {
     if (isOpen && property) {
@@ -108,6 +111,12 @@ export default function PropertyTenantAssignmentModal({
       return;
     }
     
+    // For room-specific assignments, ensure room is provided
+    if (room && !room.id) {
+      setError('Room information is missing. Please try again.');
+      return;
+    }
+    
     try {
       setSaving(true);
       setError(null);
@@ -122,12 +131,11 @@ export default function PropertyTenantAssignmentModal({
         const appPayload: ApplicationFormData = {
           tenant: selectedTenant!,
           property_ref: property.id,
-          room: undefined,
-          status: 'lease_created',
+          room: room?.id,
           desired_move_in_date: leaseData.start_date!,
           desired_lease_duration: durationMonths,
           rent_budget: leaseData.monthly_rent!,
-          message: `Auto-generated application for property ${property?.name || 'Property'}`,
+          message: `Auto-generated application for ${room ? `room ${room.name} in` : ''} property ${property?.name || 'Property'}`,
           special_requests: '',
         };
         app = await apiClient.createApplication(appPayload);
@@ -136,22 +144,30 @@ export default function PropertyTenantAssignmentModal({
       // Current user id
       const currentUser = await apiClient.getProfile();
 
-      const leasePayload: LeaseFormData = {
+      const leasePayload: any = {
         tenant: selectedTenant!,
         start_date: leaseData.start_date!,
         end_date: leaseData.end_date!,
         monthly_rent: leaseData.monthly_rent!,
-        security_deposit: leaseData.security_deposit!,
+        security_deposit: leaseData.security_deposit || 0,
         property_ref: property.id,
         application: app.id,
         created_by: currentUser.id,
-      } as any;
+      };
 
-      const lease = await apiClient.createLease(leasePayload as any);
+      // Only include room if we're assigning to a specific room
+      if (room?.id) {
+        leasePayload.room = room.id;
+      }
 
-      // Link the lease back to the application so later activation works
+      const lease = await apiClient.createLease(leasePayload);
+
+      // Link the lease back to the application and set status to lease_created
       try {
-        await apiClient.updateApplication(app.id, { lease: lease.id, status: 'lease_created' } as any);
+        await apiClient.updateApplication(app.id, { 
+          lease: lease.id, 
+          status: 'lease_created' 
+        } as any);
       } catch (linkErr) {
         console.warn('Failed to link lease to application', linkErr);
       }
@@ -233,7 +249,7 @@ export default function PropertyTenantAssignmentModal({
     <div className="modal-overlay">
       <div className="modal-content">
         <div className="modal-header">
-          <h2>Assign Tenant to {property?.name || 'Property'}</h2>
+          <h2>{`Assign Tenant to ${room ? `${room.name} in ` : ''}${property?.name || 'Property'}`}</h2>
           <button className="modal-close" onClick={onClose}>×</button>
         </div>
 
@@ -499,4 +515,4 @@ export default function PropertyTenantAssignmentModal({
       `}</style>
     </div>
   );
-} 
+}

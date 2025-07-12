@@ -9,7 +9,6 @@ import DashboardLayout from '../../../components/DashboardLayout';
 import DataTable from '../../../components/DataTable';
 import StatusBadge from '../../../components/StatusBadge';
 import EmptyState from '../../../components/EmptyState';
-import TenantAssignmentModal from '../../../components/TenantAssignmentModal';
 import { formatCurrency } from '../../../lib/utils';
 import PropertyTenantAssignmentModal from '../../../components/PropertyTenantAssignmentModal';
 import NewListingModal from '../../../components/NewListingModal';
@@ -812,7 +811,8 @@ export default function PropertyRooms() {
           </div>
 
       {assignmentModalOpen && selectedRoomForAssignment && (
-        <TenantAssignmentModal
+        <PropertyTenantAssignmentModal
+          property={property}
           room={selectedRoomForAssignment}
           isOpen={assignmentModalOpen}
           onClose={handleAssignmentModalClose}

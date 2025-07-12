@@ -873,10 +873,17 @@ class ApiClient {
   }
 
   async createLease(data: LeaseFormData): Promise<Lease> {
-    // Ensure tenant and room are provided
-    if (!data.tenant || !data.room) {
-      throw new Error("Tenant and Room are required to create a lease.");
+    // Ensure tenant is provided
+    if (!data.tenant) {
+      throw new Error("Tenant is required to create a lease.");
     }
+    
+    // For property-level leases, room is not required
+    // For room-specific leases, room is required
+    if (!data.room && !data.property_ref) {
+      throw new Error("Either Room or Property reference is required to create a lease.");
+    }
+    
     const response = await this.api.post('/tenants/leases/', data);
     return response.data;
   }
