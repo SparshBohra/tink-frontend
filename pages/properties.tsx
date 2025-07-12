@@ -578,19 +578,53 @@ function Properties() {
             </div>
 
             {properties.length === 0 ? (
-              <div className="empty-state">
-                <div className="empty-icon">
-                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M3 21h18"/>
-                    <path d="M5 21V7l8-4v18"/>
-                    <path d="M19 21V11l-6-4"/>
-                  </svg>
+              <div className="empty-properties-state">
+                <div className="empty-state-content">
+                  <div className="empty-state-icon">
+                    <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <path d="M3 21h18"/>
+                      <path d="M5 21V7l8-4v18"/>
+                      <path d="M19 21V11l-6-4"/>
+                    </svg>
+                  </div>
+                  <h3 className="empty-state-title">No Properties Yet</h3>
+                  <p className="empty-state-description">
+                    Start building your property portfolio by adding your first property.
+                    <br />
+                    Manage tenants, rooms, and rental income all in one place.
+                  </p>
+                  <div className="empty-state-actions">
+                    <button onClick={() => router.push('/properties/add')} className="btn btn-primary">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M12 5v14M5 12h14"/>
+                      </svg>
+                      Add Your First Property
+                    </button>
+                    <button onClick={() => router.push('/inventory')} className="btn btn-secondary">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                        <polyline points="9,22 9,12 15,12 15,22"/>
+                      </svg>
+                      View Inventory
+                    </button>
+                  </div>
+                  <div className="empty-state-help">
+                    <div className="help-cards">
+                      <div className="help-card">
+                        <h4>🏠 Property Types</h4>
+                        <p>Add houses, apartments, condos, or commercial properties to your portfolio.</p>
+                      </div>
+                      <div className="help-card">
+                        <h4>👥 Tenant Management</h4>
+                        <p>Track occupancy, collect rent, and manage tenant relationships easily.</p>
+                      </div>
+                      <div className="help-card">
+                        <h4>📊 Analytics</h4>
+                        <p>Monitor performance, occupancy rates, and revenue across all properties.</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <h3>No properties found</h3>
-                <p>Start by adding your first property to manage tenants and rooms.</p>
-                <button onClick={() => router.push('/properties/add')} className="empty-action-btn">
-                  Add Your First Property
-                </button>
               </div>
             ) : (
               <div className="properties-scroll-container">
@@ -1156,47 +1190,120 @@ function Properties() {
           transform: translateY(-1px);
         }
 
-        /* Empty State */
-        .empty-state {
+        /* Enhanced Empty State */
+        .empty-properties-state {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 60px 20px;
+          min-height: 500px;
+        }
+
+        .empty-state-content {
           text-align: center;
-          padding: 40px 20px;
-          color: #64748b;
+          max-width: 600px;
         }
 
-        .empty-icon {
-          width: 48px;
-          height: 48px;
-          margin: 0 auto 16px;
-          color: #cbd5e1;
+        .empty-state-icon {
+          margin: 0 auto 32px auto;
+          width: 80px;
+          height: 80px;
+          color: var(--gray-300);
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
 
-        .empty-state h3 {
-          font-size: 18px;
+        .empty-state-title {
+          font-size: 28px;
+          font-weight: 700;
+          color: var(--gray-900);
+          margin: 0 0 16px 0;
+        }
+
+        .empty-state-description {
+          font-size: 16px;
+          color: var(--gray-600);
+          line-height: 1.6;
+          margin: 0 0 32px 0;
+        }
+
+        .empty-state-actions {
+          display: flex;
+          gap: 12px;
+          justify-content: center;
+          flex-wrap: wrap;
+          margin-bottom: 40px;
+        }
+
+        .empty-state-help {
+          margin-top: 32px;
+        }
+
+        .help-cards {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+          gap: 16px;
+          margin-top: 24px;
+        }
+
+        .help-card {
+          background: var(--gray-50);
+          border: 1px solid var(--gray-200);
+          border-radius: 8px;
+          padding: 16px;
+          text-align: left;
+        }
+
+        .help-card h4 {
+          font-size: 14px;
           font-weight: 600;
-          color: #1e293b;
+          color: var(--gray-900);
           margin: 0 0 8px 0;
         }
 
-        .empty-state p {
-          font-size: 14px;
-          margin: 0 0 20px 0;
+        .help-card p {
+          font-size: 13px;
+          color: var(--gray-600);
+          margin: 0;
+          line-height: 1.4;
         }
 
-        .empty-action-btn {
-          background: #4f46e5;
-          color: white;
-          border: none;
-          padding: 12px 20px;
-          border-radius: 6px;
+        /* Button Styles */
+        .btn {
+          padding: 12px 16px;
+          border-radius: 8px;
           font-size: 14px;
-          font-weight: 600;
+          font-weight: 500;
           cursor: pointer;
-          display: inline-block;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
           transition: all 0.2s ease;
+          text-decoration: none;
+          border: none;
         }
 
-        .empty-action-btn:hover {
-          background: #3730a3;
+        .btn-primary {
+          background: var(--primary-blue);
+          color: white;
+        }
+
+        .btn-primary:hover {
+          background: var(--primary-blue-dark);
+          transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+          background: white;
+          color: var(--gray-700);
+          border: 1px solid var(--gray-300);
+        }
+
+        .btn-secondary:hover {
+          background: var(--gray-50);
+          border-color: var(--gray-400);
           transform: translateY(-1px);
         }
 

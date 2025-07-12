@@ -12,7 +12,7 @@ import EmptyState from '../../../components/EmptyState';
 import TenantAssignmentModal from '../../../components/TenantAssignmentModal';
 import { formatCurrency } from '../../../lib/utils';
 import PropertyTenantAssignmentModal from '../../../components/PropertyTenantAssignmentModal';
-import NewApplicationModal from '../../../components/NewApplicationModal';
+import NewListingModal from '../../../components/NewListingModal';
 import { calculatePropertyRevenue, getOccupancyStats as getOccupancyStatsUtil, formatRevenue } from '../../../lib/revenueCalculator';
 import RentTypeConversionWizard from '../../../components/RentTypeConversionWizard';
 import RoomCountEditor from '../../../components/RoomCountEditor';
@@ -215,9 +215,17 @@ export default function PropertyRooms() {
         setListingSuccess(null);
     try {
       await apiClient.createListing({ 
-        property_id: property.id, 
-        platforms: selectedPlatforms.join(','),
-        room_id: selectedRoom ? selectedRoom.id : undefined
+        property_ref: property.id,
+        title: `${property.name} - Room Listing`,
+        description: `Available rooms in ${property.name}`,
+        listing_type: 'rooms',
+        available_rooms: selectedRoom ? [selectedRoom.id] : [],
+        application_form_config: {
+          steps: {
+            basic_info: { enabled: true, mandatory: true },
+            contact_info: { enabled: true, mandatory: true }
+          }
+        }
       });
       setListingSuccess(`Successfully listed on ${selectedPlatforms.join(', ')}.`);
     } catch (err: any) {
@@ -365,6 +373,38 @@ export default function PropertyRooms() {
         <title>{property.name} - Rooms | Tink</title>
       </Head>
       <div className="dashboard-container">
+        {/* No Rooms Alert Banner */}
+        {rooms.length === 0 && property.rent_type === 'per_room' && (
+          <div className="alert-banner">
+            <div className="alert-content">
+              <div className="alert-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                  <line x1="12" y1="9" x2="12" y2="13"/>
+                  <line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+              </div>
+              <div className="alert-text">
+                <strong>Setup Required:</strong> This property needs rooms to be added before you can assign tenants or collect rent.
+              </div>
+              <div className="alert-actions">
+                <button 
+                  onClick={() => router.push(`/properties/${property.id}/add-room`)}
+                  className="alert-btn primary"
+                >
+                  Add Room
+                </button>
+                <button 
+                  onClick={() => setRoomCountEditorOpen(true)}
+                  className="alert-btn secondary"
+                >
+                  Add Multiple
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Main Content Grid Layout matching tenants page */}
         <div className="main-content-grid">
           <div className="left-column">
@@ -470,15 +510,47 @@ export default function PropertyRooms() {
                             />
                   </div>
                   ) : (
-                    <EmptyState
-                      title="No Rooms Found"
-                      description="This property is configured for per-room renting, but no rooms have been added yet."
-                      action={
-                        <button onClick={() => setRoomCountEditorOpen(true)} className="btn btn-primary">
-                          Add Rooms
-                        </button>
-                      }
-                    />
+                    <div className="empty-rooms-state">
+                      <div className="empty-state-content">
+                        <div className="empty-state-icon">
+                          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                            <polyline points="9 22 9 12 15 12 15 22"/>
+                          </svg>
+                        </div>
+                        <h3 className="empty-state-title">No Rooms Found</h3>
+                        <p className="empty-state-description">
+                          This property is configured for per-room renting, but no rooms have been added yet.
+                          <br />
+                          Get started by adding rooms to enable tenant assignments and rent collection.
+                        </p>
+                        <div className="empty-state-actions">
+                          <button 
+                            onClick={() => router.push(`/properties/${property.id}/add-room`)} 
+                            className="btn btn-primary"
+                          >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M12 5v14m-7-7h14"/>
+                            </svg>
+                            Add Single Room
+                          </button>
+                          <button 
+                            onClick={() => setRoomCountEditorOpen(true)} 
+                            className="btn btn-secondary"
+                          >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+                            </svg>
+                            Add Multiple Rooms
+                          </button>
+                        </div>
+                        <div className="empty-state-help">
+                          <p className="help-text">
+                            💡 <strong>Tip:</strong> Use "Add Multiple Rooms" to quickly create several rooms at once with different types and rent amounts.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                   )}
                 </div>
                 )}
@@ -596,7 +668,7 @@ export default function PropertyRooms() {
                     )}
                     {activeHistoryTab === 'rent' && (
                         <EmptyState
-                            title="Rent Collection History Coming Soon"
+                            title="Rent Collection History"
                             description="This feature is under development."
                         />
                     )}
@@ -613,7 +685,7 @@ export default function PropertyRooms() {
                     </div>
                       <div className="header-actions">
                           <button className="btn btn-primary" onClick={() => setIsNewApplicationModalOpen(true)}>
-                              New Application
+                              Create Listing
                           </button>
                           <Link href={`/properties/${property.id}/edit`} className="btn btn-secondary">
                               Edit Property
@@ -623,7 +695,7 @@ export default function PropertyRooms() {
               
               <div className="actions-grid">
                 <div 
-                  className="action-card blue"
+                  className={`action-card blue ${rooms.length === 0 ? 'highlighted' : ''}`}
                   onClick={() => router.push(`/properties/${property.id}/add-room`)}
                   style={{ cursor: 'pointer' }}
                 >
@@ -634,7 +706,7 @@ export default function PropertyRooms() {
                     </div>
                   <div className="action-content">
                     <h3 className="action-title">Add New Room</h3>
-                    <p className="action-subtitle">Create a new room</p>
+                    <p className="action-subtitle">{rooms.length === 0 ? 'Start by creating your first room' : 'Create a new room'}</p>
                         </div>
                       </div>
                 
@@ -655,7 +727,7 @@ export default function PropertyRooms() {
                     </div>
 
                 <div 
-                  className="action-card green"
+                  className={`action-card green ${rooms.length === 0 ? 'highlighted' : ''}`}
                   onClick={() => setRoomCountEditorOpen(true)}
                   style={{ cursor: 'pointer' }}
                 >
@@ -668,8 +740,8 @@ export default function PropertyRooms() {
                     </svg>
                   </div>
                   <div className="action-content">
-                    <h3 className="action-title">Manage Rooms</h3>
-                    <p className="action-subtitle">Edit room structure</p>
+                    <h3 className="action-title">{rooms.length === 0 ? 'Add Multiple Rooms' : 'Manage Rooms'}</h3>
+                    <p className="action-subtitle">{rooms.length === 0 ? 'Quickly create several rooms at once' : 'Edit room structure'}</p>
                   </div>
                 </div>
 
@@ -680,13 +752,13 @@ export default function PropertyRooms() {
                 >
                   <div className="action-icon">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                      <polyline points="14 2 14 8 20 8"/>
+                      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                      <polyline points="9,22 9,12 15,12 15,22"/>
                     </svg>
                           </div>
                   <div className="action-content">
-                    <h3 className="action-title">New Application</h3>
-                    <p className="action-subtitle">Add applicant</p>
+                    <h3 className="action-title">Create Listing</h3>
+                    <p className="action-subtitle">List property</p>
                     </div>
                           </div>
 
@@ -758,7 +830,7 @@ export default function PropertyRooms() {
       )}
 
       {isNewApplicationModalOpen && (
-        <NewApplicationModal onClose={() => setIsNewApplicationModalOpen(false)} />
+        <NewListingModal onClose={() => setIsNewApplicationModalOpen(false)} onSuccess={() => setIsNewApplicationModalOpen(false)} />
       )}
 
       {/* Conversion Wizard */}
@@ -1819,6 +1891,229 @@ export default function PropertyRooms() {
 
         :global(.dark-mode) .quick-action-text p {
           color: #8b949e;
+        }
+
+        /* Enhanced Empty State Styles */
+        .empty-rooms-state {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 60px 20px;
+          min-height: 400px;
+        }
+
+        .empty-state-content {
+          text-align: center;
+          max-width: 480px;
+        }
+
+        .empty-state-icon {
+          margin: 0 auto 24px auto;
+          width: 64px;
+          height: 64px;
+          color: #cbd5e1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .empty-state-title {
+          font-size: 24px;
+          font-weight: 600;
+          color: #1e293b;
+          margin: 0 0 16px 0;
+        }
+
+        .empty-state-description {
+          font-size: 16px;
+          color: #64748b;
+          line-height: 1.6;
+          margin: 0 0 32px 0;
+        }
+
+        .empty-state-actions {
+          display: flex;
+          gap: 12px;
+          justify-content: center;
+          flex-wrap: wrap;
+          margin-bottom: 24px;
+        }
+
+        .empty-state-actions .btn {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 12px 24px;
+          font-size: 14px;
+          font-weight: 500;
+          border-radius: 8px;
+          transition: all 0.2s ease;
+          text-decoration: none;
+          border: none;
+          cursor: pointer;
+        }
+
+        .empty-state-actions .btn-primary {
+          background: #3b82f6;
+          color: white;
+        }
+
+        .empty-state-actions .btn-primary:hover {
+          background: #2563eb;
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+
+        .empty-state-actions .btn-secondary {
+          background: white;
+          color: #374151;
+          border: 1px solid #d1d5db;
+        }
+
+        .empty-state-actions .btn-secondary:hover {
+          background: #f9fafb;
+          border-color: #9ca3af;
+          transform: translateY(-1px);
+        }
+
+        .empty-state-help {
+          background: #f0f9ff;
+          border: 1px solid #e0f2fe;
+          border-radius: 8px;
+          padding: 16px;
+          margin-top: 24px;
+        }
+
+        .help-text {
+          font-size: 14px;
+          color: #0369a1;
+          margin: 0;
+          line-height: 1.5;
+        }
+
+        .help-text strong {
+          font-weight: 600;
+        }
+
+        /* Highlighted Action Cards */
+        .action-card.highlighted {
+          border: 2px solid #3b82f6;
+          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+          transform: translateY(-2px);
+        }
+
+        .action-card.highlighted .action-title {
+          color: #1e40af;
+        }
+
+        .action-card.highlighted .action-subtitle {
+          color: #3b82f6;
+        }
+
+        /* Alert Banner */
+        .alert-banner {
+          background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+          border: 1px solid #f59e0b;
+          border-radius: 12px;
+          padding: 16px;
+          margin-bottom: 24px;
+          box-shadow: 0 4px 12px rgba(245, 158, 11, 0.1);
+        }
+
+        .alert-content {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          flex-wrap: wrap;
+        }
+
+        .alert-icon {
+          color: #d97706;
+          flex-shrink: 0;
+        }
+
+        .alert-text {
+          flex: 1;
+          min-width: 200px;
+          color: #92400e;
+          font-size: 14px;
+          line-height: 1.4;
+        }
+
+        .alert-text strong {
+          font-weight: 600;
+        }
+
+        .alert-actions {
+          display: flex;
+          gap: 8px;
+          flex-shrink: 0;
+        }
+
+        .alert-btn {
+          padding: 8px 16px;
+          border-radius: 6px;
+          font-size: 13px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          border: none;
+        }
+
+        .alert-btn.primary {
+          background: #d97706;
+          color: white;
+        }
+
+        .alert-btn.primary:hover {
+          background: #b45309;
+        }
+
+        .alert-btn.secondary {
+          background: white;
+          color: #d97706;
+          border: 1px solid #d97706;
+        }
+
+        .alert-btn.secondary:hover {
+          background: #fef3c7;
+        }
+
+        @media (max-width: 640px) {
+          .empty-rooms-state {
+            padding: 40px 16px;
+            min-height: 300px;
+          }
+
+          .empty-state-title {
+            font-size: 20px;
+          }
+
+          .empty-state-description {
+            font-size: 14px;
+          }
+
+          .empty-state-actions {
+            flex-direction: column;
+            align-items: center;
+          }
+
+          .empty-state-actions .btn {
+            width: 100%;
+            max-width: 280px;
+            justify-content: center;
+          }
+
+          .alert-content {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 12px;
+          }
+
+          .alert-actions {
+            width: 100%;
+            justify-content: flex-end;
+          }
         }
 
         @media (max-width: 1024px) {

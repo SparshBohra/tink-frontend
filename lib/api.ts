@@ -27,7 +27,10 @@ import {
   ManagerPropertyAssignment,
   ManagerFormData,
   ManagerLandlordRelationship,
-  ListingFormData
+  ListingFormData,
+  PropertyListing,
+  ListingMedia,
+  PublicApplicationData
 } from './types';
 
 // Smart environment-based API URL configuration
@@ -186,7 +189,7 @@ class ApiClient {
 
   // Authentication endpoints
   async login(credentials: LoginCredentials): Promise<{ user: User; tokens: AuthTokens }> {
-    const response = await this.api.post('/login/', credentials);
+    const response = await this.api.post('/auth/login/', credentials);
     
     const tokens = {
       access: response.data.access,
@@ -226,13 +229,13 @@ class ApiClient {
   async logout_api(): Promise<void> {
     const refreshToken = this.getRefreshToken();
     if (refreshToken) {
-      await this.api.post('/logout/', { refresh: refreshToken });
+      await this.api.post('/auth/logout/', { refresh: refreshToken });
     }
     this.logout();
   }
 
   async signup(userData: any): Promise<User> {
-    const response = await this.api.post('/signup/', userData);
+    const response = await this.api.post('/auth/signup/', userData);
     return response.data;
   }
 
@@ -252,7 +255,7 @@ class ApiClient {
   }
 
   async getProfile(): Promise<User> {
-    const response = await this.api.get('/profile/');
+    const response = await this.api.get('/auth/profile/');
     return response.data;
   }
 
@@ -314,7 +317,7 @@ class ApiClient {
   // Tenant endpoints
   async getTenants(): Promise<PaginatedResponse<Tenant>> {
     try {
-      const response = await this.api.get('/tenants/');
+      const response = await this.api.get('/tenants/tenants/');
       // Handle both paginated and direct array responses
       if (Array.isArray(response.data)) {
         return {
@@ -340,13 +343,13 @@ class ApiClient {
   }
 
   async getTenant(id: number): Promise<Tenant> {
-    const response = await this.api.get(`/tenants/${id}/`);
+    const response = await this.api.get(`/tenants/tenants/${id}/`);
     return response.data;
   }
 
   async createTenant(data: TenantFormData): Promise<Tenant> {
     try {
-      const response = await this.api.post('/tenants/', data);
+      const response = await this.api.post('/tenants/tenants/', data);
       return response.data;
     } catch (error: any) {
       console.error('Tenant creation error:', error);
@@ -367,12 +370,12 @@ class ApiClient {
   }
 
   async updateTenant(id: number, data: Partial<TenantFormData>): Promise<Tenant> {
-    const response = await this.api.put(`/tenants/${id}/`, data);
+    const response = await this.api.put(`/tenants/tenants/${id}/`, data);
     return response.data;
   }
 
   async deleteTenant(id: number): Promise<void> {
-    await this.api.delete(`/tenants/${id}/`);
+    await this.api.delete(`/tenants/tenants/${id}/`);
   }
 
   async uploadTenantDocument(tenantId: number, file: File, documentType: string, notes?: string): Promise<Document> {
@@ -393,13 +396,13 @@ class ApiClient {
   }
 
   async getTenantApplications(tenantId: number): Promise<Application[]> {
-    const response = await this.api.get(`/tenants/${tenantId}/applications/`);
+    const response = await this.api.get(`/tenants/tenants/${tenantId}/applications/`);
     return response.data;
   }
 
   async getTenantCurrentLease(tenantId: number): Promise<Lease | null> {
     try {
-      const response = await this.api.get(`/tenants/${tenantId}/current_lease/`);
+      const response = await this.api.get(`/tenants/tenants/${tenantId}/current_lease/`);
       return response.data;
     } catch (error: any) {
       if (error.status === 404) return null;
@@ -562,13 +565,13 @@ class ApiClient {
   }
 
   async getPropertyRooms(propertyId: number): Promise<Room[]> {
-    const response = await this.api.get(`/properties/${propertyId}/rooms/`);
-    return response.data;
+    const response = await this.api.get(`/properties/rooms/?property_ref=${propertyId}`);
+    return response.data.results || response.data;
   }
 
   // Room endpoints
   async getRooms(): Promise<PaginatedResponse<Room>> {
-    const response = await this.api.get('/rooms/');
+    const response = await this.api.get('/properties/rooms/');
     // Handle both paginated and direct array responses
     if (Array.isArray(response.data)) {
       return {
@@ -590,38 +593,38 @@ class ApiClient {
       }
       return room;
     }
-    const response = await this.api.get(`/rooms/${id}/`);
+    const response = await this.api.get(`/properties/rooms/${id}/`);
     return response.data;
   }
 
   async createRoom(data: RoomFormData): Promise<Room> {
-    const response = await this.api.post('/rooms/', data);
+    const response = await this.api.post('/properties/rooms/', data);
     return response.data;
   }
 
   async updateRoom(id: number, data: Partial<RoomFormData>): Promise<Room> {
-    const response = await this.api.put(`/rooms/${id}/`, data);
+    const response = await this.api.put(`/properties/rooms/${id}/`, data);
     return response.data;
   }
 
   async deleteRoom(id: number): Promise<void> {
-    await this.api.delete(`/rooms/${id}/`);
+    await this.api.delete(`/properties/rooms/${id}/`);
   }
 
   async checkRoomAvailability(roomId: number): Promise<any> {
-    const response = await this.api.get(`/rooms/${roomId}/availability/`);
+    const response = await this.api.get(`/properties/rooms/${roomId}/availability/`);
     return response.data;
   }
 
   async updateRoomOccupancy(roomId: number, occupancyData: any): Promise<Room> {
-    const response = await this.api.patch(`/rooms/${roomId}/update_occupancy/`, occupancyData);
+    const response = await this.api.patch(`/properties/rooms/${roomId}/update_occupancy/`, occupancyData);
     return response.data;
   }
 
   // Application endpoints - Updated with new bulk operations
-  async getApplications(params?: { status?: string; property?: number }): Promise<PaginatedResponse<Application>> {
+  async getApplications(params?: { status?: string; property?: number; listing?: number }): Promise<PaginatedResponse<Application>> {
     try {
-      const response = await this.api.get('/applications/', { params });
+      const response = await this.api.get('/tenants/applications/', { params });
       // Handle both paginated and direct array responses
       if (Array.isArray(response.data)) {
         return {
@@ -647,14 +650,14 @@ class ApiClient {
   }
 
   async getApplication(id: number): Promise<Application> {
-    const response = await this.api.get(`/applications/${id}/`);
+    const response = await this.api.get(`/tenants/applications/${id}/`);
     return response.data;
   }
 
   async createApplication(data: ApplicationFormData): Promise<Application> {
     try {
       console.log('Creating application with data:', data);
-      const response = await this.api.post('/applications/', data);
+      const response = await this.api.post('/tenants/applications/', data);
       console.log('Application created successfully:', response.data);
       return response.data;
     } catch (error: any) {
@@ -676,12 +679,12 @@ class ApiClient {
   }
 
   async updateApplication(id: number, data: Partial<ApplicationFormData>): Promise<Application> {
-    const response = await this.api.patch<Application>(`/applications/${id}/`, data);
+    const response = await this.api.patch<Application>(`/tenants/applications/${id}/`, data);
     return response.data;
   }
 
   async deleteApplication(id: number): Promise<void> {
-    await this.api.delete(`/applications/${id}/`);
+    await this.api.delete(`/tenants/applications/${id}/`);
   }
 
   async decideApplication(id: number, decisionData: {
@@ -694,7 +697,7 @@ class ApiClient {
   }): Promise<Application> {
     try {
       console.log(`Deciding on application ${id} with data:`, decisionData);
-    const response = await this.api.post(`/applications/${id}/decide/`, decisionData);
+    const response = await this.api.post(`/tenants/applications/${id}/decide/`, decisionData);
       console.log('Application decision successful:', response.data);
     return response.data;
     } catch (error: any) {
@@ -716,7 +719,7 @@ class ApiClient {
   }
 
   async getPendingApplications(): Promise<Application[]> {
-    const response = await this.api.get('/applications/pending/');
+    const response = await this.api.get('/tenants/applications/pending/');
     return response.data;
   }
 
@@ -729,7 +732,7 @@ class ApiClient {
     viewing_notes: string;
   }): Promise<ApplicationViewing> {
     try {
-      const response = await this.api.post(`/applications/${applicationId}/schedule-viewing/`, viewingData);
+      const response = await this.api.post(`/tenants/applications/${applicationId}/schedule-viewing/`, viewingData);
       return response.data;
     } catch (error: any) {
       console.error('Viewing scheduling failed:', error);
@@ -748,7 +751,7 @@ class ApiClient {
     next_action?: string;
   }): Promise<ApplicationViewing> {
     try {
-      const response = await this.api.post(`/applications/${applicationId}/complete-viewing/`, completionData);
+      const response = await this.api.post(`/tenants/applications/${applicationId}/complete-viewing/`, completionData);
       return response.data;
     } catch (error: any) {
       console.error('Viewing completion failed:', error);
@@ -761,13 +764,13 @@ class ApiClient {
   }
 
   async getApplicationViewings(applicationId: number): Promise<ApplicationViewing[]> {
-    const response = await this.api.get(`/applications/${applicationId}/viewings/`);
+    const response = await this.api.get(`/tenants/applications/${applicationId}/viewings/`);
     return response.data;
   }
 
   async assignRoom(applicationId: number, roomData: { room_id: number }): Promise<Application> {
     try {
-      const response = await this.api.post(`/applications/${applicationId}/assign_room/`, roomData);
+      const response = await this.api.post(`/tenants/applications/${applicationId}/assign_room/`, roomData);
       return response.data;
     } catch (error: any) {
       console.error('Room assignment failed:', error);
@@ -784,7 +787,7 @@ class ApiClient {
 
   async generateLease(applicationId: number): Promise<Application> {
     try {
-      const response = await this.api.post(`/applications/${applicationId}/generate-lease/`, {});
+      const response = await this.api.post(`/tenants/applications/${applicationId}/generate-lease/`, {});
       return response.data;
     } catch (error: any) {
       console.error('Lease generation failed:', error);
@@ -813,7 +816,7 @@ class ApiClient {
     moved_in: Application[];
     rejected: Application[];
   }> {
-    const response = await this.api.get('/applications/pipeline/');
+    const response = await this.api.get('/tenants/applications/pipeline/');
     return response.data;
   }
 
@@ -824,7 +827,7 @@ class ApiClient {
     monthly_rent: number;
     security_deposit: number;
   }): Promise<any> {
-    const response = await this.api.post('/applications/bulk_approve/', data);
+    const response = await this.api.post('/tenants/applications/bulk_approve/', data);
     return response.data;
   }
 
@@ -832,14 +835,14 @@ class ApiClient {
     application_ids: number[];
     rejection_reason: string;
   }): Promise<any> {
-    const response = await this.api.post('/applications/bulk_reject/', data);
+    const response = await this.api.post('/tenants/applications/bulk_reject/', data);
     return response.data;
   }
 
   // Lease endpoints - Updated with move-in/move-out
   async getLeases(params?: { status?: string; property?: number }): Promise<PaginatedResponse<Lease>> {
     try {
-      const response = await this.api.get('/leases/', { params });
+      const response = await this.api.get('/tenants/leases/', { params });
       // Handle both paginated and direct array responses
       if (Array.isArray(response.data)) {
         return {
@@ -865,36 +868,204 @@ class ApiClient {
   }
 
   async getLease(id: number): Promise<Lease> {
-    const response = await this.api.get(`/leases/${id}/`);
+    const response = await this.api.get(`/tenants/leases/${id}/`);
     return response.data;
   }
 
   async createLease(data: LeaseFormData): Promise<Lease> {
-    const response = await this.api.post<Lease>('/leases/', data);
+    // Ensure tenant and room are provided
+    if (!data.tenant || !data.room) {
+      throw new Error("Tenant and Room are required to create a lease.");
+    }
+    const response = await this.api.post('/tenants/leases/', data);
     return response.data;
   }
 
-  async createListing(data: ListingFormData): Promise<any> {
-    const response = await this.api.post('/listings/', data);
+  // Property Listing & Public Endpoints
+  // ===== PROPERTY LISTINGS ENDPOINTS =====
+  
+  // Get all listings for current landlord
+  async getListings(): Promise<PaginatedResponse<PropertyListing>> {
+    try {
+      const response = await this.api.get('/properties/listings/');
+      // Handle both paginated and direct array responses
+      if (Array.isArray(response.data)) {
+        return {
+          count: response.data.length,
+          next: undefined,
+          previous: undefined,
+          results: response.data
+        };
+      }
+      return response.data;
+    } catch (error: any) {
+      console.error('Failed to get listings:', error);
+      throw error;
+    }
+  }
+
+  // Create new listing
+  async createListing(data: ListingFormData): Promise<PropertyListing> {
+    try {
+      console.log('Creating listing with data:', data);
+      const response = await this.api.post('/properties/listings/', data);
+      console.log('Listing created successfully:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error('Listing creation failed:', error);
+      console.error('Error response:', error.response?.data);
+      
+      if (error.response?.status === 403) {
+        throw new Error('You do not have permission to create listings. Please contact your administrator.');
+      }
+      if (error.response?.status === 400) {
+        const details = error.response?.data?.detail || error.response?.data?.message || JSON.stringify(error.response?.data);
+        throw new Error(`Invalid listing data: ${details}`);
+      }
+      if (error.response?.status === 500) {
+        throw new Error('Server error occurred while creating listing. Please try again or contact support.');
+      }
+      throw new Error(error.message || 'Failed to create listing');
+    }
+  }
+
+  // Get specific listing details
+  async getListing(id: number): Promise<PropertyListing> {
+    const response = await this.api.get(`/properties/listings/${id}/`);
+    return response.data;
+  }
+
+  // Update listing
+  async updateListing(id: number, data: Partial<ListingFormData>): Promise<PropertyListing> {
+    try {
+      const response = await this.api.patch(`/properties/listings/${id}/`, data);
+      return response.data;
+    } catch (error: any) {
+      console.error('Failed to update listing:', error);
+      throw error;
+    }
+  }
+
+  // Delete listing
+  async deleteListing(id: number): Promise<void> {
+    try {
+      await this.api.delete(`/properties/listings/${id}/`);
+    } catch (error: any) {
+      console.error('Failed to delete listing:', error);
+      throw error;
+    }
+  }
+
+  // ===== LISTING MEDIA ENDPOINTS =====
+
+  // Upload media for listing
+  async uploadListingMedia(listingId: number, file: File, caption?: string): Promise<ListingMedia> {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('media_type', 'image');
+      if (caption) {
+        formData.append('caption', caption);
+      }
+
+      const response = await this.api.post(`/properties/listings/${listingId}/media/`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('Failed to upload media:', error);
+      throw error;
+    }
+  }
+
+  // Get all media for listing
+  async getListingMedia(listingId: number): Promise<ListingMedia[]> {
+    try {
+      const response = await this.api.get(`/properties/listings/${listingId}/media/`);
+      return response.data;
+    } catch (error: any) {
+      console.error('Failed to get listing media:', error);
+      throw error;
+    }
+  }
+
+  // Delete media from listing
+  async deleteListingMedia(listingId: number, mediaId: number): Promise<void> {
+    try {
+      await this.api.delete(`/properties/listings/${listingId}/media/${mediaId}/`);
+    } catch (error: any) {
+      console.error('Failed to delete media:', error);
+      throw error;
+    }
+  }
+
+  // ===== PUBLIC LISTING ENDPOINTS (No Auth Required) =====
+
+  // Get public listing by slug
+  async getPublicListing(slug: string): Promise<PropertyListing> {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/properties/public/listings/${slug}/`);
+      return response.data;
+    } catch (error: any) {
+      console.error('Failed to get public listing:', error);
+      throw error;
+    }
+  }
+
+  // Submit application from public listing
+  async submitPublicApplication(slug: string, data: PublicApplicationData): Promise<{ message: string; application_id: number }> {
+    try {
+      const response = await axios.post(`${API_BASE_URL}/properties/public/listings/${slug}/apply/`, data, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('Failed to submit public application:', error);
+      throw error;
+    }
+  }
+
+  // Get form configuration for public listing
+  async getPublicListingFormConfig(slug: string): Promise<any> {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/properties/public/listings/${slug}/form-config/`);
+      return response.data;
+    } catch (error: any) {
+      console.error('Failed to get form config:', error);
+      throw error;
+    }
+  }
+
+  // Get applications for specific listing
+  async getListingApplications(listingId: number): Promise<PaginatedResponse<Application>> {
+    const response = await this.api.get(`/properties/listings/${listingId}/applications/`);
     return response.data;
   }
 
   async updateLease(id: number, data: Partial<LeaseFormData>): Promise<Lease> {
-    const response = await this.api.put(`/leases/${id}/`, data);
+    const response = await this.api.put(`/tenants/leases/${id}/`, data);
     return response.data;
   }
 
   async deleteLease(id: number): Promise<void> {
-    await this.api.delete(`/leases/${id}/`);
+    await this.api.delete(`/tenants/leases/${id}/`);
   }
 
   async getActiveLeases(): Promise<Lease[]> {
-    const response = await this.api.get('/leases/active/');
+    const response = await this.api.get('/tenants/leases/active/');
     return response.data;
   }
 
   async getExpiringLeases(): Promise<Lease[]> {
-    const response = await this.api.get('/leases/expiring_soon/');
+    const response = await this.api.get('/tenants/leases/expiring/').catch(err => {
+      // If endpoint doesn't exist, return empty array
+      if (err.response?.status === 404) return { data: [] };
+      throw err;
+    });
     return response.data;
   }
 
@@ -903,7 +1074,7 @@ class ApiClient {
     move_in_condition?: string;
     deposit_collected?: number;
   }): Promise<Lease> {
-    const response = await this.api.post(`/leases/${leaseId}/move_in/`, moveInData);
+    const response = await this.api.post(`/tenants/leases/${leaseId}/move_in/`, moveInData);
     return response.data;
   }
 
@@ -914,7 +1085,7 @@ class ApiClient {
     damage_charges?: number;
     deposit_returned?: number;
   }): Promise<Lease> {
-    const response = await this.api.post(`/leases/${leaseId}/move_out/`, moveOutData);
+    const response = await this.api.post(`/tenants/leases/${leaseId}/move_out/`, moveOutData);
     return response.data;
   }
 
@@ -1361,7 +1532,7 @@ class ApiClient {
 
   async validateRoomDeletion(roomId: number): Promise<any> {
     try {
-      const response = await this.api.get(`/rooms/${roomId}/validate-deletion/`);
+      const response = await this.api.get(`/properties/rooms/${roomId}/validate-deletion/`);
       return response.data;
     } catch (error: any) {
       console.error(`Room deletion validation failed for ID ${roomId}:`, error);
@@ -1397,3 +1568,89 @@ class ApiClient {
 }
 
 export const apiClient = new ApiClient();
+
+// Public API request function (no authentication required)
+export async function publicApiRequest(endpoint: string, options: any = {}) {
+  const method = options.method || 'GET';
+  const { body, ...restOptions } = options;
+  
+  try {
+    // Create a new axios instance without authentication interceptors
+    const publicApi = axios.create({
+      baseURL: API_BASE_URL,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    let response: AxiosResponse;
+    
+    switch (method.toUpperCase()) {
+      case 'GET':
+        response = await publicApi.get(endpoint, restOptions);
+        break;
+      case 'POST':
+        response = await publicApi.post(endpoint, body, restOptions);
+        break;
+      case 'PUT':
+        response = await publicApi.put(endpoint, body, restOptions);
+        break;
+      case 'PATCH':
+        response = await publicApi.patch(endpoint, body, restOptions);
+        break;
+      case 'DELETE':
+        response = await publicApi.delete(endpoint, restOptions);
+        break;
+      default:
+        throw new Error(`Unsupported method: ${method}`);
+    }
+    
+    return response.data;
+  } catch (error: any) {
+    // Handle error similar to the main API client
+    const responseData = error.response?.data as any;
+    const message = responseData?.detail || responseData?.message || error.message || 'An error occurred';
+    const errors = responseData?.field_errors || responseData?.errors;
+    const status = error.response?.status || 500;
+
+    throw {
+      message,
+      errors,
+      status
+    };
+  }
+}
+
+// Backward compatibility - export the old function names
+export async function apiRequest(endpoint: string, options: any = {}) {
+  const method = options.method || 'GET';
+  const { body, ...restOptions } = options;
+  
+  try {
+    let response: AxiosResponse;
+    
+    switch (method.toUpperCase()) {
+      case 'GET':
+        response = await apiClient['api'].get(endpoint, restOptions);
+        break;
+      case 'POST':
+        response = await apiClient['api'].post(endpoint, body, restOptions);
+        break;
+      case 'PUT':
+        response = await apiClient['api'].put(endpoint, body, restOptions);
+        break;
+      case 'PATCH':
+        response = await apiClient['api'].patch(endpoint, body, restOptions);
+        break;
+      case 'DELETE':
+        response = await apiClient['api'].delete(endpoint, restOptions);
+        break;
+      default:
+        throw new Error(`Unsupported method: ${method}`);
+    }
+    
+    return response.data;
+  } catch (error: any) {
+    throw apiClient['handleError'](error);
+  }
+}

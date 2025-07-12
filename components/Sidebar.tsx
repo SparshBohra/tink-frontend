@@ -54,7 +54,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
 
   const handleNavigation = (path: string) => {
     if (path === '/settings' || path === '/support') {
-      alert('Coming soon!');
+      router.push('/settings');
       return;
     }
     router.push(path);

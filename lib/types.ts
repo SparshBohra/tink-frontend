@@ -359,6 +359,10 @@ export interface ApplicationFormData {
   rent_budget: number;
   message?: string;
   special_requests?: string;
+  // New fields for listing support
+  listing_id?: number;
+  source?: 'direct' | 'public_listing';
+  form_responses?: any;
 }
 
 export interface LeaseFormData {
@@ -467,4 +471,137 @@ export interface ManagerLandlordRelationship {
   landlord: number;
   is_primary: boolean;
   access_all_properties?: boolean;
+}
+
+export interface PropertyListing {
+  id: number;
+  property_ref: number;
+  landlord_id: number;
+  title: string;
+  description: string;
+  listing_type: 'rooms' | 'whole_property';
+  available_rooms: number[];
+  application_form_config: ApplicationFormConfig;
+  public_slug: string;
+  is_active: boolean;
+  view_count: number;
+  application_count: number;
+  featured_image_url?: string;
+  available_from?: string;
+  created_at: string;
+  updated_at: string;
+  // Additional fields from API response
+  property_name?: string;
+  property_address?: string;
+  landlord_name?: string;
+  available_room_details?: AvailableRoomDetail[];
+  property_details?: PropertyDetail;
+  contact_info?: ContactInfo;
+  media?: ListingMedia[];
+  // Public listing specific fields
+  property_type?: string;
+  max_occupancy?: number;
+  application_deadline?: string;
+  min_lease_term?: number;
+  max_lease_term?: number;
+  pet_policy?: string;
+  furnished?: boolean;
+  utilities_included?: string[];
+  amenities?: string[];
+  virtual_tour_url?: string;
+  smoking_allowed?: boolean;
+  application_fee?: number;
+  security_deposit?: number;
+}
+
+export interface ListingMedia {
+  id: number;
+  listing_id: number;
+  media_type: 'image' | 'video';
+  url: string;
+  file_url?: string; // Alternative field name for media URL
+  caption?: string;
+  display_order: number;
+  is_primary: boolean;
+  created_at: string;
+}
+
+export interface AvailableRoomDetail {
+  id: number;
+  name: string;
+  room_type: string;
+  monthly_rent: number;
+  square_footage?: number;
+  room_features?: string[];
+  floor_number?: number;
+}
+
+export interface PropertyDetail {
+  name: string;
+  property_type: string;
+  address: {
+    line1: string;
+    line2?: string;
+    city: string;
+    state: string;
+    postal_code: string;
+  };
+  timezone: string;
+}
+
+export interface ContactInfo {
+  landlord_name: string;
+  contact_email: string;
+  contact_phone?: string;
+}
+
+export interface ApplicationFormConfig {
+  steps: {
+    [key: string]: {
+      enabled: boolean;
+      mandatory: boolean;
+      [key: string]: any;
+    };
+  };
+  global_settings?: {
+    allow_save_and_continue?: boolean;
+    session_timeout?: number;
+    auto_save_interval?: number;
+    progress_indicator?: boolean;
+    mobile_optimized?: boolean;
+    application_fee?: number;
+    minimum_income_ratio?: number;
+    required_documents?: string[];
+  };
+}
+
+export interface ListingFormData {
+  property_ref: number;
+  title: string;
+  description: string;
+  listing_type: 'rooms' | 'whole_property';
+  available_rooms?: number[];
+  application_form_config: ApplicationFormConfig;
+  available_from?: string;
+  featured_image_url?: string;
+}
+
+export interface PublicApplicationData {
+  tenant: {
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone: string;
+  };
+  room_preference?: number;
+  desired_move_in_date: string;
+  desired_lease_duration?: number;
+  rent_budget?: number;
+  message?: string;
+  employment_info?: {
+    employer?: string;
+    position?: string;
+    annual_income?: number;
+  };
+  [key: string]: any; // For additional form fields
 } 

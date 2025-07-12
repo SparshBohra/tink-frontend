@@ -4,7 +4,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import DashboardLayout from '../components/DashboardLayout';
 import ApplicationKanban from '../components/ApplicationKanban';
-import NewApplicationModal from '../components/NewApplicationModal';
+// Modal removed - applications are now created through listings
 import ViewingSchedulerModal from '../components/ViewingSchedulerModal';
 import ViewingCompletionModal from '../components/ViewingCompletionModal';
 import LeaseGenerationModal from '../components/LeaseGenerationModal';
@@ -465,12 +465,12 @@ function Applications() {
             </div>
             <div className="header-right">
               {/* Primary quick-action buttons - reordered */}
-              <button onClick={() => setIsModalOpen(true)} className="view-all-btn" title="Create a new manual application">
+              <button onClick={() => router.push('/listings')} className="view-all-btn" title="Create property listings to receive applications">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="12" y1="5" x2="12" y2="19" />
-                  <line x1="5" y1="12" x2="19" y2="12" />
+                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                  <polyline points="9,22 9,12 15,12 15,22"/>
                 </svg>
-                New Application
+                Create Listings
               </button>
 
               <button
@@ -659,7 +659,7 @@ function Applications() {
         {/* Legacy pending & processed application tables removed – all workflow management is now handled via the Kanban board */}
       </div>
 
-      {isModalOpen && <NewApplicationModal onClose={() => setIsModalOpen(false)} />}
+      {/* Modal removed - applications are now created through listings */}
 
       {isConflictModalOpen && (
         <ConflictResolutionModal

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/router';
 import { useAuth } from '../lib/auth-context';
 import { useTheme } from '../lib/theme-context';
 import { apiClient } from '../lib/api';
@@ -43,6 +44,7 @@ const TargetIcon = () => (
 );
 
 export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarProps) {
+  const router = useRouter();
   const { user, isAdmin, isLandlord, isManager, logout } = useAuth();
   const { isDarkMode, toggleDarkMode } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
@@ -183,7 +185,7 @@ export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarPr
   };
 
   const handleSettings = () => {
-    alert('Settings page coming soon!');
+    router.push('/settings');
     setShowUserMenu(false);
   };
 
