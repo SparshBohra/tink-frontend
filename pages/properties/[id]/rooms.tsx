@@ -693,21 +693,23 @@ export default function PropertyRooms() {
                   </div>
               
               <div className="actions-grid">
-                <div 
-                  className={`action-card blue ${rooms.length === 0 ? 'highlighted' : ''}`}
-                  onClick={() => router.push(`/properties/${property.id}/add-room`)}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <div className="action-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M12 5v14m-7-7h14"/>
-                    </svg>
+                {property.rent_type === 'per_room' && (
+                  <div 
+                    className={`action-card blue ${rooms.length === 0 ? 'highlighted' : ''}`}
+                    onClick={() => router.push(`/properties/${property.id}/add-room`)}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <div className="action-icon">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M12 5v14m-7-7h14"/>
+                      </svg>
                     </div>
-                  <div className="action-content">
-                    <h3 className="action-title">Add New Room</h3>
-                    <p className="action-subtitle">{rooms.length === 0 ? 'Start by creating your first room' : 'Create a new room'}</p>
-                        </div>
-                      </div>
+                    <div className="action-content">
+                      <h3 className="action-title">Add New Room</h3>
+                      <p className="action-subtitle">{rooms.length === 0 ? 'Start by creating your first room' : 'Create a new room'}</p>
+                    </div>
+                  </div>
+                )}
                 
                 <div 
                   className="action-card purple"
@@ -718,31 +720,33 @@ export default function PropertyRooms() {
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
                     </svg>
-                    </div>
+                  </div>
                   <div className="action-content">
                     <h3 className="action-title">Convert Rent Type</h3>
                     <p className="action-subtitle">Change pricing model</p>
-                            </div>
-                    </div>
-
-                <div 
-                  className={`action-card green ${rooms.length === 0 ? 'highlighted' : ''}`}
-                  onClick={() => setRoomCountEditorOpen(true)}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <div className="action-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <rect x="3" y="3" width="7" height="7"/>
-                      <rect x="14" y="3" width="7" height="7"/>
-                      <rect x="14" y="14" width="7" height="7"/>
-                      <rect x="3" y="14" width="7" height="7"/>
-                    </svg>
-                  </div>
-                  <div className="action-content">
-                    <h3 className="action-title">{rooms.length === 0 ? 'Add Multiple Rooms' : 'Manage Rooms'}</h3>
-                    <p className="action-subtitle">{rooms.length === 0 ? 'Quickly create several rooms at once' : 'Edit room structure'}</p>
                   </div>
                 </div>
+
+                {property.rent_type === 'per_room' && (
+                  <div 
+                    className={`action-card green ${rooms.length === 0 ? 'highlighted' : ''}`}
+                    onClick={() => setRoomCountEditorOpen(true)}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <div className="action-icon">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <rect x="3" y="3" width="7" height="7"/>
+                        <rect x="14" y="3" width="7" height="7"/>
+                        <rect x="14" y="14" width="7" height="7"/>
+                        <rect x="3" y="14" width="7" height="7"/>
+                      </svg>
+                    </div>
+                    <div className="action-content">
+                      <h3 className="action-title">{rooms.length === 0 ? 'Add Multiple Rooms' : 'Manage Rooms'}</h3>
+                      <p className="action-subtitle">{rooms.length === 0 ? 'Quickly create several rooms at once' : 'Edit room structure'}</p>
+                    </div>
+                  </div>
+                )}
 
                 <div 
                   className="action-card orange"
