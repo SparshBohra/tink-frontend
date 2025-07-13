@@ -183,16 +183,17 @@ export default function ListingsDashboard(props: ListingsDashboardProps) {
 
   const handleToggleActive = async (listingId: number, isActive: boolean) => {
     try {
-      const response = await apiRequest(`/properties/listings/${listingId}/`, {
+      // Send both boolean and status string for maximum compatibility with backend expectations
+      await apiRequest(`/properties/listings/${listingId}/`, {
         method: 'PATCH',
-        body: JSON.stringify({ is_active: !isActive }),
+        body: JSON.stringify({
+          is_active: !isActive,
+          status: !isActive ? 'active' : 'inactive',
+        }),
       });
-      
-      setListings(prev => 
-        prev.map(listing => 
-          listing.id === listingId ? { ...listing, is_active: !isActive } : listing
-        )
-      );
+
+      // Immediately refresh listings from the server to ensure we have the persisted state
+      await fetchListings();
     } catch (err) {
       console.error('Error toggling listing:', err);
       setError('Failed to update listing. Please try again.');
