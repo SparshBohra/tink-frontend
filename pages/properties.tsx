@@ -582,11 +582,11 @@ function Properties() {
                 <div className="empty-state-content">
                   <div className="empty-state-icon">
                     <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                      <path d="M3 21h18"/>
-                      <path d="M5 21V7l8-4v18"/>
-                      <path d="M19 21V11l-6-4"/>
-                    </svg>
-                  </div>
+                    <path d="M3 21h18"/>
+                    <path d="M5 21V7l8-4v18"/>
+                    <path d="M19 21V11l-6-4"/>
+                  </svg>
+                </div>
                   <h3 className="empty-state-title">No Properties Yet</h3>
                   <p className="empty-state-description">
                     Start building your property portfolio by adding your first property.
@@ -598,8 +598,8 @@ function Properties() {
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M12 5v14M5 12h14"/>
                       </svg>
-                      Add Your First Property
-                    </button>
+                  Add Your First Property
+                </button>
                     <button onClick={() => router.push('/inventory')} className="btn btn-secondary">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>

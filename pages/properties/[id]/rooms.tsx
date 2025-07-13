@@ -532,7 +532,7 @@ export default function PropertyRooms() {
                               <path d="M12 5v14m-7-7h14"/>
                             </svg>
                             Add Single Room
-                          </button>
+                        </button>
                           <button 
                             onClick={() => setRoomCountEditorOpen(true)} 
                             className="btn btn-secondary"
@@ -697,21 +697,21 @@ export default function PropertyRooms() {
               
               <div className="actions-grid">
                 {property.rent_type === 'per_room' && (
-                  <div 
+                <div 
                     className={`action-card blue ${rooms.length === 0 ? 'highlighted' : ''}`}
-                    onClick={() => router.push(`/properties/${property.id}/add-room`)}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <div className="action-icon">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M12 5v14m-7-7h14"/>
-                      </svg>
+                  onClick={() => router.push(`/properties/${property.id}/add-room`)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <div className="action-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M12 5v14m-7-7h14"/>
+                    </svg>
                     </div>
-                    <div className="action-content">
-                      <h3 className="action-title">Add New Room</h3>
+                  <div className="action-content">
+                    <h3 className="action-title">Add New Room</h3>
                       <p className="action-subtitle">{rooms.length === 0 ? 'Start by creating your first room' : 'Create a new room'}</p>
-                    </div>
-                  </div>
+                        </div>
+                      </div>
                 )}
                 
                 <div 
@@ -723,32 +723,32 @@ export default function PropertyRooms() {
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
                     </svg>
-                  </div>
+                    </div>
                   <div className="action-content">
                     <h3 className="action-title">Convert Rent Type</h3>
                     <p className="action-subtitle">Change pricing model</p>
-                  </div>
-                </div>
+                            </div>
+                    </div>
 
                 {property.rent_type === 'per_room' && (
-                  <div 
+                <div 
                     className={`action-card green ${rooms.length === 0 ? 'highlighted' : ''}`}
-                    onClick={() => setRoomCountEditorOpen(true)}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <div className="action-icon">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <rect x="3" y="3" width="7" height="7"/>
-                        <rect x="14" y="3" width="7" height="7"/>
-                        <rect x="14" y="14" width="7" height="7"/>
-                        <rect x="3" y="14" width="7" height="7"/>
-                      </svg>
-                    </div>
-                    <div className="action-content">
+                  onClick={() => setRoomCountEditorOpen(true)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <div className="action-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="3" y="3" width="7" height="7"/>
+                      <rect x="14" y="3" width="7" height="7"/>
+                      <rect x="14" y="14" width="7" height="7"/>
+                      <rect x="3" y="14" width="7" height="7"/>
+                    </svg>
+                  </div>
+                  <div className="action-content">
                       <h3 className="action-title">{rooms.length === 0 ? 'Add Multiple Rooms' : 'Manage Rooms'}</h3>
                       <p className="action-subtitle">{rooms.length === 0 ? 'Quickly create several rooms at once' : 'Edit room structure'}</p>
-                    </div>
                   </div>
+                </div>
                 )}
 
                 <div 
@@ -761,7 +761,7 @@ export default function PropertyRooms() {
                       <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
                       <polyline points="9,22 9,12 15,12 15,22"/>
                     </svg>
-                  </div>
+                          </div>
                   <div className="action-content">
                     <h3 className="action-title">Create Listing</h3>
                     <p className="action-subtitle">List property</p>
@@ -782,8 +782,8 @@ export default function PropertyRooms() {
                   <div className="action-content">
                     <h3 className="action-title">View Listings</h3>
                     <p className="action-subtitle">See property listings</p>
-                  </div>
-                </div>
+                    </div>
+                          </div>
 
                 <div 
                   className="action-card blue"

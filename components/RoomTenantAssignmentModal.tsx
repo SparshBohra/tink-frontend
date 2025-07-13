@@ -1,4 +1,4 @@
-
+ 
 import { useState, useEffect } from 'react';
 import { apiClient } from '../lib/api';
 import { Tenant, Application, LeaseFormData, TenantFormData, Property, Room } from '../lib/types';

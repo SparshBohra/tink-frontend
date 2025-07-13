@@ -1,18 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { GetServerSideProps } from 'next';
 import { publicApiRequest } from '../../lib/api';
+import { PropertyListing } from '../../lib/types';
 import PublicApplicationForm from '../../components/PublicApplicationForm';
 
 interface PublicListingPageProps {
-  listing: any | null;
+  listing: PropertyListing | null;
   error?: string;
 }
 
 export default function PublicListingPage({ listing, error }: PublicListingPageProps) {
   const router = useRouter();
   const [showApplicationForm, setShowApplicationForm] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  // Treat undefined as true so listings are open unless explicitly closed
+  const canApply = listing.is_active !== false;
 
   if (error || !listing) {
     return (
@@ -37,32 +42,12 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
 
   const handleApplicationSubmit = async (applicationData: any) => {
     try {
-      // Transform the form data to match API expectations
-      const apiData = {
-        // Personal Information
-        tenant: {
-          first_name: applicationData.full_name.split(' ')[0] || applicationData.full_name,
-          last_name: applicationData.full_name.split(' ').slice(1).join(' ') || '',
-          email: applicationData.email,
-          phone: applicationData.phone,
-        },
-        // Required API fields
-        desired_move_in_date: applicationData.desired_move_in_date,
-        desired_lease_duration: parseInt(applicationData.desired_lease_duration),
-        rent_budget: parseInt(applicationData.rent_budget),
-        // Additional information
-        message: applicationData.additional_comments || '',
-        employment_info: {
-          employer: applicationData.employer_name || '',
-          position: applicationData.job_title || '',
-          annual_income: parseInt(applicationData.annual_income) || 0,
-        },
-        listing_id: listing.id,
-      };
-
-      const response = await publicApiRequest(`/properties/public/listings/${listing.public_slug}/apply/`, {
+      const response = await publicApiRequest('/api/public/applications/', {
         method: 'POST',
-        body: JSON.stringify(apiData),
+        body: JSON.stringify({
+          ...applicationData,
+          listing_id: listing.id,
+        }),
       });
 
       // Show success message and redirect
@@ -70,11 +55,26 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
       setShowApplicationForm(false);
     } catch (error: any) {
       console.error('Error submitting application:', error);
-      throw new Error('Failed to submit application. Please try again.');
+      alert('Failed to submit application. Please try again.');
     }
   };
 
-  const formatPrice = (price: number) => {
+  const nextImage = () => {
+    if (listing.media && listing.media.length > 0) {
+      const length = listing.media.length;
+      setCurrentImageIndex((prev) => (prev + 1) % length);
+    }
+  };
+
+  const prevImage = () => {
+    if (listing.media && listing.media.length > 0) {
+      const length = listing.media.length;
+      setCurrentImageIndex((prev) => (prev - 1 + length) % length);
+    }
+  };
+
+  const formatPrice = (price: number | null) => {
+    if (!price) return 'Contact for pricing';
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
@@ -90,9 +90,16 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
     });
   };
 
-  const propertyAddress = listing.property_details?.address 
-    ? `${listing.property_details.address.line1}${listing.property_details.address.line2 ? ', ' + listing.property_details.address.line2 : ''}, ${listing.property_details.address.city}, ${listing.property_details.address.state} ${listing.property_details.address.postal_code}`
-    : 'Address not available';
+  const formatPetPolicy = (policy: string) => {
+    const policies: Record<string, string> = {
+      'not_allowed': 'Not Allowed',
+      'cats_only': 'Cats Only',
+      'dogs_only': 'Dogs Only',
+      'cats_and_dogs': 'Cats and Dogs',
+      'all_pets': 'All Pets Welcome',
+    };
+    return policies[policy] || policy;
+  };
 
   return (
     <div className="public-listing-page">
@@ -101,6 +108,9 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
         <meta name="description" content={listing.description} />
         <meta property="og:title" content={listing.title} />
         <meta property="og:description" content={listing.description} />
+        {listing.media && listing.media.length > 0 && (
+          <meta property="og:image" content={listing.media[0].file_url} />
+        )}
       </Head>
 
       {/* Hero Section */}
@@ -108,191 +118,234 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
         <div className="hero-content">
           <div className="hero-text">
             <h1 className="listing-title">{listing.title}</h1>
-            <p className="property-address">{propertyAddress}</p>
+            <p className="property-address">{listing.property_address}</p>
             <div className="listing-badges">
-              <span className="badge">{listing.property_details?.property_type || 'Property'}</span>
-              <span className="badge">{listing.listing_type === 'whole_property' ? 'Whole Property' : 'Individual Rooms'}</span>
+              {listing.furnished && <span className="badge">Furnished</span>}
+              {listing.utilities_included && listing.utilities_included.length > 0 && (
+                <span className="badge">Utilities Included</span>
+              )}
+              {listing.pet_policy !== 'not_allowed' && (
+                <span className="badge">Pet Friendly</span>
+              )}
             </div>
           </div>
           
           <div className="hero-actions">
             <button 
               onClick={handleStartApplication}
-              className="btn btn-primary btn-lg"
+              className="btn btn-primary btn-large"
+              disabled={!canApply}
             >
-              Apply Now
+              {canApply ? 'Apply Now' : 'Applications Closed'}
             </button>
+            {listing.virtual_tour_url && (
+              <a 
+                href={listing.virtual_tour_url} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="btn btn-secondary btn-large"
+              >
+                Virtual Tour
+              </a>
+            )}
+            {listing.application_fee && (
+              <span className="application-fee">
+                Application Fee: {formatPrice(listing.application_fee)}
+              </span>
+            )}
           </div>
         </div>
       </div>
+
+      {/* Image Gallery */}
+      {listing.media && listing.media.length > 0 && (
+        <div className="image-gallery">
+          <div className="main-image">
+            <img 
+              src={listing.media[currentImageIndex].file_url} 
+              alt={listing.title}
+              className="gallery-image"
+            />
+            {listing.media.length > 1 && (
+              <>
+                <button 
+                  onClick={prevImage}
+                  className="image-nav prev-btn"
+                  aria-label="Previous image"
+                >
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="15,18 9,12 15,6"/>
+                  </svg>
+                </button>
+                <button 
+                  onClick={nextImage}
+                  className="image-nav next-btn"
+                  aria-label="Next image"
+                >
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="9,18 15,12 9,6"/>
+                  </svg>
+                </button>
+              </>
+            )}
+          </div>
+          
+          {listing.media.length > 1 && (
+            <div className="image-thumbnails">
+              {listing.media.map((media, index) => (
+                <button
+                  key={index}
+                  onClick={() => setCurrentImageIndex(index)}
+                  className={`thumbnail ${index === currentImageIndex ? 'active' : ''}`}
+                >
+                  <img src={media.file_url} alt={`${listing.title} - Image ${index + 1}`} />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Main Content */}
       <div className="main-content">
         <div className="content-grid">
           {/* Left Column - Property Details */}
           <div className="property-details">
-            <div className="card">
-              <div className="card-header">
-                <h2>Property Details</h2>
-              </div>
-              <div className="card-body">
-                <div className="details-list">
+            <section className="details-section">
+              <h2>Property Details</h2>
+              <div className="details-grid">
+                <div className="detail-item">
+                  <div className="detail-label">Property Type</div>
+                  <div className="detail-value">{listing.property_type}</div>
+                </div>
+                <div className="detail-item">
+                  <div className="detail-label">Max Occupancy</div>
+                  <div className="detail-value">{listing.max_occupancy} people</div>
+                </div>
+                <div className="detail-item">
+                  <div className="detail-label">Available From</div>
+                  <div className="detail-value">{listing.available_from ? formatDate(listing.available_from) : 'TBD'}</div>
+                </div>
+                {listing.application_deadline && (
                   <div className="detail-item">
-                    <div className="detail-label">Property Name</div>
-                    <div className="detail-value">{listing.property_details?.name || 'N/A'}</div>
+                    <div className="detail-label">Application Deadline</div>
+                    <div className="detail-value">{listing.application_deadline ? formatDate(listing.application_deadline) : 'TBD'}</div>
                   </div>
-                  <div className="detail-item">
-                    <div className="detail-label">Property Type</div>
-                    <div className="detail-value">{listing.property_details?.property_type || 'N/A'}</div>
+                )}
+                <div className="detail-item">
+                  <div className="detail-label">Lease Term</div>
+                  <div className="detail-value">
+                    {listing.min_lease_term} - {listing.max_lease_term || '∞'} months
                   </div>
-                  <div className="detail-item">
-                    <div className="detail-label">Listing Type</div>
-                    <div className="detail-value">{listing.listing_type === 'whole_property' ? 'Whole Property' : 'Individual Rooms'}</div>
-                  </div>
-                  {listing.available_from && (
-                    <div className="detail-item">
-                      <div className="detail-label">Available From</div>
-                      <div className="detail-value">{formatDate(listing.available_from)}</div>
-                    </div>
-                  )}
-                  {listing.available_room_details?.monthly_rent && (
-                    <div className="detail-item">
-                      <div className="detail-label">Monthly Rent</div>
-                      <div className="detail-value">{formatPrice(listing.available_room_details.monthly_rent)}</div>
-                    </div>
-                  )}
-                  {listing.available_room_details?.total_rooms && (
-                    <div className="detail-item">
-                      <div className="detail-label">Total Rooms</div>
-                      <div className="detail-value">{listing.available_room_details.total_rooms}</div>
-                    </div>
-                  )}
+                </div>
+                <div className="detail-item">
+                  <div className="detail-label">Pet Policy</div>
+                  <div className="detail-value">{listing.pet_policy ? formatPetPolicy(listing.pet_policy) : 'N/A'}</div>
+                </div>
+                <div className="detail-item">
+                  <div className="detail-label">Smoking</div>
+                  <div className="detail-value">{listing.smoking_allowed ? 'Allowed' : 'Not Allowed'}</div>
+                </div>
+                <div className="detail-item">
+                  <div className="detail-label">Furnished</div>
+                  <div className="detail-value">{listing.furnished ? 'Yes' : 'No'}</div>
                 </div>
               </div>
-            </div>
+            </section>
 
-            {/* Gallery Section */}
-            {listing.media && listing.media.length > 0 && (
-              <div className="card">
-                <div className="card-header">
-                  <h2>Photos</h2>
-                </div>
-                <div className="card-body">
-                  <div className="gallery-grid">
-                    {listing.media.map((media: any, index: number) => (
-                      <div key={media.id || index} className="gallery-item">
-                        <img
-                          src={media.file_url || media.url}
-                          alt={media.caption || `Property photo ${index + 1}`}
-                          className="gallery-image"
-                          onClick={() => {
-                            // Optional: Add lightbox functionality
-                            window.open(media.file_url || media.url, '_blank');
-                          }}
-                        />
-                        {media.caption && (
-                          <div className="gallery-caption">{media.caption}</div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
+            <section className="details-section">
+              <h2>Description</h2>
+              <div className="description-content">
+                <p>{listing.description}</p>
               </div>
+            </section>
+
+            {listing.utilities_included && listing.utilities_included.length > 0 && (
+              <section className="details-section">
+                <h2>Utilities Included</h2>
+                <div className="utilities-list">
+                  {listing.utilities_included.map((utility, index) => (
+                    <span key={index} className="utility-item">
+                      {utility.replace('_', ' ').toUpperCase()}
+                    </span>
+                  ))}
+                </div>
+              </section>
             )}
 
-            <div className="card">
-              <div className="card-header">
-                <h2>Description</h2>
-              </div>
-              <div className="card-body">
-                <div className="description-content">
-                  <p>{listing.description}</p>
+            {listing.amenities && listing.amenities.length > 0 && (
+              <section className="details-section">
+                <h2>Amenities</h2>
+                <div className="amenities-list">
+                  {listing.amenities.map((amenity, index) => (
+                    <span key={index} className="amenity-item">
+                      {amenity.replace('_', ' ').toUpperCase()}
+                    </span>
+                  ))}
                 </div>
-              </div>
-            </div>
-
-            {listing.application_form_config?.global_settings && (
-              <div className="card">
-                <div className="card-header">
-                  <h2>Application Information</h2>
-                </div>
-                <div className="card-body">
-                  <div className="details-list">
-                    {listing.application_form_config.global_settings.application_fee && (
-                      <div className="detail-item">
-                        <div className="detail-label">Application Fee</div>
-                        <div className="detail-value">{formatPrice(listing.application_form_config.global_settings.application_fee)}</div>
-                      </div>
-                    )}
-                    {listing.application_form_config.global_settings.minimum_income_ratio && (
-                      <div className="detail-item">
-                        <div className="detail-label">Minimum Income Requirement</div>
-                        <div className="detail-value">{listing.application_form_config.global_settings.minimum_income_ratio}x monthly rent</div>
-                      </div>
-                    )}
-                    {listing.application_form_config.global_settings.required_documents && (
-                      <div className="detail-item">
-                        <div className="detail-label">Required Documents</div>
-                        <div className="detail-value">
-                          {listing.application_form_config.global_settings.required_documents.join(', ')}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
+              </section>
             )}
           </div>
 
-          {/* Right Column - Contact Info & Apply */}
-          <div className="contact-summary">
-            <div className="card">
-              <div className="card-header">
-                <h3>Contact Information</h3>
-              </div>
-              <div className="card-body">
-                <div className="contact-info">
-                  <div className="contact-details">
-                    <div className="contact-item">
-                      <strong>Landlord:</strong> {listing.contact_info?.landlord_name || 'N/A'}
-                    </div>
-                    <div className="contact-item">
-                      <strong>Email:</strong> {listing.contact_info?.contact_email || 'N/A'}
-                    </div>
-                    <div className="contact-item">
-                      <strong>Property:</strong> {listing.contact_info?.property_name || listing.property_details?.name || 'N/A'}
-                    </div>
+          {/* Right Column - Application Summary */}
+          <div className="application-summary">
+            <div className="summary-card">
+              <h3>Application Information</h3>
+              
+              <div className="pricing-info">
+                {listing.application_fee && (
+                  <div className="price-item">
+                    <span className="price-label">Application Fee</span>
+                    <span className="price-value">{formatPrice(listing.application_fee)}</span>
                   </div>
-                </div>
+                )}
+                {listing.security_deposit && (
+                  <div className="price-item">
+                    <span className="price-label">Security Deposit</span>
+                    <span className="price-value">{formatPrice(listing.security_deposit)}</span>
+                  </div>
+                )}
               </div>
-            </div>
 
-            <div className="card apply-card">
-              <div className="card-header">
-                <h3>Ready to Apply?</h3>
-              </div>
-              <div className="card-body">
-                <div className="apply-info">
-                  <p className="text-muted">Submit your application online in just a few minutes.</p>
-                  {listing.application_form_config?.global_settings?.application_fee && (
-                    <div className="fee-info">
-                      <span className="fee-label">Application Fee:</span>
-                      <span className="fee-amount">{formatPrice(listing.application_form_config.global_settings.application_fee)}</span>
+              <div className="contact-info">
+                <h4>Contact Information</h4>
+                <div className="contact-details">
+                  <div className="contact-item">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                      <polyline points="22,6 12,13 2,6"/>
+                    </svg>
+                    <span>{listing.contact_info?.contact_email}</span>
+                  </div>
+                  {listing.contact_info?.contact_phone && (
+                    <div className="contact-item">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                      </svg>
+                      <span>{listing.contact_info?.contact_phone}</span>
                     </div>
                   )}
                 </div>
-                <div className="apply-actions">
-                  <button 
-                    onClick={handleStartApplication}
-                    className="btn btn-primary btn-lg"
-                    style={{ width: '100%' }}
+              </div>
+
+              <div className="summary-actions">
+                <button 
+                  onClick={handleStartApplication}
+                  className="btn btn-primary btn-block"
+                  disabled={!canApply}
+                >
+                  {canApply ? 'Start Application' : 'Applications Closed'}
+                </button>
+                {listing.virtual_tour_url && (
+                  <a 
+                    href={listing.virtual_tour_url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="btn btn-secondary btn-block"
                   >
-                    Apply Now
-                  </button>
-                  <p className="apply-note text-small text-muted">
-                    Secure application process • Get notified instantly
-                  </p>
-                </div>
+                    Take Virtual Tour
+                  </a>
+                )}
               </div>
             </div>
           </div>
@@ -311,8 +364,7 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
       <style jsx>{`
         .public-listing-page {
           min-height: 100vh;
-          background: var(--gray-50);
-          font-family: var(--font-sans);
+          background: #ffffff;
         }
 
         .error-page {
@@ -320,43 +372,42 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
           display: flex;
           align-items: center;
           justify-content: center;
-          background: var(--gray-50);
+          background: #f8fafc;
         }
 
         .error-content {
           text-align: center;
-          padding: var(--spacing-2xl);
+          padding: 40px;
           background: white;
-          border-radius: var(--radius-lg);
-          box-shadow: var(--shadow-lg);
-          max-width: 400px;
+          border-radius: 8px;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
 
         .error-content h1 {
-          font-size: var(--text-h2);
-          color: var(--gray-900);
-          margin-bottom: var(--spacing-md);
+          font-size: 24px;
+          color: #1f2937;
+          margin-bottom: 16px;
         }
 
         .error-content p {
-          color: var(--gray-600);
-          margin-bottom: var(--spacing-lg);
+          color: #6b7280;
+          margin-bottom: 24px;
         }
 
         .hero-section {
-          background: linear-gradient(135deg, var(--primary-blue) 0%, var(--info-purple) 100%);
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
           color: white;
-          padding: var(--spacing-2xl) 0;
+          padding: 80px 0;
         }
 
         .hero-content {
           max-width: 1200px;
           margin: 0 auto;
-          padding: 0 var(--spacing-md);
+          padding: 0 20px;
           display: flex;
           justify-content: space-between;
           align-items: center;
-          gap: var(--spacing-2xl);
+          gap: 40px;
         }
 
         .hero-text {
@@ -364,69 +415,173 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
         }
 
         .listing-title {
-          font-size: 2.5rem;
-          font-weight: var(--font-weight-bold);
-          margin: 0 0 var(--spacing-md) 0;
-          line-height: var(--line-height-tight);
+          font-size: 42px;
+          font-weight: 700;
+          margin: 0 0 16px 0;
+          line-height: 1.1;
         }
 
         .property-address {
-          font-size: 1.125rem;
-          margin: 0 0 var(--spacing-lg) 0;
+          font-size: 18px;
+          margin: 0 0 24px 0;
           opacity: 0.9;
         }
 
         .listing-badges {
           display: flex;
-          gap: var(--spacing-sm);
+          gap: 12px;
           flex-wrap: wrap;
         }
 
         .badge {
           background: rgba(255, 255, 255, 0.2);
-          padding: var(--spacing-xs) var(--spacing-md);
+          padding: 8px 16px;
           border-radius: 20px;
-          font-size: var(--text-small);
-          font-weight: var(--font-weight-medium);
+          font-size: 14px;
+          font-weight: 500;
           border: 1px solid rgba(255, 255, 255, 0.3);
         }
 
         .hero-actions {
           display: flex;
           flex-direction: column;
-          gap: var(--spacing-sm);
+          gap: 12px;
+        }
+
+        .application-fee {
+          font-size: 14px;
+          color: rgba(255, 255, 255, 0.9);
+          margin-top: 4px;
+        }
+
+        .image-gallery {
+          max-width: 1200px;
+          margin: 0 auto;
+          padding: 40px 20px;
+        }
+
+        .main-image {
+          position: relative;
+          border-radius: 12px;
+          overflow: hidden;
+          margin-bottom: 20px;
+        }
+
+        .gallery-image {
+          width: 100%;
+          height: 500px;
+          object-fit: cover;
+          display: block;
+        }
+
+        .image-nav {
+          position: absolute;
+          top: 50%;
+          transform: translateY(-50%);
+          background: rgba(0, 0, 0, 0.7);
+          color: white;
+          border: none;
+          border-radius: 50%;
+          width: 48px;
+          height: 48px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .image-nav:hover {
+          background: rgba(0, 0, 0, 0.9);
+        }
+
+        .prev-btn {
+          left: 20px;
+        }
+
+        .next-btn {
+          right: 20px;
+        }
+
+        .image-thumbnails {
+          display: flex;
+          gap: 12px;
+          overflow-x: auto;
+          padding: 10px 0;
+        }
+
+        .thumbnail {
+          flex-shrink: 0;
+          width: 100px;
+          height: 70px;
+          border-radius: 6px;
+          overflow: hidden;
+          border: 2px solid transparent;
+          cursor: pointer;
+          transition: all 0.2s;
+          background: none;
+          padding: 0;
+        }
+
+        .thumbnail:hover {
+          border-color: #3b82f6;
+        }
+
+        .thumbnail.active {
+          border-color: #3b82f6;
+        }
+
+        .thumbnail img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
         }
 
         .main-content {
           max-width: 1200px;
           margin: 0 auto;
-          padding: var(--spacing-2xl) var(--spacing-md);
+          padding: 40px 20px;
         }
 
         .content-grid {
           display: grid;
           grid-template-columns: 2fr 1fr;
-          gap: var(--spacing-2xl);
+          gap: 40px;
         }
 
         .property-details {
           display: flex;
           flex-direction: column;
-          gap: var(--spacing-lg);
+          gap: 32px;
         }
 
-        .details-list {
-          display: flex;
-          flex-direction: column;
-          gap: var(--spacing-md);
+        .details-section {
+          background: white;
+          border-radius: 8px;
+          padding: 24px;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+          border: 1px solid #e5e7eb;
+        }
+
+        .details-section h2 {
+          font-size: 20px;
+          font-weight: 600;
+          color: #1f2937;
+          margin: 0 0 20px 0;
+        }
+
+        .details-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+          gap: 16px;
         }
 
         .detail-item {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          padding: var(--spacing-sm) 0;
-          border-bottom: 1px solid var(--gray-200);
+          padding: 12px 0;
+          border-bottom: 1px solid #f3f4f6;
         }
 
         .detail-item:last-child {
@@ -434,130 +589,165 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
         }
 
         .detail-label {
-          font-weight: var(--font-weight-medium);
-          color: var(--gray-600);
+          font-weight: 500;
+          color: #6b7280;
         }
 
         .detail-value {
-          font-weight: var(--font-weight-semibold);
-          color: var(--gray-900);
+          font-weight: 600;
+          color: #1f2937;
         }
 
         .description-content {
-          line-height: var(--line-height-loose);
-          color: var(--gray-700);
+          line-height: 1.6;
+          color: #374151;
         }
 
-        .contact-summary {
-          position: sticky;
-          top: var(--spacing-md);
-          height: fit-content;
+        .utilities-list, .amenities-list {
           display: flex;
-          flex-direction: column;
-          gap: var(--spacing-lg);
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+
+        .utility-item, .amenity-item {
+          background: #f3f4f6;
+          color: #374151;
+          padding: 6px 12px;
+          border-radius: 16px;
+          font-size: 14px;
+          font-weight: 500;
+        }
+
+        .application-summary {
+          position: sticky;
+          top: 20px;
+          height: fit-content;
+        }
+
+        .summary-card {
+          background: white;
+          border-radius: 8px;
+          padding: 24px;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+          border: 1px solid #e5e7eb;
+        }
+
+        .summary-card h3 {
+          font-size: 18px;
+          font-weight: 600;
+          color: #1f2937;
+          margin: 0 0 20px 0;
+        }
+
+        .pricing-info {
+          margin-bottom: 24px;
+        }
+
+        .price-item {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 12px 0;
+          border-bottom: 1px solid #f3f4f6;
+        }
+
+        .price-item:last-child {
+          border-bottom: none;
+        }
+
+        .price-label {
+          color: #6b7280;
+          font-weight: 500;
+        }
+
+        .price-value {
+          font-weight: 600;
+          color: #1f2937;
+          font-size: 18px;
         }
 
         .contact-info {
-          margin-bottom: var(--spacing-lg);
+          margin-bottom: 24px;
+        }
+
+        .contact-info h4 {
+          font-size: 16px;
+          font-weight: 600;
+          color: #1f2937;
+          margin: 0 0 16px 0;
         }
 
         .contact-details {
           display: flex;
           flex-direction: column;
-          gap: var(--spacing-sm);
+          gap: 12px;
         }
 
         .contact-item {
-          color: var(--gray-600);
-          font-size: var(--text-small);
-        }
-
-        .contact-item strong {
-          color: var(--gray-900);
-        }
-
-        .apply-card {
-          border: 2px solid var(--primary-blue);
-          box-shadow: var(--shadow-lg);
-        }
-
-        .apply-info {
-          margin-bottom: var(--spacing-lg);
-        }
-
-        .fee-info {
           display: flex;
-          justify-content: space-between;
           align-items: center;
-          padding: var(--spacing-sm);
-          background: var(--gray-50);
-          border-radius: var(--radius-md);
-          margin-top: var(--spacing-sm);
+          gap: 8px;
+          color: #6b7280;
         }
 
-        .fee-label {
-          font-size: var(--text-small);
-          color: var(--gray-600);
+        .contact-item svg {
+          flex-shrink: 0;
         }
 
-        .fee-amount {
-          font-weight: var(--font-weight-semibold);
-          color: var(--primary-blue);
-        }
-
-        .apply-actions {
+        .summary-actions {
           display: flex;
           flex-direction: column;
-          gap: var(--spacing-sm);
+          gap: 12px;
         }
 
-        .apply-note {
-          text-align: center;
-          margin: 0;
-        }
-
-        .gallery-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-          gap: var(--spacing-md);
-          margin-top: var(--spacing-sm);
-        }
-
-        .gallery-item {
-          position: relative;
-          border-radius: var(--radius-md);
-          overflow: hidden;
-          background: var(--gray-100);
-          aspect-ratio: 4/3;
+        .btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          padding: 12px 24px;
+          border-radius: 6px;
+          font-size: 16px;
+          font-weight: 600;
           cursor: pointer;
-          transition: transform 0.2s ease;
+          transition: all 0.2s;
+          text-decoration: none;
+          border: none;
+          text-align: center;
         }
 
-        .gallery-item:hover {
-          transform: scale(1.02);
-        }
-
-        .gallery-image {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          transition: opacity 0.2s ease;
-        }
-
-        .gallery-image:hover {
-          opacity: 0.9;
-        }
-
-        .gallery-caption {
-          position: absolute;
-          bottom: 0;
-          left: 0;
-          right: 0;
-          background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+        .btn-primary {
+          background: #3b82f6;
           color: white;
-          padding: var(--spacing-md) var(--spacing-sm) var(--spacing-sm);
-          font-size: var(--text-small);
-          font-weight: var(--font-weight-medium);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+          background: #2563eb;
+          transform: translateY(-1px);
+        }
+
+        .btn-primary:disabled {
+          background: #9ca3af;
+          cursor: not-allowed;
+        }
+
+        .btn-secondary {
+          background: #f3f4f6;
+          color: #374151;
+          border: 1px solid #d1d5db;
+        }
+
+        .btn-secondary:hover {
+          background: #e5e7eb;
+        }
+
+        .btn-large {
+          padding: 16px 32px;
+          font-size: 18px;
+        }
+
+        .btn-block {
+          width: 100%;
         }
 
         @media (max-width: 1024px) {
@@ -565,26 +755,19 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
             grid-template-columns: 1fr;
           }
 
-          .contact-summary {
+          .application-summary {
             position: static;
           }
         }
 
         @media (max-width: 768px) {
-          .gallery-grid {
-            grid-template-columns: 1fr;
-          }
-          
-          .gallery-item {
-            aspect-ratio: 16/9;
-          }
           .hero-content {
             flex-direction: column;
             text-align: center;
           }
 
           .listing-title {
-            font-size: 2rem;
+            font-size: 32px;
           }
 
           .hero-actions {
@@ -592,14 +775,25 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
             justify-content: center;
           }
 
-          .details-list {
-            gap: var(--spacing-sm);
+          .details-grid {
+            grid-template-columns: 1fr;
           }
 
-          .detail-item {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: var(--spacing-xs);
+          .gallery-image {
+            height: 300px;
+          }
+
+          .image-nav {
+            width: 40px;
+            height: 40px;
+          }
+
+          .prev-btn {
+            left: 10px;
+          }
+
+          .next-btn {
+            right: 10px;
           }
         }
       `}</style>
@@ -617,6 +811,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
   }
 
   try {
+    // Corrected endpoint path (API_BASE_URL already includes '/api')
     const listing = await publicApiRequest(`/properties/public/listings/${slug}/`);
     
     return {

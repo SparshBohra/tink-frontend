@@ -515,4 +515,4 @@ export default function PropertyTenantAssignmentModal({
       `}</style>
     </div>
   );
-}
+} 

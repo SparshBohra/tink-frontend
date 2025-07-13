@@ -914,25 +914,38 @@ class ApiClient {
   // Create new listing
   async createListing(data: ListingFormData): Promise<PropertyListing> {
     try {
-      console.log('Creating listing with data:', data);
       const response = await this.api.post('/properties/listings/', data);
-      console.log('Listing created successfully:', response.data);
-      return response.data;
-    } catch (error: any) {
-      console.error('Listing creation failed:', error);
-      console.error('Error response:', error.response?.data);
       
-      if (error.response?.status === 403) {
-        throw new Error('You do not have permission to create listings. Please contact your administrator.');
+      if (response.status === 201) {
+        // Ideal case: The server returns the full object with ID in the body.
+        if (response.data && response.data.id) {
+          console.log('✅ createListing: Server returned new listing with ID in response body:', response.data.id);
+          return response.data;
+        }
+
+        // Common case: The server returns the ID in the 'Location' header.
+        const locationHeader = response.headers['location'];
+        if (locationHeader) {
+          console.log('✅ createListing: Found Location header:', locationHeader);
+          const matches = locationHeader.match(/\/(\d+)\/?$/); // Extracts trailing number from URL
+          if (matches && matches[1]) {
+            const newId = parseInt(matches[1], 10);
+            console.log(`✅ createListing: Extracted ID ${newId}. Fetching full listing object...`);
+            return this.getListing(newId); // Fetch the complete object using the new ID
+          }
+        }
+
+        // If we reach here, the backend isn't following standard practices.
+        console.error('❌ createListing: CRITICAL - Server did not return a listing ID in the response body or a Location header. Media upload will fail.');
+        console.error('Response Data:', response.data);
+        console.error('Response Headers:', response.headers);
+        return response.data; // Return the incomplete data, which will cause a logged failure upstream.
       }
-      if (error.response?.status === 400) {
-        const details = error.response?.data?.detail || error.response?.data?.message || JSON.stringify(error.response?.data);
-        throw new Error(`Invalid listing data: ${details}`);
-      }
-      if (error.response?.status === 500) {
-        throw new Error('Server error occurred while creating listing. Please try again or contact support.');
-      }
-      throw new Error(error.message || 'Failed to create listing');
+      
+      throw new Error(`Unexpected response status: ${response.status}`);
+    } catch (error: any) {
+      console.error('Failed to create listing:', error);
+      throw error;
     }
   }
 
@@ -967,22 +980,57 @@ class ApiClient {
 
   // Upload media for listing
   async uploadListingMedia(listingId: number, file: File, caption?: string): Promise<ListingMedia> {
+    console.log('🔄 API: Starting uploadListingMedia...');
+    console.log('📋 Upload parameters:', {
+      listingId,
+      fileName: file.name,
+      fileSize: file.size,
+      fileType: file.type,
+      caption
+    });
+    
     try {
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('files', file);
       formData.append('media_type', 'image');
       if (caption) {
         formData.append('caption', caption);
       }
 
-      const response = await this.api.post(`/properties/listings/${listingId}/media/`, formData, {
+      console.log('📦 FormData contents:');
+      for (let [key, value] of formData.entries()) {
+        if (value instanceof File) {
+          console.log(`  ${key}: File(${value.name}, ${value.size} bytes, ${value.type})`);
+        } else {
+          console.log(`  ${key}: ${value}`);
+        }
+      }
+
+      const uploadUrl = `/properties/listings/${listingId}/upload_media/`;
+      console.log('🌐 Upload URL:', uploadUrl);
+      console.log('🔑 Auth token present:', !!this.getAccessToken());
+
+      const response = await this.api.post(uploadUrl, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
+      
+      console.log('✅ API: Upload response received');
+      console.log('📊 Response status:', response.status);
+      console.log('📄 Response data:', response.data);
+      
       return response.data;
     } catch (error: any) {
-      console.error('Failed to upload media:', error);
+      console.error('❌ API: Upload failed');
+      console.error('🔍 Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        headers: error.response?.headers
+      });
+      console.error('🔍 Full error object:', error);
       throw error;
     }
   }

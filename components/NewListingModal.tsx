@@ -172,9 +172,13 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
     if (editMode && existingListing) {
       console.log('Populating form with existing listing data:', existingListing);
       
+      // Ensure property_ref is properly converted to string
+      const propertyRefValue = existingListing.property_ref ? existingListing.property_ref.toString() : '';
+      console.log('Setting property_ref to:', propertyRefValue);
+      
       // Map the API response to form data structure
       const newFormData = {
-        property_ref: existingListing.property_ref?.toString() || '',
+        property_ref: propertyRefValue,
         title: existingListing.title || '',
         description: existingListing.description || '',
         listing_type: existingListing.listing_type || 'rooms',
@@ -254,14 +258,17 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
       console.log('Fetched properties:', propertiesList);
       setProperties(propertiesList);
       
-      // If we're in edit mode and have existing listing data, but the property_ref wasn't set
-      // (because properties weren't loaded yet), re-populate the form
-      if (editMode && existingListing && formData.property_ref === '' && existingListing.property_ref) {
-        console.log('Re-populating form data now that properties are loaded');
-        setFormData(prev => ({
-          ...prev,
-          property_ref: existingListing.property_ref?.toString() || ''
-        }));
+      // In edit mode, if we have existing listing data but the form hasn't been populated yet
+      // (race condition where properties load before listing data), re-trigger form population
+      if (editMode && existingListing && !isFormDataPopulated) {
+        console.log('Properties loaded after listing data - ensuring property_ref is set');
+        const propertyRefValue = existingListing.property_ref ? existingListing.property_ref.toString() : '';
+        if (propertyRefValue && formData.property_ref !== propertyRefValue) {
+          setFormData(prev => ({
+            ...prev,
+            property_ref: propertyRefValue
+          }));
+        }
       }
     } catch (error) {
       console.error('Failed to fetch properties:', error);
@@ -370,6 +377,7 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
 
       const selectedProperty = properties.find(p => p.id === parseInt(formData.property_ref));
       
+      // First, create/update the listing
       const listingData = {
         property_ref: parseInt(formData.property_ref),
         title: formData.title,
@@ -377,7 +385,7 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
         listing_type: formData.listing_type,
         available_rooms: formData.listing_type === 'rooms' ? formData.available_rooms : [],
         available_from: formData.available_from || undefined,
-        featured_image_url: mediaFiles.find(m => m.is_primary)?.url || mediaFiles[0]?.url || '',
+        featured_image_url: '', // Will be updated after upload
         
         application_form_config: {
           steps: {
@@ -412,14 +420,119 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
         marketing_tags: formData.marketing_tags,
         property_name: selectedProperty?.name || '',
         property_address: selectedProperty?.full_address || '',
+        
+        // Remove media_info as it's not the correct way to handle uploads
+        // media_info will be created from the actual uploaded files
       };
 
       console.log('Submitting listing data:', listingData);
       
+      let savedListing;
       if (editMode && existingListing) {
-        await apiClient.updateListing(existingListing.id, listingData);
+        savedListing = await apiClient.updateListing(existingListing.id, listingData);
       } else {
-      await apiClient.createListing(listingData);
+        savedListing = await apiClient.createListing(listingData);
+      }
+
+      console.log('Listing saved:', savedListing);
+      console.log('Listing ID:', savedListing?.id);
+
+      // Now upload media files if any
+      const newMediaFiles = mediaFiles.filter(media => media.file); // Only new files with File objects
+      console.log('=== MEDIA UPLOAD DEBUG ===');
+      console.log('Total mediaFiles:', mediaFiles.length);
+      console.log('All mediaFiles:', mediaFiles.map(m => ({
+        id: m.id,
+        hasFile: !!m.file,
+        fileName: m.file?.name,
+        fileSize: m.file?.size,
+        fileType: m.file?.type,
+        caption: m.caption,
+        is_primary: m.is_primary,
+        url: m.url
+      })));
+      console.log('Filtered newMediaFiles:', newMediaFiles.length);
+      console.log('Listing ID:', savedListing?.id);
+      console.log('=== END DEBUG ===');
+      
+      if (newMediaFiles.length > 0 && savedListing?.id) {
+        console.log('Starting media upload process...');
+        console.log('Files to upload:', newMediaFiles.map(m => ({
+          fileName: m.file?.name,
+          fileSize: m.file?.size,
+          fileType: m.file?.type,
+          caption: m.caption,
+          is_primary: m.is_primary
+        })));
+        
+        try {
+          let uploadedCount = 0;
+          let primaryImageUrl = '';
+          
+          for (const media of newMediaFiles) {
+            console.log(`\n--- Uploading file ${uploadedCount + 1}/${newMediaFiles.length} ---`);
+            console.log('File details:', {
+              name: media.file?.name,
+              size: media.file?.size,
+              type: media.file?.type,
+              caption: media.caption,
+              is_primary: media.is_primary
+            });
+            
+            try {
+              const uploadedMedia = await apiClient.uploadListingMedia(savedListing.id, media.file, media.caption);
+              console.log('✅ Upload successful:', uploadedMedia);
+              uploadedCount++;
+              
+              // If this is the primary image, save the URL
+              if (media.is_primary) {
+                primaryImageUrl = uploadedMedia.file_url || uploadedMedia.url;
+                console.log('📌 Primary image URL saved:', primaryImageUrl);
+              }
+            } catch (singleUploadError: any) {
+              console.error('❌ Single file upload failed:', singleUploadError);
+              console.error('Error response:', singleUploadError.response?.data);
+              console.error('Error status:', singleUploadError.response?.status);
+              console.error('Error headers:', singleUploadError.response?.headers);
+              throw singleUploadError; // Re-throw to be caught by outer try-catch
+            }
+          }
+          
+          console.log(`\n✅ All ${uploadedCount} media files uploaded successfully!`);
+          
+          // Update featured image if we have a primary image
+          if (primaryImageUrl) {
+            console.log('🖼️ Setting featured image URL:', primaryImageUrl);
+            await apiClient.updateListing(savedListing.id, { 
+              featured_image_url: primaryImageUrl 
+            });
+            console.log('✅ Featured image URL updated');
+          }
+          
+        } catch (uploadError: any) {
+          console.error('❌ MEDIA UPLOAD FAILED:', uploadError);
+          console.error('Error message:', uploadError.message);
+          console.error('Error response data:', uploadError.response?.data);
+          console.error('Error response status:', uploadError.response?.status);
+          console.error('Error response headers:', uploadError.response?.headers);
+          console.error('Full error object:', uploadError);
+          
+          // Show detailed error to user
+          const errorMessage = uploadError.response?.data?.error || 
+                             uploadError.response?.data?.message || 
+                             uploadError.message || 
+                             'Unknown upload error';
+          
+          setError(`Listing created successfully, but failed to upload images: ${errorMessage}`);
+        }
+      } else if (newMediaFiles.length > 0 && !savedListing?.id) {
+        console.error('❌ Cannot upload media: listing ID is missing');
+        console.error('Saved listing:', savedListing);
+        setError('Listing created but media upload failed: listing ID not available');
+      } else if (newMediaFiles.length === 0) {
+        console.log('ℹ️ No new media files to upload');
+      } else {
+        console.log('ℹ️ Media upload conditions not met');
       }
       
       onSuccess?.();
@@ -468,14 +581,30 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
       <div className={styles.formSection}>
               <div className={styles.formGroup}>
           <label htmlFor="property_ref">Property <span className={styles.required}>*</span></label>
-          <div className={styles.selectWrapper}>
-            <select id="property_ref" value={formData.property_ref} onChange={(e) => handleInputChange('property_ref', e.target.value)} required>
+          {editMode ? (
+            // In edit mode, show the property name as read-only
+            <div className={styles.readOnlyField}>
+              <input 
+                type="text" 
+                value={selectedProperty ? `${selectedProperty.name} - ${selectedProperty.full_address}` : 'Loading property...'} 
+                readOnly 
+                className={styles.readOnlyInput}
+              />
+              <small style={{ color: '#666', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+                Property cannot be changed when editing a listing
+              </small>
+            </div>
+          ) : (
+            // In create mode, show the dropdown
+            <div className={styles.selectWrapper}>
+              <select id="property_ref" value={formData.property_ref} onChange={(e) => handleInputChange('property_ref', e.target.value)} required>
                   <option value="">Select a property...</option>
                   {properties.map(property => (
-                <option key={property.id} value={property.id}>{property.name} - {property.full_address}</option>
+                  <option key={property.id} value={property.id}>{property.name} - {property.full_address}</option>
                   ))}
                 </select>
-          </div>
+            </div>
+          )}
           {/* Debug info */}
           {editMode && (
             <small style={{ color: '#666', fontSize: '12px' }}>
@@ -626,8 +755,8 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
       <div className={styles.sectionHeader}>
         <h3>Property Details</h3>
         <p>Provide detailed information about amenities, policies, and terms.</p>
-          </div>
-      
+        </div>
+
       <div className={styles.formSection}>
         <div className={styles.formGroup}>
           <label>Utilities Included</label>
@@ -850,4 +979,4 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
   );
 };
 
-export default NewListingModal;
+export default NewListingModal; 
