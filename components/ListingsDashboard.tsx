@@ -63,6 +63,9 @@ export default function ListingsDashboard(props: ListingsDashboardProps) {
   const { user } = useAuth();
   const router = useRouter();
   const [listings, setListings] = useState<PropertyListing[]>([]);
+  const [filteredListings, setFilteredListings] = useState<PropertyListing[]>([]);
+  const [properties, setProperties] = useState<any[]>([]);
+  const [selectedProperty, setSelectedProperty] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -71,8 +74,41 @@ export default function ListingsDashboard(props: ListingsDashboardProps) {
   useEffect(() => {
     if (user) {
       fetchListings();
+      fetchProperties();
     }
   }, [user]);
+
+  // Handle URL parameters for property filtering
+  useEffect(() => {
+    if (router.isReady) {
+      const { property } = router.query;
+      console.log('URL parameter processing:', { property, isReady: router.isReady, query: router.query });
+      if (property && typeof property === 'string') {
+        const propertyId = parseInt(property);
+        console.log('Parsed property ID from URL:', propertyId);
+        if (!isNaN(propertyId)) {
+          setSelectedProperty(propertyId);
+        }
+      }
+    }
+  }, [router.isReady, router.query]);
+
+  // Filter listings when property filter changes
+  useEffect(() => {
+    console.log('Filtering effect triggered:', { selectedProperty, listingsCount: listings.length });
+    if (selectedProperty) {
+      const filtered = listings.filter(listing => {
+        console.log('Checking listing:', { listingId: listing.id, property_ref: listing.property_ref, selectedProperty, types: { property_ref: typeof listing.property_ref, selectedProperty: typeof selectedProperty } });
+        // Handle both string and number comparison
+        const listingPropertyRef = typeof listing.property_ref === 'string' ? parseInt(listing.property_ref) : listing.property_ref;
+        return listingPropertyRef === selectedProperty;
+      });
+      console.log('Filtered listings:', filtered.length);
+      setFilteredListings(filtered);
+    } else {
+      setFilteredListings(listings);
+    }
+  }, [listings, selectedProperty]);
 
   const fetchListings = async () => {
     try {
@@ -91,6 +127,7 @@ export default function ListingsDashboard(props: ListingsDashboardProps) {
         is_active: listing.is_active !== undefined ? listing.is_active : listing.status === 'active'
       }));
       
+      console.log('Fetched listings:', normalizedListings.map((l: any) => ({ id: l.id, property_ref: l.property_ref, title: l.title })));
       setListings(normalizedListings);
     } catch (err) {
       console.error('Error fetching listings:', err);
@@ -98,6 +135,19 @@ export default function ListingsDashboard(props: ListingsDashboardProps) {
     } finally {
       setLoading(false);
       setIsRefreshing(false);
+    }
+  };
+
+  const fetchProperties = async () => {
+    try {
+      const response = await apiRequest('/properties/', {
+        method: 'GET',
+      });
+      const propertiesData = Array.isArray(response) ? response : (response.results || []);
+      console.log('Fetched properties:', propertiesData.map((p: any) => ({ id: p.id, name: p.name })));
+      setProperties(propertiesData);
+    } catch (err) {
+      console.error('Error fetching properties:', err);
     }
   };
 
@@ -116,6 +166,11 @@ export default function ListingsDashboard(props: ListingsDashboardProps) {
       
       setListings(prev => [normalizedListing, ...prev]);
       setShowCreateModal(false);
+      
+      // Refresh listings to ensure we have the latest data
+      setTimeout(() => {
+        fetchListings();
+      }, 500);
       
       // Show success message
       // You might want to add a toast notification here
@@ -167,14 +222,14 @@ export default function ListingsDashboard(props: ListingsDashboardProps) {
 
   const handleEditListing = (listingId: number) => {
     // Navigate to edit page (to be implemented)
-    router.push(`/listings/${listingId}/edit`);
+    router.push(`/listings/edit/${listingId}`);
   };
 
   const getMetrics = () => {
-    const totalListings = listings.length;
-    const activeListings = listings.filter(l => l.is_active).length;
+    const totalListings = filteredListings.length;
+    const activeListings = filteredListings.filter(l => l.is_active).length;
     const inactiveListings = totalListings - activeListings;
-    const totalApplications = listings.reduce((sum, l) => sum + (l.application_count || 0), 0);
+    const totalApplications = filteredListings.reduce((sum, l) => sum + (l.application_count || 0), 0);
     
     return {
       totalListings,
@@ -182,6 +237,20 @@ export default function ListingsDashboard(props: ListingsDashboardProps) {
       inactiveListings,
       totalApplications,
     };
+  };
+
+  const handlePropertyFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value;
+    const propertyId = value ? parseInt(value) : null;
+    console.log('Property filter change:', { value, propertyId, selectedProperty, listings: listings.length });
+    setSelectedProperty(propertyId);
+    
+    // Update URL without full page reload
+    if (propertyId) {
+      router.push(`/listings?property=${propertyId}`, undefined, { shallow: true });
+    } else {
+      router.push('/listings', undefined, { shallow: true });
+    }
   };
 
   const metrics = getMetrics();
@@ -326,9 +395,28 @@ export default function ListingsDashboard(props: ListingsDashboardProps) {
             <h2 className="section-title">Manage Listings</h2>
             <p className="section-subtitle">
               View and manage all your property listings
+              {selectedProperty && (
+                <span className="filter-indicator">
+                  {' '}• Filtered by {properties.find(p => p.id === selectedProperty)?.name || 'Selected Property'}
+                </span>
+              )}
             </p>
           </div>
           <div className="section-actions">
+            <div className="filter-controls">
+              <select
+                value={selectedProperty || ''}
+                onChange={handlePropertyFilterChange}
+                className="property-filter-select"
+              >
+                <option value="">All Properties</option>
+                {properties.map(property => (
+                  <option key={property.id} value={property.id}>
+                    {property.name}
+                  </option>
+                ))}
+              </select>
+            </div>
             <button
               onClick={fetchListings}
               disabled={isRefreshing}
@@ -347,7 +435,7 @@ export default function ListingsDashboard(props: ListingsDashboardProps) {
           </div>
         </div>
 
-        {listings.length === 0 ? (
+        {filteredListings.length === 0 ? (
           <div className="empty-listings-state">
             <div className="empty-state-content">
               <div className="empty-state-icon">
@@ -356,11 +444,14 @@ export default function ListingsDashboard(props: ListingsDashboardProps) {
                   <polyline points="9,22 9,12 15,12 15,22"/>
                 </svg>
               </div>
-              <h3 className="empty-state-title">No Property Listings Yet</h3>
+              <h3 className="empty-state-title">
+                {selectedProperty ? 'No Listings for This Property' : 'No Property Listings Yet'}
+              </h3>
               <p className="empty-state-description">
-                Create your first property listing to start accepting applications from tenants.
-                <br />
-                Listings help you reach more potential tenants and streamline your rental process.
+                {selectedProperty 
+                  ? `No listings found for ${properties.find(p => p.id === selectedProperty)?.name || 'this property'}. Create a listing to start accepting applications.`
+                  : 'Create your first property listing to start accepting applications from tenants. Listings help you reach more potential tenants and streamline your rental process.'
+                }
               </p>
               <div className="empty-state-actions">
                 <button
@@ -368,7 +459,7 @@ export default function ListingsDashboard(props: ListingsDashboardProps) {
                   className="btn btn-primary"
                 >
                   <PlusIcon />
-                  Create Your First Listing
+                  {selectedProperty ? 'Create Listing for This Property' : 'Create Your First Listing'}
                 </button>
                 <button
                   onClick={() => router.push('/properties')}
@@ -378,27 +469,11 @@ export default function ListingsDashboard(props: ListingsDashboardProps) {
                   View Properties
                 </button>
               </div>
-              <div className="empty-state-help">
-                <div className="help-cards">
-                  <div className="help-card">
-                    <h4>📋 What are listings?</h4>
-                    <p>Public pages where tenants can view your property details and submit applications online.</p>
-                  </div>
-                  <div className="help-card">
-                    <h4>🎯 Why create listings?</h4>
-                    <p>Reach more tenants, automate applications, and reduce vacancy time with professional listings.</p>
-                  </div>
-                  <div className="help-card">
-                    <h4>⚡ Quick setup</h4>
-                    <p>Select a property, add photos and details, and publish your listing in minutes.</p>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         ) : (
           <div className="listings-grid">
-            {listings.map((listing) => (
+            {filteredListings.map((listing) => (
               <div key={listing.id} className="listing-card">
                 <div className="listing-card-header">
                   <div className="listing-info">
@@ -1117,6 +1192,41 @@ export default function ListingsDashboard(props: ListingsDashboardProps) {
             width: 100%;
             max-width: 280px;
           }
+        }
+
+        /* Filter Controls */
+        .filter-controls {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .property-filter-select {
+          padding: 8px 12px;
+          border: 1px solid var(--gray-300);
+          border-radius: 6px;
+          background: white;
+          color: var(--gray-700);
+          font-size: 14px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          min-width: 180px;
+        }
+
+        .property-filter-select:hover {
+          border-color: var(--gray-400);
+        }
+
+        .property-filter-select:focus {
+          outline: none;
+          border-color: var(--primary-blue);
+          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .filter-indicator {
+          color: var(--primary-blue);
+          font-weight: 500;
         }
       `}</style>
     </div>

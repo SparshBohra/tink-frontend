@@ -686,6 +686,9 @@ export default function PropertyRooms() {
                           <button className="btn btn-primary" onClick={() => setIsNewApplicationModalOpen(true)}>
                               Create Listing
                           </button>
+                          <button className="btn btn-secondary" onClick={() => router.push(`/listings?property=${property.id}`)}>
+                              View Listings
+                          </button>
                           <Link href={`/properties/${property.id}/edit`} className="btn btn-secondary">
                               Edit Property
                           </Link>
@@ -758,12 +761,29 @@ export default function PropertyRooms() {
                       <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
                       <polyline points="9,22 9,12 15,12 15,22"/>
                     </svg>
-                          </div>
+                  </div>
                   <div className="action-content">
                     <h3 className="action-title">Create Listing</h3>
                     <p className="action-subtitle">List property</p>
-                    </div>
-                          </div>
+                  </div>
+                </div>
+
+                <div 
+                  className="action-card blue"
+                  onClick={() => router.push(`/listings?property=${property.id}`)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <div className="action-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+                      <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+                    </svg>
+                  </div>
+                  <div className="action-content">
+                    <h3 className="action-title">View Listings</h3>
+                    <p className="action-subtitle">See property listings</p>
+                  </div>
+                </div>
 
                 <div 
                   className="action-card blue"

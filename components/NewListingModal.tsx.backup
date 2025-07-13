@@ -419,7 +419,7 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
       if (editMode && existingListing) {
         await apiClient.updateListing(existingListing.id, listingData);
       } else {
-      await apiClient.createListing(listingData);
+        await apiClient.createListing(listingData);
       }
       
       onSuccess?.();
@@ -433,7 +433,7 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
   };
 
   const selectedProperty = properties.find(p => p.id === parseInt(formData.property_ref));
-
+  
   // Enhanced validation logic for edit mode
   const isFormValid = editMode ? true : (
     formData.property_ref && 
@@ -626,7 +626,7 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
       <div className={styles.sectionHeader}>
         <h3>Property Details</h3>
         <p>Provide detailed information about amenities, policies, and terms.</p>
-          </div>
+      </div>
       
       <div className={styles.formSection}>
         <div className={styles.formGroup}>
@@ -708,146 +708,4 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
         <div className={styles.formGroup}>
           <label>Application Requirements</label>
           <div className={styles.checkboxGrid}>
-            <label className={`${styles.checkboxOption} ${formData.require_background_check ? styles.selected : ''}`}>
-              <input type="checkbox" checked={formData.require_background_check} onChange={(e) => handleInputChange('require_background_check', e.target.checked)} />
-              <span>Background Check Required</span>
-            </label>
-            <label className={`${styles.checkboxOption} ${formData.require_income_verification ? styles.selected : ''}`}>
-              <input type="checkbox" checked={formData.require_income_verification} onChange={(e) => handleInputChange('require_income_verification', e.target.checked)} />
-              <span>Income Verification Required</span>
-            </label>
-          </div>
-        </div>
-
-        <div className={styles.formGroup}>
-          <label>Required Documents</label>
-          <div className={styles.tagGrid}>
-            {documentOptions.map(doc => (
-              <button key={doc} type="button" className={`${styles.tagOption} ${formData.required_documents.includes(doc) ? styles.selected : ''}`} onClick={() => handleArrayToggle('required_documents', doc)}>
-                {doc}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-    </>
-  );
-
-  const renderContactTab = () => (
-    <>
-      <div className={styles.sectionHeader}>
-        <h3>Contact & Publish</h3>
-        <p>Set contact information and publish your listing.</p>
-      </div>
-      
-      <div className={styles.formSection}>
-        <div className={styles.formGroup}>
-          <label htmlFor="contact_email">Contact Email</label>
-          <input id="contact_email" type="email" value={formData.contact_email} onChange={(e) => handleInputChange('contact_email', e.target.value)} placeholder="contact@example.com" />
-        </div>
-
-        <div className={styles.formGroup}>
-          <label htmlFor="contact_phone">Contact Phone</label>
-          <input id="contact_phone" type="tel" value={formData.contact_phone} onChange={(e) => handleInputChange('contact_phone', e.target.value)} placeholder="(555) 123-4567" />
-        </div>
-
-        <div className={styles.formGroup}>
-          <label>Visibility Settings</label>
-          <div className={styles.checkboxGrid}>
-            <label className={`${styles.checkboxOption} ${formData.show_landlord_info ? styles.selected : ''}`}>
-              <input type="checkbox" checked={formData.show_landlord_info} onChange={(e) => handleInputChange('show_landlord_info', e.target.checked)} />
-              <span>Show Landlord Information</span>
-            </label>
-            <label className={`${styles.checkboxOption} ${formData.is_active ? styles.selected : ''}`}>
-              <input type="checkbox" checked={formData.is_active} onChange={(e) => handleInputChange('is_active', e.target.checked)} />
-              <span>Publish Listing (Active)</span>
-            </label>
-          </div>
-        </div>
-
-        <div className={styles.formGroup}>
-          <label htmlFor="seo_title">SEO Title</label>
-          <input id="seo_title" type="text" value={formData.seo_title} onChange={(e) => handleInputChange('seo_title', e.target.value)} placeholder="Custom title for search engines (optional)" />
-        </div>
-
-        <div className={styles.formGroup}>
-          <label htmlFor="seo_description">SEO Description</label>
-          <textarea id="seo_description" value={formData.seo_description} onChange={(e) => handleInputChange('seo_description', e.target.value)} placeholder="Custom description for search engines (optional)" rows={3} />
-        </div>
-      </div>
-    </>
-  );
-
-  const renderTabContent = () => {
-    console.log('Rendering tab content for:', activeTab);
-    switch (activeTab) {
-      case 'basic': return renderBasicInfo();
-      case 'media': return renderMediaTab();
-      case 'details': return renderDetailsTab();
-      case 'application': return renderApplicationTab();
-      case 'contact': return renderContactTab();
-      default: return renderBasicInfo();
-    }
-  };
-
-  return (
-    <div className={styles.modalBackdrop}>
-      <div className={styles.modalContainer}>
-        <div className={styles.modalHeader}>
-          <div className={styles.modalTitle}>
-            <h3>{editMode ? 'Edit your property listing' : 'Set up your property listing in 5 easy steps'}</h3>
-          </div>
-          <button className={styles.closeButton} onClick={onClose} aria-label="Close modal">
-            <CloseIcon />
-          </button>
-        </div>
-
-        <div className={styles.modalBody}>
-          <div className={styles.tabsNavigation}>
-            {tabs.map((tab, index) => {
-              const IconComponent = tab.icon;
-              return (
-              <button key={tab.id} className={`${styles.tabButton} ${activeTab === tab.id ? styles.active : ''}`} onClick={() => {
-                console.log('Tab clicked:', tab.id);
-                setActiveTab(tab.id);
-              }}>
-                <div className={styles.tabIcon}><IconComponent /></div>
-                <div className={styles.tabLabelGroup}>
-                    <span className={styles.tabStep}>Step {index + 1}</span>
-                    <span className={styles.tabLabel}>{tab.label}</span>
-                </div>
-              </button>
-              );
-            })}
-          </div>
-
-          <div className={styles.tabContentArea}>
-            {error && (
-              <div className={styles.errorMessage}>
-                <AlertIcon />
-                <span>{error}</span>
-              </div>
-            )}
-            <div className={styles.tabContentScrollable} key={activeTab}>
-              {renderTabContent()}
-            </div>
-          </div>
-        </div>
-
-        <div className={styles.modalFooter}>
-          <div className={styles.footerLeft}>
-            <span className={styles.formProgress}>Step {currentStep} of {tabs.length}: {tabs[currentStep - 1].label}</span>
-          </div>
-          <div className={styles.footerRight}>
-            <button className={`${styles.btn} ${styles.btnSecondary}`} onClick={onClose}>Cancel</button>
-            <button className={`${styles.btn} ${styles.btnPrimary}`} onClick={handleSubmit} disabled={loading || !isFormValid}>
-                {loading ? (editMode ? 'Updating...' : 'Creating...') : (editMode ? 'Update Listing' : 'Create Listing')}
-              </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default NewListingModal;
+            <label className={`

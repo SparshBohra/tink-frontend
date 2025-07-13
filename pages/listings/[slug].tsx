@@ -171,6 +171,35 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
               </div>
             </div>
 
+            {/* Gallery Section */}
+            {listing.media && listing.media.length > 0 && (
+              <div className="card">
+                <div className="card-header">
+                  <h2>Photos</h2>
+                </div>
+                <div className="card-body">
+                  <div className="gallery-grid">
+                    {listing.media.map((media: any, index: number) => (
+                      <div key={media.id || index} className="gallery-item">
+                        <img
+                          src={media.file_url || media.url}
+                          alt={media.caption || `Property photo ${index + 1}`}
+                          className="gallery-image"
+                          onClick={() => {
+                            // Optional: Add lightbox functionality
+                            window.open(media.file_url || media.url, '_blank');
+                          }}
+                        />
+                        {media.caption && (
+                          <div className="gallery-caption">{media.caption}</div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="card">
               <div className="card-header">
                 <h2>Description</h2>
@@ -487,6 +516,50 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
           margin: 0;
         }
 
+        .gallery-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+          gap: var(--spacing-md);
+          margin-top: var(--spacing-sm);
+        }
+
+        .gallery-item {
+          position: relative;
+          border-radius: var(--radius-md);
+          overflow: hidden;
+          background: var(--gray-100);
+          aspect-ratio: 4/3;
+          cursor: pointer;
+          transition: transform 0.2s ease;
+        }
+
+        .gallery-item:hover {
+          transform: scale(1.02);
+        }
+
+        .gallery-image {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          transition: opacity 0.2s ease;
+        }
+
+        .gallery-image:hover {
+          opacity: 0.9;
+        }
+
+        .gallery-caption {
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+          color: white;
+          padding: var(--spacing-md) var(--spacing-sm) var(--spacing-sm);
+          font-size: var(--text-small);
+          font-weight: var(--font-weight-medium);
+        }
+
         @media (max-width: 1024px) {
           .content-grid {
             grid-template-columns: 1fr;
@@ -498,6 +571,13 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
         }
 
         @media (max-width: 768px) {
+          .gallery-grid {
+            grid-template-columns: 1fr;
+          }
+          
+          .gallery-item {
+            aspect-ratio: 16/9;
+          }
           .hero-content {
             flex-direction: column;
             text-align: center;
