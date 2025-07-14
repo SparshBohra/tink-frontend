@@ -50,6 +50,7 @@ export default function TenantAssignmentModal({
   const [creatingTenant, setCreatingTenant] = useState(false);
   const [phoneError, setPhoneError] = useState<string | null>(null);
   const [emergencyPhoneError, setEmergencyPhoneError] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -132,6 +133,12 @@ export default function TenantAssignmentModal({
     setError(null);
   };
 
+  // Email validation utility
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
   const handleNewTenantFormChange = (field: string, value: string) => {
     if (field === 'phone') {
       const formattedPhone = phoneUtils.formatPhoneNumber(value);
@@ -157,6 +164,17 @@ export default function TenantAssignmentModal({
       } else {
         setEmergencyPhoneError(null);
       }
+    } else if (field === 'email') {
+      setNewTenantForm(prev => ({
+        ...prev,
+        [field]: value
+      }));
+      
+      if (value && !validateEmail(value)) {
+        setEmailError('Please enter a valid email address');
+      } else {
+        setEmailError(null);
+      }
     } else {
       setNewTenantForm(prev => ({
         ...prev,
@@ -168,14 +186,20 @@ export default function TenantAssignmentModal({
   const handleCreateNewTenant = async () => {
     if (!newTenantForm.full_name || !newTenantForm.email || !newTenantForm.phone) {
       setError('Please fill in all required fields (Name, Email, Phone)');
-      return;
-    }
-
-    if (phoneError || emergencyPhoneError) {
-      setError('Please fix phone number errors before creating tenant');
-      return;
-    }
-
+        return;
+      }
+      
+    if (!validateEmail(newTenantForm.email)) {
+      setEmailError('Please enter a valid email address');
+      setError('Please fix the email format before creating tenant');
+        return;
+      }
+      
+    if (phoneError || emergencyPhoneError || emailError) {
+      setError('Please fix validation errors before creating tenant');
+        return;
+      }
+      
     try {
       setCreatingTenant(true);
       setError(null);
@@ -220,12 +244,40 @@ export default function TenantAssignmentModal({
         current_address: ''
       });
       
+      // Reset error states
+      setEmailError(null);
+      setPhoneError(null);
+      setEmergencyPhoneError(null);
+      
       // Switch to lease details step
       setActiveTab('applications');
       
     } catch (err: any) {
       console.error('Error creating tenant:', err);
-      setError(err?.message || 'Failed to create tenant');
+      
+      // Handle specific error types
+      if (err?.response?.status === 400) {
+        const errorData = err.response.data;
+        
+        // Handle field-specific validation errors
+        if (errorData?.email) {
+          setEmailError(Array.isArray(errorData.email) ? errorData.email[0] : errorData.email);
+          setError('Please fix the email validation error');
+        } else if (errorData?.phone) {
+          setPhoneError(Array.isArray(errorData.phone) ? errorData.phone[0] : errorData.phone);
+          setError('Please fix the phone number validation error');
+        } else if (errorData?.detail) {
+          setError(errorData.detail);
+        } else if (errorData?.non_field_errors) {
+          setError(Array.isArray(errorData.non_field_errors) ? errorData.non_field_errors[0] : errorData.non_field_errors);
+      } else {
+          setError('Please check your input and try again');
+        }
+      } else if (err?.response?.status === 409) {
+        setError('A tenant with this email already exists');
+      } else {
+        setError(err?.message || 'Failed to create tenant. Please try again.');
+      }
     } finally {
       setCreatingTenant(false);
     }
@@ -505,52 +557,52 @@ export default function TenantAssignmentModal({
                         <h4>All Applications</h4>
                         <p className="text-muted">All pending and approved applications across all properties</p>
                       </div>
-                      <div className="tenant-list">
-                        {applications.length > 0 ? (
-                          applications.map(application => {
-                            const tenant = tenants.find(t => t.id === application.tenant);
-                            if (!tenant) return null;
+                    <div className="tenant-list">
+                      {applications.length > 0 ? (
+                        applications.map(application => {
+                          const tenant = tenants.find(t => t.id === application.tenant);
+                          if (!tenant) return null;
                             
                             const isSelected = selectedTenant === tenant.id && selectedSource === 'application';
-                            
-                            return (
+                          
+                          return (
                               <div
                                 key={application.id} 
                                 className={`tenant-item ${isSelected ? 'selected' : ''}`}
                                 onClick={() => handleTenantSelect(tenant.id, 'application')}
                               >
                                 <div className="tenant-radio">
-                                  <input
-                                    type="radio"
-                                    name="selectedTenant"
+                              <input
+                                type="radio"
+                                name="selectedTenant"
                                     checked={isSelected}
                                     onChange={() => handleTenantSelect(tenant.id, 'application')}
-                                  />
+                              />
                                 </div>
-                                <div className="tenant-details">
+                              <div className="tenant-details">
                                   <div className="tenant-name">{tenant.full_name}</div>
                                   <div className="tenant-email">{tenant.email}</div>
                                   <div className="application-info">
                                     <span className="application-date">Applied: {new Date(application.application_date).toLocaleDateString()}</span>
-                                    {application.move_in_date && (
+                                  {application.move_in_date && (
                                       <span className="move-in-date">• Move-in: {new Date(application.move_in_date).toLocaleDateString()}</span>
-                                    )}
+                                  )}
                                     <span className="budget">• Budget: {formatCurrency(application.rent_budget)}</span>
-                                  </div>
+                              </div>
                                 </div>
                                 <div className="selection-indicator">
                                   {isSelected && <div className="selected-checkmark">✓</div>}
                                 </div>
                               </div>
-                            );
-                          })
-                        ) : (
+                          );
+                        })
+                      ) : (
                           <div className="empty-state">
                             <p>No applications found for this specific room.</p>
                             <small>Try checking "Property Applications" for general property applications.</small>
-                          </div>
-                        )}
-                      </div>
+                        </div>
+                      )}
+                    </div>
                     </div>
                   )}
 
@@ -560,7 +612,7 @@ export default function TenantAssignmentModal({
                         <h4>Property Applications</h4>
                         <p className="text-muted">Tenants who applied to this property but not specifically to {room.name}</p>
                       </div>
-                      <div className="tenant-list">
+                    <div className="tenant-list">
                         {propertyApplications.length > 0 ? (
                           propertyApplications.map(application => {
                             const tenant = tenants.find(t => t.id === application.tenant);
@@ -575,14 +627,14 @@ export default function TenantAssignmentModal({
                                 onClick={() => handleTenantSelect(tenant.id, 'application')}
                               >
                                 <div className="tenant-radio">
-                                  <input
-                                    type="radio"
-                                    name="selectedTenant"
+                          <input
+                            type="radio"
+                            name="selectedTenant"
                                     checked={isSelected}
                                     onChange={() => handleTenantSelect(tenant.id, 'application')}
-                                  />
+                          />
                                 </div>
-                                <div className="tenant-details">
+                          <div className="tenant-details">
                                   <div className="tenant-name">{tenant.full_name}</div>
                                   <div className="tenant-email">{tenant.email}</div>
                                   <div className="application-info">
@@ -591,8 +643,8 @@ export default function TenantAssignmentModal({
                                       <span className="move-in-date">• Move-in: {new Date(application.move_in_date).toLocaleDateString()}</span>
                                     )}
                                     <span className="budget">• Budget: {formatCurrency(application.rent_budget)}</span>
-                                  </div>
-                                </div>
+                          </div>
+                    </div>
                                 <div className="selection-indicator">
                                   {isSelected && <div className="selected-checkmark">✓</div>}
                                 </div>
@@ -605,8 +657,8 @@ export default function TenantAssignmentModal({
                             <small>Try checking "Recommended" for tenants with history at this property.</small>
                           </div>
                         )}
+                        </div>
                       </div>
-                    </div>
                   )}
 
                   {activeTab === 'recommended' && (
@@ -718,153 +770,154 @@ export default function TenantAssignmentModal({
                       </div>
                       
                       <div className="create-tenant-form">
-                        <div className="form-section">
+                      <div className="form-section">
                           <h5>Basic Information</h5>
-                          <div className="form-grid">
-                            <div className="form-group">
-                              <label className="form-label">Full Name*</label>
-                              <input
-                                type="text"
-                                value={newTenantForm.full_name}
-                                onChange={(e) => handleNewTenantFormChange('full_name', e.target.value)}
-                                className="form-input"
-                                placeholder="Enter full name"
-                                required
-                              />
-                            </div>
-                            
-                            <div className="form-group">
-                              <label className="form-label">Email*</label>
-                              <input
-                                type="email"
-                                value={newTenantForm.email}
-                                onChange={(e) => handleNewTenantFormChange('email', e.target.value)}
-                                className="form-input"
-                                placeholder="Enter email address"
-                                required
-                              />
-                            </div>
-                            
-                            <div className="form-group">
-                              <label className="form-label">Phone*</label>
-                              <input
-                                type="tel"
-                                value={newTenantForm.phone}
-                                onChange={(e) => handleNewTenantFormChange('phone', e.target.value)}
-                                className={`form-input ${phoneError ? 'error' : ''}`}
-                                placeholder="(555) 123-4567"
-                                required
-                              />
-                              {phoneError && (
-                                <div className="field-error">
-                                  {phoneError}
-                                </div>
-                              )}
-                            </div>
-                            
-                            <div className="form-group">
-                              <label className="form-label">Date of Birth</label>
-                              <input
-                                type="date"
-                                value={newTenantForm.date_of_birth}
-                                onChange={(e) => handleNewTenantFormChange('date_of_birth', e.target.value)}
-                                className="form-input"
-                              />
+                        <div className="form-grid">
+                          <div className="form-group">
+                            <label className="form-label">Full Name*</label>
+                            <input
+                              type="text"
+                              value={newTenantForm.full_name}
+                              onChange={(e) => handleNewTenantFormChange('full_name', e.target.value)}
+                              className="form-input"
+                              placeholder="Enter full name"
+                              required
+                            />
+                          </div>
+                          
+                          <div className="form-group">
+                            <label className="form-label">Email*</label>
+                            <input
+                              type="email"
+                              value={newTenantForm.email}
+                              onChange={(e) => handleNewTenantFormChange('email', e.target.value)}
+                                className={`form-input ${emailError ? 'error' : ''}`}
+                              placeholder="Enter email address"
+                              required
+                            />
+                              {emailError && <div className="field-error">{emailError}</div>}
+                          </div>
+                          
+                          <div className="form-group">
+                            <label className="form-label">Phone*</label>
+                            <input
+                              type="tel"
+                              value={newTenantForm.phone}
+                              onChange={(e) => handleNewTenantFormChange('phone', e.target.value)}
+                              className={`form-input ${phoneError ? 'error' : ''}`}
+                              placeholder="(555) 123-4567"
+                              required
+                            />
+                            {phoneError && (
+                              <div className="field-error">
+                                {phoneError}
+                              </div>
+                            )}
+                          </div>
+                          
+                          <div className="form-group">
+                            <label className="form-label">Date of Birth</label>
+                            <input
+                              type="date"
+                              value={newTenantForm.date_of_birth}
+                              onChange={(e) => handleNewTenantFormChange('date_of_birth', e.target.value)}
+                              className="form-input"
+                            />
                             </div>
                           </div>
-                        </div>
-
+                          </div>
+                          
                         <div className="form-section">
                           <h5>Additional Information</h5>
                           <div className="form-grid">
-                            <div className="form-group">
-                              <label className="form-label">Gender</label>
-                              <select
-                                value={newTenantForm.gender}
-                                onChange={(e) => handleNewTenantFormChange('gender', e.target.value)}
-                                className="form-input"
-                              >
-                                <option value="">Select gender</option>
-                                <option value="male">Male</option>
-                                <option value="female">Female</option>
-                                <option value="other">Other</option>
-                                <option value="prefer_not_to_say">Prefer not to say</option>
-                              </select>
-                            </div>
-                            
-                            <div className="form-group">
-                              <label className="form-label">Occupation</label>
-                              <input
-                                type="text"
-                                value={newTenantForm.occupation}
-                                onChange={(e) => handleNewTenantFormChange('occupation', e.target.value)}
-                                className="form-input"
-                                placeholder="Enter occupation"
-                              />
-                            </div>
-                            
-                            <div className="form-group">
-                              <label className="form-label">Employer</label>
-                              <input
-                                type="text"
-                                value={newTenantForm.employer}
-                                onChange={(e) => handleNewTenantFormChange('employer', e.target.value)}
-                                className="form-input"
+                          <div className="form-group">
+                            <label className="form-label">Gender</label>
+                            <select
+                              value={newTenantForm.gender}
+                              onChange={(e) => handleNewTenantFormChange('gender', e.target.value)}
+                              className="form-input"
+                            >
+                              <option value="">Select gender</option>
+                              <option value="male">Male</option>
+                              <option value="female">Female</option>
+                              <option value="other">Other</option>
+                              <option value="prefer_not_to_say">Prefer not to say</option>
+                            </select>
+                          </div>
+                          
+                          <div className="form-group">
+                            <label className="form-label">Occupation</label>
+                            <input
+                              type="text"
+                              value={newTenantForm.occupation}
+                              onChange={(e) => handleNewTenantFormChange('occupation', e.target.value)}
+                              className="form-input"
+                              placeholder="Enter occupation"
+                            />
+                      </div>
+                      
+                          <div className="form-group">
+                            <label className="form-label">Employer</label>
+                            <input
+                              type="text"
+                              value={newTenantForm.employer}
+                              onChange={(e) => handleNewTenantFormChange('employer', e.target.value)}
+                              className="form-input"
                                 placeholder="Enter employer"
-                              />
-                            </div>
-                            
-                            <div className="form-group">
-                              <label className="form-label">Monthly Income</label>
-                              <input
-                                type="number"
-                                value={newTenantForm.monthly_income}
-                                onChange={(e) => handleNewTenantFormChange('monthly_income', e.target.value)}
-                                className="form-input"
+                            />
+                          </div>
+                          
+                          <div className="form-group">
+                            <label className="form-label">Monthly Income</label>
+                            <input
+                              type="number"
+                              value={newTenantForm.monthly_income}
+                              onChange={(e) => handleNewTenantFormChange('monthly_income', e.target.value)}
+                              className="form-input"
                                 placeholder="Enter monthly income"
-                                step="0.01"
-                                min="0"
-                              />
-                            </div>
+                              step="0.01"
+                              min="0"
+                            />
                           </div>
                         </div>
-
-                        <div className="form-section">
+                      </div>
+                      
+                      <div className="form-section">
                           <h5>Emergency Contact</h5>
-                          <div className="form-grid">
-                            <div className="form-group">
-                              <label className="form-label">Emergency Contact Name</label>
-                              <input
-                                type="text"
-                                value={newTenantForm.emergency_contact_name}
-                                onChange={(e) => handleNewTenantFormChange('emergency_contact_name', e.target.value)}
-                                className="form-input"
-                                placeholder="Enter emergency contact name"
-                              />
-                            </div>
-                            
-                            <div className="form-group">
-                              <label className="form-label">Emergency Contact Phone</label>
-                              <input
-                                type="tel"
-                                value={newTenantForm.emergency_contact_phone}
-                                onChange={(e) => handleNewTenantFormChange('emergency_contact_phone', e.target.value)}
-                                className={`form-input ${emergencyPhoneError ? 'error' : ''}`}
+                        <div className="form-grid">
+                          <div className="form-group">
+                            <label className="form-label">Emergency Contact Name</label>
+                            <input
+                              type="text"
+                              value={newTenantForm.emergency_contact_name}
+                              onChange={(e) => handleNewTenantFormChange('emergency_contact_name', e.target.value)}
+                              className="form-input"
+                              placeholder="Enter emergency contact name"
+                            />
+                          </div>
+                          
+                          <div className="form-group">
+                            <label className="form-label">Emergency Contact Phone</label>
+                            <input
+                              type="tel"
+                              value={newTenantForm.emergency_contact_phone}
+                              onChange={(e) => handleNewTenantFormChange('emergency_contact_phone', e.target.value)}
+                              className={`form-input ${emergencyPhoneError ? 'error' : ''}`}
                                 placeholder="(555) 123-4567"
-                              />
-                              {emergencyPhoneError && (
-                                <div className="field-error">
-                                  {emergencyPhoneError}
-                                </div>
-                              )}
-                            </div>
-                            
-                            <div className="form-group">
-                              <label className="form-label">Relationship</label>
+                            />
+                            {emergencyPhoneError && (
+                              <div className="field-error">
+                                {emergencyPhoneError}
+                              </div>
+                            )}
+                          </div>
+                          
+                          <div className="form-group">
+                            <label className="form-label">Relationship</label>
                               <select
-                                value={newTenantForm.emergency_contact_relationship}
-                                onChange={(e) => handleNewTenantFormChange('emergency_contact_relationship', e.target.value)}
-                                className="form-input"
+                              value={newTenantForm.emergency_contact_relationship}
+                              onChange={(e) => handleNewTenantFormChange('emergency_contact_relationship', e.target.value)}
+                              className="form-input"
                               >
                                 <option value="">Select relationship</option>
                                 <option value="parent">Parent</option>
@@ -873,37 +926,37 @@ export default function TenantAssignmentModal({
                                 <option value="friend">Friend</option>
                                 <option value="other">Other</option>
                               </select>
-                            </div>
-                            
-                            <div className="form-group">
-                              <label className="form-label">Current Address</label>
-                              <textarea
-                                value={newTenantForm.current_address}
-                                onChange={(e) => handleNewTenantFormChange('current_address', e.target.value)}
-                                className="form-input"
-                                placeholder="Enter current address"
-                                rows={2}
-                              />
-                            </div>
+                          </div>
+                          
+                          <div className="form-group">
+                            <label className="form-label">Current Address</label>
+                            <textarea
+                              value={newTenantForm.current_address}
+                              onChange={(e) => handleNewTenantFormChange('current_address', e.target.value)}
+                              className="form-input"
+                              placeholder="Enter current address"
+                              rows={2}
+                            />
                           </div>
                         </div>
-
+                      </div>
+                      
                         <div className="form-actions">
-                          <button
+                        <button 
                             type="button"
-                            onClick={handleCreateNewTenant}
+                          onClick={handleCreateNewTenant}
                             disabled={creatingTenant || !newTenantForm.full_name || !newTenantForm.email || !newTenantForm.phone}
                             className="btn btn-primary"
-                          >
-                            {creatingTenant ? (
-                              <>
-                                <div className="btn-spinner"></div>
-                                Creating Tenant...
-                              </>
-                            ) : (
+                        >
+                          {creatingTenant ? (
+                            <>
+                              <div className="btn-spinner"></div>
+                              Creating Tenant...
+                            </>
+                          ) : (
                               'Create Tenant'
-                            )}
-                          </button>
+                          )}
+                        </button>
                         </div>
                       </div>
                     </div>
@@ -922,7 +975,7 @@ export default function TenantAssignmentModal({
                       <line x1="16" y1="17" x2="8" y2="17"/>
                       <polyline points="10,9 9,9 8,9"/>
                     </svg>
-                    <h4>Lease Details</h4>
+                  <h4>Lease Details</h4>
                   </div>
                   
                   {selectedTenantData && (
@@ -952,65 +1005,65 @@ export default function TenantAssignmentModal({
                   )}
                   
                   <div className="lease-form">
-                    <div className="form-grid">
-                      <div className="form-group">
-                        <label className="form-label">Start Date*</label>
-                        <input
-                          type="date"
-                          value={leaseData.start_date || ''}
-                          onChange={(e) => handleLeaseDataChange('start_date', e.target.value)}
-                          className="form-input"
-                          required
-                        />
-                      </div>
-                      
-                      <div className="form-group">
-                        <label className="form-label">End Date*</label>
-                        <input
-                          type="date"
-                          value={leaseData.end_date || ''}
-                          onChange={(e) => handleLeaseDataChange('end_date', e.target.value)}
-                          className="form-input"
-                          required
-                        />
-                      </div>
-                      
-                      <div className="form-group">
-                        <label className="form-label">Monthly Rent*</label>
-                        <input
-                          type="number"
-                          value={leaseData.monthly_rent || ''}
-                          onChange={(e) => handleLeaseDataChange('monthly_rent', parseFloat(e.target.value) || 0)}
-                          className="form-input"
-                          step="0.01"
-                          min="0"
-                          placeholder="0.00"
-                          required
-                        />
-                        {room.monthly_rent && (
-                          <small className="form-help">
-                            Room base rent: {formatCurrency(Number(room.monthly_rent))}
-                          </small>
-                        )}
-                      </div>
-                      
-                      <div className="form-group">
-                        <label className="form-label">Security Deposit*</label>
-                        <input
-                          type="number"
-                          value={leaseData.security_deposit || ''}
-                          onChange={(e) => handleLeaseDataChange('security_deposit', parseFloat(e.target.value) || 0)}
-                          className="form-input"
-                          step="0.01"
-                          min="0"
-                          placeholder="0.00"
-                          required
-                        />
-                        {room.security_deposit && (
-                          <small className="form-help">
-                            Room base deposit: {formatCurrency(Number(room.security_deposit))}
-                          </small>
-                        )}
+                  <div className="form-grid">
+                    <div className="form-group">
+                      <label className="form-label">Start Date*</label>
+                      <input
+                        type="date"
+                        value={leaseData.start_date || ''}
+                        onChange={(e) => handleLeaseDataChange('start_date', e.target.value)}
+                        className="form-input"
+                        required
+                      />
+                    </div>
+                    
+                    <div className="form-group">
+                      <label className="form-label">End Date*</label>
+                      <input
+                        type="date"
+                        value={leaseData.end_date || ''}
+                        onChange={(e) => handleLeaseDataChange('end_date', e.target.value)}
+                        className="form-input"
+                        required
+                      />
+                    </div>
+                    
+                    <div className="form-group">
+                      <label className="form-label">Monthly Rent*</label>
+                      <input
+                        type="number"
+                        value={leaseData.monthly_rent || ''}
+                        onChange={(e) => handleLeaseDataChange('monthly_rent', parseFloat(e.target.value) || 0)}
+                        className="form-input"
+                        step="0.01"
+                        min="0"
+                        placeholder="0.00"
+                        required
+                      />
+                      {room.monthly_rent && (
+                        <small className="form-help">
+                          Room base rent: {formatCurrency(Number(room.monthly_rent))}
+                        </small>
+                      )}
+                    </div>
+                    
+                    <div className="form-group">
+                      <label className="form-label">Security Deposit*</label>
+                      <input
+                        type="number"
+                        value={leaseData.security_deposit || ''}
+                        onChange={(e) => handleLeaseDataChange('security_deposit', parseFloat(e.target.value) || 0)}
+                        className="form-input"
+                        step="0.01"
+                        min="0"
+                        placeholder="0.00"
+                        required
+                      />
+                      {room.security_deposit && (
+                        <small className="form-help">
+                          Room base deposit: {formatCurrency(Number(room.security_deposit))}
+                        </small>
+                      )}
                       </div>
                     </div>
                   </div>

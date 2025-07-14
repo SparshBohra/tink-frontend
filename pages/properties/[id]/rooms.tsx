@@ -123,6 +123,20 @@ export default function PropertyRooms() {
   const getPropertyOccupancyStats = () => {
     if (!property) return { totalRooms: 0, occupiedRooms: 0, vacantRooms: 0, occupancyRate: '0.0' };
     
+    // For per_property rent type, don't count "rooms" - it's about the whole property
+    if (property.rent_type === 'per_property') {
+      const propertyLease = getPropertyLevelLease();
+      const isOccupied = propertyLease && (propertyLease.status === 'active' || propertyLease.is_active);
+      
+      return {
+        totalRooms: 1, // The whole property counts as 1 unit
+        occupiedRooms: isOccupied ? 1 : 0,
+        vacantRooms: isOccupied ? 0 : 1,
+        occupancyRate: isOccupied ? '100.0' : '0.0'
+      };
+    }
+    
+    // For per_room rent type, use the existing logic
     const stats = getOccupancyStatsUtil(property, leases, rooms);
     return {
       totalRooms: stats.totalUnits,
@@ -381,6 +395,211 @@ export default function PropertyRooms() {
     </tr>
   );
 
+  // Dynamic quick actions based on occupancy status
+  const getQuickActions = () => {
+    const { occupiedRooms, totalRooms } = getPropertyOccupancyStats();
+    const hasActiveTenants = occupiedRooms > 0;
+    const hasVacantRooms = occupiedRooms < totalRooms;
+    const isPerRoom = property?.rent_type === 'per_room';
+    const isPerProperty = property?.rent_type === 'per_property';
+    
+    // Define all possible actions
+    const allActions = {
+      // Tenant management actions (high priority when tenants are active)
+      viewLeases: {
+        title: 'View Leases',
+        subtitle: 'Manage agreements',
+        icon: (
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+            <polyline points="14 2 14 8 20 8"/>
+          </svg>
+        ),
+        color: 'green',
+        onClick: () => router.push('/leases'),
+        priority: hasActiveTenants ? 1 : 5
+      },
+      manageTenants: {
+        title: 'Manage Tenants',
+        subtitle: 'View tenant details',
+        icon: (
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+            <circle cx="12" cy="7" r="4"/>
+          </svg>
+        ),
+        color: 'blue',
+        onClick: () => router.push('/tenants'),
+        priority: hasActiveTenants ? 2 : 6
+      },
+      manageInventory: {
+        title: 'Manage Inventory',
+        subtitle: 'Track property items',
+        icon: (
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+            <line x1="9" y1="3" x2="9" y2="21"/>
+            <line x1="15" y1="3" x2="15" y2="21"/>
+          </svg>
+        ),
+        color: 'blue',
+        onClick: () => router.push('/inventory'),
+        priority: hasActiveTenants ? 3 : 4
+      },
+      // Room management actions (ONLY for per_room properties)
+      manageRooms: {
+        title: rooms.length === 0 ? 'Add Multiple Rooms' : 'Manage Rooms',
+        subtitle: rooms.length === 0 ? 'Create room structure' : 'Edit room layout',
+        icon: (
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <rect x="3" y="3" width="7" height="7"/>
+            <rect x="14" y="3" width="7" height="7"/>
+            <rect x="14" y="14" width="7" height="7"/>
+            <rect x="3" y="14" width="7" height="7"/>
+          </svg>
+        ),
+        color: 'green',
+        onClick: () => setRoomCountEditorOpen(true),
+        priority: 4,
+        condition: isPerRoom // Only show for per_room properties
+      },
+      addRoom: {
+        title: 'Add Single Room',
+        subtitle: 'Create a new room',
+        icon: (
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M12 5v14m-7-7h14"/>
+          </svg>
+        ),
+        color: 'green',
+        onClick: () => router.push(`/properties/${property?.id}/add-room`),
+        priority: isPerRoom ? 5 : 8,
+        condition: isPerRoom // Only show for per_room properties
+      },
+      // Property-level tenant assignment (ONLY for per_property)
+      assignPropertyTenant: {
+        title: 'Assign Tenant',
+        subtitle: 'Lease entire property',
+        icon: (
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+            <circle cx="12" cy="7" r="4"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            <path d="M8 3.13a4 4 0 0 0 0 7.75"/>
+          </svg>
+        ),
+        color: 'blue',
+        onClick: () => setPropertyAssignmentModalOpen(true),
+        priority: isPerProperty && !hasActiveTenants ? 1 : 8,
+        condition: isPerProperty && !hasActiveTenants // Only show for vacant per_property
+      },
+      // Listing/Marketing actions (priority based on vacancy)
+      createListing: {
+        title: 'Create Listing',
+        subtitle: isPerProperty ? 'List entire property' : 'List available rooms',
+        icon: (
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+            <polyline points="9,22 9,12 15,12 15,22"/>
+          </svg>
+        ),
+        color: 'orange',
+        onClick: () => setIsNewApplicationModalOpen(true),
+        priority: hasVacantRooms ? (hasActiveTenants ? 6 : 1) : 9,
+        condition: hasVacantRooms || (!hasActiveTenants && isPerProperty)
+      },
+      viewListings: {
+        title: 'View Listings',
+        subtitle: 'See active listings',
+        icon: (
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+          </svg>
+        ),
+        color: 'blue',
+        onClick: () => router.push(`/listings?property=${property.id}`),
+        priority: hasVacantRooms ? (hasActiveTenants ? 7 : 2) : 10
+      },
+      // Conversion actions (low priority when tenants are active, not available for occupied properties)
+      convertRentType: {
+        title: 'Convert Rent Type',
+        subtitle: `Switch to ${isPerRoom ? 'per-property' : 'per-room'} model`,
+        icon: (
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="8.5" cy="7" r="4"/>
+            <path d="M20 8v6"/>
+            <path d="M23 11h-6"/>
+          </svg>
+        ),
+        color: 'purple',
+        onClick: () => setConversionWizardOpen(true),
+        priority: hasActiveTenants ? 15 : 3,
+        condition: !hasActiveTenants // Only show when no active tenants
+      }
+    };
+
+    // Filter actions based on conditions and sort by priority
+    return Object.values(allActions)
+      .filter(action => !(action as any).condition || (action as any).condition !== false)
+      .sort((a, b) => a.priority - b.priority)
+      .slice(0, 6); // Show top 6 actions
+  };
+
+  // Dynamic header actions based on occupancy status
+  const getHeaderActions = () => {
+    const { occupiedRooms, totalRooms } = getPropertyOccupancyStats();
+    const hasActiveTenants = occupiedRooms > 0;
+    const hasVacantRooms = occupiedRooms < totalRooms;
+
+    const actions = [];
+
+    if (hasActiveTenants) {
+      // When tenants are active, prioritize tenant management
+      actions.push(
+        <button key="manage-tenants" className="btn btn-primary" onClick={() => router.push('/tenants')}>
+          Manage Tenants
+        </button>
+      );
+      actions.push(
+        <button key="view-leases" className="btn btn-secondary" onClick={() => router.push('/leases')}>
+          View Leases
+        </button>
+      );
+      
+      // Only show listing actions if there are vacant rooms
+      if (hasVacantRooms) {
+        actions.push(
+          <button key="create-listing" className="btn btn-secondary" onClick={() => setIsNewApplicationModalOpen(true)}>
+            Create Listing
+          </button>
+        );
+      }
+    } else {
+      // When no active tenants, prioritize marketing/listing actions
+      actions.push(
+        <button key="create-listing" className="btn btn-primary" onClick={() => setIsNewApplicationModalOpen(true)}>
+          Create Listing
+        </button>
+      );
+      actions.push(
+        <button key="view-listings" className="btn btn-secondary" onClick={() => router.push(`/listings?property=${property.id}`)}>
+          View Listings
+        </button>
+      );
+    }
+
+    // Always show edit property as last option
+    actions.push(
+      <Link key="edit-property" href={`/properties/${property.id}/edit`} className="btn btn-secondary">
+        Edit Property
+      </Link>
+    );
+
+    return actions;
+  };
+
   return (
     <DashboardLayout
       title={property.name}
@@ -437,7 +656,9 @@ export default function PropertyRooms() {
             <div className="metric-card">
               <div className="metric-header">
                   <div className="metric-info">
-                  <h3 className="metric-title">Total Rooms</h3>
+                  <h3 className="metric-title">
+                    {property.rent_type === 'per_property' ? 'Property Status' : 'Total Rooms'}
+                  </h3>
                     <div className="metric-icon">
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
@@ -447,11 +668,28 @@ export default function PropertyRooms() {
                   </div>
                 </div>
                 <div className="metric-content">
-                <div className="metric-value">{totalRooms}</div>
-                  <div className="metric-subtitle">in this property</div>
+                <div className="metric-value">
+                  {property.rent_type === 'per_property' ? (occupiedRooms > 0 ? 'Occupied' : 'Vacant') : totalRooms}
+                </div>
+                  <div className="metric-subtitle">
+                    {property.rent_type === 'per_property' ? 'entire property' : 'in this property'}
+                  </div>
                   <div className="metric-progress">
+                    {property.rent_type === 'per_property' ? (
+                      <>
+                        <span className="metric-label">
+                          {occupiedRooms > 0 ? 'Tenant assigned' : 'Available for lease'}
+                        </span>
+                        <span className={`metric-change ${occupiedRooms > 0 ? 'occupied' : 'vacant'}`}>
+                          {occupiedRooms > 0 ? 'generating revenue' : 'seeking tenant'}
+                        </span>
+                      </>
+                    ) : (
+                      <>
                     <span className="metric-label">{vacantRooms} vacant</span>
                     <span className="metric-change neutral">{occupiedRooms} occupied</span>
+                      </>
+                    )}
                 </div>
               </div>
               </div>
@@ -705,146 +943,54 @@ export default function PropertyRooms() {
               <div className="section-header">
                     <div>
                   <h2 className="section-title">Quick Actions</h2>
-                  <p className="section-subtitle">Frequently used actions</p>
+                  <p className="section-subtitle">
+                    {(() => {
+                      const { occupiedRooms, totalRooms } = getPropertyOccupancyStats();
+                      const hasActiveTenants = occupiedRooms > 0;
+                      const hasVacantRooms = occupiedRooms < totalRooms;
+                      const isPerProperty = property.rent_type === 'per_property';
+                      
+                      if (isPerProperty) {
+                        if (hasActiveTenants) {
+                          return `Prioritized for tenant management (property occupied)`;
+                        } else {
+                          return `Prioritized for marketing (property vacant)`;
+                        }
+                      } else {
+                        if (hasActiveTenants && hasVacantRooms) {
+                          return `Prioritized for tenant management (${occupiedRooms}/${totalRooms} rooms occupied)`;
+                        } else if (hasActiveTenants) {
+                          return `Prioritized for tenant management (all rooms occupied)`;
+                        } else {
+                          return `Prioritized for marketing (${totalRooms} vacant rooms)`;
+                        }
+                      }
+                    })()}
+                  </p>
                     </div>
                       <div className="header-actions">
-                          <button className="btn btn-primary" onClick={() => setIsNewApplicationModalOpen(true)}>
-                              Create Listing
-                          </button>
-                          <button className="btn btn-secondary" onClick={() => router.push(`/listings?property=${property.id}`)}>
-                              View Listings
-                          </button>
-                          <Link href={`/properties/${property.id}/edit`} className="btn btn-secondary">
-                              Edit Property
-                          </Link>
+                          {getHeaderActions()}
                       </div>
                   </div>
               
               <div className="actions-grid">
-                {property.rent_type === 'per_room' && (
+                {getQuickActions().map((action, index) => (
                 <div 
-                    className={`action-card blue ${rooms.length === 0 ? 'highlighted' : ''}`}
-                  onClick={() => router.push(`/properties/${property.id}/add-room`)}
+                    key={index}
+                    className={`action-card ${action.color} ${index === 0 ? 'highlighted' : ''}`}
+                    onClick={action.onClick}
                   style={{ cursor: 'pointer' }}
                 >
                   <div className="action-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M12 5v14m-7-7h14"/>
-                    </svg>
+                      {action.icon}
                     </div>
                   <div className="action-content">
-                    <h3 className="action-title">Add New Room</h3>
-                      <p className="action-subtitle">{rooms.length === 0 ? 'Start by creating your first room' : 'Create a new room'}</p>
+                      <h3 className="action-title">{action.title}</h3>
+                      <p className="action-subtitle">{action.subtitle}</p>
                         </div>
                       </div>
-                )}
-                
-                <div 
-                  className="action-card purple"
-                  onClick={() => setConversionWizardOpen(true)}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <div className="action-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
-                    </svg>
+                ))}
                     </div>
-                  <div className="action-content">
-                    <h3 className="action-title">Convert Rent Type</h3>
-                    <p className="action-subtitle">Change pricing model</p>
-                            </div>
-                    </div>
-
-                {property.rent_type === 'per_room' && (
-                <div 
-                    className={`action-card green ${rooms.length === 0 ? 'highlighted' : ''}`}
-                  onClick={() => setRoomCountEditorOpen(true)}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <div className="action-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <rect x="3" y="3" width="7" height="7"/>
-                      <rect x="14" y="3" width="7" height="7"/>
-                      <rect x="14" y="14" width="7" height="7"/>
-                      <rect x="3" y="14" width="7" height="7"/>
-                    </svg>
-                  </div>
-                  <div className="action-content">
-                      <h3 className="action-title">{rooms.length === 0 ? 'Add Multiple Rooms' : 'Manage Rooms'}</h3>
-                      <p className="action-subtitle">{rooms.length === 0 ? 'Quickly create several rooms at once' : 'Edit room structure'}</p>
-                  </div>
-                </div>
-                )}
-
-                <div 
-                  className="action-card orange"
-                  onClick={() => setIsNewApplicationModalOpen(true)}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <div className="action-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-                      <polyline points="9,22 9,12 15,12 15,22"/>
-                    </svg>
-                          </div>
-                  <div className="action-content">
-                    <h3 className="action-title">Create Listing</h3>
-                    <p className="action-subtitle">List property</p>
-                  </div>
-                </div>
-
-                <div 
-                  className="action-card blue"
-                  onClick={() => router.push(`/listings?property=${property.id}`)}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <div className="action-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
-                      <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
-                    </svg>
-                  </div>
-                  <div className="action-content">
-                    <h3 className="action-title">View Listings</h3>
-                    <p className="action-subtitle">See property listings</p>
-                    </div>
-                          </div>
-
-                <div 
-                  className="action-card blue"
-                  onClick={() => router.push('/inventory')}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <div className="action-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                      <line x1="9" y1="3" x2="9" y2="21"/>
-                      <line x1="15" y1="3" x2="15" y2="21"/>
-                    </svg>
-                          </div>
-                  <div className="action-content">
-                    <h3 className="action-title">Manage Inventory</h3>
-                    <p className="action-subtitle">Track items</p>
-                          </div>
-                          </div>
-
-                <div 
-                  className="action-card green"
-                  onClick={() => router.push('/leases')}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <div className="action-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
-                      <polyline points="14 2 14 8 20 8"/>
-                    </svg>
-                          </div>
-                  <div className="action-content">
-                    <h3 className="action-title">View Leases</h3>
-                    <p className="action-subtitle">Manage agreements</p>
-                          </div>
-                  </div>
-                </div>
             </div>
           </div>
         </div>
@@ -1351,6 +1497,12 @@ export default function PropertyRooms() {
         }
         .metric-change.positive {
           color: #10b981;
+        }
+        .metric-change.vacant {
+          color: #10b981;
+        }
+        .metric-change.occupied {
+          color: #ef4444;
         }
         .metric-change.neutral {
           color: #64748b;

@@ -53,6 +53,7 @@ export default function RoomTenantAssignmentModal({
   const [creatingTenant, setCreatingTenant] = useState(false);
   const [phoneError, setPhoneError] = useState<string | null>(null);
   const [emergencyPhoneError, setEmergencyPhoneError] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -135,6 +136,12 @@ export default function RoomTenantAssignmentModal({
     setError(null);
   };
 
+  // Email validation utility
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
   const handleNewTenantFormChange = (field: string, value: string) => {
     if (field === 'phone') {
       const formattedPhone = phoneUtils.formatPhoneNumber(value);
@@ -160,6 +167,17 @@ export default function RoomTenantAssignmentModal({
       } else {
         setEmergencyPhoneError(null);
       }
+    } else if (field === 'email') {
+      setNewTenantForm(prev => ({
+        ...prev,
+        [field]: value
+      }));
+      
+      if (value && !validateEmail(value)) {
+        setEmailError('Please enter a valid email address');
+      } else {
+        setEmailError(null);
+      }
     } else {
       setNewTenantForm(prev => ({
         ...prev,
@@ -174,8 +192,14 @@ export default function RoomTenantAssignmentModal({
       return;
     }
 
-    if (phoneError || emergencyPhoneError) {
-      setError('Please fix phone number errors before creating tenant');
+    if (!validateEmail(newTenantForm.email)) {
+      setEmailError('Please enter a valid email address');
+      setError('Please fix the email format before creating tenant');
+      return;
+    }
+
+    if (phoneError || emergencyPhoneError || emailError) {
+      setError('Please fix validation errors before creating tenant');
       return;
     }
 
@@ -223,12 +247,37 @@ export default function RoomTenantAssignmentModal({
         current_address: ''
       });
       
-      // Switch to applications tab to show lease details
-      setActiveTab('applications');
+      // Reset error states
+      setEmailError(null);
+      setPhoneError(null);
+      setEmergencyPhoneError(null);
       
     } catch (err: any) {
       console.error('Error creating tenant:', err);
-      setError(err?.message || 'Failed to create tenant');
+      
+      // Handle specific error types
+      if (err?.response?.status === 400) {
+        const errorData = err.response.data;
+        
+        // Handle field-specific validation errors
+        if (errorData?.email) {
+          setEmailError(Array.isArray(errorData.email) ? errorData.email[0] : errorData.email);
+          setError('Please fix the email validation error');
+        } else if (errorData?.phone) {
+          setPhoneError(Array.isArray(errorData.phone) ? errorData.phone[0] : errorData.phone);
+          setError('Please fix the phone number validation error');
+        } else if (errorData?.detail) {
+          setError(errorData.detail);
+        } else if (errorData?.non_field_errors) {
+          setError(Array.isArray(errorData.non_field_errors) ? errorData.non_field_errors[0] : errorData.non_field_errors);
+        } else {
+          setError('Please check your input and try again');
+        }
+      } else if (err?.response?.status === 409) {
+        setError('A tenant with this email already exists');
+      } else {
+        setError(err?.message || 'Failed to create tenant. Please try again.');
+      }
     } finally {
       setCreatingTenant(false);
     }
@@ -677,10 +726,11 @@ export default function RoomTenantAssignmentModal({
                                   type="email"
                                   value={newTenantForm.email}
                                   onChange={(e) => handleNewTenantFormChange('email', e.target.value)}
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${emailError ? 'border-red-300' : 'border-gray-300'}`}
                                   placeholder="Enter email address"
                                   required
                                 />
+                                {emailError && <p className="text-red-500 text-xs mt-1">{emailError}</p>}
                               </div>
                               <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Phone*</label>
