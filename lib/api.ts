@@ -565,6 +565,7 @@ class ApiClient {
   }
 
   async getPropertyRooms(propertyId: number): Promise<Room[]> {
+    // Backend expects property_ref as the query parameter
     const response = await this.api.get(`/properties/rooms/?property_ref=${propertyId}`);
     return response.data.results || response.data;
   }

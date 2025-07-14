@@ -368,6 +368,8 @@ export interface ApplicationFormData {
 export interface LeaseFormData {
   tenant: number;
   room: number;
+  /** Optional: link lease directly to property instead of a specific room */
+  property_ref?: number;
   start_date: string;
   end_date: string;
   monthly_rent: number;

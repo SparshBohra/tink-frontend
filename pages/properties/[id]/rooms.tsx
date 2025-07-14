@@ -43,13 +43,38 @@ export default function PropertyRooms() {
   const [roomCountEditorOpen, setRoomCountEditorOpen] = useState(false);
   const [showAllHistory, setShowAllHistory] = useState(false);
 
+  // This single useEffect handles both initial data fetching and the refresh after creation.
   useEffect(() => {
+    // We wait until the router is ready and provides the `id`.
     if (id) {
+      const urlParams = new URLSearchParams(window.location.search);
+      const justCreated = urlParams.get('created') === 'true';
+
+      const fetchData = () => {
       fetchPropertyData();
+        // If we just created, clean the URL param to prevent re-fetching on manual refresh
+        if (justCreated) {
+          router.replace(`/properties/${id}/rooms`, undefined, { shallow: true });
+        }
+      };
+
+      if (justCreated) {
+        // Delay fetch slightly to allow for potential database replication lag
+        const timer = setTimeout(fetchData, 500);
+        return () => clearTimeout(timer);
+      } else {
+        fetchPropertyData();
+      }
     }
-  }, [id]);
+  }, [id]); // Dependency on `id` ensures this runs when the router is ready.
 
   const fetchPropertyData = async () => {
+    // Add guard here to prevent running with an invalid ID
+    if (!id || typeof id !== 'string') {
+      console.warn("fetchPropertyData called without a valid ID.");
+      return;
+    }
+
     try {
       setLoading(true);
       const propertyId = parseInt(id as string);
