@@ -8,6 +8,7 @@ interface DashboardLayoutProps {
   title: string;
   subtitle?: string;
   icon?: ReactNode;
+  actions?: ReactNode[];
 }
 
 /**
@@ -17,7 +18,8 @@ export default function DashboardLayout({
   children, 
   title, 
   subtitle,
-  icon 
+  icon,
+  actions
 }: DashboardLayoutProps) {
   // Default to collapsed (true), load from localStorage if available
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
@@ -200,21 +202,28 @@ export default function DashboardLayout({
         
         <main className={`main-content ${isSidebarCollapsed ? 'sidebar-collapsed' : 'sidebar-expanded'}`}>
           <div className="content-wrapper">
-        {/* Page Header */}
-            {(title || subtitle || icon) && (
-        <div className="page-header">
-          {icon && <div className="page-header-icon">{icon}</div>}
-                <div className="page-header-content">
-                  {title && <h1 className="page-title">{title}</h1>}
-                  {subtitle && <p className="page-subtitle">{subtitle}</p>}
-          </div>
-        </div>
+            {/* Page Header */}
+            {(title || subtitle || icon || actions) && (
+              <div className="page-header">
+                <div className="page-header-left">
+                  {icon && <div className="page-header-icon">{icon}</div>}
+                  <div className="page-header-content">
+                    {title && <h1 className="page-title">{title}</h1>}
+                    {subtitle && <p className="page-subtitle">{subtitle}</p>}
+                  </div>
+                </div>
+                {actions && actions.length > 0 && (
+                  <div className="page-header-actions">
+                    {actions}
+                  </div>
+                )}
+              </div>
             )}
 
-        {/* Main Content */}
-        <div className="page-content">
-          {children}
-        </div>
+            {/* Main Content */}
+            <div className="page-content">
+              {children}
+            </div>
           </div>
         </main>
       </div>
@@ -266,6 +275,18 @@ export default function DashboardLayout({
         .page-header {
           margin-bottom: 20px;
           padding: 0;
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          gap: 20px;
+        }
+
+        .page-header-left {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          flex: 1;
+          min-width: 0;
         }
 
         .page-header-content {
@@ -289,6 +310,13 @@ export default function DashboardLayout({
           font-weight: 500;
         }
 
+        .page-header-actions {
+          display: flex;
+          gap: 12px;
+          align-items: center;
+          flex-shrink: 0;
+        }
+
         .page-content {
           position: relative;
           z-index: 1;
@@ -298,6 +326,7 @@ export default function DashboardLayout({
           width: 56px;
           height: 56px;
           font-size: 24px;
+          flex-shrink: 0;
         }
 
         @media (max-width: 768px) {
@@ -314,8 +343,16 @@ export default function DashboardLayout({
           }
 
           .page-header {
+            flex-direction: column;
+            gap: 16px;
+            align-items: flex-start;
             padding: 24px;
             margin-bottom: 24px;
+          }
+
+          .page-header-actions {
+            width: 100%;
+            justify-content: flex-end;
           }
 
           .page-title {

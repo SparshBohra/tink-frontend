@@ -405,20 +405,51 @@ export default function PropertyRooms() {
     
     // Define all possible actions
     const allActions = {
-      // Tenant management actions (high priority when tenants are active)
-      viewLeases: {
-        title: 'View Leases',
-        subtitle: 'Manage agreements',
+      // Listing/Marketing actions (high priority when vacant)
+      createListing: {
+        title: 'Create Listing',
+        subtitle: isPerProperty ? 'List entire property' : 'List available rooms',
         icon: (
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
-            <polyline points="14 2 14 8 20 8"/>
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+            <polyline points="9,22 9,12 15,12 15,22"/>
           </svg>
         ),
-        color: 'green',
-        onClick: () => router.push('/leases'),
-        priority: hasActiveTenants ? 1 : 5
+        color: 'orange',
+        onClick: handleCreateListing,
+        priority: hasVacantRooms ? 1 : 8,
+        condition: hasVacantRooms || (!hasActiveTenants && isPerProperty)
       },
+      viewListings: {
+        title: 'View Listings',
+        subtitle: 'See active listings',
+        icon: (
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+          </svg>
+        ),
+        color: 'blue',
+        onClick: () => router.push(`/listings?property=${property.id}`),
+        priority: 2
+      },
+      // Application management actions
+      viewApplications: {
+        title: 'View Applications',
+        subtitle: 'Review tenant applications',
+        icon: (
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14,2 14,8 20,8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+          </svg>
+        ),
+        color: 'purple',
+        onClick: () => router.push('/applications'),
+        priority: 3
+      },
+      // Tenant management actions (high priority when tenants are active)
       manageTenants: {
         title: 'Manage Tenants',
         subtitle: 'View tenant details',
@@ -430,7 +461,7 @@ export default function PropertyRooms() {
         ),
         color: 'blue',
         onClick: () => router.push('/tenants'),
-        priority: hasActiveTenants ? 2 : 6
+        priority: hasActiveTenants ? 4 : 7
       },
       manageInventory: {
         title: 'Manage Inventory',
@@ -444,7 +475,7 @@ export default function PropertyRooms() {
         ),
         color: 'blue',
         onClick: () => router.push('/inventory'),
-        priority: hasActiveTenants ? 3 : 4
+        priority: hasActiveTenants ? 5 : 8
       },
       // Room management actions (ONLY for per_room properties)
       manageRooms: {
@@ -460,7 +491,7 @@ export default function PropertyRooms() {
         ),
         color: 'green',
         onClick: () => setRoomCountEditorOpen(true),
-        priority: 4,
+        priority: 6,
         condition: isPerRoom // Only show for per_room properties
       },
       addRoom: {
@@ -473,53 +504,21 @@ export default function PropertyRooms() {
         ),
         color: 'green',
         onClick: () => router.push(`/properties/${property?.id}/add-room`),
-        priority: isPerRoom ? 5 : 8,
+        priority: isPerRoom ? 7 : 10,
         condition: isPerRoom // Only show for per_room properties
       },
-      // Property-level tenant assignment (ONLY for per_property)
-      assignPropertyTenant: {
-        title: 'Assign Tenant',
-        subtitle: 'Lease entire property',
+      // Communication actions
+      communicationLog: {
+        title: 'Communication Log',
+        subtitle: 'View messages & history',
         icon: (
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-            <circle cx="12" cy="7" r="4"/>
-            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-            <path d="M8 3.13a4 4 0 0 0 0 7.75"/>
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
           </svg>
         ),
         color: 'blue',
-        onClick: () => setPropertyAssignmentModalOpen(true),
-        priority: isPerProperty && !hasActiveTenants ? 1 : 8,
-        condition: isPerProperty && !hasActiveTenants // Only show for vacant per_property
-      },
-      // Listing/Marketing actions (priority based on vacancy)
-      createListing: {
-        title: 'Create Listing',
-        subtitle: isPerProperty ? 'List entire property' : 'List available rooms',
-        icon: (
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-            <polyline points="9,22 9,12 15,12 15,22"/>
-          </svg>
-        ),
-        color: 'orange',
-        onClick: () => setIsNewApplicationModalOpen(true),
-        priority: hasVacantRooms ? (hasActiveTenants ? 6 : 1) : 9,
-        condition: hasVacantRooms || (!hasActiveTenants && isPerProperty)
-      },
-      viewListings: {
-        title: 'View Listings',
-        subtitle: 'See active listings',
-        icon: (
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
-            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
-          </svg>
-        ),
-        color: 'blue',
-        onClick: () => router.push(`/listings?property=${property.id}`),
-        priority: hasVacantRooms ? (hasActiveTenants ? 7 : 2) : 10
+        onClick: () => router.push('/communication-log'),
+        priority: 9
       },
       // Conversion actions (low priority when tenants are active, not available for occupied properties)
       convertRentType: {
@@ -535,16 +534,20 @@ export default function PropertyRooms() {
         ),
         color: 'purple',
         onClick: () => setConversionWizardOpen(true),
-        priority: hasActiveTenants ? 15 : 3,
+        priority: hasActiveTenants ? 15 : 11,
         condition: !hasActiveTenants // Only show when no active tenants
       }
     };
 
     // Filter actions based on conditions and sort by priority
-    return Object.values(allActions)
-      .filter(action => !(action as any).condition || (action as any).condition !== false)
-      .sort((a, b) => a.priority - b.priority)
-      .slice(0, 6); // Show top 6 actions
+    const filteredActions = Object.values(allActions)
+      .filter(action => {
+        // Existing condition filter
+        return (action as any).condition !== false;
+      })
+      .sort((a, b) => a.priority - b.priority);
+
+    return filteredActions.slice(0, 6); // Show top 6 relevant actions
   };
 
   // Dynamic header actions based on occupancy status
@@ -571,7 +574,7 @@ export default function PropertyRooms() {
       // Only show listing actions if there are vacant rooms
       if (hasVacantRooms) {
         actions.push(
-          <button key="create-listing" className="btn btn-secondary" onClick={() => setIsNewApplicationModalOpen(true)}>
+          <button key="create-listing" className="btn btn-secondary" onClick={handleCreateListing}>
             Create Listing
           </button>
         );
@@ -579,7 +582,7 @@ export default function PropertyRooms() {
     } else {
       // When no active tenants, prioritize marketing/listing actions
       actions.push(
-        <button key="create-listing" className="btn btn-primary" onClick={() => setIsNewApplicationModalOpen(true)}>
+        <button key="create-listing" className="btn btn-primary" onClick={handleCreateListing}>
           Create Listing
         </button>
       );
@@ -611,6 +614,7 @@ export default function PropertyRooms() {
           </svg>
         </button>
       }
+      actions={getHeaderActions()}
     >
       <Head>
         <title>{property.name} - Rooms | Tink</title>
@@ -941,7 +945,7 @@ export default function PropertyRooms() {
             {/* Quick Actions Section */}
             <div className="quick-actions-section">
               <div className="section-header">
-                    <div>
+                <div className="section-title-group">
                   <h2 className="section-title">Quick Actions</h2>
                   <p className="section-subtitle">
                     {(() => {
@@ -967,9 +971,6 @@ export default function PropertyRooms() {
                       }
                     })()}
                   </p>
-                    </div>
-                      <div className="header-actions">
-                          {getHeaderActions()}
                       </div>
                   </div>
               
@@ -1247,21 +1248,22 @@ export default function PropertyRooms() {
 
         /* Quick Actions Section */
         .quick-actions-section {
-          background: white;
+          background: rgba(255, 255, 255, 0.9);
+          backdrop-filter: blur(10px);
+          border: 1px solid rgba(226, 232, 240, 0.6);
           border-radius: 6px;
           padding: 16px;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-          border: 1px solid #e2e8f0;
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
           height: fit-content;
-          display: flex;
-          flex-direction: column;
         }
         :global(.dark-mode) .quick-actions-section {
-          background: #1a1a1a;
-          border-color: #333333;
+          background: rgba(22, 27, 34, 0.9);
+          border-color: rgba(48, 54, 61, 0.6);
         }
 
         .quick-actions-section .section-header {
+          padding: 0;
+          border-bottom: none;
           margin-bottom: 12px;
         }
 
@@ -1287,9 +1289,7 @@ export default function PropertyRooms() {
         .actions-grid {
           display: flex;
           flex-direction: column;
-          gap: 12px;
-          flex: 1;
-          justify-content: flex-start;
+          gap: 10px;
         }
 
         .action-card {
@@ -1817,7 +1817,6 @@ export default function PropertyRooms() {
           display: flex;
           gap: 10px;
           margin-left: auto;
-          flex-wrap: nowrap;
         }
         .header-actions .btn {
           white-space: nowrap;
