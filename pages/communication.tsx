@@ -72,6 +72,12 @@ function CommunicationPage() {
   const [newMessage, setNewMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [phoneError, setPhoneError] = useState<string | null>(null);
+  
+  // New state for message detection and auto-reload
+  const [lastMessageCheck, setLastMessageCheck] = useState<Date>(new Date());
+  const [isPageVisible, setIsPageVisible] = useState(true);
+  const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
+  const [isAutoRefreshing, setIsAutoRefreshing] = useState(false);
 
   useEffect(() => {
     fetchMessages();
@@ -79,10 +85,143 @@ function CommunicationPage() {
     fetchTenants();
   }, []);
 
-  const fetchMessages = async () => {
+  // Page visibility detection
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      setIsPageVisible(!document.hidden);
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
+
+  // Auto-reload functionality - check for new messages every 5 seconds
+  useEffect(() => {
+    if (isPageVisible) {
+      const interval = setInterval(async () => {
+        await checkForNewMessages();
+      }, 5000); // Check every 5 seconds
+
+      setPollingInterval(interval);
+      
+      return () => {
+        if (interval) {
+          clearInterval(interval);
+        }
+      };
+    } else {
+      // Clear interval when page is not visible
+      if (pollingInterval) {
+        clearInterval(pollingInterval);
+        setPollingInterval(null);
+      }
+    }
+  }, [isPageVisible, lastMessageCheck]);
+
+  const checkForNewMessages = async () => {
     try {
-      setLoading(true);
-      // Mock conversations data
+      console.log('Checking for new messages...');
+      
+      // Fetch latest conversations to check for new messages
+      const conversationsResponse = await apiClient.getConversations();
+      const backendConversations = conversationsResponse.results || [];
+      
+      if (backendConversations.length === 0) {
+        return;
+      }
+
+      // Check if there are any new messages since our last check
+      let hasNewMessages = false;
+      let latestMessageTime = lastMessageCheck;
+
+      for (const conv of backendConversations) {
+        if (conv.last_message_at) {
+          const messageTime = new Date(conv.last_message_at);
+          if (messageTime > lastMessageCheck) {
+            hasNewMessages = true;
+            if (messageTime > latestMessageTime) {
+              latestMessageTime = messageTime;
+            }
+          }
+        }
+      }
+
+      if (hasNewMessages) {
+        console.log('New messages detected, refreshing data...');
+        
+        // Show auto-refresh indicator
+        setIsAutoRefreshing(true);
+        
+        // Update the last check time
+        setLastMessageCheck(latestMessageTime);
+        
+        // Refresh conversations and current conversation messages
+        await fetchMessages(true); // Pass true for isAutoRefresh
+        
+        // If we have a selected conversation, reload its messages too
+        if (selectedConversation) {
+          await loadConversationMessages(selectedConversation);
+        }
+        
+        // Hide auto-refresh indicator after a brief delay
+        setTimeout(() => {
+          setIsAutoRefreshing(false);
+        }, 1500);
+        
+        // Optional: Show a brief notification
+        console.log('Communication data refreshed due to new messages');
+      }
+    } catch (error) {
+      console.error('Error checking for new messages:', error);
+      // Don't show error to user as this is background polling
+    }
+  };
+
+  const fetchMessages = async (isAutoRefresh = false) => {
+    try {
+      if (!isAutoRefresh) {
+        setLoading(true);
+      }
+      setError(null);
+      console.log('Fetching conversations from backend...');
+      
+      // Fetch real conversations from backend
+      const conversationsResponse = await apiClient.getConversations();
+      console.log('Conversations response:', conversationsResponse);
+      
+      // Transform backend conversations to frontend format
+      const backendConversations = conversationsResponse.results || [];
+      const transformedConversations = backendConversations.map((conv: any) => ({
+        id: conv.id,
+        tenantId: conv.tenant,  // This is the tenant ID from the backend
+        tenantName: conv.tenant_name || 'Unknown Tenant',
+        tenantPhone: conv.tenant_phone || '',
+        tenantUnit: 'N/A', // This field doesn't exist in backend - could be added later
+        tenantProperty: conv.property_name || 'N/A',
+        lastMessage: conv.last_message?.body || conv.subject || 'No messages',
+        lastMessageDate: conv.last_message_at || conv.created_at,
+        unreadCount: conv.unread_count || 0,
+        status: conv.status || 'active',
+        tenantAvatar: undefined
+      }));
+      
+      console.log('Transformed conversations:', transformedConversations);
+      setConversations(transformedConversations);
+
+      // Update last message check time for auto-reload functionality
+      const now = new Date();
+      setLastMessageCheck(now);
+
+      // If no conversation is selected and we have conversations, select the first one
+      if (!selectedConversation && transformedConversations.length > 0) {
+        setSelectedConversation(transformedConversations[0].id);
+        loadConversationMessages(transformedConversations[0].id);
+      }
+    } catch (err: any) {
+      console.error('Failed to fetch conversations:', err);
+      setError('Failed to load conversations. Using fallback data.');
+      
+      // Fallback to mock data if API fails
       setConversations([
         {
           id: 1,
@@ -95,128 +234,119 @@ function CommunicationPage() {
           lastMessageDate: '2024-01-15T14:30:00Z',
           unreadCount: 0,
           status: 'active'
-        },
-        {
-          id: 2,
-          tenantId: 2,
-          tenantName: 'Jane Smith',
-          tenantPhone: '+1234567891',
-          tenantUnit: 'B205',
-          tenantProperty: 'Oak Street Complex',
-          lastMessage: 'Yes, I would like to renew my lease.',
-          lastMessageDate: '2024-01-14T16:45:00Z',
-          unreadCount: 2,
-          status: 'active'
-        },
-        {
-          id: 3,
-          tenantId: 3,
-          tenantName: 'Mike Johnson',
-          tenantPhone: '+1234567892',
-          tenantUnit: 'C303',
-          tenantProperty: 'Downtown Lofts',
-          lastMessage: 'Got it, thanks!',
-          lastMessageDate: '2024-01-13T09:20:00Z',
-          unreadCount: 0,
-          status: 'active'
-        },
-        {
-          id: 4,
-          tenantId: 4,
-          tenantName: 'Sarah Wilson',
-          tenantPhone: '+1234567893',
-          tenantUnit: 'A102',
-          tenantProperty: 'Sunset Apartments',
-          lastMessage: 'When will the maintenance be completed?',
-          lastMessageDate: '2024-01-12T11:15:00Z',
-          unreadCount: 1,
-          status: 'active'
-        },
-        {
-          id: 5,
-          tenantId: 5,
-          tenantName: 'David Brown',
-          tenantPhone: '+1234567894',
-          tenantUnit: 'B206',
-          tenantProperty: 'Oak Street Complex',
-          lastMessage: 'Payment sent via bank transfer.',
-          lastMessageDate: '2024-01-11T13:30:00Z',
-          unreadCount: 0,
-          status: 'active'
         }
       ]);
-
-      // Set initial messages for first conversation if none selected
-      if (!selectedConversation) {
-        setSelectedConversation(1);
-        loadConversationMessages(1);
-      }
-    } catch (err: any) {
-      console.error('Failed to fetch conversations:', err);
-      setError('Failed to load conversations');
     } finally {
-      setLoading(false);
+      if (!isAutoRefresh) {
+        setLoading(false);
+      }
     }
   };
 
-  const loadConversationMessages = (conversationId: number) => {
-    // Mock messages for the selected conversation
-    const mockMessages: ChatMessage[] = [
-      {
-        id: 1,
-        conversationId: conversationId,
-        message: 'Hi John, this is a friendly reminder that your rent payment is due in 3 days.',
-        sent_date: '2024-01-15T10:00:00Z',
-        sender: 'user',
-        status: 'read',
-        type: 'sms'
-      },
-      {
-        id: 2,
-        conversationId: conversationId,
-        message: 'Thank you for the reminder! I will make the payment today.',
-        sent_date: '2024-01-15T14:30:00Z',
-        sender: 'tenant',
-        status: 'delivered',
-        type: 'sms'
-      },
-      {
-        id: 3,
-        conversationId: conversationId,
-        message: 'Perfect! Let me know if you need any assistance.',
-        sent_date: '2024-01-15T14:35:00Z',
-        sender: 'user',
-        status: 'read',
-        type: 'sms'
-      }
-    ];
-    setMessages(mockMessages);
+  const loadConversationMessages = async (conversationId: number) => {
+    try {
+      console.log('Loading messages for conversation:', conversationId);
+      
+      // Fetch real messages from backend
+      const messagesResponse = await apiClient.getMessages();
+      console.log('Messages response:', messagesResponse);
+      
+      // Filter messages for this conversation and transform to frontend format
+      const backendMessages = messagesResponse.results || [];
+      const conversationMessages = backendMessages
+        .filter((msg: any) => msg.conversation === conversationId)
+        .map((msg: any) => ({
+          id: msg.id,
+          conversationId: msg.conversation,
+          message: msg.body,
+          sent_date: msg.created_at,
+          sender: (msg.sender_type === 'manager' ? 'user' : 'tenant') as 'user' | 'tenant',
+          status: msg.status || 'sent',
+          phone: msg.from_number || msg.to_number,
+          sid: msg.twilio_sid || msg.external_message_id,
+          type: msg.message_type || 'sms'
+        }))
+        .sort((a: any, b: any) => new Date(a.sent_date).getTime() - new Date(b.sent_date).getTime());
+      
+      console.log('Conversation messages:', conversationMessages);
+      setMessages(conversationMessages);
+    } catch (err: any) {
+      console.error('Failed to load conversation messages:', err);
+      
+      // Fallback to mock messages
+      const mockMessages: ChatMessage[] = [
+        {
+          id: 1,
+          conversationId: conversationId,
+          message: 'Hi, this is a message from the communication system.',
+          sent_date: '2024-01-15T10:00:00Z',
+          sender: 'user',
+          status: 'read',
+          type: 'sms'
+        }
+      ];
+      setMessages(mockMessages);
+    }
   };
 
   const fetchTemplates = async () => {
     try {
-      const response = await fetch('/api/sms/templates');
-      const data = await response.json();
-      if (data.success) {
-        setTemplates(data.templates);
-      }
-    } catch (error) {
+      console.log('Fetching templates from backend...');
+      
+      // Fetch real templates from backend
+      const templatesResponse = await apiClient.getMessageTemplates();
+      console.log('Templates response:', templatesResponse);
+      
+      // Transform backend templates to frontend format
+      const backendTemplates = templatesResponse.results || [];
+      const transformedTemplates = backendTemplates.map((template: any) => ({
+        id: template.id,
+        name: template.name,
+        category: template.category || 'General',
+        subject: template.subject || '',
+        body: template.body || '',
+        variables: template.variables || []
+      }));
+      
+      console.log('Transformed templates:', transformedTemplates);
+      setTemplates(transformedTemplates);
+    } catch (error: any) {
       console.error('Failed to fetch templates:', error);
+      
+      // Fallback to empty templates if API fails
+      setTemplates([]);
     }
   };
 
   const fetchTenants = async () => {
     try {
-      // Mock tenant data - replace with actual API call
+      console.log('Fetching tenants from backend...');
+      
+      // Fetch real tenants from backend
+      const tenantsResponse = await apiClient.getTenants();
+      console.log('Tenants response:', tenantsResponse);
+      
+      // Transform backend tenants to frontend format
+      const backendTenants = tenantsResponse.results || [];
+      const transformedTenants = backendTenants.map((tenant: any) => ({
+        id: tenant.id,
+        name: tenant.full_name,
+        phone: tenant.phone,
+        email: tenant.email,
+        unit: tenant.current_room_name || 'N/A',
+        property: tenant.current_property_name || 'N/A'
+      }));
+      
+      console.log('Transformed tenants:', transformedTenants);
+      setTenants(transformedTenants);
+    } catch (error: any) {
+      console.error('Failed to fetch tenants:', error);
+      
+      // Fallback to mock data if API fails
       setTenants([
         { id: 1, name: 'John Doe', phone: '+1234567890', email: 'john@example.com', unit: 'A101', property: 'Sunset Apartments' },
-        { id: 2, name: 'Jane Smith', phone: '+1234567891', email: 'jane@example.com', unit: 'B205', property: 'Oak Street Complex' },
-        { id: 3, name: 'Mike Johnson', phone: '+1234567892', email: 'mike@example.com', unit: 'C303', property: 'Downtown Lofts' },
-        { id: 4, name: 'Sarah Wilson', phone: '+1234567893', email: 'sarah@example.com', unit: 'A102', property: 'Sunset Apartments' },
-        { id: 5, name: 'David Brown', phone: '+1234567894', email: 'david@example.com', unit: 'B206', property: 'Oak Street Complex' }
+        { id: 2, name: 'Jane Smith', phone: '+1234567891', email: 'jane@example.com', unit: 'B205', property: 'Oak Street Complex' }
       ]);
-    } catch (error) {
-      console.error('Failed to fetch tenants:', error);
     }
   };
 
@@ -225,58 +355,95 @@ function CommunicationPage() {
     setSending(true);
     
     try {
-      const payload: any = {
-        message: messageForm.message,
-        type: messageForm.type
-      };
+      console.log('Sending message with form data:', messageForm);
 
       if (messageForm.messageType === 'sms') {
         if (messageForm.type === 'individual') {
-          payload.to = messageForm.phone;
+          // Find tenant by phone number
+          const tenant = tenants.find(t => t.phone === messageForm.phone);
+          if (!tenant) {
+            throw new Error('Tenant not found for the provided phone number');
+          }
+
+          // Use the new communication API for individual messages
+          const result = await apiClient.sendMessage({
+            tenant_id: tenant.id,
+            message_type: 'sms',
+            subject: messageForm.subject,
+            body: messageForm.message,
+            template_id: messageForm.templateId ? parseInt(messageForm.templateId) : undefined
+          });
+
+          if (result.success) {
+            alert('SMS sent successfully!');
+            setShowMessageForm(false);
+            setMessageForm({ 
+              recipient: '', 
+              phone: '',
+              subject: '', 
+              message: '', 
+              type: 'individual',
+              messageType: 'sms',
+              templateId: '',
+              selectedTenants: []
+            });
+            
+            // Refresh conversations to show the new message
+            await fetchMessages(true); // Pass true to avoid loading screen
+          } else {
+            throw new Error(result.error || 'Failed to send SMS');
+          }
         } else {
-          // Broadcast to selected tenants or all tenants
+          // For bulk messages, use the old API for now (could be updated later)
           const selectedTenantsList = messageForm.selectedTenants.length > 0 
             ? tenants.filter(t => messageForm.selectedTenants.includes(t.id))
             : tenants;
           
-          payload.recipients = selectedTenantsList.map(tenant => ({
-            name: tenant.name,
-            phone: tenant.phone
-          }));
-        }
+          const payload = {
+            message: messageForm.message,
+            type: messageForm.type,
+            recipients: selectedTenantsList.map(tenant => ({
+              name: tenant.name,
+              phone: tenant.phone
+            }))
+          };
 
-        const response = await fetch('/api/sms/send', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(payload)
-        });
-
-        const result = await response.json();
-        
-        if (result.success) {
-          alert(`SMS sent successfully! ${result.summary.successful} of ${result.summary.total} messages delivered.`);
-      setShowMessageForm(false);
-          setMessageForm({ 
-            recipient: '', 
-            phone: '',
-            subject: '', 
-            message: '', 
-            type: 'individual',
-            messageType: 'sms',
-            templateId: '',
-            selectedTenants: []
+          const response = await fetch('/api/sms/send', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload)
           });
-      fetchMessages(); // Refresh messages
-        } else {
-          throw new Error(result.error || 'Failed to send SMS');
+
+          const result = await response.json();
+          
+          if (result.success) {
+            alert(`SMS sent successfully! ${result.summary.successful} of ${result.summary.total} messages delivered.`);
+            setShowMessageForm(false);
+            setMessageForm({ 
+              recipient: '', 
+              phone: '',
+              subject: '', 
+              message: '', 
+              type: 'individual',
+              messageType: 'sms',
+              templateId: '',
+              selectedTenants: []
+            });
+            
+            // Refresh conversations
+            await fetchMessages(true); // Pass true to avoid loading screen
+          } else {
+            throw new Error(result.error || 'Failed to send SMS');
+          }
         }
       } else {
         // Email functionality - placeholder
         alert('Email functionality not implemented yet');
       }
     } catch (err: any) {
+      console.error('Failed to send message:', err);
       alert('Failed to send message: ' + err.message);
     } finally {
       setSending(false);
@@ -303,47 +470,33 @@ function CommunicationPage() {
       const selectedConv = conversations.find(c => c.id === selectedConversation);
       if (!selectedConv) return;
 
-      const payload = {
-        to: selectedConv.tenantPhone,
-        message: newMessage,
-        type: 'individual'
-      };
-
-      const response = await fetch('/api/sms/send', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload)
+      console.log('Sending message via new communication API...');
+      
+      // Use the new communication API
+      const result = await apiClient.sendMessage({
+        tenant_id: selectedConv.tenantId,
+        message_type: 'sms',
+        body: newMessage
       });
-
-      const result = await response.json();
+      
+      console.log('Send message result:', result);
       
       if (result.success) {
-        // Add message to current conversation
-        const newChatMessage: ChatMessage = {
-          id: messages.length + 1,
-          conversationId: selectedConversation,
-          message: newMessage,
-          sent_date: new Date().toISOString(),
-          sender: 'user',
-          status: 'sent',
-          type: 'sms'
-        };
-        
-        setMessages([...messages, newChatMessage]);
+        // Clear the input
         setNewMessage('');
         
-        // Update conversation last message
-        setConversations(conversations.map(conv => 
-          conv.id === selectedConversation 
-            ? { ...conv, lastMessage: newMessage, lastMessageDate: new Date().toISOString() }
-            : conv
-        ));
+        // Refresh conversations and messages to get the latest data
+        await fetchMessages(true); // Pass true to avoid loading screen
+        
+        // Reload the current conversation messages
+        await loadConversationMessages(selectedConversation);
+        
+        console.log('Message sent successfully!');
       } else {
         throw new Error(result.error || 'Failed to send message');
       }
     } catch (err: any) {
+      console.error('Failed to send message:', err);
       alert('Failed to send message: ' + err.message);
     } finally {
       setSending(false);
@@ -430,7 +583,17 @@ function CommunicationPage() {
         <div className="dashboard-header">
           <div className="header-content">
             <div className="header-left">
-              <h1 className="dashboard-title">Communication</h1>
+              <h1 className="dashboard-title">
+                Communication
+                {isAutoRefreshing && (
+                  <span className="auto-refresh-indicator">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="spinning">
+                      <path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c0 5-4 9-9 9s-9-4-9-9m9 9v-9"/>
+                    </svg>
+                    New messages detected
+                  </span>
+                )}
+              </h1>
               <div className="subtitle-container">
                 <p className="welcome-message">
                   Manage tenant communications and announcements
@@ -882,15 +1045,10 @@ function CommunicationPage() {
                             type="tel"
                             id="phone"
                             value={messageForm.phone}
-                            onChange={(e) => {
-                              const formattedPhone = phoneUtils.formatPhoneNumber(e.target.value);
-                              setMessageForm({ ...messageForm, phone: formattedPhone });
-                              const phoneErrorMsg = phoneUtils.getPhoneErrorMessage(formattedPhone);
-                              setPhoneError(phoneErrorMsg);
-                            }}
                             placeholder="(555) 123-4567"
                             required
-                            className={`form-input ${phoneError ? 'error' : ''}`}
+                            readOnly
+                            className={`form-input readonly ${phoneError ? 'error' : ''}`}
                           />
                           {phoneError && (
                             <div className="field-error">
@@ -947,18 +1105,20 @@ function CommunicationPage() {
                     </select>
                   </div>
                   
-                  <div className="form-group full-width">
-                    <label htmlFor="subject" className="form-label">Subject</label>
-                    <input
-                      type="text"
-                      id="subject"
-                      value={messageForm.subject}
-                      onChange={(e) => setMessageForm({ ...messageForm, subject: e.target.value })}
-                      placeholder="e.g., Rent Reminder, Maintenance Notice"
-                      required
-                      className="form-input"
-                    />
-                  </div>
+                  {messageForm.messageType === 'email' && (
+                    <div className="form-group full-width">
+                      <label htmlFor="subject" className="form-label">Subject</label>
+                      <input
+                        type="text"
+                        id="subject"
+                        value={messageForm.subject}
+                        onChange={(e) => setMessageForm({ ...messageForm, subject: e.target.value })}
+                        placeholder="e.g., Rent Reminder, Maintenance Notice"
+                        required
+                        className="form-input"
+                      />
+                    </div>
+                  )}
 
                   <div className="form-group full-width">
                     <label htmlFor="message" className="form-label">
@@ -2443,6 +2603,18 @@ function CommunicationPage() {
           color: #9ca3af;
           cursor: not-allowed;
         }
+        
+        .message-form .form-input.readonly {
+          background: #f8fafc;
+          color: #6b7280;
+          cursor: default;
+          border-color: #e2e8f0;
+        }
+        
+        .message-form .form-input.readonly:focus {
+          box-shadow: none;
+          border-color: #e2e8f0;
+        }
 
         .message-form .form-actions {
           display: flex;
@@ -2760,6 +2932,15 @@ function CommunicationPage() {
         }
         :global(.dark-mode) .message-form .form-input:focus { border-color: #3b82f6 !important; }
         :global(.dark-mode) .message-form .form-input:disabled { background: #374151 !important; color: #6b7280 !important; }
+        :global(.dark-mode) .message-form .form-input.readonly { 
+          background: #1f2937 !important; 
+          color: #9ca3af !important; 
+          border-color: #374151 !important; 
+        }
+        :global(.dark-mode) .message-form .form-input.readonly:focus { 
+          border-color: #374151 !important; 
+          box-shadow: none !important; 
+        }
         :global(.dark-mode) .message-form .form-actions { border-top-color: #333333 !important; }
         :global(.dark-mode) .tenant-selection { 
           background: #1a1a1a !important; 
@@ -2843,7 +3024,42 @@ function CommunicationPage() {
         :global(.dark-mode) .toggle-input:checked + .toggle-slider {
           background-color: #4f46e5 !important;
         }
-      `}</style>
+        
+        /* Auto-refresh indicator styles */
+        .auto-refresh-indicator {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          margin-left: 12px;
+          font-size: 14px;
+          font-weight: 500;
+          color: #10b981;
+          background: rgba(16, 185, 129, 0.1);
+          padding: 4px 8px;
+          border-radius: 6px;
+          border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+        
+        .spinning {
+          animation: spin 2s linear infinite;
+        }
+        
+        @keyframes spin {
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(360deg);
+          }
+        }
+        
+        /* Dark mode auto-refresh indicator */
+        :global(.dark-mode) .auto-refresh-indicator {
+          color: #34d399 !important;
+          background: rgba(52, 211, 153, 0.1) !important;
+          border-color: rgba(52, 211, 153, 0.3) !important;
+                  }
+        `}</style>
     </DashboardLayout>
   );
 }

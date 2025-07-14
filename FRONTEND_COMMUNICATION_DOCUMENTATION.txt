@@ -1,0 +1,621 @@
+===============================================================================
+                     TINK FRONTEND COMMUNICATION DOCUMENTATION
+===============================================================================
+
+TABLE OF CONTENTS
+1. SYSTEM OVERVIEW
+2. ARCHITECTURE & COMPONENTS
+3. SETUP & CONFIGURATION
+4. API ENDPOINTS
+5. FRONTEND COMPONENTS
+6. USAGE GUIDE
+7. MESSAGE TEMPLATES
+8. INTEGRATION GUIDE
+9. TROUBLESHOOTING
+10. BEST PRACTICES
+11. SECURITY CONSIDERATIONS
+12. FUTURE ENHANCEMENTS
+
+===============================================================================
+1. SYSTEM OVERVIEW
+===============================================================================
+
+The Tink Frontend Communication System is a comprehensive messaging platform 
+that enables property managers and landlords to communicate with tenants through 
+multiple channels including SMS and Email. The system supports both individual 
+and bulk messaging with template management, conversation tracking, and delivery 
+status monitoring.
+
+KEY FEATURES:
+- Multi-channel communication (SMS, Email)
+- Individual and bulk messaging
+- Message templates with variable substitution
+- Conversation management and history
+- Real-time delivery tracking
+- Role-based access control
+- Mobile-responsive UI
+- Twilio integration for SMS
+
+SUPPORTED COMMUNICATION CHANNELS:
+- SMS (via Twilio)
+- Email (planned)
+- Internal notes
+
+===============================================================================
+2. ARCHITECTURE & COMPONENTS
+===============================================================================
+
+FRONTEND ARCHITECTURE:
+```
+tink-frontend/
+├── pages/
+│   ├── communication.tsx          # Main communication interface
+│   ├── communication-log.tsx      # Communication history
+│   └── api/
+│       └── sms/
+│           ├── send.ts            # SMS sending endpoint
+│           ├── status.ts          # SMS status checking
+│           └── templates.ts       # Message templates
+├── components/
+│   ├── ConversationList.tsx       # Conversation sidebar
+│   ├── ChatWindow.tsx            # Message display
+│   ├── MessageForm.tsx           # Message composer
+│   └── TemplateSelector.tsx      # Template picker
+├── lib/
+│   ├── api.ts                    # API client
+│   ├── twilio.ts                 # Twilio integration
+│   └── types.ts                  # TypeScript definitions
+```
+
+BACKEND INTEGRATION:
+```
+tink-backend/communication/
+├── models.py                     # Database models
+├── views.py                      # API endpoints
+├── services.py                   # Business logic
+├── serializers.py                # Data serialization
+└── urls.py                       # URL routing
+```
+
+===============================================================================
+3. SETUP & CONFIGURATION
+===============================================================================
+
+ENVIRONMENT VARIABLES:
+Create a .env.local file in the frontend root with:
+
+```
+# Twilio Configuration
+TWILIO_ACCOUNT_SID=your_account_sid_here
+TWILIO_AUTH_TOKEN=your_auth_token_here
+TWILIO_PHONE_NUMBER=your_twilio_phone_number_here
+
+# API Configuration
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8000/api
+```
+
+TWILIO SETUP:
+1. Create a Twilio account at https://www.twilio.com/
+2. Get your Account SID and Auth Token from the Console
+3. Purchase a phone number for SMS sending
+4. Configure webhook URLs for status callbacks:
+   - Status Webhook: {your-domain}/api/sms/status
+   - Incoming Webhook: {your-domain}/api/sms/incoming
+
+BACKEND DEPENDENCIES:
+Ensure the following are installed in your backend:
+- Django REST Framework
+- Twilio Python SDK
+- django-cors-headers
+
+FRONTEND DEPENDENCIES:
+```bash
+npm install twilio axios js-cookie
+```
+
+===============================================================================
+4. API ENDPOINTS
+===============================================================================
+
+FRONTEND API ROUTES:
+```
+POST /api/sms/send
+- Send SMS messages (individual or bulk)
+- Body: { to, message, type, recipients }
+- Response: { success, results, summary }
+
+GET /api/sms/templates
+- Get message templates
+- Query: ?category=payment&id=rent-reminder
+- Response: { templates, categories }
+
+POST /api/sms/status
+- Update message status (webhook)
+- Body: { MessageSid, MessageStatus, etc. }
+```
+
+BACKEND API ENDPOINTS:
+```
+Communication Templates:
+GET /api/communication/templates/
+POST /api/communication/templates/
+GET /api/communication/templates/{id}/
+PUT /api/communication/templates/{id}/
+DELETE /api/communication/templates/{id}/
+
+Conversations:
+GET /api/communication/conversations/
+POST /api/communication/conversations/
+GET /api/communication/conversations/{id}/
+POST /api/communication/conversations/{id}/mark_as_read/
+GET /api/communication/conversations/{id}/messages/
+
+Messages:
+GET /api/communication/messages/
+POST /api/communication/messages/
+POST /api/communication/messages/send/
+GET /api/communication/messages/{id}/
+POST /api/communication/messages/{id}/update_status/
+
+Bulk Messages:
+GET /api/communication/bulk-messages/
+POST /api/communication/bulk-messages/
+POST /api/communication/bulk-messages/send/
+GET /api/communication/bulk-messages/{id}/delivery_logs/
+
+Preferences:
+GET /api/communication/preferences/
+POST /api/communication/preferences/
+GET /api/communication/preferences/by_tenant/
+```
+
+===============================================================================
+5. FRONTEND COMPONENTS
+===============================================================================
+
+MAIN PAGES:
+
+1. communication.tsx
+   - Main communication interface
+   - Conversation list and chat window
+   - Message composer with templates
+   - Individual and bulk messaging
+   - Real-time message status updates
+
+2. communication-log.tsx
+   - Historical communication data
+   - Message filtering and search
+   - Delivery status tracking
+   - Export functionality
+
+KEY COMPONENTS:
+
+1. ConversationList
+   - Displays tenant conversations
+   - Unread message indicators
+   - Search and filter functionality
+   - Click to open conversation
+
+2. ChatWindow
+   - Message thread display
+   - Real-time message updates
+   - Message status indicators
+   - Typing indicators (future)
+
+3. MessageForm
+   - Message composition
+   - Template selection
+   - Character count for SMS
+   - Attachment support (future)
+
+4. TemplateSelector
+   - Pre-defined message templates
+   - Variable substitution preview
+   - Category-based filtering
+   - Custom template creation
+
+COMPONENT PROPERTIES:
+
+ConversationList Props:
+```typescript
+interface ConversationListProps {
+  conversations: Conversation[];
+  selectedConversation: number | null;
+  onSelectConversation: (id: number) => void;
+  onNewMessage: () => void;
+}
+```
+
+ChatWindow Props:
+```typescript
+interface ChatWindowProps {
+  conversation: Conversation;
+  messages: Message[];
+  onSendMessage: (message: string) => void;
+  sending: boolean;
+}
+```
+
+MessageForm Props:
+```typescript
+interface MessageFormProps {
+  onSubmit: (formData: MessageFormData) => void;
+  templates: Template[];
+  tenants: Tenant[];
+  isVisible: boolean;
+  onClose: () => void;
+}
+```
+
+===============================================================================
+6. USAGE GUIDE
+===============================================================================
+
+SENDING INDIVIDUAL MESSAGES:
+
+1. Access the Communication page
+2. Click "Create New" or select existing conversation
+3. Choose message type (SMS/Email)
+4. Select recipient from tenant list
+5. Compose message or select template
+6. Click "Send SMS" or "Send Email"
+7. Monitor delivery status in real-time
+
+SENDING BULK MESSAGES:
+
+1. Click "Create New" message
+2. Select "All Tenants" or "Selected Tenants"
+3. Choose recipients (if selected tenants)
+4. Compose message with variable placeholders
+5. Preview message substitution
+6. Send to all selected recipients
+7. Monitor delivery progress
+
+MANAGING CONVERSATIONS:
+
+1. View conversation list on left sidebar
+2. Click conversation to open chat window
+3. Send quick replies using message input
+4. Mark conversations as read/unread
+5. Archive completed conversations
+6. Search conversations by tenant name
+
+USING MESSAGE TEMPLATES:
+
+1. Access template selector in message form
+2. Choose template by category
+3. Preview template with variable substitution
+4. Customize template content if needed
+5. Save custom templates for future use
+
+VIEWING COMMUNICATION LOG:
+
+1. Access Communication Log page
+2. Filter by date range, type, or status
+3. Search by tenant name or content
+4. View delivery details and timestamps
+5. Export communication history
+
+===============================================================================
+7. MESSAGE TEMPLATES
+===============================================================================
+
+BUILT-IN TEMPLATES:
+
+1. Rent Reminder (Payment Category)
+   - Subject: "Rent Payment Reminder"
+   - Variables: {{name}}, {{amount}}, {{dueDate}}, {{propertyName}}
+   - Body: "Hi {{name}}, this is a friendly reminder that your rent payment of ${{amount}} is due on {{dueDate}}..."
+
+2. Maintenance Notice (Maintenance Category)
+   - Subject: "Scheduled Maintenance Notice"
+   - Variables: {{name}}, {{maintenanceType}}, {{date}}, {{startTime}}, {{endTime}}
+   - Body: "Dear {{name}}, we have scheduled maintenance for {{maintenanceType}} on {{date}}..."
+
+3. Lease Renewal (Lease Category)
+   - Subject: "Lease Renewal Notice"
+   - Variables: {{name}}, {{unitNumber}}, {{expirationDate}}, {{contactInfo}}
+   - Body: "Hi {{name}}, your lease for {{unitNumber}} expires on {{expirationDate}}..."
+
+4. Welcome Message (General Category)
+   - Subject: "Welcome to Your New Home"
+   - Variables: {{name}}, {{propertyName}}, {{unitNumber}}, {{contactInfo}}
+   - Body: "Welcome to {{propertyName}}, {{name}}! We're excited to have you..."
+
+5. Emergency Notice (Emergency Category)
+   - Subject: "Emergency Notice"
+   - Variables: {{emergencyType}}, {{propertyName}}, {{emergencyDetails}}
+   - Body: "EMERGENCY NOTICE: {{emergencyType}} at {{propertyName}}..."
+
+TEMPLATE VARIABLES:
+
+Common Variables:
+- {{name}} - Tenant's full name
+- {{propertyName}} - Property name
+- {{unitNumber}} - Unit/room number
+- {{contactInfo}} - Contact information
+- {{dueDate}} - Payment due date
+- {{amount}} - Payment amount
+- {{date}} - General date field
+- {{startTime}} - Event start time
+- {{endTime}} - Event end time
+
+Creating Custom Templates:
+1. Use double curly braces for variables: {{variableName}}
+2. Keep SMS messages under 160 characters
+3. Test variable substitution before sending
+4. Save frequently used templates
+5. Organize templates by category
+
+===============================================================================
+8. INTEGRATION GUIDE
+===============================================================================
+
+INTEGRATING WITH EXISTING COMPONENTS:
+
+1. Import Communication Components:
+```typescript
+import { MessageForm } from '../components/MessageForm';
+import { ConversationList } from '../components/ConversationList';
+```
+
+2. Add Message Button to Other Pages:
+```typescript
+// In applications.tsx or tenants.tsx
+const handleMessage = (tenant: Tenant) => {
+  router.push(`/communication?tenant=${tenant.id}`);
+};
+```
+
+3. Trigger Messages from Workflows:
+```typescript
+// Send automated messages
+await sendNotification({
+  tenantId: tenant.id,
+  template: 'welcome',
+  variables: {
+    name: tenant.name,
+    propertyName: property.name
+  }
+});
+```
+
+API CLIENT INTEGRATION:
+
+```typescript
+// Using the API client
+import { apiClient } from '../lib/api';
+
+// Send message
+const result = await apiClient.post('/sms/send', {
+  to: '+1234567890',
+  message: 'Hello from Tink!',
+  type: 'individual'
+});
+
+// Get templates
+const templates = await apiClient.get('/sms/templates');
+```
+
+WEBHOOK INTEGRATION:
+
+Setup webhook handlers for:
+- Message delivery status updates
+- Incoming message processing
+- Error handling and retries
+
+===============================================================================
+9. TROUBLESHOOTING
+===============================================================================
+
+COMMON ISSUES:
+
+1. SMS Not Sending:
+   - Check Twilio credentials in environment variables
+   - Verify phone number format (+1XXXXXXXXXX)
+   - Confirm Twilio account has sufficient balance
+   - Check network connectivity
+
+2. Templates Not Loading:
+   - Verify API endpoint is accessible
+   - Check browser console for errors
+   - Confirm template data structure
+   - Reload page to refresh templates
+
+3. Message Status Not Updating:
+   - Verify webhook URL is configured in Twilio
+   - Check webhook endpoint is accessible
+   - Confirm webhook receives status updates
+   - Check network firewall settings
+
+4. UI Not Responsive:
+   - Check CSS media queries
+   - Verify mobile viewport settings
+   - Test on different screen sizes
+   - Check for JavaScript errors
+
+DEBUGGING STEPS:
+
+1. Check Browser Console:
+   - Look for JavaScript errors
+   - Verify API responses
+   - Check network requests
+
+2. Check Network Tab:
+   - Verify API calls are made
+   - Check response status codes
+   - Examine request/response data
+
+3. Backend Logs:
+   - Check Django logs for errors
+   - Verify Twilio API responses
+   - Monitor database queries
+
+4. Twilio Console:
+   - Check message delivery status
+   - Verify webhook configuration
+   - Monitor account usage
+
+ERROR CODES:
+
+Common Twilio Error Codes:
+- 21211: Invalid 'To' phone number
+- 21614: 'To' number is not a valid mobile number
+- 21408: Permission to send an SMS has not been enabled
+- 30001: Message delivery - no answer
+- 30002: Message delivery - handset busy
+- 30003: Message delivery - unreachable destination
+
+===============================================================================
+10. BEST PRACTICES
+===============================================================================
+
+MESSAGE COMPOSITION:
+- Keep SMS messages under 160 characters
+- Use clear, concise language
+- Include property name for context
+- Provide contact information
+- Use professional tone
+- Test messages before bulk sending
+
+TEMPLATE MANAGEMENT:
+- Create templates for common scenarios
+- Use consistent variable naming
+- Test variable substitution
+- Keep templates up to date
+- Organize by category
+- Document template usage
+
+COMMUNICATION STRATEGY:
+- Respect tenant communication preferences
+- Avoid sending messages during quiet hours
+- Use appropriate channel for message type
+- Follow up on important messages
+- Keep communication logs for records
+
+SECURITY:
+- Validate all user inputs
+- Sanitize message content
+- Use HTTPS for all API calls
+- Implement rate limiting
+- Monitor for spam/abuse
+- Follow data privacy regulations
+
+PERFORMANCE:
+- Implement message queuing for bulk sends
+- Use background processing for large batches
+- Cache frequently used templates
+- Optimize database queries
+- Monitor API rate limits
+
+===============================================================================
+11. SECURITY CONSIDERATIONS
+===============================================================================
+
+DATA PROTECTION:
+- Encrypt sensitive data in transit and at rest
+- Implement proper authentication and authorization
+- Use HTTPS for all communication
+- Validate and sanitize all inputs
+- Follow GDPR and other privacy regulations
+
+ACCESS CONTROL:
+- Role-based access to communication features
+- Restrict bulk messaging to authorized users
+- Audit communication activities
+- Implement session management
+- Use secure token-based authentication
+
+RATE LIMITING:
+- Implement API rate limiting
+- Prevent spam and abuse
+- Monitor usage patterns
+- Set daily/hourly message limits
+- Implement exponential backoff
+
+WEBHOOK SECURITY:
+- Validate webhook signatures
+- Use HTTPS endpoints
+- Implement proper error handling
+- Monitor webhook activities
+- Secure webhook URLs
+
+===============================================================================
+12. FUTURE ENHANCEMENTS
+===============================================================================
+
+PLANNED FEATURES:
+
+1. Email Integration:
+   - Full email sending capability
+   - Email templates
+   - Attachment support
+   - Email tracking
+
+2. Advanced Templates:
+   - Rich text formatting
+   - Conditional content
+   - Multi-language support
+   - Template versioning
+
+3. Communication Analytics:
+   - Message open rates
+   - Response tracking
+   - Communication effectiveness metrics
+   - Tenant engagement analytics
+
+4. Mobile App Support:
+   - React Native integration
+   - Push notifications
+   - Offline message queue
+   - Mobile-optimized UI
+
+5. Integration Features:
+   - Calendar integration
+   - Automated reminders
+   - Workflow triggers
+   - Third-party integrations
+
+6. Advanced Features:
+   - Message scheduling
+   - Auto-responders
+   - Chat bot integration
+   - Voice message support
+
+TECHNICAL IMPROVEMENTS:
+
+1. Performance Optimizations:
+   - Message queuing system
+   - Database indexing
+   - Caching strategies
+   - CDN integration
+
+2. Scalability Enhancements:
+   - Microservices architecture
+   - Load balancing
+   - Database sharding
+   - Horizontal scaling
+
+3. Monitoring and Logging:
+   - Enhanced error tracking
+   - Performance monitoring
+   - Usage analytics
+   - Health checks
+
+===============================================================================
+SUPPORT AND MAINTENANCE
+===============================================================================
+
+For technical support or questions about the communication system:
+1. Check this documentation first
+2. Review the troubleshooting section
+3. Check the GitHub issues
+4. Contact the development team
+
+Last Updated: January 2024
+Version: 1.0.0
+Documentation Maintained By: Tink Development Team
+
+===============================================================================
+END OF DOCUMENTATION
+=============================================================================== 

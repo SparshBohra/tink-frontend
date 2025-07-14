@@ -1621,6 +1621,130 @@ class ApiClient {
       return { inconsistencies: [], warnings: [] };
     }
   }
+
+  // Communication endpoints
+  async getConversations(): Promise<PaginatedResponse<any>> {
+    try {
+      const response = await this.api.get('/communication/conversations/');
+      // Handle both paginated and direct array responses
+      if (Array.isArray(response.data)) {
+        return {
+          count: response.data.length,
+          next: undefined,
+          previous: undefined,
+          results: response.data
+        };
+      }
+      return response.data;
+    } catch (error: any) {
+      if (error.status === 403 || error.status === 401) {
+        // Return empty response if no permission
+        return {
+          count: 0,
+          next: undefined,
+          previous: undefined,
+          results: []
+        };
+      }
+      throw error;
+    }
+  }
+
+  async getConversation(id: number): Promise<any> {
+    const response = await this.api.get(`/communication/conversations/${id}/`);
+    return response.data;
+  }
+
+  async getMessages(): Promise<PaginatedResponse<any>> {
+    try {
+      const response = await this.api.get('/communication/messages/');
+      // Handle both paginated and direct array responses
+      if (Array.isArray(response.data)) {
+        return {
+          count: response.data.length,
+          next: undefined,
+          previous: undefined,
+          results: response.data
+        };
+      }
+      return response.data;
+    } catch (error: any) {
+      if (error.status === 403 || error.status === 401) {
+        // Return empty response if no permission
+        return {
+          count: 0,
+          next: undefined,
+          previous: undefined,
+          results: []
+        };
+      }
+      throw error;
+    }
+  }
+
+  async sendMessage(data: {
+    tenant_id: number;
+    message_type: 'sms' | 'email';
+    subject?: string;
+    body: string;
+    template_id?: number;
+  }): Promise<any> {
+    const response = await this.api.post('/communication/messages/send/', data);
+    return response.data;
+  }
+
+  async getMessageTemplates(): Promise<PaginatedResponse<any>> {
+    try {
+      const response = await this.api.get('/communication/templates/');
+      // Handle both paginated and direct array responses
+      if (Array.isArray(response.data)) {
+        return {
+          count: response.data.length,
+          next: undefined,
+          previous: undefined,
+          results: response.data
+        };
+      }
+      return response.data;
+    } catch (error: any) {
+      if (error.status === 403 || error.status === 401) {
+        // Return empty response if no permission
+        return {
+          count: 0,
+          next: undefined,
+          previous: undefined,
+          results: []
+        };
+      }
+      throw error;
+    }
+  }
+
+  // SMS Sending (for backward compatibility with existing SMS API)
+  async sendSMS(data: any): Promise<any> {
+    // Try the new communication API first
+    try {
+      if (data.to && data.message) {
+        // Find tenant by phone number
+        const tenantsResponse = await this.getTenants();
+        const tenant = tenantsResponse.results.find(t => t.phone === data.to);
+        
+        if (tenant) {
+          return await this.sendMessage({
+            tenant_id: tenant.id,
+            message_type: 'sms',
+            body: data.message
+          });
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to use new communication API, falling back to old SMS API:', error);
+    }
+
+    // Fallback to the old SMS API if needed
+    const response = await this.api.post('/api/sms/send', data);
+    return response.data;
+  }
 }
 
 export const apiClient = new ApiClient();
