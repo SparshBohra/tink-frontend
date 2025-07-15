@@ -194,7 +194,7 @@ const ApplicationApprovalModal: React.FC<ApplicationApprovalModalProps> = ({
       newErrors.security_deposit = 'Security deposit cannot be negative';
     }
     
-    if (selectedProperty?.rent_type === 'per_room' && !formData.room_id) {
+    if (selectedProperty?.rent_type === 'per_room' && filteredRooms.length > 0 && !formData.room_id) {
       newErrors.room_id = 'Room assignment is required for per-room rentals';
     }
     
@@ -308,7 +308,7 @@ const ApplicationApprovalModal: React.FC<ApplicationApprovalModalProps> = ({
                 </div>
               )}
 
-              {selectedProperty?.rent_type === 'per_room' && (
+              {selectedProperty?.rent_type === 'per_room' && filteredRooms.length > 0 && (
                 <div className="form-group">
                   <label htmlFor="room_id">Room Assignment *</label>
                   <select
@@ -326,10 +326,11 @@ const ApplicationApprovalModal: React.FC<ApplicationApprovalModalProps> = ({
                     ))}
                   </select>
                   {errors.room_id && <span className="error-message">{errors.room_id}</span>}
-                  {filteredRooms.length === 0 && selectedProperty && (
-                    <span className="info-message">No vacant rooms available in this property</span>
-                  )}
                 </div>
+              )}
+
+              {selectedProperty?.rent_type === 'per_room' && filteredRooms.length === 0 && (
+                <span className="info-message">No vacant rooms available in this property</span>
               )}
             </div>
             
@@ -444,268 +445,6 @@ const ApplicationApprovalModal: React.FC<ApplicationApprovalModalProps> = ({
           </form>
         </div>
       </div>
-      
-      <style jsx>{`
-        .modal-overlay {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(0, 0, 0, 0.5);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 1000;
-        }
-        
-        .modal-content {
-          background: white;
-          border-radius: 8px;
-          max-width: 600px;
-          width: 90%;
-          max-height: 90vh;
-          overflow-y: auto;
-        }
-        
-        .modal-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 20px;
-          border-bottom: 1px solid #e5e7eb;
-        }
-        
-        .modal-header h2 {
-          margin: 0;
-          color: #1f2937;
-        }
-        
-        .close-button {
-          background: none;
-          border: none;
-          font-size: 24px;
-          cursor: pointer;
-          color: #6b7280;
-          padding: 0;
-          width: 30px;
-          height: 30px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        
-        .close-button:hover {
-          color: #374151;
-        }
-        
-        .modal-body {
-          padding: 20px;
-        }
-        
-        .application-summary {
-          background: #f9fafb;
-          border: 1px solid #e5e7eb;
-          border-radius: 6px;
-          padding: 16px;
-          margin-bottom: 24px;
-        }
-        
-        .application-summary h3 {
-          margin: 0 0 12px 0;
-          color: #1f2937;
-          font-size: 16px;
-        }
-        
-        .summary-row {
-          display: flex;
-          justify-content: space-between;
-          margin-bottom: 8px;
-        }
-        
-        .summary-row:last-child {
-          margin-bottom: 0;
-        }
-        
-        .label {
-          font-weight: 500;
-          color: #6b7280;
-        }
-        
-        .value {
-          color: #1f2937;
-        }
-        
-        .form-section h3 {
-          margin: 0 0 16px 0;
-          color: #1f2937;
-          font-size: 16px;
-        }
-        
-        .form-row {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 16px;
-          margin-bottom: 16px;
-        }
-        
-        .form-group {
-          display: flex;
-          flex-direction: column;
-        }
-        
-        .form-group label {
-          margin-bottom: 4px;
-          font-weight: 500;
-          color: #374151;
-        }
-        
-        .form-group input,
-        .form-group select,
-        .form-group textarea {
-          padding: 8px 12px;
-          border: 1px solid #d1d5db;
-          border-radius: 4px;
-          font-size: 14px;
-        }
-        
-        .form-group input:focus,
-        .form-group select:focus,
-        .form-group textarea:focus {
-          outline: none;
-          border-color: #3b82f6;
-          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-        }
-        
-        .form-group input.error,
-        .form-group select.error,
-        .form-group textarea.error {
-          border-color: #ef4444;
-        }
-        
-        .error-message {
-          color: #ef4444;
-          font-size: 12px;
-          margin-top: 4px;
-        }
-        
-        .modal-footer {
-          display: flex;
-          justify-content: flex-end;
-          gap: 12px;
-          padding: 20px;
-          border-top: 1px solid #e5e7eb;
-        }
-        
-        .btn-secondary {
-          padding: 8px 16px;
-          border: 1px solid #d1d5db;
-          background: white;
-          color: #374151;
-          border-radius: 4px;
-          cursor: pointer;
-          font-size: 14px;
-        }
-        
-        .btn-secondary:hover {
-          background: #f9fafb;
-        }
-        
-        .btn-primary {
-          padding: 8px 16px;
-          border: none;
-          background: #3b82f6;
-          color: white;
-          border-radius: 4px;
-          cursor: pointer;
-          font-size: 14px;
-        }
-        
-        .btn-primary:hover {
-          background: #2563eb;
-        }
-        
-        .property-info {
-          background: #f0f9eb;
-          border: 1px solid #a7d7c5;
-          border-radius: 6px;
-          padding: 12px 16px;
-          margin-top: 16px;
-          margin-bottom: 24px;
-        }
-
-        .property-details p {
-          margin: 4px 0;
-          color: #333;
-        }
-
-        .info-message {
-          color: #6b7280;
-          font-size: 14px;
-          margin-top: 8px;
-        }
-        
-        .info-section {
-          background: #e0f2fe;
-          border: 1px solid #bbdefb;
-          border-radius: 6px;
-          padding: 12px 16px;
-          margin-top: 16px;
-          margin-bottom: 24px;
-          display: flex;
-          align-items: center;
-        }
-
-        .info-message svg {
-          width: 20px;
-          height: 20px;
-          margin-right: 10px;
-          color: #2196f3;
-        }
-
-        .info-message p {
-          margin: 0;
-          color: #1976d2;
-          font-weight: 500;
-        }
-        
-        @media (max-width: 640px) {
-          .form-row {
-            grid-template-columns: 1fr;
-          }
-        }
-
-        .btn-cancel {
-          padding: 8px 16px;
-          border: 1px solid #d1d5db;
-          background: white;
-          color: #374151;
-          border-radius: 6px;
-          font-weight: 500;
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-        
-        .btn-cancel:hover {
-          background: #f9fafb;
-          border-color: #9ca3af;
-        }
-        
-        .btn-approve {
-          padding: 8px 16px;
-          border: none;
-          background: #2563eb;
-          color: white;
-          border-radius: 6px;
-          font-weight: 500;
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-        
-        .btn-approve:hover {
-          background: #1d4ed8;
-        }
-      `}</style>
     </div>
   );
 };

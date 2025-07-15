@@ -103,20 +103,19 @@ function Applications() {
       const draftedLeases = (leasesResponse.results || []).filter((l:any) => l.status === 'draft');
 
       const apps = (applicationsResponse.results || []).map((app:any) => {
-        if (['lease_created','lease_signed','approved'].includes(app.status)) {
-          const hasActiveLease = activeLeases.some((l:any) => l.tenant === app.tenant && l.property_ref === app.property_ref);
-          if (hasActiveLease) {
-            return { ...app, status: 'moved_in' };
-          }
+        // If an active lease exists, the applicant has moved in
+        const hasActiveLease = activeLeases.some((l:any) => l.tenant === app.tenant && l.property_ref === app.property_ref);
+        if (hasActiveLease) {
+          return { ...app, status: 'moved_in' };
         }
 
-        // If a lease has been created (drafted), update the application status to 'lease_created'
+        // If a drafted lease exists for this application, it's in the lease created stage
         const hasDraftedLease = draftedLeases.some((l:any) => l.application === app.id);
         if (hasDraftedLease) {
           return { ...app, status: 'lease_created' };
         }
-
-        return app;
+        
+        return app; // Default to backend status if no specific override
       });
       setApplications(apps);
       setFilteredApplications(apps);
@@ -682,6 +681,29 @@ function Applications() {
     }
   };
 
+  const handleSkipViewing = async (applicationId: number) => {
+    try {
+      const application = applications.find(app => app.id === applicationId);
+      if (!application) {
+        alert('Application not found');
+        return;
+      }
+
+      // Use completeViewing with a neutral outcome to signify skipping
+      await apiClient.completeViewing(applicationId, {
+        outcome: 'neutral',
+        landlord_notes: 'Viewing skipped by agent.',
+        next_action: 'Proceed to room assignment',
+      });
+      fetchData(); // Refresh data
+      alert('✅ Viewing skipped! Application moved to Viewing Completed.');
+    } catch (error: any) {
+      console.error('Skip viewing error:', error);
+      const errorMessage = error.response?.data?.detail || error.response?.data?.message || (error instanceof Error ? error.message : 'An unknown error occurred');
+      alert(`❌ Failed to skip viewing: ${errorMessage}\n\nPlease check the console for more details.`);
+    }
+  };
+
   if (loading) {
     return (
       <DashboardLayout
@@ -886,6 +908,7 @@ function Applications() {
           onMessage={handleMessage}
           onSetupViewing={handleSetupViewing}
           onActivateLease={handleActivateLease}
+          onSkipViewing={handleSkipViewing}
           getPropertyName={getPropertyName}
           formatDate={formatDate}
           extraActions={(

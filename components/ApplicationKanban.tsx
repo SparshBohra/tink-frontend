@@ -14,6 +14,7 @@ interface ApplicationKanbanProps {
   onMessage?: (application: Application) => void;
   onSetupViewing?: (application: Application) => void;
   onActivateLease?: (application: Application) => void;
+  onSkipViewing?: (applicationId: number) => void; /* New prop */
   getPropertyName: (propertyId: number) => string;
   formatDate: (date: string | null) => string;
   extraActions?: React.ReactNode;
@@ -65,7 +66,17 @@ interface ApplicationListViewProps extends ApplicationKanbanProps {
   getSortLabel: (sortType: 'default' | 'date' | 'name') => string;
 }
 
-function ApplicationListView({
+type Column = { keys: string[]; title: string };
+
+const STATUS_COLUMNS: Column[] = [
+  { keys: ['pending', 'rejected'], title: 'Pending Review' },
+  { keys: ['approved', 'viewing_scheduled'], title: 'Shortlisted' },
+  { keys: ['viewing_completed', 'processing', 'room_assigned'], title: 'Assign Room' },
+  { keys: ['lease_ready', 'lease_created', 'lease_signed'], title: 'Lease Process' },
+  { keys: ['moved_in', 'active'], title: 'Active Tenants' },
+];
+
+const ApplicationListView: React.FC<ApplicationListViewProps> = ({
   grouped,
   onReview,
   onApprove,
@@ -76,13 +87,14 @@ function ApplicationListView({
   onMessage,
   onSetupViewing,
   onActivateLease,
+  onSkipViewing,
   getPropertyName,
   formatDate,
   sortSettings,
   toggleSort,
   getSortIcon,
   getSortLabel,
-}: ApplicationListViewProps) {
+}) => {
   const getStageDescription = (title: string): string => {
     switch (title) {
       case 'Pending Review':
@@ -195,9 +207,18 @@ function ApplicationListView({
 
                           {/* Qualified actions */}
                           {app.status === 'approved' && (
-                            <button className="btn-sm primary" onClick={() => onSetupViewing && onSetupViewing(app)}>
-                              Schedule Viewing
-                            </button>
+                            <>
+                              <button className="btn-sm primary" onClick={() => onSetupViewing && onSetupViewing(app)}>
+                                Schedule Viewing
+                              </button>
+                              <button 
+                                className="btn-sm secondary" 
+                                onClick={() => onSkipViewing && onSkipViewing(app.id)}
+                                title="Skip viewing and move directly to room assignment"
+                              >
+                                Skip Viewing
+                              </button>
+                            </>
                           )}
 
                           {/* Viewing Scheduled actions */}
@@ -265,7 +286,7 @@ function ApplicationListView({
                             </button>
                           )}
 
-                          {/* Message button */}
+                          {/* Message button - available on all cards except rejected */}
                           {app.status !== 'rejected' && (
                             <button className="btn-sm message" onClick={() => onMessage && onMessage(app)}>
                               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -286,17 +307,7 @@ function ApplicationListView({
       ))}
     </div>
   );
-}
-
-type Column = { keys: string[]; title: string };
-
-const STATUS_COLUMNS: Column[] = [
-  { keys: ['pending', 'rejected'], title: 'Pending Review' },
-  { keys: ['approved', 'viewing_scheduled'], title: 'Shortlisted' },
-  { keys: ['viewing_completed', 'processing'], title: 'Assign Room' },
-  { keys: ['room_assigned', 'lease_ready', 'lease_created', 'lease_signed'], title: 'Lease Process' },
-  { keys: ['moved_in', 'active'], title: 'Active Tenants' },
-];
+};
 
 export default function ApplicationKanban({
   applications,
@@ -309,6 +320,7 @@ export default function ApplicationKanban({
   onMessage,
   onSetupViewing,
   onActivateLease,
+  onSkipViewing,
   getPropertyName,
   formatDate,
   extraActions,
@@ -528,6 +540,13 @@ export default function ApplicationKanban({
                             <button className="btn-sm primary" onClick={() => onSetupViewing && onSetupViewing(app)}>
                               Schedule Viewing
                             </button>
+                            <button 
+                              className="btn-sm secondary" 
+                              onClick={() => onSkipViewing && onSkipViewing(app.id)}
+                              title="Skip viewing and move directly to room assignment"
+                            >
+                              Skip Viewing
+                            </button>
                           </>
                         )}
 
@@ -625,6 +644,7 @@ export default function ApplicationKanban({
           onMessage={onMessage}
           onSetupViewing={onSetupViewing}
           onActivateLease={onActivateLease}
+          onSkipViewing={onSkipViewing}
           getPropertyName={getPropertyName}
           formatDate={formatDate}
           sortSettings={sortSettings}
