@@ -6,6 +6,7 @@ interface LeaseGenerationModalProps {
   application: Application;
   room: Room;
   properties: Property[];
+  rooms?: Room[]; // Add rooms array for room selection
   onClose: () => void;
   onLeaseGenerated: (leaseData: LeaseData) => void;
 }
@@ -16,6 +17,7 @@ interface LeaseData {
   tenantEmail: string;
   propertyName: string;
   roomName: string;
+  roomId: number; // Add room ID for tracking
   monthlyRent: number;
   securityDeposit: number;
   leaseStartDate: string;
@@ -42,6 +44,7 @@ const ImprovedLeaseGenerationModal: React.FC<LeaseGenerationModalProps> = ({
   application,
   room,
   properties,
+  rooms,
   onClose,
   onLeaseGenerated
 }) => {
@@ -53,19 +56,73 @@ const ImprovedLeaseGenerationModal: React.FC<LeaseGenerationModalProps> = ({
   }
 
   const [activeStep, setActiveStep] = useState(1);
+  
+  // Enhanced auto-fill logic using application data
+  const getAutoFilledMonthlyRent = () => {
+    // Priority: 1. Application monthly_rent, 2. Room monthly_rent, 3. Rent budget
+    if (application.monthly_rent) {
+      const rent = typeof application.monthly_rent === 'string' ? parseFloat(application.monthly_rent) : application.monthly_rent;
+      return rent;
+    }
+    if (room.monthly_rent) {
+      const rent = typeof room.monthly_rent === 'string' ? parseFloat(room.monthly_rent) : room.monthly_rent;
+      return rent;
+    }
+    if (application.rent_budget) {
+      const rent = typeof application.rent_budget === 'string' ? parseFloat(application.rent_budget) : application.rent_budget;
+      return rent;
+    }
+    return 0;
+  };
+
+  const getAutoFilledSecurityDeposit = () => {
+    // Priority: 1. Application security_deposit, 2. 2x monthly rent
+    if (application.security_deposit) {
+      const deposit = typeof application.security_deposit === 'string' ? parseFloat(application.security_deposit) : application.security_deposit;
+      return deposit;
+    }
+    const monthlyRent = getAutoFilledMonthlyRent();
+    const deposit = monthlyRent * 2; // Standard 2 months rent
+    return deposit;
+  };
+
+  const getAutoFilledLeaseEndDate = () => {
+    if (application.lease_end_date) {
+      return application.lease_end_date;
+    }
+    // Calculate based on start date + 12 months default
+    const startDate = new Date(application.desired_move_in_date || application.lease_start_date || new Date());
+    const endDate = new Date(startDate);
+    endDate.setMonth(endDate.getMonth() + 12);
+    return endDate.toISOString().split('T')[0];
+  };
+
+  const getAutoFilledSpecialConditions = () => {
+    const conditions = [];
+    if (application.notes) conditions.push(`Application Notes: ${application.notes}`);
+    if (application.decision_notes) conditions.push(`Decision Notes: ${application.decision_notes}`);
+    if (application.occupation) conditions.push(`Tenant Occupation: ${application.occupation}`);
+    if (application.monthly_income) conditions.push(`Monthly Income: $${application.monthly_income}`);
+    if (application.emergency_contact_name) {
+      conditions.push(`Emergency Contact: ${application.emergency_contact_name}${application.emergency_contact_phone ? ` (${application.emergency_contact_phone})` : ''}`);
+    }
+    return conditions.join('\n');
+  };
+
   const [leaseData, setLeaseData] = useState<LeaseData>({
     applicationId: application.id,
     tenantName: application.tenant_name || '',
     tenantEmail: application.tenant_email || '',
     propertyName: property.name,
     roomName: room.name,
-    monthlyRent: typeof room.monthly_rent === 'string' ? parseFloat(room.monthly_rent) : (room.monthly_rent || 0),
-    securityDeposit: 0,
-    leaseStartDate: application.desired_move_in_date || new Date().toISOString().split('T')[0],
-    leaseEndDate: '',
+    roomId: room.id, // Set room ID
+    monthlyRent: getAutoFilledMonthlyRent(),
+    securityDeposit: getAutoFilledSecurityDeposit(),
+    leaseStartDate: application.desired_move_in_date || application.lease_start_date || new Date().toISOString().split('T')[0],
+    leaseEndDate: getAutoFilledLeaseEndDate(),
     leaseTermMonths: 12,
     additionalTerms: [],
-    specialConditions: '',
+    specialConditions: getAutoFilledSpecialConditions(),
     utilitiesIncluded: [],
     parkingIncluded: false,
     petPolicy: 'No pets allowed',
@@ -256,6 +313,53 @@ Generated on: ${new Date().toLocaleDateString()}
           </button>
         </div>
 
+        {/* Auto-fill Information */}
+        <div className="auto-fill-info">
+          <div className="info-header">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="l12 6 0 4"/>
+              <path d="l12 14 0 .01"/>
+            </svg>
+            <span>Auto-filled from Application Data</span>
+          </div>
+          <div className="info-content">
+            <div className="info-grid">
+              <div className="info-item">
+                <span className="label">Tenant:</span>
+                <span className="value">{application.tenant_name || 'Not specified'}</span>
+              </div>
+              <div className="info-item">
+                <span className="label">Monthly Rent:</span>
+                <span className="value">${getAutoFilledMonthlyRent()}</span>
+                <span className="source">
+                  {application.monthly_rent ? '(from application)' : 
+                   room.monthly_rent ? '(from room)' : 
+                   application.rent_budget ? '(from budget)' : '(default)'}
+                </span>
+              </div>
+              <div className="info-item">
+                <span className="label">Security Deposit:</span>
+                <span className="value">${getAutoFilledSecurityDeposit()}</span>
+                <span className="source">
+                  {application.security_deposit ? '(from application)' : '(2x monthly rent)'}
+                </span>
+              </div>
+              <div className="info-item">
+                <span className="label">Start Date:</span>
+                <span className="value">{application.desired_move_in_date || application.lease_start_date || 'Today'}</span>
+                <span className="source">
+                  {application.desired_move_in_date ? '(desired move-in)' : 
+                   application.lease_start_date ? '(from application)' : '(default)'}
+                </span>
+              </div>
+            </div>
+            <div className="info-note">
+              <strong>Note:</strong> All fields are editable. You can modify any auto-filled values as needed.
+            </div>
+          </div>
+        </div>
+
         {/* Progress Steps */}
         <div className="progress-steps">
           <div className={`step ${activeStep >= 1 ? 'active' : ''} ${activeStep > 1 ? 'completed' : ''}`}>
@@ -305,7 +409,16 @@ Generated on: ${new Date().toLocaleDateString()}
                     <h4 className="section-title">Lease Information</h4>
                     <div className="form-grid">
                       <div className="form-group">
-                        <label>Tenant Name</label>
+                        <label>
+                          Tenant Name
+                          {application.tenant_name && (
+                            <span className="auto-fill-badge" title="Auto-filled from application">
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M20 6L9 17l-5-5"/>
+                              </svg>
+                            </span>
+                          )}
+                        </label>
                         <input
                           type="text"
                           value={leaseData.tenantName}
@@ -314,7 +427,16 @@ Generated on: ${new Date().toLocaleDateString()}
                         />
                       </div>
                       <div className="form-group">
-                        <label>Tenant Email</label>
+                        <label>
+                          Tenant Email
+                          {application.tenant_email && (
+                            <span className="auto-fill-badge" title="Auto-filled from application">
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M20 6L9 17l-5-5"/>
+                              </svg>
+                            </span>
+                          )}
+                        </label>
                         <input
                           type="email"
                           value={leaseData.tenantEmail}
@@ -323,7 +445,58 @@ Generated on: ${new Date().toLocaleDateString()}
                         />
                       </div>
                       <div className="form-group">
-                        <label>Monthly Rent</label>
+                        <label>
+                          Room Assignment
+                          <span className="auto-fill-badge" title="Auto-selected based on application, but can be changed">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M20 6L9 17l-5-5"/>
+                            </svg>
+                          </span>
+                        </label>
+                        <select
+                          value={leaseData.roomId}
+                          onChange={(e) => {
+                            const selectedRoomId = parseInt(e.target.value);
+                            const selectedRoom = rooms?.find(r => r.id === selectedRoomId);
+                            if (selectedRoom) {
+                              handleInputChange('roomId', selectedRoomId);
+                              handleInputChange('roomName', selectedRoom.name);
+                              // Update monthly rent if room has different rent
+                              if (selectedRoom.monthly_rent) {
+                                const roomRent = typeof selectedRoom.monthly_rent === 'string' ? 
+                                  parseFloat(selectedRoom.monthly_rent) : selectedRoom.monthly_rent;
+                                handleInputChange('monthlyRent', roomRent);
+                              }
+                            }
+                          }}
+                          className="form-input"
+                        >
+                          {rooms ? (
+                            // If rooms array is provided, show all rooms for the property
+                            rooms.filter(r => r.property_ref === application.property_ref).map(room => (
+                              <option key={room.id} value={room.id}>
+                                {room.name} - ${typeof room.monthly_rent === 'string' ? 
+                                  parseFloat(room.monthly_rent) : room.monthly_rent}/month
+                                {room.is_vacant ? ' (Available)' : ' (Occupied)'}
+                              </option>
+                            ))
+                          ) : (
+                            // Fallback: show current room only
+                            <option value={room.id}>{room.name}</option>
+                          )}
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label>
+                          Monthly Rent
+                          {(application.monthly_rent || room.monthly_rent || application.rent_budget) && (
+                            <span className="auto-fill-badge" title={`Auto-filled from ${application.monthly_rent ? 'application' : room.monthly_rent ? 'room' : 'budget'}`}>
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M20 6L9 17l-5-5"/>
+                              </svg>
+                            </span>
+                          )}
+                        </label>
                         <input
                           type="number"
                           value={leaseData.monthlyRent}
@@ -332,7 +505,16 @@ Generated on: ${new Date().toLocaleDateString()}
                         />
                       </div>
                       <div className="form-group">
-                        <label>Security Deposit</label>
+                        <label>
+                          Security Deposit
+                          {(application.security_deposit || getAutoFilledMonthlyRent() > 0) && (
+                            <span className="auto-fill-badge" title={`Auto-filled ${application.security_deposit ? 'from application' : '(2x monthly rent)'}`}>
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M20 6L9 17l-5-5"/>
+                              </svg>
+                            </span>
+                          )}
+                        </label>
                         <input
                           type="number"
                           value={leaseData.securityDeposit}
@@ -341,7 +523,16 @@ Generated on: ${new Date().toLocaleDateString()}
                         />
                       </div>
                       <div className="form-group">
-                        <label>Lease Start Date</label>
+                        <label>
+                          Lease Start Date
+                          {(application.desired_move_in_date || application.lease_start_date) && (
+                            <span className="auto-fill-badge" title="Auto-filled from application">
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M20 6L9 17l-5-5"/>
+                              </svg>
+                            </span>
+                          )}
+                        </label>
                         <input
                           type="date"
                           value={leaseData.leaseStartDate}
@@ -350,7 +541,16 @@ Generated on: ${new Date().toLocaleDateString()}
                         />
                       </div>
                       <div className="form-group">
-                        <label>Lease End Date</label>
+                        <label>
+                          Lease End Date
+                          {application.lease_end_date && (
+                            <span className="auto-fill-badge" title="Auto-filled from application">
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M20 6L9 17l-5-5"/>
+                              </svg>
+                            </span>
+                          )}
+                        </label>
                         <input
                           type="date"
                           value={leaseData.leaseEndDate}
@@ -446,7 +646,16 @@ Generated on: ${new Date().toLocaleDateString()}
 
                   {/* Special Conditions */}
                   <div className="form-section">
-                    <h4 className="section-title">Special Conditions</h4>
+                    <h4 className="section-title">
+                      Special Conditions
+                      {(application.notes || application.decision_notes || application.occupation || application.monthly_income || application.emergency_contact_name) && (
+                        <span className="auto-fill-badge" title="Auto-filled from application data">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M20 6L9 17l-5-5"/>
+                          </svg>
+                        </span>
+                      )}
+                    </h4>
                     <div className="form-group">
                       <textarea
                         value={leaseData.specialConditions}
@@ -1158,6 +1367,88 @@ Generated on: ${new Date().toLocaleDateString()}
           background: #4b5563;
         }
 
+        .auto-fill-info {
+          background: #f9fafb;
+          border-radius: 8px;
+          padding: 16px;
+          margin: 0 24px 24px 24px;
+          border: 1px solid #e5e7eb;
+        }
+
+        .info-header {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-bottom: 12px;
+          color: #374151;
+          font-size: 14px;
+          font-weight: 500;
+        }
+
+        .info-header svg {
+          color: #3b82f6;
+        }
+
+        .info-content {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        .info-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+          gap: 12px;
+        }
+
+        .info-item {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+
+        .label {
+          font-size: 12px;
+          color: #6b7280;
+          font-weight: 400;
+        }
+
+        .value {
+          font-size: 14px;
+          font-weight: 500;
+          color: #1f2937;
+        }
+
+        .source {
+          font-size: 12px;
+          color: #6b7280;
+          margin-left: 8px;
+        }
+
+        .info-note {
+          font-size: 12px;
+          color: #6b7280;
+          margin-top: 8px;
+        }
+
+        .auto-fill-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          margin-left: 8px;
+          color: #3b82f6;
+          font-size: 12px;
+          font-weight: 500;
+          background: #eff6ff;
+          padding: 2px 6px;
+          border-radius: 4px;
+          border: 1px solid #d1fae5;
+        }
+
+        .auto-fill-badge svg {
+          color: #10b981;
+        }
+
         @media (max-width: 768px) {
           .lease-generation-modal {
             width: 100%;
@@ -1201,6 +1492,37 @@ Generated on: ${new Date().toLocaleDateString()}
 
           .cancel-btn {
             order: 1;
+          }
+
+          .auto-fill-info {
+            margin: 0 16px 16px 16px;
+            padding: 12px;
+          }
+
+          .info-header {
+            font-size: 12px;
+          }
+
+          .info-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .info-item {
+            flex-direction: row;
+            align-items: center;
+            gap: 8px;
+          }
+
+          .label {
+            flex: 1;
+          }
+
+          .value {
+            flex: 2;
+          }
+
+          .source {
+            flex: 1;
           }
         }
       `}</style>

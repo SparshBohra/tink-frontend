@@ -84,9 +84,9 @@ export default function ViewingCompletionModal({
           <h2 className="modal-title">Complete Property Viewing</h2>
           <button onClick={onClose} className="close-btn">
             ×
-          </button>
-        </div>
-        
+            </button>
+          </div>
+
         <div className="modal-body">
           {/* Application Summary */}
           <div className="application-summary">

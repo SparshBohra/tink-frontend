@@ -702,19 +702,44 @@ class ApiClient {
   }): Promise<Application> {
     try {
       console.log(`Deciding on application ${id} with data:`, decisionData);
-    const response = await this.api.post(`/tenants/applications/${id}/decide/`, decisionData);
+    const response = await this.api.post(`/applications/${id}/decide/`, decisionData);
       console.log('Application decision successful:', response.data);
     return response.data;
     } catch (error: any) {
       console.error(`Application decision failed for ID ${id}:`, error);
       console.error('Error response:', error.response?.data);
       
+      if (error.response?.status === 404) {
+        // Fallback mechanism for 404 errors
+        console.log('Endpoint not available, using fallback mechanism');
+        
+        if (decisionData.decision === 'approve') {
+          // Use existing approve fallback logic
+          const updateData = {
+            status: 'approved' as const,
+            monthly_rent: decisionData.monthly_rent || '0',
+            security_deposit: decisionData.security_deposit || '0',
+            decision_notes: decisionData.decision_notes || '',
+            start_date: decisionData.start_date || '',
+            end_date: decisionData.end_date || ''
+          };
+          
+          return await this.updateApplication(id, updateData as any);
+        } else if (decisionData.decision === 'reject') {
+          // Fallback for rejection: update status to rejected
+          const updateData = {
+            status: 'rejected' as const,
+            rejection_reason: decisionData.rejection_reason || '',
+            decision_notes: `Rejected: ${decisionData.rejection_reason}`
+          };
+          
+          return await this.updateApplication(id, updateData as any);
+        }
+      }
+      
       if (error.response?.status === 400) {
         const details = error.response?.data?.detail || error.response?.data?.message || JSON.stringify(error.response?.data);
         throw new Error(`Decision validation failed: ${details}`);
-      }
-      if (error.response?.status === 404) {
-        throw new Error(`Application with ID ${id} not found`);
       }
       if (error.response?.status === 500) {
         throw new Error('Server error occurred while processing application decision. Please try again or contact support.');
@@ -737,40 +762,23 @@ class ApiClient {
     viewing_notes: string;
   }): Promise<ApplicationViewing> {
     try {
-      // First try the actual endpoint
-      const response = await this.api.post(`/tenants/applications/${applicationId}/schedule-viewing/`, viewingData);
+      console.log(`Scheduling viewing for application ${applicationId} with data:`, viewingData);
+      const response = await this.api.post(`/applications/${applicationId}/schedule-viewing/`, viewingData);
+      console.log('Viewing scheduling successful:', response.data);
       return response.data;
     } catch (error: any) {
-      console.error('Viewing scheduling endpoint failed:', error);
-      
-      // If the endpoint doesn't exist (500 error), use a workaround
-      if (error.response?.status === 500) {
-        console.log('Using workaround for viewing scheduling...');
-        
-        // Create a mock viewing object
-        const mockViewing: ApplicationViewing = {
-          id: Date.now(), // Use timestamp as mock ID
-          application: applicationId,
-          scheduled_date: viewingData.scheduled_date,
-          scheduled_time: viewingData.scheduled_time,
-          contact_person: viewingData.contact_person,
-          contact_phone: viewingData.contact_phone,
-          viewing_notes: viewingData.viewing_notes,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        };
-        
-        // Store viewing info in localStorage as a temporary workaround
-        const existingViewings = JSON.parse(localStorage.getItem('temp_viewings') || '[]');
-        existingViewings.push(mockViewing);
-        localStorage.setItem('temp_viewings', JSON.stringify(existingViewings));
-        
-        return mockViewing;
-      }
+      console.error('Viewing scheduling failed:', error);
+      console.error('Error response:', error.response?.data);
       
       if (error.response?.status === 400) {
         const details = error.response?.data?.detail || error.response?.data?.message || JSON.stringify(error.response?.data);
         throw new Error(`Invalid viewing data: ${details}`);
+      }
+      if (error.response?.status === 404) {
+        throw new Error(`Application with ID ${applicationId} not found`);
+      }
+      if (error.response?.status === 500) {
+        throw new Error('Server error occurred while scheduling viewing. Please try again or contact support.');
       }
       throw new Error(error.message || 'Failed to schedule viewing');
     }
@@ -783,83 +791,75 @@ class ApiClient {
     next_action?: string;
   }): Promise<ApplicationViewing> {
     try {
-      const response = await this.api.post(`/tenants/applications/${applicationId}/complete-viewing/`, completionData);
+      const response = await this.api.post(`/applications/${applicationId}/complete-viewing/`, completionData);
       return response.data;
     } catch (error: any) {
-      console.error('Viewing completion endpoint failed:', error);
-      
-      // If the endpoint doesn't exist (500 error), use a workaround
-      if (error.response?.status === 500) {
-        console.log('Using workaround for viewing completion...');
-        
-        // Find the viewing in localStorage
-        const existingViewings = JSON.parse(localStorage.getItem('temp_viewings') || '[]');
-        const viewingIndex = existingViewings.findIndex((v: any) => v.application === applicationId);
-        
-        if (viewingIndex !== -1) {
-          // Update the viewing with completion data
-          existingViewings[viewingIndex] = {
-            ...existingViewings[viewingIndex],
-            completed_at: new Date().toISOString(),
-            outcome: completionData.outcome,
-            tenant_feedback: completionData.tenant_feedback,
-            landlord_notes: completionData.landlord_notes,
-            next_action: completionData.next_action,
-            updated_at: new Date().toISOString(),
-          };
-          
-          localStorage.setItem('temp_viewings', JSON.stringify(existingViewings));
-          return existingViewings[viewingIndex];
-        } else {
-          // Create a new completed viewing if not found
-          const mockViewing: ApplicationViewing = {
-            id: Date.now(),
-            application: applicationId,
-            scheduled_date: new Date().toISOString().split('T')[0],
-            scheduled_time: '10:00:00',
-            contact_person: 'System',
-            contact_phone: '',
-            viewing_notes: 'Completed via workaround',
-            completed_at: new Date().toISOString(),
-            outcome: completionData.outcome,
-            tenant_feedback: completionData.tenant_feedback,
-            landlord_notes: completionData.landlord_notes,
-            next_action: completionData.next_action,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          };
-          
-          existingViewings.push(mockViewing);
-          localStorage.setItem('temp_viewings', JSON.stringify(existingViewings));
-          return mockViewing;
-        }
-      }
+      console.error('Viewing completion failed:', error);
       
       if (error.response?.status === 400) {
         const details = error.response?.data?.detail || error.response?.data?.message || JSON.stringify(error.response?.data);
         throw new Error(`Invalid completion data: ${details}`);
       }
+      if (error.response?.status === 404) {
+        throw new Error(`Application with ID ${applicationId} not found`);
+      }
+      if (error.response?.status === 500) {
+        throw new Error('Server error occurred while completing viewing. Please try again or contact support.');
+      }
       throw new Error(error.message || 'Failed to complete viewing');
     }
   }
 
+  // Skip viewing functionality - NEW ENDPOINT
+  async skipViewing(applicationId: number): Promise<Application> {
+    try {
+      console.log(`Skipping viewing for application ${applicationId}`);
+      const response = await this.api.post(`/applications/${applicationId}/skip-viewing/`, {});
+      console.log('Skip viewing successful:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Skip viewing failed for application ${applicationId}:`, error);
+      
+      if (error.response?.status === 400) {
+        const details = error.response?.data?.detail || error.response?.data?.message || JSON.stringify(error.response?.data);
+        throw new Error(`Cannot skip viewing: ${details}`);
+      }
+      if (error.response?.status === 404) {
+        throw new Error(`Application with ID ${applicationId} not found`);
+      }
+      if (error.response?.status === 500) {
+        throw new Error('Server error occurred while skipping viewing. Please try again or contact support.');
+      }
+      throw new Error(error.message || 'Failed to skip viewing');
+    }
+  }
+
   async getApplicationViewings(applicationId: number): Promise<ApplicationViewing[]> {
-    const response = await this.api.get(`/tenants/applications/${applicationId}/viewings/`);
+    const response = await this.api.get(`/applications/${applicationId}/viewings/`);
     return response.data;
   }
 
   async assignRoom(applicationId: number, roomData: { room_id: number }): Promise<Application> {
     try {
-      const response = await this.api.post(`/tenants/applications/${applicationId}/assign_room/`, roomData);
+      console.log(`Assigning room ${roomData.room_id} to application ${applicationId}`);
+      const response = await this.api.post(`/applications/${applicationId}/assign_room/`, roomData);
+      console.log('Room assignment successful:', response.data);
       return response.data;
     } catch (error: any) {
-      console.error('Room assignment failed:', error);
+      console.error(`Room assignment failed for application ${applicationId}:`, error);
+      
+      if (error.response?.status === 400) {
+        const details = error.response?.data?.detail || error.response?.data?.message || JSON.stringify(error.response?.data);
+        throw new Error(`Cannot assign room: ${details}`);
+      }
+      if (error.response?.status === 404) {
+        throw new Error(`Application with ID ${applicationId} not found`);
+      }
       if (error.response?.status === 409) {
         throw new Error('Room is already assigned or unavailable');
       }
-      if (error.response?.status === 400) {
-        const details = error.response?.data?.detail || error.response?.data?.message || JSON.stringify(error.response?.data);
-        throw new Error(`Invalid room assignment: ${details}`);
+      if (error.response?.status === 500) {
+        throw new Error('Server error occurred while assigning room. Please try again or contact support.');
       }
       throw new Error(error.message || 'Failed to assign room');
     }
@@ -867,13 +867,22 @@ class ApiClient {
 
   async generateLease(applicationId: number): Promise<Application> {
     try {
-      const response = await this.api.post(`/tenants/applications/${applicationId}/generate-lease/`, {});
+      console.log(`Generating lease for application ${applicationId}`);
+      const response = await this.api.post(`/applications/${applicationId}/generate-lease/`, {});
+      console.log('Lease generation successful:', response.data);
       return response.data;
     } catch (error: any) {
-      console.error('Lease generation failed:', error);
+      console.error(`Lease generation failed for application ${applicationId}:`, error);
+      
       if (error.response?.status === 400) {
         const details = error.response?.data?.detail || error.response?.data?.message || JSON.stringify(error.response?.data);
         throw new Error(`Cannot generate lease: ${details}`);
+      }
+      if (error.response?.status === 404) {
+        throw new Error(`Application with ID ${applicationId} not found`);
+      }
+      if (error.response?.status === 500) {
+        throw new Error('Server error occurred while generating lease. Please try again or contact support.');
       }
       throw new Error(error.message || 'Failed to generate lease');
     }
@@ -1209,8 +1218,26 @@ class ApiClient {
     move_in_condition?: string;
     deposit_collected?: number;
   }): Promise<Lease> {
-    const response = await this.api.post(`/tenants/leases/${leaseId}/move_in/`, moveInData);
+    try {
+      console.log(`Processing move-in for lease ${leaseId} with data:`, moveInData);
+      const response = await this.api.post(`/tenants/leases/${leaseId}/move_in/`, moveInData);
+      console.log('Move-in processing successful:', response.data);
     return response.data;
+    } catch (error: any) {
+      console.error(`Move-in processing failed for lease ${leaseId}:`, error);
+      
+      if (error.response?.status === 400) {
+        const details = error.response?.data?.detail || error.response?.data?.message || JSON.stringify(error.response?.data);
+        throw new Error(`Cannot process move-in: ${details}`);
+      }
+      if (error.response?.status === 404) {
+        throw new Error(`Lease with ID ${leaseId} not found`);
+      }
+      if (error.response?.status === 500) {
+        throw new Error('Server error occurred while processing move-in. Please try again or contact support.');
+      }
+      throw new Error(error.message || 'Failed to process move-in');
+    }
   }
 
   async processMoveout(leaseId: number, moveOutData: {
@@ -1823,6 +1850,33 @@ class ApiClient {
     // Fallback to the old SMS API if needed
     const response = await this.api.post('/api/sms/send', data);
     return response.data;
+  }
+
+  async ensureValidToken(): Promise<void> {
+    const token = this.getAccessToken();
+    if (!token) {
+      // No token, nothing to do, the interceptor will handle the 401
+      return;
+    }
+
+    try {
+      // Decode the token to check its expiration
+      // This is a simple check; a more robust solution might use a library like jwt-decode
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const isExpired = Date.now() >= payload.exp * 1000;
+
+      if (isExpired && !this.isRefreshing) {
+        console.log('Token is expired, refreshing proactively...');
+        // The interceptor's refresh logic will be triggered by the next request,
+        // but we can trigger it manually here if needed. For now, we'll let the
+        // interceptor handle it to avoid race conditions.
+        // A simple way to trigger it is to make a lightweight, authenticated request.
+        await this.getProfile(); // This will trigger the refresh flow
+      }
+    } catch (error) {
+      console.error('Failed to decode or refresh token proactively:', error);
+      // If decoding fails, the token is likely invalid, let the interceptor handle it
+    }
   }
 }
 

@@ -15,6 +15,7 @@ interface ApplicationKanbanProps {
   onSetupViewing?: (application: Application) => void;
   onActivateLease?: (application: Application) => void;
   onSkipViewing?: (applicationId: number) => void; /* New prop */
+  onDelete?: (applicationId: number) => void; /* New prop for delete functionality */
   getPropertyName: (propertyId: number) => string;
   formatDate: (date: string | null) => string;
   extraActions?: React.ReactNode;
@@ -71,10 +72,68 @@ type Column = { keys: string[]; title: string };
 const STATUS_COLUMNS: Column[] = [
   { keys: ['pending', 'rejected'], title: 'Pending Review' },
   { keys: ['approved', 'viewing_scheduled'], title: 'Shortlisted' },
-  { keys: ['viewing_completed', 'processing', 'room_assigned'], title: 'Assign Room' },
+  { keys: ['viewing_completed', 'processing', 'room_assigned'], title: 'Generate Lease' },
   { keys: ['lease_ready', 'lease_created', 'lease_signed'], title: 'Lease Process' },
   { keys: ['moved_in', 'active'], title: 'Active Tenants' },
 ];
+
+// Helper function to get card colors based on status (matching StatusBadge colors)
+const getCardColorClass = (status: string) => {
+  switch (status.toLowerCase()) {
+    case 'moved_in':
+    case 'active':
+      return 'card-success'; // Dark green for moved in/active
+    
+    case 'approved':
+      return 'card-success-light'; // Light green for shortlisted/approved
+    
+    case 'success':
+    case 'completed':
+    case 'paid':
+    case 'lease_signed':
+      return 'card-success';
+    
+    case 'warning':
+    case 'pending':
+    case 'in progress':
+    case 'in review':
+    case 'awaiting':
+      return 'card-warning';
+    
+    case 'error':
+    case 'rejected':
+    case 'failed':
+    case 'overdue':
+    case 'cancelled':
+    case 'withdrawn':
+      return 'card-error';
+    
+    case 'info':
+    case 'new':
+    case 'processing':
+    case 'draft':
+    case 'viewing_scheduled':
+      return 'card-info';
+
+    case 'primary':
+    case 'room_assigned':
+    case 'lease_created':
+      return 'card-primary';
+
+    case 'secondary':
+    case 'viewing_completed':
+      return 'card-secondary';
+    
+    default:
+      return 'card-neutral';
+  }
+};
+
+// Helper function to check if application can be deleted
+const canDeleteApplication = (status: string) => {
+  const protectedStatuses = ['lease_created', 'lease_signed', 'moved_in', 'active'];
+  return !protectedStatuses.includes(status);
+};
 
 const ApplicationListView: React.FC<ApplicationListViewProps> = ({
   grouped,
@@ -88,6 +147,7 @@ const ApplicationListView: React.FC<ApplicationListViewProps> = ({
   onSetupViewing,
   onActivateLease,
   onSkipViewing,
+  onDelete,
   getPropertyName,
   formatDate,
   sortSettings,
@@ -101,8 +161,8 @@ const ApplicationListView: React.FC<ApplicationListViewProps> = ({
         return 'New applications waiting for initial screening and approval decision';
       case 'Shortlisted':
         return 'Shortlisted applicants ready for property viewing scheduling and completion';
-      case 'Assign Room':
-        return 'Viewing completed - ready for room assignment and lease generation';
+      case 'Generate Lease':
+        return 'Viewing completed - ready for lease generation (room assignment can be edited during lease creation)';
       case 'Lease Process':
         return 'Room assigned and lease documents in preparation, generation, or signing process';
       case 'Active Tenants':
@@ -119,12 +179,12 @@ const ApplicationListView: React.FC<ApplicationListViewProps> = ({
           <div className="list-section-header">
             <div className="list-header-content">
               <div className="list-header-text">
-                <h3 className="list-section-title">
-                  {col.title} ({grouped[col.title]?.length || 0})
-                </h3>
-                <p className="list-section-description">
-                  {getStageDescription(col.title)}
-                </p>
+            <h3 className="list-section-title">
+              {col.title} ({grouped[col.title]?.length || 0})
+            </h3>
+            <p className="list-section-description">
+              {getStageDescription(col.title)}
+            </p>
               </div>
               <button
                 className="sort-toggle-btn"
@@ -196,8 +256,12 @@ const ApplicationListView: React.FC<ApplicationListViewProps> = ({
                           {/* Rejected actions */}
                           {app.status === 'rejected' && (
                             <>
-                              <button className="btn-sm success" onClick={() => onApprove(app.id, app.property_ref)}>
-                                Shortlist
+                              <button 
+                                className="btn-sm success" 
+                                onClick={() => onQualify && onQualify(app.id)}
+                                title="Restore application to pending status for fresh review"
+                              >
+                                Undo
                               </button>
                               <button className="btn-sm primary" onClick={() => onReview(app)}>
                                 Review Details
@@ -208,9 +272,9 @@ const ApplicationListView: React.FC<ApplicationListViewProps> = ({
                           {/* Qualified actions */}
                           {app.status === 'approved' && (
                             <>
-                              <button className="btn-sm primary" onClick={() => onSetupViewing && onSetupViewing(app)}>
-                                Schedule Viewing
-                              </button>
+                            <button className="btn-sm primary" onClick={() => onSetupViewing && onSetupViewing(app)}>
+                              Schedule Viewing
+                            </button>
                               <button 
                                 className="btn-sm secondary" 
                                 onClick={() => onSkipViewing && onSkipViewing(app.id)}
@@ -295,6 +359,27 @@ const ApplicationListView: React.FC<ApplicationListViewProps> = ({
                               Message
                             </button>
                           )}
+
+                          {/* Delete button - available if application can be deleted */}
+                          {canDeleteApplication(app.status) && onDelete && (
+                            <button 
+                              className="btn-sm btn-error" 
+                              onClick={() => {
+                                if (window.confirm(`Are you sure you want to delete the application from ${app.tenant_name || `Applicant #${app.id}`}? This action cannot be undone.`)) {
+                                  onDelete(app.id);
+                                }
+                              }}
+                              title="Delete application"
+                            >
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <polyline points="3,6 5,6 21,6"/>
+                                <path d="m19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"/>
+                                <line x1="10" y1="11" x2="10" y2="17"/>
+                                <line x1="14" y1="11" x2="14" y2="17"/>
+                              </svg>
+                              Delete
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -321,6 +406,7 @@ export default function ApplicationKanban({
   onSetupViewing,
   onActivateLease,
   onSkipViewing,
+  onDelete,
   getPropertyName,
   formatDate,
   extraActions,
@@ -407,8 +493,8 @@ export default function ApplicationKanban({
         return 'New applications waiting for initial screening and approval decision';
       case 'Shortlisted':
         return 'Shortlisted applicants ready for property viewing scheduling and completion';
-      case 'Assign Room':
-        return 'Viewing completed - ready for room assignment and lease generation';
+      case 'Generate Lease':
+        return 'Viewing completed - ready for lease generation (room assignment can be edited during lease creation)';
       case 'Lease Process':
         return 'Room assigned and lease documents in preparation, generation, or signing process';
       case 'Active Tenants':
@@ -464,7 +550,7 @@ export default function ApplicationKanban({
               <div className="kanban-column-header">
                 <div className="column-header-content">
                   <span className="column-title">
-                    {col.title} ({grouped[col.title]?.length || 0})
+                {col.title} ({grouped[col.title]?.length || 0})
                   </span>
                   <button
                     className="sort-toggle-btn"
@@ -483,7 +569,7 @@ export default function ApplicationKanban({
                   <div className="kanban-empty">No items</div>
                 ) : (
                   grouped[col.title].map((app) => (
-                    <div key={app.id} className="kanban-card">
+                    <div key={app.id} className={`kanban-card ${getCardColorClass(app.status)}`}>
                       <div className="card-top">
                         <div className="applicant-name" onClick={() => onReview(app)}>
                           {app.tenant_name || `Applicant #${app.id}`}
@@ -525,8 +611,12 @@ export default function ApplicationKanban({
                         {/* Rejected actions - can be accepted again */}
                         {app.status === 'rejected' && (
                           <>
-                            <button className="btn-sm success" onClick={() => onApprove(app.id, app.property_ref)}>
-                              Shortlist
+                            <button 
+                              className="btn-sm success" 
+                              onClick={() => onQualify && onQualify(app.id)}
+                              title="Restore application to pending status for fresh review"
+                            >
+                              Undo
                             </button>
                             <button className="btn-sm primary" onClick={() => onReview(app)}>
                               Review Details
@@ -567,10 +657,8 @@ export default function ApplicationKanban({
                           <>
                             <button 
                               className="btn-sm success" 
-                              onClick={() => {
-                                console.log('Generate Lease button clicked for app:', app);
-                                onGenerateLease && onGenerateLease(app);
-                              }}
+                              onClick={() => onGenerateLease && onGenerateLease(app)}
+                              title="Generate lease for this applicant (room assignment can be edited during lease generation)"
                             >
                               Generate Lease
                             </button>
@@ -624,6 +712,27 @@ export default function ApplicationKanban({
                             Message
                           </button>
                         )}
+
+                        {/* Delete button - available if application can be deleted */}
+                        {canDeleteApplication(app.status) && onDelete && (
+                          <button 
+                            className="btn-sm btn-error" 
+                            onClick={() => {
+                              if (window.confirm(`Are you sure you want to delete the application from ${app.tenant_name || `Applicant #${app.id}`}? This action cannot be undone.`)) {
+                                onDelete(app.id);
+                              }
+                            }}
+                            title="Delete application"
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <polyline points="3,6 5,6 21,6"/>
+                              <path d="m19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"/>
+                              <line x1="10" y1="11" x2="10" y2="17"/>
+                              <line x1="14" y1="11" x2="14" y2="17"/>
+                            </svg>
+                            Delete
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))
@@ -645,6 +754,7 @@ export default function ApplicationKanban({
           onSetupViewing={onSetupViewing}
           onActivateLease={onActivateLease}
           onSkipViewing={onSkipViewing}
+          onDelete={onDelete}
           getPropertyName={getPropertyName}
           formatDate={formatDate}
           sortSettings={sortSettings}
@@ -876,6 +986,72 @@ export default function ApplicationKanban({
           box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
           transform: translateY(-1px);
         }
+        
+        /* Card color variants based on status */
+        .kanban-card.card-success {
+          border-color: rgba(16, 185, 129, 0.4);
+        }
+        .kanban-card.card-success:hover {
+          border-color: #059669;
+          box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2);
+        }
+        
+        .kanban-card.card-success-light {
+          border-color: rgba(16, 185, 129, 0.2);
+        }
+        .kanban-card.card-success-light:hover {
+          border-color: #10b981;
+          box-shadow: 0 4px 12px rgba(16, 185, 129, 0.12);
+        }
+        
+        .kanban-card.card-warning {
+          border-color: rgba(245, 158, 11, 0.3);
+        }
+        .kanban-card.card-warning:hover {
+          border-color: #f59e0b;
+          box-shadow: 0 4px 12px rgba(245, 158, 11, 0.15);
+        }
+        
+        .kanban-card.card-error {
+          border-color: rgba(239, 68, 68, 0.3);
+        }
+        .kanban-card.card-error:hover {
+          border-color: #ef4444;
+          box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15);
+        }
+        
+        .kanban-card.card-info {
+          border-color: rgba(139, 92, 246, 0.3);
+        }
+        .kanban-card.card-info:hover {
+          border-color: #8b5cf6;
+          box-shadow: 0 4px 12px rgba(139, 92, 246, 0.15);
+        }
+        
+        .kanban-card.card-primary {
+          border-color: rgba(59, 130, 246, 0.3);
+        }
+        .kanban-card.card-primary:hover {
+          border-color: #3b82f6;
+          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+        }
+        
+        .kanban-card.card-secondary {
+          border-color: rgba(6, 182, 212, 0.3);
+        }
+        .kanban-card.card-secondary:hover {
+          border-color: #06b6d4;
+          box-shadow: 0 4px 12px rgba(6, 182, 212, 0.15);
+        }
+        
+        .kanban-card.card-neutral {
+          border-color: rgba(107, 114, 128, 0.3);
+        }
+        .kanban-card.card-neutral:hover {
+          border-color: #6b7280;
+          box-shadow: 0 4px 12px rgba(107, 114, 128, 0.15);
+        }
+        
         .card-top {
           display: flex;
           justify-content: space-between;
@@ -1092,6 +1268,14 @@ export default function ApplicationKanban({
         .btn-sm.message:hover {
           background: #e5e7eb;
           color: #374151;
+          transform: translateY(-1px);
+        }
+        .btn-sm.btn-error {
+          background: #ef4444;
+          color: white;
+        }
+        .btn-sm.btn-error:hover {
+          background: #dc2626;
           transform: translateY(-1px);
         }
       `}</style>

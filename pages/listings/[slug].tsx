@@ -17,7 +17,7 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   // Treat undefined as true so listings are open unless explicitly closed
-  const canApply = listing.is_active !== false;
+  const canApply = listing?.is_active !== false;
 
   if (error || !listing) {
     return (
@@ -42,12 +42,32 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
 
   const handleApplicationSubmit = async (applicationData: any) => {
     try {
-      const response = await publicApiRequest('/api/public/applications/', {
+      const { slug } = router.query;
+      
+      if (!listing) {
+        throw new Error('Listing not found');
+      }
+      
+      // Transform the data to match backend expectations
+      const transformedData = {
+        tenant: {
+          first_name: applicationData.full_name?.split(' ')[0] || '',
+          last_name: applicationData.full_name?.split(' ').slice(1).join(' ') || '',
+          email: applicationData.email,
+          phone: applicationData.phone,
+          date_of_birth: applicationData.date_of_birth
+        },
+        desired_move_in_date: applicationData.desired_move_in_date,
+        desired_lease_duration: parseInt(applicationData.desired_lease_duration) || 12,
+        rent_budget: parseInt(applicationData.rent_budget) || 0,
+        message: applicationData.additional_comments || `Application for ${listing.title}`,
+        // Include additional form data as metadata
+        form_responses: applicationData
+      };
+      
+      const response = await publicApiRequest(`/properties/public/listings/${slug}/apply/`, {
         method: 'POST',
-        body: JSON.stringify({
-          ...applicationData,
-          listing_id: listing.id,
-        }),
+        body: JSON.stringify(transformedData),
       });
 
       // Show success message and redirect

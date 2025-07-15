@@ -38,7 +38,15 @@ export default function ViewingSchedulerModal({
     setIsSubmitting(true);
 
     try {
-      await onSchedule(formData);
+      // Ensure time is in HH:MM:SS format and phone is in E164 format (backend expects this)
+      const formattedData = {
+        ...formData,
+        scheduled_time: formData.scheduled_time.includes(':') && formData.scheduled_time.split(':').length === 2 
+          ? `${formData.scheduled_time}:00` 
+          : formData.scheduled_time,
+        contact_phone: formData.contact_phone ? phoneUtils.toE164Format(formData.contact_phone) : formData.contact_phone
+      };
+      await onSchedule(formattedData);
       onClose();
       setFormData({
         scheduled_date: '',
