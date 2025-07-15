@@ -1416,6 +1416,269 @@ select {
   font-weight: var(--font-weight-medium);
 }
  
+/* Generic Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Common Modal Header */
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.modal-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #6b7280;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.close-btn:hover {
+  color: #374151;
+}
+
+/* Common Modal Body */
+.modal-body {
+  padding: 24px;
+  flex-grow: 1;
+  overflow-y: auto;
+}
+
+/* Common Modal Footer (if applicable, though often inside form) */
+.modal-footer {
+  padding: 16px 24px;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+} 
+ 
+/* ViewingCompletionModal Specific Styles - Moved from component for global application */
+.application-summary {
+  background: #f9fafb;
+  border-radius: 6px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.application-summary h3 {
+  margin: 0 0 12px 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.summary-row {
+  display: flex;
+  align-items: baseline; /* Align items to their baselines */
+  margin-bottom: 8px;
+  font-size: 0.875rem;
+}
+
+.summary-row:last-child {
+  margin-bottom: 0;
+}
+
+.label {
+  color: #6b7280;
+  font-weight: 500;
+  min-width: 90px; /* Adjust min-width for labels to prevent overlap */
+  margin-right: 10px; /* Add some space between label and value */
+}
+
+.value {
+  color: #111827;
+  font-weight: 600;
+  flex-grow: 1; /* Allow value to take remaining space */
+  text-align: left; /* Keep value aligned to the left after label */
+  word-break: break-word; /* Ensure long words break */
+}
+
+.error-message {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  font-size: 0.875rem;
+}
+
+.completion-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-label {
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 8px;
+  font-size: 0.875rem;
+}
+
+.radio-group {
+  display: flex;
+  gap: 20px; /* Increase gap between radio options */
+  align-items: center; /* Vertically align items */
+  flex-wrap: wrap; /* Allow wrapping for smaller screens */
+}
+
+.radio-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #6b7280;
+  background: white;
+  transition: all 0.2s;
+  flex-grow: 1; /* Allow options to grow and distribute space */
+  justify-content: center; /* Center content within each option */
+  min-width: 100px; /* Ensure a minimum width for each option */
+}
+
+.radio-option:hover {
+  border-color: #3b82f6;
+}
+
+.radio-option.selected {
+  border-color: #3b82f6;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.radio-option input[type="radio"] {
+  margin: 0;
+  /* Hide default radio button, use custom styling */
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #9ca3af;
+  border-radius: 50%;
+  display: grid;
+  place-content: center;
+  cursor: pointer;
+}
+
+.radio-option input[type="radio"]::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  transform: scale(0);
+  transition: transform 0.2s ease-in-out;
+  background-color: #3b82f6;
+}
+
+.radio-option input[type="radio"]:checked {
+  border-color: #3b82f6;
+}
+
+.radio-option input[type="radio"]:checked::before {
+  transform: scale(1);
+}
+
+.form-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  resize: vertical;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.btn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+}
+
+.btn-secondary {
+  background: white;
+  color: #374151;
+  border-color: #d1d5db;
+}
+
+.btn-secondary:hover {
+  background: #f9fafb;
+}
+
+.btn-primary {
+  background: #3b82f6;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #2563eb;
+}
+
+.btn-primary:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+} 
+ 
  
  
  

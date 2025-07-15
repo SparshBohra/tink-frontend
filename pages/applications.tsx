@@ -8,6 +8,7 @@ import ApplicationKanban from '../components/ApplicationKanban';
 import ViewingSchedulerModal from '../components/ViewingSchedulerModal';
 import ViewingCompletionModal from '../components/ViewingCompletionModal';
 import LeaseGenerationModal from '../components/LeaseGenerationModal';
+import ApplicationApprovalModal from '../components/ApplicationApprovalModal';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useAuth, withAuth } from '../lib/auth-context';
 import { Application, Property, Room } from '../lib/types';
@@ -28,6 +29,7 @@ import ImprovedLeaseGenerationModal from '../components/ImprovedLeaseGenerationM
 function Applications() {
   const router = useRouter();
   const { property: propertyIdParam } = router.query;
+  const { user } = useAuth(); // Get current user from auth context
   
   const [applications, setApplications] = useState<Application[]>([]);
   const [filteredApplications, setFilteredApplications] = useState<Application[]>([]);
@@ -56,6 +58,11 @@ function Applications() {
   const [selectedViewingForCompletion, setSelectedViewingForCompletion] = useState<any>(null);
   const [isNewLeaseModalOpen, setIsNewLeaseModalOpen] = useState(false);
   const [selectedApplicationForNewLease, setSelectedApplicationForNewLease] = useState<Application | null>(null);
+  
+  // Add state for approval modal
+  const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false);
+  const [selectedApplicationForApproval, setSelectedApplicationForApproval] = useState<Application | null>(null);
+  const [selectedPropertyForApproval, setSelectedPropertyForApproval] = useState<Property | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -93,6 +100,7 @@ function Applications() {
       ]);
 
       const activeLeases = (leasesResponse.results || []).filter((l:any) => l.status === 'active' || l.is_active);
+      const draftedLeases = (leasesResponse.results || []).filter((l:any) => l.status === 'draft');
 
       const apps = (applicationsResponse.results || []).map((app:any) => {
         if (['lease_created','lease_signed','approved'].includes(app.status)) {
@@ -101,6 +109,13 @@ function Applications() {
             return { ...app, status: 'moved_in' };
           }
         }
+
+        // If a lease has been created (drafted), update the application status to 'lease_created'
+        const hasDraftedLease = draftedLeases.some((l:any) => l.application === app.id);
+        if (hasDraftedLease) {
+          return { ...app, status: 'lease_created' };
+        }
+
         return app;
       });
       setApplications(apps);
@@ -148,53 +163,281 @@ function Applications() {
     };
   };
 
-  const handleQuickApprove = async (applicationId: number, propertyId: number) => {
-    const propertyDetails = getPropertyDetails(propertyId);
-    if (propertyDetails.vacantRooms > 0) {
+  const handleQualify = async (applicationId: number) => {
+    try {
       const application = applications.find(app => app.id === applicationId);
       if (!application) {
         alert('Application not found');
         return;
       }
 
-      // Get the first available room
-      const availableRoom = propertyDetails.vacantRoomsList[0];
+      const property = properties.find(p => p.id === application.property_ref);
+      if (!property) {
+        alert('Property not found');
+        return;
+      }
+
+      // Simple approval with reasonable defaults - these can be updated later in actual lease creation
+      const startDate = application.desired_move_in_date || new Date().toISOString().split('T')[0];
+      const endDate = new Date(startDate);
+      endDate.setFullYear(endDate.getFullYear() + 1);
+      
+      const estimatedRent = application.rent_budget || (typeof property.monthly_rent === 'string' ? parseFloat(property.monthly_rent) : property.monthly_rent) || 1000;
+      const securityDeposit = estimatedRent * 2;
+
+      const decisionData = {
+        decision: 'approve' as const,
+        decision_notes: 'Application qualified for viewing process',
+        start_date: startDate,
+        end_date: endDate.toISOString().split('T')[0],
+        monthly_rent: estimatedRent.toString(),
+        security_deposit: securityDeposit.toString(),
+      };
+      
+      await apiClient.decideApplication(applicationId, decisionData);
+      fetchData(); // Refresh data
+      alert('✅ Application shortlisted successfully!');
+    } catch (error: any) {
+      console.error('Qualification error:', error);
+      const errorMessage = error.response?.data?.detail || error.response?.data?.message || (error instanceof Error ? error.message : 'An unknown error occurred');
+      alert(`❌ Failed to shortlist application: ${errorMessage}\n\nPlease check the console for more details.`);
+    }
+  };
+
+  const handleApprove = async (applicationId: number, propertyId: number) => {
+    // This will be used for final approval with lease details later
+    const application = applications.find(app => app.id === applicationId);
+    const property = properties.find(p => p.id === propertyId);
+    
+    if (!application || !property) {
+      alert('Application or property not found');
+      return;
+    }
+    
+    setSelectedApplicationForApproval(application);
+    setSelectedPropertyForApproval(property);
+    setIsApprovalModalOpen(true);
+  };
+
+  const handleApprovalSubmit = async (applicationId: number, approvalData: any) => {
+    try {
+      console.log('Sending approval decision data:', approvalData);
+      
+      const application = applications.find(app => app.id === applicationId);
+      if (!application) {
+        throw new Error('Application not found');
+      }
+
+      // If property was changed, we need to update the application's property reference
+      if (approvalData.property_id && application.property_ref !== approvalData.property_id) {
+        try {
+          await apiClient.updateApplication(applicationId, {
+            property_ref: approvalData.property_id
+          });
+          console.log('Updated application property reference');
+        } catch (updateError) {
+          console.error('Failed to update application property:', updateError);
+          // Continue with approval even if property update fails
+        }
+      }
+      
+      // For viewing_completed applications, use room assignment and lease creation workflow
+      if (application.status === 'viewing_completed' || application.status === 'processing') {
+        // Step 1: Assign room if specified
+        if (approvalData.room_id) {
+          await apiClient.assignRoom(applicationId, { room_id: approvalData.room_id });
+          console.log('Room assigned successfully');
+        }
+        
+        // Step 2: Create lease with user-specified details
+        try {
+          let currentUserId;
+          if (user?.id) {
+            currentUserId = user.id;
+          } else {
+            try {
+              const currentUser = await apiClient.getProfile();
+              currentUserId = currentUser.id;
+            } catch (profileError) {
+              console.warn('Failed to get current user profile, using fallback');
+              // Use a fallback - this should rarely happen
+              currentUserId = 1; // Default fallback
+            }
+          }
+          
+          const leaseData = {
+            tenant: application.tenant,
+            application: applicationId,
+            property_ref: approvalData.property_id || application.property_ref,
+            room: approvalData.room_id || null,
+            start_date: approvalData.start_date,
+            end_date: approvalData.end_date,
+            monthly_rent: parseFloat(approvalData.monthly_rent),
+            security_deposit: parseFloat(approvalData.security_deposit),
+            status: 'draft',
+            is_active: false,
+            decision_notes: approvalData.decision_notes || '',
+            created_by: currentUserId,
+          };
+          
+          console.log('Creating lease with data:', leaseData);
+          await apiClient.createLease(leaseData);
+          console.log('Lease created successfully');
+
+        } catch (leaseError) {
+          console.error('Failed to create lease:', leaseError);
+          throw new Error('Failed to create lease: ' + (leaseError instanceof Error ? leaseError.message : 'Unknown error'));
+        }
+        
+        fetchData(); // Refresh data
+        setIsApprovalModalOpen(false);
+        setSelectedApplicationForApproval(null);
+        setSelectedPropertyForApproval(null);
+        alert('✅ Room assigned and lease created successfully!');
+      } else {
+        // For pending applications, use the original decide workflow
+        await apiClient.decideApplication(applicationId, approvalData);
+        fetchData(); // Refresh data
+        setIsApprovalModalOpen(false);
+        setSelectedApplicationForApproval(null);
+        setSelectedPropertyForApproval(null);
+        alert('✅ Application approved successfully!');
+      }
+    } catch (error: any) {
+      console.error('Approval error:', error);
+      const errorMessage = error.response?.data?.detail || error.response?.data?.message || (error instanceof Error ? error.message : 'An unknown error occurred');
+      alert(`❌ Failed to process application: ${errorMessage}\n\nPlease check the console for more details.`);
+    }
+  };
+
+  const handleQuickApprove = async (applicationId: number, propertyId: number) => {
+    const propertyDetails = getPropertyDetails(propertyId);
+    
+    // Debug logging to understand the vacancy issue
+    console.log('Property Details Debug:', {
+      propertyId,
+      property: propertyDetails.property,
+      totalRooms: propertyDetails.totalRooms,
+      vacantRooms: propertyDetails.vacantRooms,
+      vacantRoomsList: propertyDetails.vacantRoomsList,
+      allRooms: rooms.filter(room => room.property_ref === propertyId),
+      roomsState: rooms.length
+    });
+    
+    // Check for a valid property object
+    if (!propertyDetails.property) {
+      alert('Error: Could not find property details. Please refresh and try again.');
+      return;
+    }
+
+    const { property, vacantRooms, vacantRoomsList } = propertyDetails;
+    const isPerProperty = property.rent_type === 'per_property';
+
+    // Approval logic for 'per_property' rentals
+    if (isPerProperty) {
+      // For per-property rentals, check if the property itself is available
+      // We can use the property's vacant_rooms field from the API
+      const isPropertyOccupied = property.vacant_rooms === 0 && property.total_rooms > 0;
+      if (isPropertyOccupied) {
+        alert(`Cannot approve: This property is already fully occupied (${property.total_rooms} total rooms, ${property.vacant_rooms} vacant). Please check the property status.`);
+        return;
+      }
+    } 
+    // Approval logic for 'per_room' rentals
+    else {
+      if (vacantRooms === 0) {
+        // More detailed error message for debugging
+        alert(`Cannot approve - no vacant rooms in this property.\n\nDebug info:\n- Total rooms found: ${propertyDetails.totalRooms}\n- Vacant rooms: ${vacantRooms}\n- Property type: ${property.rent_type}\n\nPlease check if rooms are properly loaded and marked as vacant.`);
+        return;
+      }
+    }
+
+      const application = applications.find(app => app.id === applicationId);
+      if (!application) {
+        alert('Application not found');
+        return;
+      }
+
+    // For per-room rentals, get the first available room
+    // For per-property rentals, use the property name
+    let assignedRoomName = 'Entire Property';
+    let roomId = undefined;
+    
+    if (!isPerProperty && vacantRoomsList.length > 0) {
+      assignedRoomName = vacantRoomsList[0].name;
+      roomId = vacantRoomsList[0].id;
+    }
       
       // Calculate lease dates
       const startDate = application.desired_move_in_date || new Date().toISOString().split('T')[0];
       const endDate = new Date(startDate);
-      endDate.setFullYear(endDate.getFullYear() + 1); // 1 year lease
+    endDate.setFullYear(endDate.getFullYear() + 1);
       
-      try {
-        await apiClient.decideApplication(applicationId, {
-          decision: 'approve',
+    // Prepare decision data with all required fields
+    const monthlyRent = parseFloat(String(application.rent_budget || property.monthly_rent || '1000'));
+    const securityDeposit = monthlyRent * 2;
+    
+    const decisionData: any = {
+      decision: 'approve' as const,
+      decision_notes: `Quick approved and assigned to ${assignedRoomName}`,
           start_date: startDate,
           end_date: endDate.toISOString().split('T')[0],
-          monthly_rent: parseFloat(String(application.rent_budget || '1000')),
-          security_deposit: parseFloat(String(application.rent_budget || '1000')) * 2,
-          decision_notes: `Quick approved and assigned to ${availableRoom.name}`
-        });
+      monthly_rent: monthlyRent.toFixed(2),
+      security_deposit: securityDeposit.toFixed(2),
+    };
+    
+    // Add room assignment for per-room rentals
+    if (!isPerProperty && roomId) {
+      decisionData.room_id = roomId;
+    }
+    
+    console.log('Sending approval decision data:', decisionData);
+    
+    try {
+      await apiClient.decideApplication(applicationId, decisionData);
         fetchData(); // Refresh data
-        alert(`✅ Application approved!\n\nTenant: ${application.tenant_name}\nRoom: ${availableRoom.name}\nLease created successfully!`);
-      } catch (error: unknown) {
+      alert(`✅ Application approved!\n\nTenant: ${application.tenant_name}\nAssigned: ${assignedRoomName}\nLease created successfully!`);
+    } catch (error: any) {
         console.error('Approval error:', error);
-        alert(`❌ Failed to approve application: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      }
-    } else {
-      alert('Cannot approve - no vacant rooms in this property');
+      const errorMessage = error.response?.data?.detail || error.response?.data?.message || (error instanceof Error ? error.message : 'An unknown error occurred');
+      alert(`❌ Failed to approve application: ${errorMessage}\n\nPlease check the console for more details.`);
     }
   };
 
   const handleReject = async (applicationId: number) => {
+    const reason = prompt('Please provide a reason for rejecting this application. This will be logged and may be visible to the applicant.');
+    if (!reason || reason.trim() === '') {
+      alert('Rejection cancelled. A reason is required.');
+      return;
+    }
+
+    // Prepare rejection data with correct field name
+    const decisionData = {
+      decision: 'reject' as const,
+      rejection_reason: reason.trim()
+    };
+    
+    console.log('Sending rejection decision data:', decisionData);
+    console.log('Application ID:', applicationId);
+
     try {
-      await apiClient.decideApplication(applicationId, {
-        decision: 'reject',
-        decision_notes: 'Rejected via dashboard'
-      });
+      await apiClient.decideApplication(applicationId, decisionData);
       fetchData(); // Refresh data
-      alert('Application rejected');
-    } catch (error: unknown) {
-      alert(`Failed to reject application: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      alert('Application rejected successfully.');
+    } catch (error: any) {
+      console.error('Rejection failed:', error);
+      console.error('Full error object:', error.response);
+      
+      // Try to extract meaningful error message
+      let errorMessage = 'Unknown error occurred';
+      if (error.response?.data) {
+        const data = error.response.data;
+        errorMessage = data.detail || data.message || data.error || JSON.stringify(data);
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      alert(`Failed to reject application: ${errorMessage}\n\nPlease check the console for more details.`);
     }
   };
 
@@ -210,24 +453,7 @@ function Applications() {
     });
   };
 
-  const getStatusBadge = (status: string) => {
-    const badges: { [key: string]: { style: React.CSSProperties; text: string } } = {
-      pending: { 
-        style: { background: '#fef3c7', color: '#d97706', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 500, textTransform: 'capitalize', display: 'inline-block' },
-        text: 'Pending' 
-      },
-      approved: { 
-        style: { background: '#dcfce7', color: '#16a34a', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 500, textTransform: 'capitalize', display: 'inline-block' },
-        text: 'Approved' 
-      },
-      rejected: { 
-        style: { background: '#fee2e2', color: '#dc2626', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 500, textTransform: 'capitalize', display: 'inline-block' },
-        text: 'Rejected' 
-      }
-    };
-    const badge = badges[status] || badges.pending;
-    return <span style={badge.style}>{badge.text}</span>;
-  };
+  // Removed getStatusBadge as StatusBadge component handles this
 
   const handleRoomAssignment = (applicationId: number, roomId: number, roomInfo: unknown) => {
     // Implementation of handleRoomAssignment
@@ -327,11 +553,33 @@ function Applications() {
   };
 
   const handleGenerateLease = (app: Application) => {
-    if (app.status === 'room_assigned') {
+    console.log('handleGenerateLease called with app:', app);
+    console.log('App status:', app.status);
+    
+    if (app.status === 'viewing_completed' || app.status === 'processing') {
+      // For viewing completed applications, open the approval modal to create lease
+      console.log('Opening approval modal for viewing_completed application');
+      setSelectedApplicationForApproval(app);
+      const property = properties.find(p => p.id === app.property_ref);
+      console.log('Found property:', property);
+      
+      if (!property) {
+        console.error('Property not found for app.property_ref:', app.property_ref);
+        alert('Error: Property not found. Please refresh the page and try again.');
+        return;
+      }
+      
+      setSelectedPropertyForApproval(property);
+      setIsApprovalModalOpen(true);
+      console.log('Modal should be open now');
+    } else if (app.status === 'room_assigned') {
+      // For room assigned applications, open the lease generation modal
+      console.log('Opening lease generation modal for room_assigned application');
       setSelectedApplicationForNewLease(app);
       setIsNewLeaseModalOpen(true);
     } else {
-      alert(`Cannot generate lease for application in ${app.status} status. Room must be assigned first.`);
+      console.log('Cannot generate lease for status:', app.status);
+      alert(`Cannot generate lease for application in ${app.status} status.`);
     }
   };
 
@@ -353,7 +601,20 @@ function Applications() {
         setSelectedViewingForCompletion(viewing);
         setIsViewingCompletionOpen(true);
       } else {
-        alert('No viewing found for this application');
+        // If no viewing data found in app object, check localStorage workaround
+        const tempViewings = JSON.parse(localStorage.getItem('temp_viewings') || '[]');
+        const appViewing = tempViewings.find((v: any) => v.application === app.id);
+        
+        if (appViewing) {
+          setSelectedApplicationForViewing(app);
+          setSelectedViewingForCompletion(appViewing);
+          setIsViewingCompletionOpen(true);
+        } else {
+          // If still no viewing found, allow completion anyway
+          setSelectedApplicationForViewing(app);
+          setSelectedViewingForCompletion(null);
+          setIsViewingCompletionOpen(true);
+        }
       }
     } else {
       alert(`Cannot setup viewing for application in ${app.status} status`);
@@ -372,7 +633,7 @@ function Applications() {
     try {
       await apiClient.scheduleViewing(selectedApplicationForViewing.id, viewingData);
       fetchData(); // Refresh data
-      alert('Viewing scheduled successfully!');
+      alert(`✅ Viewing scheduled successfully!\n\nDate: ${viewingData.scheduled_date}\nTime: ${viewingData.scheduled_time}\nContact: ${viewingData.contact_person}\n\nThe viewing has been recorded. You can now complete the viewing from the kanban board.`);
     } catch (error: any) {
       alert(`Failed to schedule viewing: ${error.message}`);
     }
@@ -389,7 +650,7 @@ function Applications() {
     try {
       await apiClient.completeViewing(selectedApplicationForViewing.id, completionData);
       fetchData(); // Refresh data
-      alert('Viewing completed successfully!');
+      alert(`✅ Viewing completed successfully!\n\nOutcome: ${completionData.outcome}\nNext Action: ${completionData.next_action || 'Proceed with application'}\n\nThe application is now ready for the next stage.`);
     } catch (error: any) {
       alert(`Failed to complete viewing: ${error.message}`);
     }
@@ -617,7 +878,8 @@ function Applications() {
         <ApplicationKanban
           applications={filteredApplications}
           onReview={openApplicationDetail}
-          onApprove={handleQuickApprove}
+          onApprove={handleApprove}
+          onQualify={handleQualify}
           onReject={handleReject}
           onAssignRoom={openRoomAssignmentModal}
           onGenerateLease={handleGenerateLease}
@@ -740,7 +1002,26 @@ function Applications() {
         />
       )}
 
-      {isViewingCompletionOpen && selectedApplicationForViewing && selectedViewingForCompletion && (
+      {isApprovalModalOpen && selectedApplicationForApproval && (
+        <ApplicationApprovalModal
+          isOpen={isApprovalModalOpen}
+          application={selectedApplicationForApproval}
+          property={selectedPropertyForApproval}
+          availableRooms={selectedPropertyForApproval ? rooms.filter(room => 
+            room.property_ref === selectedPropertyForApproval.id && room.is_vacant
+          ) : []}
+          allProperties={properties}
+          allRooms={rooms}
+          onClose={() => {
+            setIsApprovalModalOpen(false);
+            setSelectedApplicationForApproval(null);
+            setSelectedPropertyForApproval(null);
+          }}
+          onApprove={handleApprovalSubmit}
+        />
+      )}
+
+      {isViewingCompletionOpen && selectedApplicationForViewing && (
         <ViewingCompletionModal
           isOpen={isViewingCompletionOpen}
           application={selectedApplicationForViewing}

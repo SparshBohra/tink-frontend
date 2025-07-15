@@ -7,6 +7,7 @@ interface ApplicationKanbanProps {
   applications: Application[];
   onReview: (application: Application) => void;
   onApprove: (applicationId: number, propertyId: number) => void;
+  onQualify?: (applicationId: number) => void;
   onReject: (applicationId: number) => void;
   onAssignRoom: (application: Application) => void;
   onGenerateLease?: (application: Application) => void;
@@ -58,12 +59,17 @@ function ViewToggle({ currentView, onViewChange }: ViewToggleProps) {
 
 interface ApplicationListViewProps extends ApplicationKanbanProps {
   grouped: Record<string, Application[]>;
+  sortSettings: Record<string, 'default' | 'date' | 'name'>;
+  toggleSort: (columnTitle: string) => void;
+  getSortIcon: (sortType: 'default' | 'date' | 'name') => React.ReactNode;
+  getSortLabel: (sortType: 'default' | 'date' | 'name') => string;
 }
 
 function ApplicationListView({
   grouped,
   onReview,
   onApprove,
+  onQualify,
   onReject,
   onAssignRoom,
   onGenerateLease,
@@ -72,15 +78,19 @@ function ApplicationListView({
   onActivateLease,
   getPropertyName,
   formatDate,
+  sortSettings,
+  toggleSort,
+  getSortIcon,
+  getSortLabel,
 }: ApplicationListViewProps) {
   const getStageDescription = (title: string): string => {
     switch (title) {
       case 'Pending Review':
         return 'New applications waiting for initial screening and approval decision';
-      case 'Qualified':
-        return 'Approved applicants ready for property viewing scheduling';
-      case 'Viewing Process':
-        return 'Property viewings scheduled, in progress, or completed - ready for room assignment';
+      case 'Shortlisted':
+        return 'Shortlisted applicants ready for property viewing scheduling and completion';
+      case 'Assign Room':
+        return 'Viewing completed - ready for room assignment and lease generation';
       case 'Lease Process':
         return 'Room assigned and lease documents in preparation, generation, or signing process';
       case 'Active Tenants':
@@ -95,12 +105,23 @@ function ApplicationListView({
       {STATUS_COLUMNS.map((col) => (
         <div key={col.title} className="list-section">
           <div className="list-section-header">
-            <h3 className="list-section-title">
-              {col.title} ({grouped[col.title]?.length || 0})
-            </h3>
-            <p className="list-section-description">
-              {getStageDescription(col.title)}
-            </p>
+            <div className="list-header-content">
+              <div className="list-header-text">
+                <h3 className="list-section-title">
+                  {col.title} ({grouped[col.title]?.length || 0})
+                </h3>
+                <p className="list-section-description">
+                  {getStageDescription(col.title)}
+                </p>
+              </div>
+              <button
+                className="sort-toggle-btn"
+                onClick={() => toggleSort(col.title)}
+                title={getSortLabel(sortSettings[col.title] || 'default')}
+              >
+                {getSortIcon(sortSettings[col.title] || 'default')}
+              </button>
+            </div>
           </div>
           
           {(grouped[col.title] || []).length === 0 ? (
@@ -151,8 +172,8 @@ function ApplicationListView({
                               <button className="btn-sm primary" onClick={() => onReview(app)}>
                                 Review
                               </button>
-                              <button className="btn-sm success" onClick={() => onApprove(app.id, app.property_ref)}>
-                                Approve
+                              <button className="btn-sm success" onClick={() => onQualify && onQualify(app.id)}>
+                                Shortlist
                               </button>
                               <button className="btn-sm btn-error" onClick={() => onReject(app.id)}>
                                 Reject
@@ -164,7 +185,7 @@ function ApplicationListView({
                           {app.status === 'rejected' && (
                             <>
                               <button className="btn-sm success" onClick={() => onApprove(app.id, app.property_ref)}>
-                                Accept
+                                Shortlist
                               </button>
                               <button className="btn-sm primary" onClick={() => onReview(app)}>
                                 Review Details
@@ -194,11 +215,14 @@ function ApplicationListView({
                           {/* Viewing Complete actions */}
                           {(app.status === 'viewing_completed' || app.status === 'processing') && (
                             <>
-                              <button className="btn-sm primary" onClick={() => onAssignRoom(app)}>
-                                Assign Room
-                              </button>
-                              <button className="btn-sm secondary" onClick={() => onReject(app.id)}>
-                                Reject
+                              <button 
+                                className="btn-sm success" 
+                                onClick={() => {
+                                  console.log('Generate Lease button clicked for app:', app);
+                                  onGenerateLease && onGenerateLease(app);
+                                }}
+                              >
+                                Generate Lease
                               </button>
                             </>
                           )}
@@ -268,8 +292,8 @@ type Column = { keys: string[]; title: string };
 
 const STATUS_COLUMNS: Column[] = [
   { keys: ['pending', 'rejected'], title: 'Pending Review' },
-  { keys: ['approved'], title: 'Qualified' },
-  { keys: ['viewing_scheduled', 'viewing_completed', 'processing'], title: 'Viewing Process' },
+  { keys: ['approved', 'viewing_scheduled'], title: 'Shortlisted' },
+  { keys: ['viewing_completed', 'processing'], title: 'Assign Room' },
   { keys: ['room_assigned', 'lease_ready', 'lease_created', 'lease_signed'], title: 'Lease Process' },
   { keys: ['moved_in', 'active'], title: 'Active Tenants' },
 ];
@@ -278,6 +302,7 @@ export default function ApplicationKanban({
   applications,
   onReview,
   onApprove,
+  onQualify,
   onReject,
   onAssignRoom,
   onGenerateLease,
@@ -289,16 +314,89 @@ export default function ApplicationKanban({
   extraActions,
 }: ApplicationKanbanProps) {
   const [currentView, setCurrentView] = useState<'kanban' | 'list'>('kanban');
+  const [sortSettings, setSortSettings] = useState<Record<string, 'default' | 'date' | 'name'>>({});
+
+  // Sorting function
+  const sortApplications = (apps: Application[], sortType: 'default' | 'date' | 'name') => {
+    if (sortType === 'default') {
+      return apps; // Return original order
+    }
+    
+    return [...apps].sort((a, b) => {
+      if (sortType === 'date') {
+        // Sort by applied date (newest first)
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      } else if (sortType === 'name') {
+        // Sort by tenant name alphabetically
+        const nameA = (a.tenant_name || `Applicant #${a.id}`).toLowerCase();
+        const nameB = (b.tenant_name || `Applicant #${b.id}`).toLowerCase();
+        return nameA.localeCompare(nameB);
+      }
+      return 0;
+    });
+  };
+
+  // Toggle sort for a specific column
+  const toggleSort = (columnTitle: string) => {
+    setSortSettings(prev => {
+      const currentSort = prev[columnTitle] || 'default';
+      const nextSort = currentSort === 'default' ? 'date' : 
+                      currentSort === 'date' ? 'name' : 'default';
+      return { ...prev, [columnTitle]: nextSort };
+    });
+  };
+
+  // Get sort icon for display
+  const getSortIcon = (sortType: 'default' | 'date' | 'name') => {
+    switch (sortType) {
+      case 'date':
+        return (
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="16" y1="2" x2="16" y2="6"></line>
+            <line x1="8" y1="2" x2="8" y2="6"></line>
+            <line x1="3" y1="10" x2="21" y2="10"></line>
+          </svg>
+        );
+      case 'name':
+        return (
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M17 19H9"/>
+            <path d="M12 17V5"/>
+            <path d="M8 8l4-4 4 4"/>
+          </svg>
+        );
+      default:
+        return (
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="7 13 12 18 17 13"></polyline>
+            <polyline points="7 11 12 6 17 11"></polyline>
+          </svg>
+        );
+    }
+  };
+
+  // Get sort label for tooltip
+  const getSortLabel = (sortType: 'default' | 'date' | 'name') => {
+    switch (sortType) {
+      case 'date':
+        return 'Sorted by Applied Date';
+      case 'name':
+        return 'Sorted by Tenant Name';
+      default:
+        return 'Default Order';
+    }
+  };
 
   // Helper function to get stage descriptions
   const getStageDescription = (title: string): string => {
     switch (title) {
       case 'Pending Review':
         return 'New applications waiting for initial screening and approval decision';
-      case 'Qualified':
-        return 'Approved applicants ready for property viewing scheduling';
-      case 'Viewing Process':
-        return 'Property viewings scheduled, in progress, or completed - ready for room assignment';
+      case 'Shortlisted':
+        return 'Shortlisted applicants ready for property viewing scheduling and completion';
+      case 'Assign Room':
+        return 'Viewing completed - ready for room assignment and lease generation';
       case 'Lease Process':
         return 'Room assigned and lease documents in preparation, generation, or signing process';
       case 'Active Tenants':
@@ -319,6 +417,12 @@ export default function ApplicationKanban({
     const key = column ? column.title : 'Unmapped';
     if (!grouped[key]) grouped[key] = [];
     grouped[key].push(app);
+  });
+
+  // Apply sorting to each column
+  STATUS_COLUMNS.forEach((col) => {
+    const sortType = sortSettings[col.title] || 'default';
+    grouped[col.title] = sortApplications(grouped[col.title], sortType);
   });
 
   return (
@@ -346,7 +450,18 @@ export default function ApplicationKanban({
           {STATUS_COLUMNS.map((col) => (
             <div key={col.title} className="kanban-column">
               <div className="kanban-column-header">
-                {col.title} ({grouped[col.title]?.length || 0})
+                <div className="column-header-content">
+                  <span className="column-title">
+                    {col.title} ({grouped[col.title]?.length || 0})
+                  </span>
+                  <button
+                    className="sort-toggle-btn"
+                    onClick={() => toggleSort(col.title)}
+                    title={getSortLabel(sortSettings[col.title] || 'default')}
+                  >
+                    {getSortIcon(sortSettings[col.title] || 'default')}
+                  </button>
+                </div>
                 <div className="stage-description">
                   {getStageDescription(col.title)}
                 </div>
@@ -367,7 +482,7 @@ export default function ApplicationKanban({
                       <div className="app-dates">Applied: {formatDate(app.created_at)}</div>
                       <div className="app-status-text">
                         {app.status === 'pending' && 'Awaiting Review'}
-                        {app.status === 'approved' && 'Approved - Viewing Needed'}
+                        {app.status === 'approved' && 'Shortlisted'}
                         {app.status === 'rejected' && 'Application Rejected'}
                         {app.status === 'viewing_scheduled' && 'Viewing Scheduled'}
                         {app.status === 'viewing_completed' && 'Viewing Completed'}
@@ -386,8 +501,8 @@ export default function ApplicationKanban({
                             <button className="btn-sm primary" onClick={() => onReview(app)}>
                               Review
                             </button>
-                            <button className="btn-sm success" onClick={() => onApprove(app.id, app.property_ref)}>
-                              Approve
+                            <button className="btn-sm success" onClick={() => onQualify && onQualify(app.id)}>
+                              Shortlist
                             </button>
                             <button className="btn-sm btn-error" onClick={() => onReject(app.id)}>
                               Reject
@@ -399,7 +514,7 @@ export default function ApplicationKanban({
                         {app.status === 'rejected' && (
                           <>
                             <button className="btn-sm success" onClick={() => onApprove(app.id, app.property_ref)}>
-                              Accept
+                              Shortlist
                             </button>
                             <button className="btn-sm primary" onClick={() => onReview(app)}>
                               Review Details
@@ -431,11 +546,14 @@ export default function ApplicationKanban({
                         {/* Viewing Complete actions */}
                         {(app.status === 'viewing_completed' || app.status === 'processing') && (
                           <>
-                            <button className="btn-sm primary" onClick={() => onAssignRoom(app)}>
-                              Assign Room
-                            </button>
-                            <button className="btn-sm secondary" onClick={() => onReject(app.id)}>
-                              Reject
+                            <button 
+                              className="btn-sm success" 
+                              onClick={() => {
+                                console.log('Generate Lease button clicked for app:', app);
+                                onGenerateLease && onGenerateLease(app);
+                              }}
+                            >
+                              Generate Lease
                             </button>
                           </>
                         )}
@@ -509,6 +627,10 @@ export default function ApplicationKanban({
           onActivateLease={onActivateLease}
           getPropertyName={getPropertyName}
           formatDate={formatDate}
+          sortSettings={sortSettings}
+          toggleSort={toggleSort}
+          getSortIcon={getSortIcon}
+          getSortLabel={getSortLabel}
         />
       )}
 
@@ -631,6 +753,49 @@ export default function ApplicationKanban({
           background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.95));
           border-radius: 10px 10px 0 0;
           letter-spacing: 0.025em;
+        }
+        .column-header-content {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 6px;
+        }
+        .column-title {
+          font-size: 14px;
+          font-weight: 700;
+          color: #334155;
+          letter-spacing: 0.025em;
+        }
+        .sort-toggle-btn {
+          background: #f1f5f9;
+          border: 1px solid #e2e8f0;
+          border-radius: 6px;
+          padding: 4px 8px;
+          font-size: 12px;
+          font-weight: 600;
+          color: #64748b;
+          cursor: pointer;
+          transition: all 0.18s ease;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          min-width: 32px;
+          height: 24px;
+          justify-content: center;
+        }
+        .sort-toggle-btn:hover {
+          background: rgba(255, 255, 255, 0.9);
+          color: #374151;
+          border-color: #cbd5e1;
+          transform: translateY(-1px);
+        }
+        .sort-toggle-btn:active {
+          transform: translateY(0);
+        }
+        .sort-toggle-btn.active {
+          background: #4f46e5;
+          color: #ffffff;
+          box-shadow: 0 2px 6px rgba(79, 70, 229, 0.25);
         }
         .stage-description {
           font-size: 12px;
@@ -761,6 +926,16 @@ export default function ApplicationKanban({
           padding: 20px 24px;
           background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.95));
           border-bottom: 1px solid #e2e8f0;
+        }
+
+        .list-header-content {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+
+        .list-header-text {
+          flex: 1;
         }
 
         .list-section-title {

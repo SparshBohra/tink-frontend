@@ -1,6 +1,6 @@
 import React from 'react';
 
-type StatusType = 'success' | 'warning' | 'error' | 'info' | 'neutral';
+type StatusType = 'success' | 'warning' | 'error' | 'info' | 'neutral' | 'primary' | 'secondary';
 
 interface StatusBadgeProps {
   status: StatusType | string;
@@ -24,7 +24,7 @@ export default function StatusBadge({
       case 'approved':
       case 'completed':
       case 'paid':
-      case 'lease_created':
+      case 'lease_signed':
       case 'moved_in':
         return 'status-success';
       
@@ -47,14 +47,58 @@ export default function StatusBadge({
       case 'new':
       case 'processing':
       case 'draft':
+      case 'viewing_scheduled':
         return 'status-info';
+
+      case 'primary':
+      case 'room_assigned':
+      case 'lease_created':
+        return 'status-primary';
+
+      case 'secondary':
+      case 'viewing_completed':
+        return 'status-secondary';
       
       default:
         return 'status-neutral';
     }
   };
   
-  const displayText = text || status;
+  const getDisplayText = () => {
+    if (text) return text;
+    
+    // Map status values to display text
+    switch (status.toLowerCase()) {
+      case 'approved':
+        return 'Shortlisted';
+      case 'pending':
+        return 'Awaiting Review';
+      case 'rejected':
+        return 'Rejected';
+      case 'viewing_scheduled':
+        return 'Viewing Scheduled';
+      case 'viewing_completed':
+        return 'Viewing Completed';
+      case 'processing':
+        return 'Processing';
+      case 'room_assigned':
+        return 'Room Assigned';
+      case 'lease_created':
+        return 'Lease Generated';
+      case 'lease_signed':
+        return 'Lease Signed';
+      case 'moved_in':
+        return 'Moved In';
+      case 'active':
+        return 'Active';
+      case 'draft':
+        return 'Draft';
+      default:
+        return status;
+    }
+  };
+  
+  const displayText = getDisplayText();
   
   return (
     <span className={`status-badge ${getStatusClass()} ${small ? 'small' : ''}`}>
@@ -118,6 +162,24 @@ export default function StatusBadge({
         .status-info .status-dot {
           background: var(--info-purple);
         }
+
+        .status-primary {
+          background: rgba(59, 130, 246, 0.1);
+          color: #1e40af;
+        }
+
+        .status-primary .status-dot {
+          background: #3b82f6;
+        }
+
+        .status-secondary {
+          background: rgba(6, 182, 212, 0.1);
+          color: #0891b2;
+        }
+
+        .status-secondary .status-dot {
+          background: #06b6d4;
+        }
         
         .status-neutral {
           background: rgba(107, 114, 128, 0.1);
@@ -130,4 +192,4 @@ export default function StatusBadge({
       `}</style>
     </span>
   );
-} 
+}

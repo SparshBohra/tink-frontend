@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import DashboardLayout from '../components/DashboardLayout';
@@ -16,7 +16,19 @@ function Properties() {
   const [propertyRooms, setPropertyRooms] = useState<{ [key: number]: Room[] }>({});
   const [propertyLeases, setPropertyLeases] = useState<{ [key: number]: Lease[] }>({});
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasNextPage, setHasNextPage] = useState(false);
+  const [totalCount, setTotalCount] = useState(0);
+  const ITEMS_PER_PAGE = 10; // Load 10 properties at a time
+  
+  // Lazy loading state for detailed data
+  const [loadedPropertyDetails, setLoadedPropertyDetails] = useState<Set<number>>(new Set());
+  
+  // Modal states
   const [showListingModal, setShowListingModal] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
@@ -42,146 +54,178 @@ function Properties() {
     return cloned.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
   };
 
+  // Initial load
   useEffect(() => {
-    fetchData();
+    fetchProperties(1, true);
   }, []);
 
+  // Re-sort when sort option changes
   useEffect(() => {
-    // Re-sort when sort option changes, but only if there are properties
     if (properties.length > 0) {
       setProperties(prev => applySort(prev, sortOption));
     }
   }, [sortOption]);
 
-  const fetchData = async () => {
+  // Fetch properties with client-side pagination
+  const fetchProperties = async (page: number = 1, replace: boolean = false) => {
     try {
+      if (page === 1) {
       setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
       setError(null);
-      const propertiesResponse = await apiClient.getProperties();
-      const sorted = applySort(propertiesResponse.results || [], sortOption);
-      setProperties(sorted);
       
-      // Fetch room and lease data for each property
-      const roomsData: { [key: number]: Room[] } = {};
-      const leasesData: { [key: number]: Lease[] } = {};
+      console.log(`Fetching properties page ${page}...`);
       
-      for (const property of sorted) {
-        try {
-          const [rooms, leases] = await Promise.all([
-            apiClient.getPropertyRooms(property.id),
-            apiClient.getLeases({ property: property.id })
-          ]);
-          roomsData[property.id] = rooms;
-          leasesData[property.id] = leases.results || [];
-        } catch (err) {
-          console.error(`Failed to fetch rooms/leases for property ${property.id}:`, err);
-          roomsData[property.id] = [];
-          leasesData[property.id] = [];
-        }
+      // Since backend doesn't support pagination yet, we fetch all and implement client-side pagination
+      const response = await apiClient.getProperties();
+      
+      console.log('Properties response:', response);
+      
+      const allProperties = response.results || [];
+      const sorted = applySort(allProperties, sortOption);
+      
+      // Implement client-side pagination
+      const startIndex = (page - 1) * ITEMS_PER_PAGE;
+      const endIndex = startIndex + ITEMS_PER_PAGE;
+      const pageProperties = sorted.slice(startIndex, endIndex);
+      
+      if (replace || page === 1) {
+        setProperties(pageProperties);
+        setCurrentPage(1);
+      } else {
+        setProperties(prev => [...prev, ...pageProperties]);
+        setCurrentPage(page);
       }
       
-      setPropertyRooms(roomsData);
-      setPropertyLeases(leasesData);
+      setTotalCount(sorted.length);
+      setHasNextPage(endIndex < sorted.length);
+      
+      console.log(`Loaded ${pageProperties.length} properties for page ${page}, total: ${sorted.length}, hasNext: ${endIndex < sorted.length}`);
+      
     } catch (error: any) {
-      console.error('Failed to fetch properties data:', error);
+      console.error('Failed to fetch properties:', error);
       setError(error?.message || 'Failed to load properties data');
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
+  // Load more properties (infinite scroll)
+  const loadMoreProperties = useCallback(() => {
+    if (!loadingMore && hasNextPage) {
+      fetchProperties(currentPage + 1, false);
+    }
+  }, [loadingMore, hasNextPage, currentPage]);
+
+  // Lazy load detailed data for a specific property
+  const loadPropertyDetails = useCallback(async (propertyId: number) => {
+    if (loadedPropertyDetails.has(propertyId)) {
+      return; // Already loaded
+    }
+
+    try {
+      console.log(`Loading detailed data for property ${propertyId}...`);
+      
+      const [rooms, leases] = await Promise.all([
+        apiClient.getPropertyRooms(propertyId),
+        apiClient.getLeases({ property: propertyId })
+      ]);
+      
+      setPropertyRooms(prev => ({
+        ...prev,
+        [propertyId]: rooms
+      }));
+      
+      setPropertyLeases(prev => ({
+        ...prev,
+        [propertyId]: leases.results || []
+      }));
+      
+      setLoadedPropertyDetails(prev => new Set([...prev, propertyId]));
+      
+      console.log(`Loaded details for property ${propertyId}: ${rooms.length} rooms, ${leases.results?.length || 0} leases`);
+      
+    } catch (err) {
+      console.error(`Failed to fetch details for property ${propertyId}:`, err);
+      // Set empty arrays so we don't keep trying to load
+      setPropertyRooms(prev => ({ ...prev, [propertyId]: [] }));
+      setPropertyLeases(prev => ({ ...prev, [propertyId]: [] }));
+      setLoadedPropertyDetails(prev => new Set([...prev, propertyId]));
+    }
+  }, [loadedPropertyDetails]);
+
+  // Intersection Observer for infinite scroll
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const target = entries[0];
+        if (target.isIntersecting && hasNextPage && !loadingMore) {
+          loadMoreProperties();
+        }
+      },
+      {
+        threshold: 0.1,
+        rootMargin: '100px'
+      }
+    );
+
+    const sentinel = document.getElementById('properties-sentinel');
+    if (sentinel) {
+      observer.observe(sentinel);
+    }
+
+    return () => {
+      if (sentinel) {
+        observer.unobserve(sentinel);
+      }
+    };
+  }, [hasNextPage, loadingMore, loadMoreProperties]);
+
+  // Refresh all data
+  const refreshData = async () => {
+    setLoadedPropertyDetails(new Set());
+    setPropertyRooms({});
+    setPropertyLeases({});
+    await fetchProperties(1, true);
+  };
+
+  // Get property stats with lazy loading
   const getPropertyStats = (property: Property) => {
     const rooms = propertyRooms[property.id] || [];
     const leases = propertyLeases[property.id] || [];
     
-    // Calculate accurate room statistics
-    const totalRooms = rooms.length || property.total_rooms || 0;
-    
-    // Count occupied rooms based on active leases
-    const activeLeases = leases.filter(lease => {
-      const today = new Date();
-      const startDate = new Date(lease.start_date);
-      const endDate = lease.end_date ? new Date(lease.end_date) : null;
-      
-      return lease.status === 'active' && 
-             startDate <= today && 
-             (!endDate || endDate >= today);
-    });
-    
-    let occupiedRooms = 0;
-    if (property.rent_type === 'per_room') {
-      // For per-room properties, count rooms with active leases
-      const occupiedRoomIds = new Set(activeLeases.filter(l => l.room && l.room > 0).map(l => l.room));
-      occupiedRooms = occupiedRoomIds.size;
-    } else {
-      // For per-property properties, property is occupied if there's any active lease
-      occupiedRooms = activeLeases.length > 0 ? 1 : 0;
+    // If we haven't loaded details yet, use the property's own fields
+    if (!loadedPropertyDetails.has(property.id)) {
+      return {
+        totalRooms: property.total_rooms || 0,
+        vacantRooms: property.vacant_rooms || 0,
+        occupiedRooms: (property.total_rooms || 0) - (property.vacant_rooms || 0),
+        occupancyRate: property.total_rooms > 0 ? Math.round(((property.total_rooms - property.vacant_rooms) / property.total_rooms) * 100) : 0,
+        activeLeases: 0, // We don't have this data yet
+        isDetailLoaded: false
+      };
     }
     
-    const vacantRooms = totalRooms - occupiedRooms;
-    const occupancyRate = totalRooms > 0 ? 
-      Math.round((occupiedRooms / totalRooms) * 100) : 0;
+    const occupiedRooms = rooms.filter(room => !room.is_vacant).length;
+    const vacantRooms = rooms.filter(room => room.is_vacant).length;
+    const totalRooms = rooms.length;
+    const activeLeases = leases.filter(lease => lease.is_active || lease.status === 'active').length;
+    const occupancyRate = totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0;
     
     return {
       totalRooms,
       occupiedRooms,
       vacantRooms,
-      occupancyRate
+      occupancyRate,
+      activeLeases,
+      isDetailLoaded: true
     };
   };
 
-  const canAssignTenant = (property: Property) => {
-    const leases = propertyLeases[property.id] || [];
-    const rooms = propertyRooms[property.id] || [];
-    
-    // Check for active leases
-    const activeLeases = leases.filter(lease => {
-      const today = new Date();
-      const startDate = new Date(lease.start_date);
-      const endDate = lease.end_date ? new Date(lease.end_date) : null;
-      
-      return lease.status === 'active' && 
-             startDate <= today && 
-             (!endDate || endDate >= today);
-    });
-    
-    if (property.rent_type === 'per_property') {
-      // For per-property, can only assign if no active lease exists
-      return activeLeases.length === 0;
-    } else {
-      // For per-room, can assign if there are vacant rooms
-      if (rooms.length === 0) return false;
-      
-      const occupiedRoomIds = new Set(activeLeases.filter(l => l.room && l.room > 0).map(l => l.room));
-      return occupiedRoomIds.size < rooms.length;
-    }
-  };
-
-  const downloadPropertiesReport = () => {
-    const csvData = [
-      ['Property Name', 'Address', 'Total Rooms', 'Occupied', 'Vacant', 'Occupancy Rate'],
-      ...properties.map(property => {
-        const stats = getPropertyStats(property);
-        return [
-          property.name,
-          property.full_address,
-          stats.totalRooms.toString(),
-          stats.occupiedRooms.toString(),
-          stats.vacantRooms.toString(),
-          `${stats.occupancyRate}%`
-        ];
-      })
-    ];
-    const csvContent = csvData.map(row => row.join(',')).join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `tink-properties-report-${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-  };
-
-  // Calculate portfolio summary using accurate data
+  // Calculate portfolio summary from loaded data only
   const portfolioStats = properties.reduce((acc, property) => {
     const stats = getPropertyStats(property);
     return {
@@ -320,7 +364,7 @@ function Properties() {
   const handleDeleteComplete = async () => {
     try {
       // Refresh the property data
-      await fetchData();
+      await fetchProperties(1, true);
       setSelectedProperty(null);
       setError(null);
     } catch (err: any) {
@@ -353,7 +397,7 @@ function Properties() {
 
   const handleTenantAssignmentSave = async () => {
     // Refresh the data after tenant assignment
-    await fetchData();
+    await fetchProperties(1, true);
     setShowTenantAssignModal(false);
     setSelectedPropertyForAssign(null);
   };
@@ -361,6 +405,39 @@ function Properties() {
   const handleCloseTenantAssignModal = () => {
     setShowTenantAssignModal(false);
     setSelectedPropertyForAssign(null);
+  };
+
+  // Check if a property can have tenants assigned
+  const canAssignTenant = (property: Property) => {
+    // Can assign tenant if property has vacant rooms or is per-property rental
+    return property.rent_type === 'per_property' || (property.vacant_rooms && property.vacant_rooms > 0);
+  };
+
+  // Download properties report
+  const downloadPropertiesReport = () => {
+    const csvData = [
+      ['Property Name', 'Type', 'Address', 'Total Rooms', 'Vacant Rooms', 'Occupancy Rate', 'Effective Rent'],
+      ...properties.map(property => {
+        const stats = getPropertyStats(property);
+        return [
+          property.name,
+          property.property_type,
+          property.full_address,
+          stats.totalRooms.toString(),
+          stats.vacantRooms.toString(),
+          `${stats.occupancyRate}%`,
+          property.effective_rent ? `$${property.effective_rent}` : 'N/A'
+        ];
+      })
+    ];
+    const csvContent = csvData.map(row => row.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const today = new Date().toISOString().split('T')[0];
+    a.download = `tink-properties-report-${today}.csv`;
+    a.click();
   };
 
   // Close dropdown when clicking outside
@@ -559,7 +636,7 @@ function Properties() {
                   <option value="latest">Latest Added</option>
                   <option value="name">Name A–Z</option>
                 </select>
-                <button onClick={() => fetchData()} className="refresh-btn">
+                <button onClick={() => fetchProperties()} className="refresh-btn">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <polyline points="23 4 23 10 17 10"/>
                     <polyline points="1 20 1 14 7 14"/>
@@ -606,7 +683,7 @@ function Properties() {
                         <polyline points="9,22 9,12 15,12 15,22"/>
                       </svg>
                       View Inventory
-                    </button>
+                </button>
                   </div>
                   <div className="empty-state-help">
                     <div className="help-cards">
@@ -644,8 +721,20 @@ function Properties() {
                     <tbody>
                       {properties.map((property) => {
                         const stats = getPropertyStats(property);
+                        
+                        // Trigger lazy loading when property becomes visible
+                        const handleRowVisible = () => {
+                          if (!loadedPropertyDetails.has(property.id)) {
+                            loadPropertyDetails(property.id);
+                          }
+                        };
+                        
                         return (
-                          <tr key={property.id}>
+                          <tr 
+                            key={property.id}
+                            onMouseEnter={handleRowVisible}
+                            onClick={handleRowVisible}
+                          >
                             <td className="table-left">
                               <div 
                                 className="property-name clickable-property-name"
@@ -659,11 +748,21 @@ function Properties() {
                             <td className="table-left">{property.full_address}</td>
                             <td className="table-center">
                               <div className="rooms-cell">
+                                {stats.isDetailLoaded ? (
+                                  <>
                                 <div className="rooms-total">{stats.totalRooms} total</div>
                                 <div className="rooms-vacant">{stats.vacantRooms} vacant</div>
+                                  </>
+                                ) : (
+                                  <div className="loading-details">
+                                    <div className="rooms-total">{stats.totalRooms} total</div>
+                                    <div className="rooms-loading">Loading...</div>
+                                  </div>
+                                )}
                               </div>
                             </td>
                             <td className="table-center">
+                              {stats.isDetailLoaded ? (
                               <span className={`status-badge ${
                                 stats.occupancyRate < 50 ? 'low' : 
                                 stats.occupancyRate < 80 ? 'good' : 'excellent'
@@ -671,6 +770,9 @@ function Properties() {
                                 {stats.occupancyRate < 50 ? 'Low' : 
                                  stats.occupancyRate < 80 ? 'Good' : 'Excellent'} ({stats.occupancyRate}%)
                               </span>
+                              ) : (
+                                <span className="status-badge loading">Loading...</span>
+                              )}
                             </td>
                             <td className="table-center">
                               {property.effective_rent !== undefined && property.effective_rent !== null ? `$${property.effective_rent}` : '-'}
@@ -757,6 +859,23 @@ function Properties() {
                     </tbody>
                   </table>
                 </div>
+                
+                {/* Infinite scroll sentinel and loading indicator */}
+                {properties.length > 0 && (
+                  <div id="properties-sentinel" className="scroll-sentinel">
+                    {loadingMore && (
+                      <div className="loading-more">
+                        <div className="loading-spinner-small"></div>
+                        <span>Loading more properties...</span>
+                      </div>
+                    )}
+                    {!hasNextPage && properties.length > ITEMS_PER_PAGE && (
+                      <div className="end-of-list">
+                        <span>You've reached the end of your properties list</span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -1653,6 +1772,58 @@ function Properties() {
             gap: 12px;
             align-items: stretch;
           }
+        }
+
+        /* Lazy loading and pagination styles */
+        .scroll-sentinel {
+          padding: 20px;
+          text-align: center;
+        }
+
+        .loading-more {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 12px;
+          color: #6b7280;
+          font-size: 14px;
+        }
+
+        .loading-spinner-small {
+          width: 20px;
+          height: 20px;
+          border: 2px solid #e5e7eb;
+          border-top-color: #4f46e5;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+        }
+
+        .end-of-list {
+          color: #9ca3af;
+          font-size: 14px;
+          font-style: italic;
+        }
+
+        .rooms-loading {
+          font-size: 12px;
+          color: #9ca3af;
+          font-style: italic;
+        }
+
+        .loading-details {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+
+        .status-badge.loading {
+          background: #f3f4f6;
+          color: #9ca3af;
+          font-style: italic;
+        }
+
+        @keyframes spin {
+          to { transform: rotate(360deg); }
         }
 
         /* Dark Mode Styles */
