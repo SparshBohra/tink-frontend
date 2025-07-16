@@ -1495,4 +1495,4 @@ Generated on: ${new Date().toLocaleDateString()}
       `}</style>
     </div>
   );
-}; 
+};
