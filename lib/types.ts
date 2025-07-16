@@ -420,7 +420,9 @@ export interface LandlordSignupData {
   phone: string;
   username: string;
   password: string;
-  confirm_password: string;
+  password_confirm: string;
+  org_name: string;
+  business_address: string;
 }
 
 export interface ManagerWithProperties {
