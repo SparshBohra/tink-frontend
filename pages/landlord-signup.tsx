@@ -10,9 +10,9 @@ export default function LandlordSignup() {
   const { signupLandlord, error, clearError } = useAuth();
   const [formData, setFormData] = useState({
     org_name: '',
-    email: '',
-    phone: '',
-    business_address: '',
+    contact_email: '',
+    contact_phone: '',
+    address: '',
     full_name: '',
     username: '',
     password: '',
@@ -25,7 +25,7 @@ export default function LandlordSignup() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     
-    if (name === 'phone') {
+    if (name === 'contact_phone') {
       // Format phone number as user types
       const formattedPhone = phoneUtils.formatPhoneNumber(value);
       setFormData(prev => ({ ...prev, [name]: formattedPhone }));
@@ -120,12 +120,12 @@ export default function LandlordSignup() {
 
               <div className="form-row">
                 <div className="form-group">
-                  <label htmlFor="email" className="form-label">Business Email *</label>
+                  <label htmlFor="contact_email" className="form-label">Business Email *</label>
                   <input 
-                    id="email" 
-                    name="email" 
+                    id="contact_email" 
+                    name="contact_email" 
                     type="email" 
-                    value={formData.email} 
+                    value={formData.contact_email} 
                     onChange={handleChange} 
                     placeholder="business@company.com"
                     required 
@@ -134,12 +134,12 @@ export default function LandlordSignup() {
                   />
                 </div>
                 <div className="form-group">
-                  <label htmlFor="phone" className="form-label">Business Phone</label>
+                  <label htmlFor="contact_phone" className="form-label">Business Phone</label>
                   <input 
-                    id="phone" 
-                    name="phone" 
+                    id="contact_phone" 
+                    name="contact_phone" 
                     type="tel" 
-                    value={formData.phone} 
+                    value={formData.contact_phone} 
                     onChange={handleChange} 
                     placeholder="(555) 123-4567"
                     disabled={loading} 
@@ -150,7 +150,7 @@ export default function LandlordSignup() {
                       {phoneError}
                     </div>
                   )}
-                  {formData.phone && !phoneError && (
+                  {formData.contact_phone && !phoneError && (
                     <div className="field-success">
                       ✓ Valid phone number
                     </div>
@@ -159,12 +159,12 @@ export default function LandlordSignup() {
               </div>
 
               <div className="form-group">
-                <label htmlFor="business_address" className="form-label">Business Address</label>
+                <label htmlFor="address" className="form-label">Business Address</label>
                 <input 
-                  id="business_address" 
-                  name="business_address" 
+                  id="address" 
+                  name="address" 
                   type="text" 
-                  value={formData.business_address} 
+                  value={formData.address} 
                   onChange={handleChange} 
                   placeholder="123 Business St, City, State"
                   disabled={loading} 

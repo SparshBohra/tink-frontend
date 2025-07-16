@@ -416,13 +416,13 @@ export interface DashboardStats {
 
 export interface LandlordSignupData {
   full_name: string;
-  email: string;
-  phone: string;
+  contact_email: string;
+  contact_phone: string;
   username: string;
   password: string;
   password_confirm: string;
   org_name: string;
-  business_address: string;
+  address: string;
 }
 
 export interface ManagerWithProperties {

@@ -240,7 +240,7 @@ class ApiClient {
   }
 
   async signupLandlord(userData: any): Promise<{ user: User; tokens: AuthTokens; landlord: any }> {
-    const response = await this.api.post('/landlords/signup/', userData);
+    const response = await this.api.post('/auth/landlords/signup/', userData);
     
     // If the response includes tokens, set them
     if (response.data.tokens) {
