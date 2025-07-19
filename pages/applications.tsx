@@ -511,7 +511,7 @@ function Applications() {
         // If we're here, it means the fallback worked, so just refresh and show success
         fetchData();
         alert('Application rejected successfully.');
-      } else {
+    } else {
         // Handle other types of errors
         let errorMessage = 'Unknown error occurred';
         if (error.response?.data) {
