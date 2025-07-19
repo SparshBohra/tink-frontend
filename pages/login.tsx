@@ -38,7 +38,7 @@ export default function Login() {
     }
   };
 
-  const handleDemoLogin = async (role: 'admin' | 'owner' | 'manager') => {
+  const handleDemoLogin = async (role: 'admin' | 'owner' | 'manager' | 'tenant') => {
     if (isLoading) return;
 
     try {
@@ -57,17 +57,22 @@ export default function Login() {
         credentials = { username: 'premium_owner', password: 'demo123' };
         setUsername('premium_owner');
         setPassword('demo123');
-      } else {
+      } else if (role === 'manager') {
         // Manager - Works for landlords and manages day-to-day operations
         credentials = { username: 'sarah_manager', password: 'demo12345' };
         setUsername('sarah_manager');
         setPassword('demo12345');
+      } else {
+        // Tenant - Lives in properties and uses tenant portal
+        credentials = { username: 'john_tenant', password: 'tenant123' };
+        setUsername('john_tenant');
+        setPassword('tenant123');
       }
       
       console.log('Demo login - attempting login with:', credentials.username);
       await login(credentials);
       console.log('Demo login completed successfully');
-      setSuccess(`${role === 'admin' ? 'Platform Admin' : role === 'owner' ? 'Landlord' : 'Manager'} demo login successful! Redirecting...`);
+      setSuccess(`${role === 'admin' ? 'Platform Admin' : role === 'owner' ? 'Landlord' : role === 'manager' ? 'Manager' : 'Tenant'} demo login successful! Redirecting...`);
       // Login function will redirect based on role
     } catch (error: any) {
       console.error('Demo login failed:', error);
@@ -199,6 +204,14 @@ export default function Login() {
                 className="btn btn-success btn-sm demo-btn"
               >
                 Property Manager Demo
+              </button>
+              
+              <button 
+                onClick={() => handleDemoLogin('tenant')}
+                disabled={isLoading || loading}
+                className="btn btn-primary btn-sm demo-btn"
+              >
+                Tenant Portal Demo
               </button>
             </div>
           </div>

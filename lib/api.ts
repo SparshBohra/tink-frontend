@@ -30,7 +30,13 @@ import {
   ListingFormData,
   PropertyListing,
   ListingMedia,
-  PublicApplicationData
+  PublicApplicationData,
+  StripeConnectAccountData,
+  StripeConnectAccountStatus,
+  StripeConnectAccountSession,
+  StripeConnectAccountLink,
+  StripeConnectSessionData,
+  StripeConnectLinkData
 } from './types';
 
 // Smart environment-based API URL configuration
@@ -1877,6 +1883,27 @@ class ApiClient {
       console.error('Failed to decode or refresh token proactively:', error);
       // If decoding fails, the token is likely invalid, let the interceptor handle it
     }
+  }
+
+  // Stripe Connect Methods
+  async getStripeAccountStatus(): Promise<StripeConnectAccountStatus> {
+    const response = await this.api.get('/auth/stripe/account-status/');
+    return response.data;
+  }
+
+  async createStripeConnectedAccount(data: StripeConnectAccountData): Promise<{ account_id: string; status: string }> {
+    const response = await this.api.post('/auth/stripe/create-connected-account/', data);
+    return response.data;
+  }
+
+  async createStripeAccountSession(data: StripeConnectSessionData): Promise<StripeConnectAccountSession> {
+    const response = await this.api.post('/auth/stripe/create-account-session/', data);
+    return response.data;
+  }
+
+  async createStripeAccountLink(data: StripeConnectLinkData): Promise<StripeConnectAccountLink> {
+    const response = await this.api.post('/auth/stripe/create-account-link/', data);
+    return response.data;
   }
 }
 

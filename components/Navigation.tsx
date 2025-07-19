@@ -6,7 +6,7 @@ import { apiClient } from '../lib/api';
 
 export default function Navigation() {
   const router = useRouter();
-  const { user, logout, isAdmin, isLandlord, isManager } = useAuth();
+  const { user, logout, isAdmin, isLandlord, isManager, isTenant } = useAuth();
   const [pendingApplicationsCount, setPendingApplicationsCount] = useState<number>(0);
 
   useEffect(() => {
@@ -48,6 +48,7 @@ export default function Navigation() {
     if (isAdmin()) return 'Platform Admin';
     if (isLandlord()) return 'Business Owner';
     if (isManager()) return 'Property Manager';
+    if (isTenant()) return 'Tenant Portal';
     return 'User';
   };
 
@@ -56,6 +57,7 @@ export default function Navigation() {
     if (isAdmin()) return { text: 'ADMIN', bgColor: 'var(--error-red)', textColor: 'white' };
     if (isLandlord()) return { text: 'OWNER', bgColor: 'var(--warning-amber)', textColor: 'white' };
     if (isManager()) return { text: 'MANAGER', bgColor: 'var(--success-green)', textColor: 'white' };
+    if (isTenant()) return { text: 'TENANT', bgColor: 'var(--primary-blue)', textColor: 'white' };
     return { text: 'USER', bgColor: 'var(--gray-400)', textColor: 'white' };
   };
 
@@ -196,6 +198,16 @@ export default function Navigation() {
                 <span className="nav-icon team-icon"></span>
                 <span className="nav-text">My Team</span>
               </Link>
+              <Link 
+                href="/stripe-connect" 
+                className={`nav-link ${isActive('/stripe-connect') ? 'active' : ''}`}
+              >
+                <svg className="nav-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+                  <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+                </svg>
+                <span className="nav-text">Payment Setup</span>
+              </Link>
             </>
           )}
           
@@ -263,6 +275,57 @@ export default function Navigation() {
               >
                 <span className="nav-icon task-icon"></span>
                 <span className="nav-text">Tasks</span>
+              </Link>
+            </>
+          )}
+          
+          {isTenant() && (
+            <>
+              <Link 
+                href="/tenant-dashboard" 
+                className={`nav-link ${isActive('/tenant-dashboard') ? 'active' : ''}`}
+              >
+                <span className="nav-icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                    <polyline points="9,22 9,12 15,12 15,22"/>
+                  </svg>
+                </span>
+                <span className="nav-text">Dashboard</span>
+              </Link>
+              <Link 
+                href="/tenant-payments" 
+                className={`nav-link ${isActive('/tenant-payments') ? 'active' : ''}`}
+              >
+                <span className="nav-icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
+                    <line x1="1" y1="10" x2="23" y2="10"/>
+                  </svg>
+                </span>
+                <span className="nav-text">Payments</span>
+              </Link>
+              <Link 
+                href="/tenant-maintenance" 
+                className={`nav-link ${isActive('/tenant-maintenance') ? 'active' : ''}`}
+              >
+                <span className="nav-icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                  </svg>
+                </span>
+                <span className="nav-text">Maintenance</span>
+              </Link>
+              <Link 
+                href="/tenant-announcements" 
+                className={`nav-link ${isActive('/tenant-announcements') ? 'active' : ''}`}
+              >
+                <span className="nav-icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>
+                  </svg>
+                </span>
+                <span className="nav-text">Announcements</span>
               </Link>
             </>
           )}

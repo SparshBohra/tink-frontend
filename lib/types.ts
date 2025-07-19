@@ -414,17 +414,6 @@ export interface DashboardStats {
   };
 }
 
-export interface LandlordSignupData {
-  full_name: string;
-  contact_email: string;
-  contact_phone: string;
-  username: string;
-  password: string;
-  password_confirm: string;
-  org_name: string;
-  address: string;
-}
-
 export interface ManagerWithProperties {
   id: number;
   username: string;
@@ -608,4 +597,83 @@ export interface PublicApplicationData {
     annual_income?: number;
   };
   [key: string]: any; // For additional form fields
+} 
+
+// Stripe Connect Types
+export interface StripeConnectAccountData {
+  business_type: 'individual' | 'company';
+  email: string;
+  first_name?: string;
+  last_name?: string;
+  phone?: string;
+  address?: {
+    line1: string;
+    line2?: string;
+    city: string;
+    state: string;
+    postal_code: string;
+    country: string;
+  };
+  company?: {
+    name: string;
+    tax_id?: string;
+    address?: {
+      line1: string;
+      line2?: string;
+      city: string;
+      state: string;
+      postal_code: string;
+      country: string;
+    };
+  };
+}
+
+export interface StripeConnectAccountStatus {
+  status: 'not_created' | 'onboarding_pending' | 'verification_pending' | 'active' | 'restricted' | 'rejected';
+  account_id?: string;
+  details_submitted: boolean;
+  charges_enabled: boolean;
+  payouts_enabled: boolean;
+  landlord_id: number;
+  message?: string;
+  requirements?: {
+    currently_due: string[];
+    eventually_due: string[];
+    past_due: string[];
+    pending_verification: string[];
+  };
+}
+
+export interface StripeConnectAccountSession {
+  client_secret: string;
+  url?: string;
+  expires_at?: number;
+}
+
+export interface StripeConnectAccountLink {
+  url: string;
+  expires_at: number;
+  created: number;
+}
+
+export interface StripeConnectSessionData {
+  account_id?: string;
+  refresh_url: string;
+  return_url: string;
+}
+
+export interface StripeConnectLinkData {
+  refresh_url: string;
+  return_url: string;
+}
+
+export interface LandlordSignupData {
+  org_name: string;
+  contact_email: string;
+  contact_phone?: string;
+  address?: string;
+  full_name: string;
+  username: string;
+  password: string;
+  password_confirm: string;
 } 

@@ -18,6 +18,7 @@ interface AuthContextType {
   isAdmin: () => boolean;
   isLandlord: () => boolean;
   isManager: () => boolean;
+  isTenant: () => boolean;
   hasRole: (role: string) => boolean;
   hasAnyRole: (roles: string[]) => boolean;
 }
@@ -68,6 +69,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
       case 'manager':
         router.push('/manager-dashboard');
         break;
+      case 'tenant':
+        router.push('/tenant-dashboard');
+        break;
       default:
         router.push('/manager-dashboard');
     }
@@ -78,6 +82,33 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setLoading(true);
       setError(null);
       
+      // Check for tenant demo login and bypass API
+      if (credentials.username === 'john_tenant' && credentials.password === 'tenant123') {
+        const tenantUser: User = {
+          id: 999,
+          username: 'john_tenant',
+          email: 'john.tenant@example.com',
+          full_name: 'John Smith',
+          role: 'tenant',
+          is_active: true
+        };
+        
+        setUser(tenantUser);
+        
+        // Store user data in localStorage for persistence
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('userRole', 'tenant');
+          localStorage.setItem('userId', '999');
+          localStorage.setItem('userName', 'John Smith');
+          localStorage.setItem('userEmail', 'john.tenant@example.com');
+        }
+        
+        // Navigate to tenant dashboard
+        redirectBasedOnRole('tenant');
+        return;
+      }
+      
+      // Regular API login for other roles
       const response = await apiClient.login(credentials);
       
       // Check if we have user data in the response
@@ -233,6 +264,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const isAdmin = () => user?.role === 'admin';
   const isLandlord = () => user?.role === 'owner';
   const isManager = () => user?.role === 'manager';
+  const isTenant = () => user?.role === 'tenant';
   const hasRole = (role: string) => user?.role === role;
   const hasAnyRole = (roles: string[]) => user ? roles.includes(user.role) : false;
 
@@ -250,6 +282,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     isAdmin,
     isLandlord,
     isManager,
+    isTenant,
     hasRole,
     hasAnyRole
   };
