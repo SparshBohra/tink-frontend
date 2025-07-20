@@ -12,7 +12,8 @@ import { Property, Room, Lease } from '../lib/types';
 
 function Properties() {
   const router = useRouter();
-  const [properties, setProperties] = useState<Property[]>([]);
+  const [properties, setProperties] = useState<Property[]>([]); // Paginated properties for display
+  const [allProperties, setAllProperties] = useState<Property[]>([]); // Full dataset for calculations
   const [propertyRooms, setPropertyRooms] = useState<{ [key: number]: Room[] }>({});
   const [propertyLeases, setPropertyLeases] = useState<{ [key: number]: Lease[] }>({});
   const [loading, setLoading] = useState(true);
@@ -61,10 +62,18 @@ function Properties() {
 
   // Re-sort when sort option changes
   useEffect(() => {
-    if (properties.length > 0) {
-      setProperties(prev => applySort(prev, sortOption));
+    if (allProperties.length > 0) {
+      const sortedAll = applySort(allProperties, sortOption);
+      setAllProperties(sortedAll);
+      
+      // Re-paginate with new sort order
+      const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+      const endIndex = startIndex + ITEMS_PER_PAGE;
+      const pageProperties = sortedAll.slice(0, endIndex); // Show all loaded pages so far
+      setProperties(pageProperties);
+      setHasNextPage(endIndex < sortedAll.length);
     }
-  }, [sortOption]);
+  }, [sortOption, allProperties.length, currentPage]);
 
   // Fetch properties with client-side pagination
   const fetchProperties = async (page: number = 1, replace: boolean = false) => {
@@ -83,8 +92,11 @@ function Properties() {
       
       console.log('Properties response:', response);
       
-      const allProperties = response.results || [];
-      const sorted = applySort(allProperties, sortOption);
+      const allPropertiesData = response.results || [];
+      const sorted = applySort(allPropertiesData, sortOption);
+      
+      // Store full dataset for calculations
+      setAllProperties(sorted);
       
       // Implement client-side pagination
       const startIndex = (page - 1) * ITEMS_PER_PAGE;
@@ -209,9 +221,10 @@ function Properties() {
       };
     }
     
-    const occupiedRooms = rooms.filter(room => !room.is_vacant).length;
-    const vacantRooms = rooms.filter(room => room.is_vacant).length;
+    // Use backend occupancy data instead of filtering room status
     const totalRooms = rooms.length;
+    const occupiedRooms = rooms.reduce((sum, room) => sum + (room.current_occupancy || 0), 0);
+    const vacantRooms = Math.max(0, totalRooms - occupiedRooms);
     const activeLeases = leases.filter(lease => lease.is_active || lease.status === 'active').length;
     const occupancyRate = totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0;
     
@@ -225,8 +238,8 @@ function Properties() {
     };
   };
 
-  // Calculate portfolio summary from loaded data only
-  const portfolioStats = properties.reduce((acc, property) => {
+  // Calculate portfolio summary from full dataset
+  const portfolioStats = allProperties.reduce((acc, property) => {
     const stats = getPropertyStats(property);
     return {
       totalRooms: acc.totalRooms + stats.totalRooms,
@@ -537,11 +550,11 @@ function Properties() {
               </div>
             </div>
             <div className="metric-content">
-              <div className="metric-value">{properties.length}</div>
+              <div className="metric-value">{totalCount}</div>
               <div className="metric-subtitle">Active portfolio</div>
               <div className="metric-progress">
                 <span className="metric-label">Properties managed</span>
-                <span className="metric-change positive">+{properties.length > 0 ? '1' : '0'}</span>
+                <span className="metric-change positive">+{totalCount > 0 ? '1' : '0'}</span>
               </div>
             </div>
           </div>
@@ -623,7 +636,7 @@ function Properties() {
           <div className="properties-section">
             <div className="section-header">
               <div>
-                <h2 className="section-title">Properties ({properties.length})</h2>
+                <h2 className="section-title">Properties ({totalCount})</h2>
                 <p className="section-subtitle">Manage property details, rooms, and occupancy status</p>
               </div>
               <div className="section-actions">

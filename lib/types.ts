@@ -248,6 +248,11 @@ export interface Lease {
   is_active?: boolean;
   created_at: string;
   updated_at: string;
+  // Additional fields from backend serializer
+  tenant_name?: string;
+  tenant_email?: string;
+  property_name?: string;
+  room_name?: string;
 }
 
 export interface Landlord {

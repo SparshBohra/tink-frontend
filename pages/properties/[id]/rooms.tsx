@@ -136,13 +136,17 @@ export default function PropertyRooms() {
       };
     }
     
-    // For per_room rent type, use the existing logic
-    const stats = getOccupancyStatsUtil(property, leases, rooms);
+    // For per_room rent type, use backend occupancy data instead of counting leases
+    const totalRooms = rooms.length || property.total_rooms || 0;
+    const occupiedRooms = rooms.reduce((sum, room) => sum + (room.current_occupancy || 0), 0);
+    const vacantRooms = Math.max(0, totalRooms - occupiedRooms);
+    const occupancyRate = totalRooms > 0 ? ((occupiedRooms / totalRooms) * 100).toFixed(1) : '0.0';
+    
     return {
-      totalRooms: stats.totalUnits,
-      occupiedRooms: stats.occupiedUnits,
-      vacantRooms: stats.vacantUnits,
-      occupancyRate: stats.occupancyRate
+      totalRooms,
+      occupiedRooms,
+      vacantRooms,
+      occupancyRate
     };
   };
 
@@ -309,6 +313,9 @@ export default function PropertyRooms() {
   const renderRoomRow = (rowData: any, index: number) => {
     const room = rowData as Room;
     const lease = getRoomOccupancy(room.id);
+    
+    // Use backend occupancy data to determine actual status
+    const isActuallyOccupied = (room.current_occupancy || 0) > 0;
 
     return (
         <tr key={room.id} className="room-row">
@@ -319,24 +326,30 @@ export default function PropertyRooms() {
                 </Link>
       </td>
             <td>
-                {lease ? (
+                {isActuallyOccupied ? (
                   <StatusBadge
-                    status={lease.status}
-                    text={
-                      lease.status === 'draft' ? 'Draft Lease' :
-                      lease.status === 'active' ? 'Occupied' :
-                      lease.status
-                    }
+                    status="occupied"
+                    text="Occupied"
+                  />
+                ) : lease?.status === 'draft' ? (
+                  <StatusBadge
+                    status="draft"
+                    text="Draft Lease"
                   />
                 ) : (
                   <StatusBadge status="vacant" text="Vacant" />
                 )}
       </td>
             <td>
-                {lease ? (
+                {isActuallyOccupied && lease ? (
                     <div className="tenant-info">
                         <span className="tenant-avatar" style={{ backgroundColor: '#E0E7FF' }}>{getTenantName(lease.tenant).charAt(0)}</span>
                         {getTenantName(lease.tenant)}
+          </div>
+                ) : lease?.status === 'draft' ? (
+                    <div className="tenant-info draft">
+                        <span className="tenant-avatar" style={{ backgroundColor: '#FEF3C7' }}>{getTenantName(lease.tenant).charAt(0)}</span>
+                        {getTenantName(lease.tenant)} (Draft)
           </div>
         ) : (
                     <span className="unassigned">-</span>

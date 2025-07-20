@@ -195,7 +195,7 @@ class ApiClient {
 
   // Authentication endpoints
   async login(credentials: LoginCredentials): Promise<{ user: User; tokens: AuthTokens }> {
-    const response = await this.api.post('/auth/login/', credentials);
+    const response = await this.api.post('/token/', credentials);
     
     const tokens = {
       access: response.data.access,
@@ -203,33 +203,11 @@ class ApiClient {
     };
     this.setTokens(tokens);
     
-    // Handle the actual API response structure
-    // The API returns user data in the 'manager' field for all user types
-    let user: User;
-    if (response.data.manager) {
-      user = response.data.manager;
-    } else if (response.data.user) {
-      // Fallback for different response structure
-      user = response.data.user;
-    } else if (response.data.landlord) {
-      // Another possible structure
-      user = response.data.landlord;
-    } else {
-      // Last resort fallback
-      user = {
-        id: response.data.id || 0,
-        username: response.data.username || credentials.username,
-        email: response.data.email || '',
-        full_name: response.data.full_name || response.data.username || credentials.username,
-        role: response.data.role || 'manager',
-        is_active: response.data.is_active !== false
-      };
-    }
+    // Get user profile after setting tokens
+    const profileResponse = await this.api.get('/auth/profile/');
+    const user: User = profileResponse.data;
     
-    return {
-      user,
-      tokens
-    };
+    return { user, tokens };
   }
 
   async logout_api(): Promise<void> {
@@ -708,7 +686,7 @@ class ApiClient {
   }): Promise<Application> {
     try {
       console.log(`Deciding on application ${id} with data:`, decisionData);
-    const response = await this.api.post(`/applications/${id}/decide/`, decisionData);
+          const response = await this.api.post(`/tenants/applications/${id}/decide/`, decisionData);
       console.log('Application decision successful:', response.data);
     return response.data;
     } catch (error: any) {
@@ -769,7 +747,7 @@ class ApiClient {
   }): Promise<ApplicationViewing> {
     try {
       console.log(`Scheduling viewing for application ${applicationId} with data:`, viewingData);
-      const response = await this.api.post(`/applications/${applicationId}/schedule-viewing/`, viewingData);
+      const response = await this.api.post(`/tenants/applications/${applicationId}/schedule-viewing/`, viewingData);
       console.log('Viewing scheduling successful:', response.data);
       return response.data;
     } catch (error: any) {
@@ -797,7 +775,7 @@ class ApiClient {
     next_action?: string;
   }): Promise<ApplicationViewing> {
     try {
-      const response = await this.api.post(`/applications/${applicationId}/complete-viewing/`, completionData);
+      const response = await this.api.post(`/tenants/applications/${applicationId}/complete-viewing/`, completionData);
       return response.data;
     } catch (error: any) {
       console.error('Viewing completion failed:', error);
@@ -820,7 +798,7 @@ class ApiClient {
   async skipViewing(applicationId: number): Promise<Application> {
     try {
       console.log(`Skipping viewing for application ${applicationId}`);
-      const response = await this.api.post(`/applications/${applicationId}/skip-viewing/`, {});
+      const response = await this.api.post(`/tenants/applications/${applicationId}/skip-viewing/`, {});
       console.log('Skip viewing successful:', response.data);
       return response.data;
     } catch (error: any) {
@@ -841,14 +819,14 @@ class ApiClient {
   }
 
   async getApplicationViewings(applicationId: number): Promise<ApplicationViewing[]> {
-    const response = await this.api.get(`/applications/${applicationId}/viewings/`);
-    return response.data;
+    const response = await this.api.get(`/tenants/applications/${applicationId}/viewings/`);
+    return response.data.viewings || response.data;
   }
 
   async assignRoom(applicationId: number, roomData: { room_id: number }): Promise<Application> {
     try {
       console.log(`Assigning room ${roomData.room_id} to application ${applicationId}`);
-      const response = await this.api.post(`/applications/${applicationId}/assign_room/`, roomData);
+      const response = await this.api.post(`/tenants/applications/${applicationId}/assign_room/`, roomData);
       console.log('Room assignment successful:', response.data);
       return response.data;
     } catch (error: any) {
@@ -871,18 +849,19 @@ class ApiClient {
     }
   }
 
-  async generateLease(applicationId: number): Promise<Application> {
+  async generateLease(applicationId: number, roomId: number, leaseTerms?: any): Promise<Application> {
     try {
-      console.log(`Generating lease for application ${applicationId}`);
-      const response = await this.api.post(`/applications/${applicationId}/generate-lease/`, {});
+      console.log(`Generating lease for application ${applicationId} and room ${roomId}`, leaseTerms);
+      const requestData = { room_id: roomId, ...leaseTerms };
+      const response = await this.api.post(`/tenants/applications/${applicationId}/generate-lease/`, requestData);
       console.log('Lease generation successful:', response.data);
       return response.data;
     } catch (error: any) {
       console.error(`Lease generation failed for application ${applicationId}:`, error);
       
       if (error.response?.status === 400) {
-        const details = error.response?.data?.detail || error.response?.data?.message || JSON.stringify(error.response?.data);
-        throw new Error(`Cannot generate lease: ${details}`);
+        const details = error.response?.data?.error || error.response?.data?.detail || error.response?.data?.message || JSON.stringify(error.response?.data);
+        throw new Error(details);
       }
       if (error.response?.status === 404) {
         throw new Error(`Application with ID ${applicationId} not found`);
@@ -1377,7 +1356,7 @@ class ApiClient {
   }
 
   async getManagers(): Promise<PaginatedResponse<Manager>> {
-    const response = await this.api.get('/managers/');
+    const response = await this.api.get('/auth/managers/');
     return response.data;
   }
 

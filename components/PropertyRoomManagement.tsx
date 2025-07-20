@@ -61,9 +61,11 @@ const PropertyRoomManagement: React.FC<PropertyRoomManagementProps> = ({
 
   const calculateAnalytics = (propertyRooms: Room[]) => {
     const totalRooms = propertyRooms.length;
-    const vacantRooms = propertyRooms.filter(room => room.is_vacant).length;
-    const occupiedRooms = propertyRooms.filter(room => !room.is_vacant).length;
-    const maintenanceRooms = propertyRooms.filter(room => room.status === 'maintenance').length;
+    
+    // Use backend occupancy data instead of is_vacant status
+    const occupiedRooms = propertyRooms.reduce((sum, room) => sum + (room.current_occupancy || 0), 0);
+    const vacantRooms = Math.max(0, totalRooms - occupiedRooms);
+    const maintenanceRooms = 0; // Simplified since Room interface doesn't have status field
     
     const pendingAssignments = applications.filter(app => 
       app.property_ref === selectedProperty?.id && 
@@ -77,8 +79,10 @@ const PropertyRoomManagement: React.FC<PropertyRoomManagementProps> = ({
     
     const averageRent = rents.length > 0 ? rents.reduce((sum, rent) => sum + rent, 0) / rents.length : 0;
     const occupancyRate = totalRooms > 0 ? (occupiedRooms / totalRooms) * 100 : 0;
+    
+    // Calculate revenue based on rooms that have current occupancy > 0
     const revenueGenerated = propertyRooms
-      .filter(room => !room.is_vacant)
+      .filter(room => (room.current_occupancy || 0) > 0)
       .reduce((sum, room) => {
         const rent = typeof room.monthly_rent === 'string' ? parseFloat(room.monthly_rent) : (room.monthly_rent || 0);
         return sum + rent;
@@ -97,15 +101,13 @@ const PropertyRoomManagement: React.FC<PropertyRoomManagementProps> = ({
   };
 
   const getRoomStatusColor = (room: Room) => {
-    if (room.status === 'maintenance') return '#f59e0b';
-    if (room.is_vacant) return '#10b981';
-    return '#ef4444';
+    if ((room.current_occupancy || 0) > 0) return '#ef4444'; // Occupied - red
+    return '#10b981'; // Vacant - green
   };
 
   const getRoomStatusText = (room: Room) => {
-    if (room.status === 'maintenance') return 'Maintenance';
-    if (room.is_vacant) return 'Vacant';
-    return 'Occupied';
+    if ((room.current_occupancy || 0) > 0) return 'Occupied';
+    return 'Vacant';
   };
 
   const getFilteredRooms = () => {

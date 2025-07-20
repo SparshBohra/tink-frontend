@@ -150,8 +150,8 @@ function Applications() {
   const getPropertyDetails = (propertyId: number) => {
     const property = properties.find(p => p.id === propertyId);
     const propertyRooms = rooms.filter(room => room.property_ref === propertyId);
-    const vacantRooms = propertyRooms.filter(room => room.is_vacant);
-    const occupiedRooms = propertyRooms.filter(room => !room.is_vacant);
+    const vacantRooms = propertyRooms.filter(room => room.is_available);
+    const occupiedRooms = propertyRooms.filter(room => !room.is_available);
     
     return {
       property,
@@ -472,12 +472,66 @@ function Applications() {
     
     try {
       await apiClient.decideApplication(applicationId, decisionData);
-        fetchData(); // Refresh data
-      alert(`✅ Application approved!\n\nTenant: ${application.tenant_name}\nAssigned: ${assignedRoomName}\nLease created successfully!`);
+      
+      // Optimistically update the application status in the UI immediately
+      setApplications(prevApps => 
+        prevApps.map(app => 
+          app.id === applicationId 
+            ? { ...app, status: 'approved' as const }
+            : app
+        )
+      );
+      
+      // Refresh data from backend (this will happen in background)
+      fetchData(); // Don't await this - let it refresh in background
+      
+      // Enhanced success message with details
+      const successMessage = `✅ Application Approved Successfully!\n\n👤 Tenant: ${application.tenant_name}\n🏠 Assigned: ${assignedRoomName}\n💰 Monthly Rent: $${monthlyRent.toFixed(2)}\n🔒 Security Deposit: $${securityDeposit.toFixed(2)}\n\n🎯 Next Steps:\n• Lease document created automatically\n• Send lease to tenant for signing\n• Coordinate move-in date\n• Collect security deposit`;
+      
+      alert(successMessage);
     } catch (error: any) {
         console.error('Approval error:', error);
+      
+      // Enhanced error handling for application approval
+      let errorTitle = '❌ Failed to Approve Application';
+      let errorDetails = '';
+      let suggestions = '';
+      
+      if (error.message.includes('400') || error.message.includes('Bad Request')) {
+        errorTitle = '❌ Invalid Approval Data';
+        if (error.message.includes('room') || error.message.includes('occupied')) {
+          errorDetails = 'The selected room is no longer available or already occupied.';
+          suggestions = '• Refresh the page to see current room availability\n• Try assigning a different room\n• Check if other applications already claimed this room';
+        } else if (error.message.includes('rent') || error.message.includes('budget')) {
+          errorDetails = 'The rent amount or budget information is invalid.';
+          suggestions = '• Check the monthly rent amount\n• Verify the security deposit calculation\n• Ensure the tenant\'s budget matches the property rent';
+        } else if (error.message.includes('date')) {
+          errorDetails = 'The lease start or end dates are invalid.';
+          suggestions = '• Ensure move-in date is in the future\n• Check date format is correct\n• Verify lease duration settings';
+        } else {
+          errorDetails = 'The approval information provided is not valid.';
+          suggestions = '• Check all required fields are filled\n• Verify tenant and property details\n• Try refreshing and submitting again';
+        }
+      } else if (error.message.includes('404')) {
+        errorTitle = '❌ Application or Property Not Found';
+        errorDetails = 'The application or associated property no longer exists.';
+        suggestions = '• The application may have been deleted\n• The property may have been removed\n• Refresh the page to see current applications';
+      } else if (error.message.includes('409') || error.message.includes('conflict')) {
+        errorTitle = '❌ Room Assignment Conflict';
+        errorDetails = 'Another application may have claimed this room first.';
+        suggestions = '• Refresh the page to see current room availability\n• Try approving with a different room\n• Check other pending applications for conflicts';
+      } else if (error.message.includes('500')) {
+        errorTitle = '❌ Server Error';
+        errorDetails = 'There was a problem processing the approval.';
+        suggestions = '• Please try again in a moment\n• If the issue persists, contact support\n• Check if all property data is properly configured';
+      } else {
       const errorMessage = error.response?.data?.detail || error.response?.data?.message || (error instanceof Error ? error.message : 'An unknown error occurred');
-      alert(`❌ Failed to approve application: ${errorMessage}\n\nPlease check the console for more details.`);
+        errorDetails = errorMessage;
+        suggestions = '• Refresh the page and try again\n• Check your internet connection\n• Verify all application data is complete';
+      }
+      
+      const fullMessage = `${errorTitle}\n\n${errorDetails}\n\n💡 Suggestions:\n${suggestions}`;
+      alert(fullMessage);
     }
   };
 
@@ -499,18 +553,61 @@ function Applications() {
 
     try {
       await apiClient.decideApplication(applicationId, decisionData);
-      fetchData(); // Refresh data
-      alert('Application rejected successfully.');
+      
+      // Optimistically update the application status in the UI immediately
+      setApplications(prevApps => 
+        prevApps.map(app => 
+          app.id === applicationId 
+            ? { ...app, status: 'rejected' as const }
+            : app
+        )
+      );
+      
+      // Refresh data from backend (this will happen in background)
+      fetchData(); // Don't await this - let it refresh in background
+      
+      // Enhanced success message for rejection
+      const application = applications.find(app => app.id === applicationId);
+      const successMessage = `✅ Application Rejected Successfully!\n\n👤 Tenant: ${application?.tenant_name || 'Unknown'}\n📝 Reason: ${reason}\n📅 Date: ${new Date().toLocaleDateString()}\n\n🎯 Next Steps:\n• Tenant will be notified automatically\n• Review other applications for this property\n• Document any follow-up actions needed`;
+      
+      alert(successMessage);
     } catch (error: any) {
       console.error('Rejection failed:', error);
       console.error('Full error object:', error.response);
       
-      // Check if this is a 404 error (endpoint not implemented) - fallback should handle this silently
+      // Enhanced error handling for application rejection
+      let errorTitle = '❌ Failed to Reject Application';
+      let errorDetails = '';
+      let suggestions = '';
+      
       if (error.message.includes('404') || error.message.includes('not found')) {
+        errorTitle = '❌ Application Not Found';
+        errorDetails = 'The application you\'re trying to reject no longer exists.';
+        suggestions = '• The application may have already been processed\n• Refresh the page to see current applications\n• Check if it was moved to a different status';
+        
         // The fallback mechanism in decideApplication should have handled this
         // If we're here, it means the fallback worked, so just refresh and show success
-        fetchData();
-        alert('Application rejected successfully.');
+        await fetchData();
+        const application = applications.find(app => app.id === applicationId);
+        const successMessage = `✅ Application Rejected Successfully!\n\n👤 Tenant: ${application?.tenant_name || 'Unknown'}\n📝 Reason: ${reason}\n📅 Date: ${new Date().toLocaleDateString()}`;
+        alert(successMessage);
+        return;
+      } else if (error.message.includes('400') || error.message.includes('Bad Request')) {
+        errorTitle = '❌ Invalid Rejection Data';
+        if (error.message.includes('reason') || error.message.includes('required')) {
+          errorDetails = 'The rejection reason is missing or invalid.';
+          suggestions = '• Provide a clear reason for rejection\n• Reason should be at least 10 characters\n• Be specific about why the application was rejected';
+        } else if (error.message.includes('status')) {
+          errorDetails = 'This application cannot be rejected in its current status.';
+          suggestions = '• Application may already be approved or rejected\n• Refresh the page to see current status\n• Check if application has progressed too far';
+        } else {
+          errorDetails = 'The rejection information provided is not valid.';
+          suggestions = '• Check the rejection reason format\n• Ensure the application is in a rejectable status\n• Try refreshing and submitting again';
+        }
+      } else if (error.message.includes('500')) {
+        errorTitle = '❌ Server Error';
+        errorDetails = 'There was a problem processing the rejection.';
+        suggestions = '• Please try again in a moment\n• If the issue persists, contact support\n• Check if the rejection was actually processed';
     } else {
         // Handle other types of errors
         let errorMessage = 'Unknown error occurred';
@@ -521,20 +618,64 @@ function Applications() {
           errorMessage = error.message;
         }
         
-        alert(`Failed to reject application: ${errorMessage}\n\nPlease check the console for more details.`);
+        errorDetails = errorMessage;
+        suggestions = '• Refresh the page and try again\n• Check your internet connection\n• Verify the application still exists';
       }
+      
+      const fullMessage = `${errorTitle}\n\n${errorDetails}\n\n💡 Suggestions:\n${suggestions}`;
+      alert(fullMessage);
     }
   };
 
   const handleDelete = async (applicationId: number) => {
+    // Confirmation before deletion
+    const application = applications.find(app => app.id === applicationId);
+    const confirmDelete = confirm(`⚠️ Delete Application?\n\nTenant: ${application?.tenant_name || 'Unknown'}\nProperty: ${application?.property_name || 'Unknown'}\n\nThis action cannot be undone. Are you sure?`);
+    
+    if (!confirmDelete) {
+      return;
+    }
+    
     try {
       await apiClient.deleteApplication(applicationId);
-      fetchData(); // Refresh data
-      alert('Application deleted successfully.');
+      await fetchData(); // Refresh data
+      
+      const successMessage = `✅ Application Deleted Successfully!\n\n👤 Tenant: ${application?.tenant_name || 'Unknown'}\n📅 Date: ${new Date().toLocaleDateString()}\n\n🎯 Next Steps:\n• Application removed from system\n• Consider informing the tenant if necessary\n• Review remaining applications for this property`;
+      
+      alert(successMessage);
     } catch (error: any) {
       console.error('Delete failed:', error);
+      
+      // Enhanced error handling for application deletion
+      let errorTitle = '❌ Failed to Delete Application';
+      let errorDetails = '';
+      let suggestions = '';
+      
+      if (error.message.includes('404') || error.message.includes('not found')) {
+        errorTitle = '❌ Application Not Found';
+        errorDetails = 'The application you\'re trying to delete no longer exists.';
+        suggestions = '• The application may have already been deleted\n• Refresh the page to see current applications\n• No further action needed';
+        await fetchData(); // Refresh to show current state
+      } else if (error.message.includes('400') || error.message.includes('Bad Request')) {
+        errorTitle = '❌ Cannot Delete Application';
+        errorDetails = 'This application cannot be deleted in its current status.';
+        suggestions = '• Applications with active leases cannot be deleted\n• Consider rejecting instead of deleting\n• Check if application has progressed too far';
+      } else if (error.message.includes('403') || error.message.includes('permission')) {
+        errorTitle = '❌ Permission Denied';
+        errorDetails = 'You don\'t have permission to delete this application.';
+        suggestions = '• Contact your administrator for access\n• Check if you\'re logged in as the correct user\n• Some applications may only be deletable by managers';
+      } else if (error.message.includes('500')) {
+        errorTitle = '❌ Server Error';
+        errorDetails = 'There was a problem deleting the application.';
+        suggestions = '• Please try again in a moment\n• If the issue persists, contact support\n• Check if the deletion was actually processed';
+      } else {
       const errorMessage = error.response?.data?.detail || error.response?.data?.message || error.message || 'Failed to delete application';
-      alert(`Failed to delete application: ${errorMessage}`);
+        errorDetails = errorMessage;
+        suggestions = '• Refresh the page and try again\n• Check your internet connection\n• Verify the application still exists';
+      }
+      
+      const fullMessage = `${errorTitle}\n\n${errorDetails}\n\n💡 Suggestions:\n${suggestions}`;
+      alert(fullMessage);
     }
   };
 
@@ -555,15 +696,30 @@ function Applications() {
   const handleRoomAssignment = async (applicationId: number, roomId: number, roomInfo: unknown) => {
     try {
       await apiClient.assignRoom(applicationId, { room_id: roomId });
-      fetchData(); // Refresh data
+      
+      // Optimistically update the application status in the UI immediately
+      setApplications(prevApps => 
+        prevApps.map(app => 
+          app.id === applicationId 
+            ? { ...app, status: 'room_assigned' as const, room: roomId }
+            : app
+        )
+      );
+      
+      // Close the modal
+      setIsRoomAssignmentModalOpen(false);
+      setSelectedApplicationForAssignment(null);
+      
+      // Refresh data from backend (this will happen in background)
+      fetchData(); // Don't await this - let it refresh in background
+      
       alert('✅ Room assigned successfully!');
     } catch (error: any) {
       console.error('Room assignment error:', error);
       const errorMessage = error.message || 'Failed to assign room. Please try again.';
       alert(`❌ ${errorMessage}`);
-    } finally {
-    setIsRoomAssignmentModalOpen(false);
-    setSelectedApplicationForAssignment(null);
+      
+      // Only close modal on success - keep it open for error to allow retry
     }
   };
 
@@ -574,7 +730,7 @@ function Applications() {
   };
 
   const handleLeaseGenerated = (leaseData: { applicationId: number; tenantName: string; roomName: string; leaseStartDate: string; leaseEndDate: string }) => {
-    // Update application status to lease_created
+    // Update application status to lease_created (this is called AFTER successful API response)
     setApplications(prevApps => 
       prevApps.map(app => 
         app.id === leaseData.applicationId 
@@ -583,8 +739,17 @@ function Applications() {
       )
     );
     
-    // Show success message
-    alert(`✅ Lease generated successfully!\n\nTenant: ${leaseData.tenantName}\nRoom: ${leaseData.roomName}\nLease Period: ${leaseData.leaseStartDate} to ${leaseData.leaseEndDate}`);
+    // Refresh data to make sure we have the latest backend state
+    fetchData();
+    
+    // Enhanced success message with clear next steps
+    const successMessage = `✅ Lease Generated Successfully!\n\n📋 Lease Details:\n• Tenant: ${leaseData.tenantName}\n• Room: ${leaseData.roomName}\n• Period: ${leaseData.leaseStartDate} to ${leaseData.leaseEndDate}\n\n🎯 Next Steps:\n• Go to "Leases" page to activate the lease\n• The lease is currently in "Draft" status\n• Click "Activate" to make it active\n• Then tenant can move in\n\n📍 Navigate: Leases → Draft Leases → Click "Activate"`;
+    
+    const goToLeases = confirm(`${successMessage}\n\n🚀 Would you like to go to the Leases page now?`);
+    
+    if (goToLeases) {
+      router.push('/leases');
+    }
   };
 
   // Filter applications by status (used for metrics only now)
@@ -647,7 +812,7 @@ function Applications() {
 
   const getLeaseButtonTooltip = (app: Application) => {
     const availableRooms = rooms.filter(room => 
-      room.property_ref === app.property_ref && room.is_vacant
+      room.property_ref === app.property_ref && room.is_available
     );
     
     if (availableRooms.length === 0) {
@@ -657,40 +822,28 @@ function Applications() {
   };
 
   const handleGenerateLease = (app: Application) => {
-    // Allow lease generation for viewing_completed and room_assigned statuses
+    // Enhanced validation for lease generation
     if (app.status !== 'room_assigned' && app.status !== 'viewing_completed' && app.status !== 'processing') {
-      alert(`Lease can only be generated after viewing is completed. Current status: ${app.status}`);
+      const statusMessages: { [key: string]: string } = {
+        'pending': 'Application must be approved before generating lease.',
+        'approved': 'Please complete or skip viewing before generating lease.',
+        'viewing_scheduled': 'Please complete the scheduled viewing first.',
+        'rejected': 'Cannot generate lease for rejected applications.',
+        'lease_ready': 'Lease is ready to be finalized.',
+        'lease_created': 'Lease has already been generated for this application.',
+        'lease_signed': 'Lease is already signed for this application.',
+        'moved_in': 'Tenant has already moved in.',
+        'active': 'Lease is already active for this tenant.'
+      };
+      
+      const message = statusMessages[app.status] || `Lease cannot be generated from status: ${app.status}`;
+      
+      alert(`❌ Cannot Generate Lease\n\n${message}\n\n💡 Current Status: ${app.status.replace('_', ' ').toUpperCase()}\n\nPlease follow the application workflow in order.`);
       return;
     }
 
-    // Find the room for this application
-    let assignedRoom = null;
-    
-    // First try to find by app.room (if already assigned)
-    if (app.room) {
-      assignedRoom = rooms.find(room => room.id === app.room);
-    }
-    
-    // If no room found, try to find by property and availability
-    if (!assignedRoom && app.property_ref) {
-      const propertyRooms = rooms.filter(room => room.property_ref === app.property_ref);
-      
-      // Try to find a vacant room in the property
-      assignedRoom = propertyRooms.find(room => room.is_vacant);
-      
-      // If no vacant room, use the first room (for whole property rentals)
-      if (!assignedRoom && propertyRooms.length > 0) {
-        assignedRoom = propertyRooms[0];
-      }
-    }
-
-    if (!assignedRoom) {
-      alert('Error: No suitable room could be found for this application. Please check the property and room availability.');
-      return;
-    }
-
+    // Always open the modal - let the modal handle room selection and validation
     setSelectedApplicationForLease(app);
-    setSelectedRoomForLease(assignedRoom);
     setIsLeaseGenerationOpen(true);
   };
 
@@ -712,20 +865,10 @@ function Applications() {
         setSelectedViewingForCompletion(viewing);
         setIsViewingCompletionOpen(true);
       } else {
-        // If no viewing data found in app object, check localStorage workaround
-        const tempViewings = JSON.parse(localStorage.getItem('temp_viewings') || '[]');
-        const appViewing = tempViewings.find((v: any) => v.application === app.id);
-        
-        if (appViewing) {
-          setSelectedApplicationForViewing(app);
-          setSelectedViewingForCompletion(appViewing);
-          setIsViewingCompletionOpen(true);
-        } else {
-          // If still no viewing found, allow completion anyway
+        // If no viewing data found, allow completion anyway
           setSelectedApplicationForViewing(app);
           setSelectedViewingForCompletion(null);
           setIsViewingCompletionOpen(true);
-        }
       }
     } else {
       alert(`Cannot setup viewing for application in ${app.status} status`);
@@ -747,65 +890,72 @@ function Applications() {
       // Call the API to schedule viewing
       const schedulingResult = await apiClient.scheduleViewing(selectedApplicationForViewing.id, viewingData);
       
-      // Only refresh data if the API call was successful
-      await fetchData(); // Refresh data
+      // Optimistically update the application status in the UI immediately
+      setApplications(prevApps => 
+        prevApps.map(app => 
+          app.id === selectedApplicationForViewing.id 
+            ? { ...app, status: 'viewing_scheduled' as const }
+            : app
+        )
+      );
       
-      // Show success message
-      alert(`✅ Viewing scheduled successfully!\n\nDate: ${viewingData.scheduled_date}\nTime: ${viewingData.scheduled_time}\nContact: ${viewingData.contact_person}\n\nThe viewing has been recorded. You can now complete the viewing from the kanban board.`);
+      // Close the modal
+      setIsViewingSchedulerOpen(false);
+      setSelectedApplicationForViewing(null);
+      
+      // Refresh data from backend (this will happen in background)
+      fetchData(); // Don't await this - let it refresh in background
+      
+      // Enhanced success message with next steps
+      const successMessage = `✅ Viewing Scheduled Successfully!\n\n📅 Details:\n• Date: ${viewingData.scheduled_date}\n• Time: ${viewingData.scheduled_time}\n• Contact: ${viewingData.contact_person}\n• Notes: ${viewingData.viewing_notes || 'None'}\n\n🎯 Next Steps:\n• The tenant will be notified about the viewing\n• Complete the viewing after it takes place\n• Use "Complete Viewing" button when done\n• Or "Reschedule" if changes are needed`;
+      alert(successMessage);
       
     } catch (error: any) {
       console.error('Schedule viewing error:', error);
       
-      // Check if this is a 404 error (endpoint not implemented)
-      if (error.message.includes('404') || error.message.includes('not found')) {
-        console.log('Backend endpoint not available, using fallback method...');
-        
-        try {
-          // Fallback: Update application status and store viewing data locally
-          await apiClient.updateApplication(selectedApplicationForViewing.id, {
-            status: 'viewing_scheduled'
-          } as any);
+      // Enhanced error handling with user-friendly messages
+      let errorTitle = '❌ Failed to Schedule Viewing';
+      let errorDetails = '';
+      let suggestions = '';
+      
+            if (error.message.includes('400') || error.message.includes('Bad Request')) {
+        errorTitle = '❌ Invalid Viewing Details';
+        if (error.message.includes('Can only schedule viewing for approved applications') || error.message.includes('Invalid viewing data: {\"error\":\"Can only schedule viewing for approved applications\"')) {
+          errorDetails = 'Only approved applications can have viewings scheduled.';
           
-          // Store viewing data in localStorage as a temporary workaround
-          const tempViewings = JSON.parse(localStorage.getItem('temp_viewings') || '[]');
-          const newViewing = {
-            id: Date.now(), // Temporary ID
-            application: selectedApplicationForViewing.id,
-            scheduled_date: viewingData.scheduled_date,
-            scheduled_time: viewingData.scheduled_time,
-            contact_person: viewingData.contact_person,
-            contact_phone: viewingData.contact_phone,
-            viewing_notes: viewingData.viewing_notes,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          };
-          tempViewings.push(newViewing);
-          localStorage.setItem('temp_viewings', JSON.stringify(tempViewings));
+          // Extract current status if available in error message  
+          const statusMatch = error.message.match(/"current_status":"([^"]+)"/);
+          const currentStatus = statusMatch ? statusMatch[1].replace('_', ' ') : 'unknown';
           
-          // Refresh data to show the updated status
-          await fetchData();
-          
-          // Show success message (no mention of fallback)
-          alert(`✅ Viewing scheduled successfully!\n\nDate: ${viewingData.scheduled_date}\nTime: ${viewingData.scheduled_time}\nContact: ${viewingData.contact_person}\n\nThe viewing has been recorded. You can now complete the viewing from the kanban board.`);
-          
-        } catch (fallbackError: any) {
-          console.error('Fallback method also failed:', fallbackError);
-          alert(`❌ Failed to schedule viewing: ${fallbackError.message}`);
-        }
+          if (currentStatus !== 'unknown') {
+            errorDetails += `\n\nCurrent status: ${currentStatus.toUpperCase()}`;
+          }
+          suggestions = '• Application must be in "approved" status first\n• Check if application was rejected or already processed\n• Refresh the page to see current status';
+        } else if (error.message.includes('date') || error.message.includes('time')) {
+          errorDetails = 'The viewing date or time is invalid.';
+          suggestions = '• Choose a future date and time\n• Ensure time format is correct (HH:MM)';
+        } else if (error.message.includes('already scheduled') || error.message.includes('viewing_scheduled')) {
+          errorDetails = 'This application already has a viewing scheduled.';
+          suggestions = '• Use "Reschedule" instead of "Schedule Viewing"\n• Or complete the existing viewing first';
       } else {
-        // Handle other types of errors
-        let errorMessage = 'Failed to schedule viewing';
-        
-        if (error.message.includes('400')) {
-          errorMessage = `❌ Invalid Data: ${error.message}\n\nPlease check the form data and try again.`;
+          errorDetails = 'The viewing information provided is not valid.';
+          suggestions = '• Check all required fields are filled\n• Verify contact information format';
+        }
+      } else if (error.message.includes('404')) {
+        errorTitle = '❌ Application Not Found';
+        errorDetails = 'The application you\'re trying to schedule viewing for no longer exists.';
+        suggestions = '• The application may have been deleted\n• Refresh the page to see current applications';
         } else if (error.message.includes('500')) {
-          errorMessage = `❌ Server Error: ${error.message}\n\nPlease try again or contact support.`;
+        errorTitle = '❌ Server Error';
+        errorDetails = 'There was a problem processing your viewing request.';
+        suggestions = '• Please try again in a moment\n• If the issue persists, contact support';
         } else {
-          errorMessage = `❌ ${error.message}`;
+        errorDetails = error.message || 'An unexpected error occurred.';
+        suggestions = '• Refresh the page and try again\n• Check your internet connection';
         }
         
-        alert(errorMessage);
-      }
+      const fullMessage = `${errorTitle}\n\n${errorDetails}\n\n💡 Suggestions:\n${suggestions}`;
+      alert(fullMessage);
       
     } finally {
       // Always close the modal regardless of success or failure
@@ -826,93 +976,98 @@ function Applications() {
       // Call the API to complete viewing
       await apiClient.completeViewing(selectedApplicationForViewing.id, completionData);
       
-      // Only refresh data if the API call was successful
-      await fetchData(); // Refresh data
+      // Optimistically update the application status in the UI immediately
+      setApplications(prevApps => 
+        prevApps.map(app => 
+          app.id === selectedApplicationForViewing.id 
+            ? { ...app, status: 'viewing_completed' as const }
+            : app
+        )
+      );
       
-      // Show success message
-      alert(`✅ Viewing completed successfully!\n\nOutcome: ${completionData.outcome}\nNext Action: ${completionData.next_action || 'Proceed with application'}\n\nThe application is now ready for the next stage.`);
+      // Close the modal
+      setIsViewingCompletionOpen(false);
+      setSelectedApplicationForViewing(null);
+      setSelectedViewingForCompletion(null);
       
-    } catch (error: any) {
+      // Refresh data from backend (this will happen in background)
+      fetchData(); // Don't await this - let it refresh in background
+      
+      // Enhanced success message based on outcome
+      let nextSteps = '';
+      let outcomeIcon = '';
+      
+      switch(completionData.outcome) {
+        case 'positive':
+          outcomeIcon = '👍';
+          nextSteps = '• Generate lease for this tenant\n• Assign room and finalize terms\n• Send lease for signing';
+          break;
+        case 'negative':
+          outcomeIcon = '👎';
+          nextSteps = '• Application will be rejected automatically\n• Consider other applications for this property\n• Tenant will be notified';
+          break;
+        case 'neutral':
+          outcomeIcon = '🤔';
+          nextSteps = '• Review feedback and make decision\n• Additional evaluation may be needed\n• Consider scheduling follow-up';
+          break;
+      }
+      
+      const successMessage = `✅ Viewing Completed Successfully!\n\n${outcomeIcon} Outcome: ${completionData.outcome.toUpperCase()}\n\n📝 Feedback:\n${completionData.tenant_feedback ? `• Tenant: "${completionData.tenant_feedback}"` : '• No tenant feedback recorded'}\n${completionData.landlord_notes ? `• Your notes: "${completionData.landlord_notes}"` : '• No landlord notes recorded'}\n\n🎯 Next Steps:\n${nextSteps}`;
+      
+      alert(successMessage);
+      
+        } catch (error: any) {
       console.error('Complete viewing error:', error);
       
-      // Check if this is a 404 error (endpoint not implemented)
-      if (error.message.includes('404') || error.message.includes('not found')) {
-        console.log('Backend endpoint not available, using fallback method...');
-        
-        try {
-          // Fallback: Update application status and store completion data locally
-          await apiClient.updateApplication(selectedApplicationForViewing.id, {
-            status: 'viewing_completed'
-          } as any);
-          
-          // Update viewing data in localStorage with completion information
-          const tempViewings = JSON.parse(localStorage.getItem('temp_viewings') || '[]');
-          const viewingIndex = tempViewings.findIndex((v: any) => v.application === selectedApplicationForViewing.id);
-          
-          if (viewingIndex !== -1) {
-            // Update existing viewing with completion data
-            tempViewings[viewingIndex] = {
-              ...tempViewings[viewingIndex],
-              completed_at: new Date().toISOString(),
-              outcome: completionData.outcome,
-              tenant_feedback: completionData.tenant_feedback || '',
-              landlord_notes: completionData.landlord_notes || '',
-              next_action: completionData.next_action || '',
-              updated_at: new Date().toISOString()
-            };
-          } else {
-            // Create new viewing completion record if not found
-            const newViewingCompletion = {
-              id: Date.now(), // Temporary ID
-              application: selectedApplicationForViewing.id,
-              completed_at: new Date().toISOString(),
-              outcome: completionData.outcome,
-              tenant_feedback: completionData.tenant_feedback || '',
-              landlord_notes: completionData.landlord_notes || '',
-              next_action: completionData.next_action || '',
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            };
-            tempViewings.push(newViewingCompletion);
-          }
-          
-          localStorage.setItem('temp_viewings', JSON.stringify(tempViewings));
-          
-          // Refresh data to show the updated status
-          await fetchData();
-          
-          // Show success message with note about fallback
-          alert(`✅ Viewing completed successfully!\n\nOutcome: ${completionData.outcome}\nNext Action: ${completionData.next_action || 'Proceed with application'}\n\nThe application is now ready for the next stage.`);
-          
-        } catch (fallbackError: any) {
-          console.error('Fallback method also failed:', fallbackError);
-          alert(`❌ Failed to complete viewing: ${fallbackError.message}`);
-        }
-      } else {
-        // Handle other types of errors
-        let errorMessage = 'Failed to complete viewing';
-        
-        if (error.message.includes('400')) {
-          errorMessage = `❌ Invalid Data: ${error.message}\n\nPlease check the form data and try again.`;
-        } else if (error.message.includes('500')) {
-          errorMessage = `❌ Server Error: ${error.message}\n\nPlease try again or contact support.`;
+      // Enhanced error handling for viewing completion
+      let errorTitle = '❌ Failed to Complete Viewing';
+      let errorDetails = '';
+      let suggestions = '';
+      
+      if (error.message.includes('400') || error.message.includes('Bad Request')) {
+        errorTitle = '❌ Cannot Complete Viewing';
+        if (error.message.includes('No active viewing found for this application') || error.message.includes('Invalid completion data: {\"error\":\"No active viewing found for this application\"')) {
+          errorDetails = 'No active viewing was found for this application.';
+          suggestions = '• Schedule a viewing first before trying to complete it\n• Or use "Skip Viewing" if no viewing is needed\n• Check if viewing was already completed or canceled';
+        } else if (error.message.includes('already completed')) {
+          errorDetails = 'This viewing has already been completed.';
+          suggestions = '• Refresh the page to see current status\n• The application should be ready for lease generation';
+        } else if (error.message.includes('viewing_scheduled')) {
+          errorDetails = 'The application must have a scheduled viewing to complete.';
+          suggestions = '• Make sure viewing was scheduled first\n• Check application status';
         } else {
-          errorMessage = `❌ ${error.message}`;
+          errorDetails = 'The viewing completion data is invalid.';
+          suggestions = '• Ensure outcome is selected (Positive/Negative/Neutral)\n• Check all required fields';
+        }
+      } else if (error.message.includes('404')) {
+        errorTitle = '❌ Application Not Found';
+        errorDetails = 'The application or viewing no longer exists.';
+        suggestions = '• The application may have been deleted\n• Refresh the page to see current applications';
+        } else if (error.message.includes('500')) {
+        errorTitle = '❌ Server Error';
+        errorDetails = 'There was a problem completing the viewing.';
+        suggestions = '• Please try again in a moment\n• If the issue persists, contact support';
+        } else {
+        errorDetails = error.message || 'An unexpected error occurred while completing the viewing.';
+        suggestions = '• Refresh the page and try again\n• Check your internet connection';
         }
         
-        alert(errorMessage);
-      }
+      const fullMessage = `${errorTitle}\n\n${errorDetails}\n\n💡 Suggestions:\n${suggestions}`;
+      alert(fullMessage);
     }
   };
 
   const handleNewLeaseGeneration = async (applicationId: number) => {
-    try {
-      await apiClient.generateLease(applicationId);
-      fetchData(); // Refresh data
-      alert('Lease generated successfully!');
-    } catch (error: any) {
-      alert(`Failed to generate lease: ${error.message}`);
+    // Find the application to open the lease generation modal
+    const application = applications.find(app => app.id === applicationId);
+    if (!application) {
+      alert('❌ Application not found. Please refresh the page.');
+      return;
     }
+    
+    // Open the lease generation modal for property and room selection
+    setSelectedApplicationForLease(application);
+    setIsLeaseGenerationOpen(true);
   };
 
   const handleActivateLease = async (app: Application) => {
@@ -954,65 +1109,58 @@ function Applications() {
       // Call the API to skip viewing
       await apiClient.skipViewing(applicationId);
       
-      // Only refresh data if the API call was successful
-      await fetchData(); // Refresh data
+      // Optimistically update the application status in the UI immediately
+      setApplications(prevApps => 
+        prevApps.map(app => 
+          app.id === applicationId 
+            ? { ...app, status: 'viewing_completed' as const }
+            : app
+        )
+      );
       
-      // Show success message
-      alert('✅ Viewing skipped! Application moved to next stage.');
+      // Refresh data from backend (this will happen in background)
+      fetchData(); // Don't await this - let it refresh in background
+      
+      // Enhanced success message for skip viewing
+      const successMessage = `✅ Viewing Skipped Successfully!\n\n⏭️ Status Update:\n• Application moved to "Viewing Completed" stage\n• No viewing record created\n• Ready for lease generation\n\n🎯 Next Steps:\n• Review application details\n• Generate lease document\n• Assign room and finalize terms\n• Send lease to tenant for signing`;
+      
+      alert(successMessage);
       
     } catch (error: any) {
       console.error('Skip viewing error:', error);
       
-      // Check if this is a 404 error (endpoint not implemented)
-      if (error.message.includes('404') || error.message.includes('not found')) {
-        console.log('Backend endpoint not available, using fallback method...');
-        
-        try {
-          // Fallback: Update application status directly to viewing_completed
-          await apiClient.updateApplication(applicationId, {
-            status: 'viewing_completed'
-          } as any);
-          
-          // Store skip viewing record in localStorage
-          const tempViewings = JSON.parse(localStorage.getItem('temp_viewings') || '[]');
-          const skipViewingRecord = {
-            id: Date.now(), // Temporary ID
-            application: applicationId,
-            skipped_at: new Date().toISOString(),
-            outcome: 'skipped',
-            tenant_feedback: '',
-            landlord_notes: 'Viewing was skipped by landlord/manager',
-            next_action: 'Proceed to room assignment',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          };
-          tempViewings.push(skipViewingRecord);
-          localStorage.setItem('temp_viewings', JSON.stringify(tempViewings));
-          
-          // Refresh data to show the updated status
-          await fetchData();
-          
-          // Show success message (no mention of fallback)
-          alert('✅ Viewing skipped! Application moved to next stage.');
-          
-        } catch (fallbackError: any) {
-          console.error('Fallback method also failed:', fallbackError);
-          alert(`❌ Failed to skip viewing: ${fallbackError.message}`);
-        }
+      // Enhanced error handling for skip viewing
+      let errorTitle = '❌ Failed to Skip Viewing';
+      let errorDetails = '';
+      let suggestions = '';
+      
+            if (error.message.includes('400') || error.message.includes('Bad Request')) {
+        errorTitle = '❌ Cannot Skip Viewing';
+        if (error.message.includes('Only approved applications can skip viewing') || error.message.includes('Cannot skip viewing: Only approved applications can skip viewing')) {
+          errorDetails = 'Only approved applications can skip viewing.';
+          suggestions = '• The application must be in "approved" status\n• Check if application was rejected or already processed\n• Refresh the page to see current status';
+        } else if (error.message.includes('already completed')) {
+          errorDetails = 'This application has already progressed beyond the viewing stage.';
+          suggestions = '• The viewing may already be completed or skipped\n• Check current application status\n• Proceed to lease generation if ready';
       } else {
-        // Handle other types of errors
-        let errorMessage = 'Failed to skip viewing';
-        
-        if (error.message.includes('400')) {
-          errorMessage = `❌ Invalid Data: ${error.message}\n\nPlease check the application status and try again.`;
+          errorDetails = 'The application is not in the correct state to skip viewing.';
+          suggestions = '• Application must be approved first\n• Check application status and try again';
+        }
+      } else if (error.message.includes('404')) {
+        errorTitle = '❌ Application Not Found';
+        errorDetails = 'The application no longer exists.';
+        suggestions = '• The application may have been deleted\n• Refresh the page to see current applications';
         } else if (error.message.includes('500')) {
-          errorMessage = `❌ Server Error: ${error.message}\n\nPlease try again or contact support.`;
+        errorTitle = '❌ Server Error';
+        errorDetails = 'There was a problem skipping the viewing.';
+        suggestions = '• Please try again in a moment\n• If the issue persists, contact support';
         } else {
-          errorMessage = `❌ ${error.message}`;
+        errorDetails = error.message || 'An unexpected error occurred while skipping viewing.';
+        suggestions = '• Refresh the page and try again\n• Check your internet connection';
         }
         
-        alert(errorMessage);
-      }
+      const fullMessage = `${errorTitle}\n\n${errorDetails}\n\n💡 Suggestions:\n${suggestions}`;
+      alert(fullMessage);
     }
   };
 
@@ -1100,6 +1248,38 @@ function Applications() {
                 </svg>
                 Room Management
               </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Workflow Guide Banner */}
+        <div style={{
+          backgroundColor: '#f0f9ff',
+          border: '1px solid #0ea5e9',
+          borderRadius: '8px',
+          padding: '16px',
+          marginBottom: '24px',
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: '12px'
+        }}>
+          <div style={{ color: '#0ea5e9', fontSize: '20px' }}>ℹ️</div>
+          <div>
+            <h4 style={{ margin: '0 0 8px 0', color: '#0f172a', fontSize: '16px', fontWeight: '600' }}>
+              Application Workflow Guide
+            </h4>
+            <p style={{ margin: '0 0 8px 0', color: '#475569', fontSize: '14px', lineHeight: '1.5' }}>
+              <strong>Step 1:</strong> Review and shortlist applications →
+              <strong>Step 2:</strong> Schedule or skip viewing →
+              <strong>Step 3:</strong> Complete viewing (if scheduled) →
+              <strong>Step 4:</strong> Generate lease
+            </p>
+            <div style={{ display: 'flex', gap: '16px', fontSize: '12px', color: '#64748b' }}>
+              <span>🔵 Pending Review</span>
+              <span>🟡 Shortlisted</span>
+              <span>🟠 Viewing Process</span>
+              <span>🟢 Ready for Lease</span>
+              <span>🏠 Active Tenant</span>
             </div>
           </div>
         </div>
@@ -1262,7 +1442,7 @@ function Applications() {
       {isConflictModalOpen && (
         <ConflictResolutionModal
           conflictingApplications={conflictingApplications}
-          availableRooms={rooms.filter(room => room.is_vacant)}
+          availableRooms={rooms.filter(room => room.is_available)}
           properties={properties}
           onClose={() => setIsConflictModalOpen(false)}
           onResolveConflict={handleConflictResolution}
@@ -1272,7 +1452,7 @@ function Applications() {
       {isRoomAssignmentModalOpen && selectedApplicationForAssignment && (
         <RoomAssignmentModal
           application={selectedApplicationForAssignment}
-          availableRooms={rooms.filter(room => room.is_vacant)}
+          availableRooms={rooms.filter(room => room.is_available)}
           properties={properties}
           onClose={() => {
             setIsRoomAssignmentModalOpen(false);
@@ -1311,11 +1491,10 @@ function Applications() {
         />
       )}
 
-      {isLeaseGenerationOpen && selectedApplicationForLease && selectedRoomForLease && (
+      {isLeaseGenerationOpen && selectedApplicationForLease && (
         <ImprovedLeaseGenerationModal
           isOpen={isLeaseGenerationOpen}
           application={selectedApplicationForLease}
-          room={selectedRoomForLease}
           properties={properties}
           rooms={rooms}
           onClose={() => {
@@ -1345,7 +1524,7 @@ function Applications() {
           application={selectedApplicationForApproval}
           property={selectedPropertyForApproval}
           availableRooms={selectedPropertyForApproval ? rooms.filter(room => 
-            room.property_ref === selectedPropertyForApproval.id && room.is_vacant
+            room.property_ref === selectedPropertyForApproval.id && room.is_available
           ) : []}
           allProperties={properties}
           allRooms={rooms}

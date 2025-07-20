@@ -81,8 +81,10 @@ const calculatePerRoomRevenue = (
   );
 
   const monthlyRevenue = roomLeases.reduce((sum, lease) => sum + lease.monthly_rent, 0);
-  const occupiedUnits = roomLeases.length;
+  
+  // Use backend-calculated occupancy data instead of counting leases
   const totalUnits = rooms.length || property.total_rooms || 1;
+  const occupiedUnits = rooms.reduce((sum, room) => sum + (room.current_occupancy || 0), 0);
   
   const revenueBreakdown = roomLeases.map(lease => {
     const room = rooms.find(r => r.id === lease.room);

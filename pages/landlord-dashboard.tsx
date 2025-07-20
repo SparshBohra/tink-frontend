@@ -6,7 +6,7 @@ import DashboardLayout from '../components/DashboardLayout';
 import { withAuth } from '../lib/auth-context';
 import { useAuth } from '../lib/auth-context';
 import ApplicationDetailModal from '../components/ApplicationDetailModal';
-import { Application, Property, Room, DashboardStats } from '../lib/types';
+import { Application, Property, Room, DashboardStats, Manager } from '../lib/types';
 import { apiClient } from '../lib/api';
 
 // Icon Components
@@ -88,6 +88,14 @@ function LandlordDashboard() {
   const [currentMessage, setCurrentMessage] = useState<{ text: string; icon: React.ReactElement | null }>({ text: '', icon: null });
   const [isUserInteracting, setIsUserInteracting] = useState(false);
   
+  // Real data state
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [applications, setApplications] = useState<Application[]>([]);
+  const [managers, setManagers] = useState<Manager[]>([]);
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [dataLoading, setDataLoading] = useState(true);
+  const [dataError, setDataError] = useState<string | null>(null);
+  
   // Application modal state
   const [isApplicationDetailOpen, setIsApplicationDetailOpen] = useState(false);
   const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
@@ -120,6 +128,44 @@ function LandlordDashboard() {
 
     if (user) {
       fetchDashboardStats();
+    }
+  }, [user]);
+
+  // Fetch real data
+  useEffect(() => {
+    const fetchRealData = async () => {
+      try {
+        setDataLoading(true);
+        setDataError(null);
+        
+        // Fetch all data in parallel
+        const [propertiesResponse, applicationsResponse, managersResponse, roomsResponse] = await Promise.all([
+          apiClient.getProperties(),
+          apiClient.getApplications({ status: 'pending' }), // Only get pending applications
+          apiClient.getManagers(),
+          apiClient.getRooms()
+        ]);
+        
+        setProperties(propertiesResponse.results || []);
+        setApplications(applicationsResponse.results || []);
+        setManagers(managersResponse.results || []);
+        setRooms(roomsResponse.results || []);
+        
+      } catch (error: any) {
+        console.error('Failed to fetch dashboard data:', error);
+        setDataError('Failed to load dashboard data');
+        // Set fallback empty arrays
+        setProperties([]);
+        setApplications([]);
+        setManagers([]);
+        setRooms([]);
+      } finally {
+        setDataLoading(false);
+      }
+    };
+
+    if (user) {
+      fetchRealData();
     }
   }, [user]);
   
@@ -390,276 +436,6 @@ function LandlordDashboard() {
       link: '/stripe-connect'
     }
   ];
-
-  const properties = [
-    {
-      id: 1,
-      name: 'University District House',
-      location: 'Downtown District',
-      status: 'Active',
-      occupancy: '8/8',
-      occupancyPercent: 100,
-      revenue: 7000,
-      revenueChange: '+5%',
-      tasks: 2,
-      initials: 'UD',
-      color: '#10b981'
-    },
-    {
-      id: 2,
-      name: 'Sunset Boulevard Apartments',
-      location: 'Downtown District',
-      status: 'Active',
-      occupancy: '15/16',
-      occupancyPercent: 94,
-      revenue: 12800,
-      revenueChange: '+5%',
-      tasks: 1,
-      initials: 'SB',
-      color: '#8b5cf6'
-    },
-    {
-      id: 3,
-      name: 'Riverside Student Housing',
-      location: 'Downtown District',
-      status: 'Active',
-      occupancy: '20/22',
-      occupancyPercent: 91,
-      revenue: 18500,
-      revenueChange: '+5%',
-      tasks: 4,
-      initials: 'RS',
-      color: '#f97316'
-    },
-    {
-      id: 4,
-      name: 'Oak Street Residences',
-      location: 'Downtown District',
-      status: 'Maintenance',
-      occupancy: '6/10',
-      occupancyPercent: 60,
-      revenue: 5200,
-      revenueChange: '+5%',
-      tasks: 8,
-      initials: 'OS',
-      color: '#dc2626'
-    },
-    {
-      id: 5,
-      name: 'Maple Street Commons',
-      location: 'Downtown District',
-      status: 'Active',
-      occupancy: '18/20',
-      occupancyPercent: 90,
-      revenue: 16200,
-      revenueChange: '+5%',
-      tasks: 2,
-      initials: 'MS',
-      color: '#6366f1'
-    }
-  ];
-
-  const recentApplications: Application[] = [
-    {
-      id: 1,
-      tenant_name: 'John Smith',
-      tenant_email: 'john.smith@email.com',
-      tenant_phone: '+1-555-0101',
-      property_ref: 1,
-      desired_move_in_date: '2024-01-15',
-      rent_budget: 1200,
-      status: 'pending',
-      priority_score: 85,
-      days_pending: 2,
-      created_at: '2024-01-10T10:00:00Z',
-      updated_at: '2024-01-10T10:00:00Z',
-      decision_date: null,
-      decision_notes: null,
-      start_date: null,
-      end_date: null,
-      monthly_rent: null,
-      security_deposit: null,
-      has_conflicts: false,
-      conflicting_applications: [],
-      recommended_rooms: [1, 2],
-      applicant_initials: 'JS',
-      appliedDate: '2 days ago',
-      property_name: 'Downtown Coliving Hub'
-    },
-    {
-      id: 2,
-      tenant_name: 'Maria Johnson',
-      tenant_email: 'maria.johnson@email.com',
-      tenant_phone: '+1-555-0102',
-      property_ref: 2,
-      desired_move_in_date: '2024-01-16',
-      rent_budget: 1100,
-      status: 'pending',
-      priority_score: 92,
-      days_pending: 1,
-      created_at: '2024-01-11T14:30:00Z',
-      updated_at: '2024-01-11T14:30:00Z',
-      decision_date: null,
-      decision_notes: null,
-      start_date: null,
-      end_date: null,
-      monthly_rent: null,
-      security_deposit: null,
-      has_conflicts: false,
-      conflicting_applications: [],
-      recommended_rooms: [3, 4],
-      applicant_initials: 'MJ',
-      appliedDate: '1 day ago',
-      property_name: 'University District House'
-    },
-    {
-      id: 3,
-      tenant_name: 'Robert Brown',
-      tenant_email: 'robert.brown@email.com',
-      tenant_phone: '+1-555-0103',
-      property_ref: 3,
-      desired_move_in_date: '2024-01-12',
-      rent_budget: 1300,
-      status: 'approved',
-      priority_score: 78,
-      days_pending: 5,
-      created_at: '2024-01-07T09:15:00Z',
-      updated_at: '2024-01-09T16:20:00Z',
-      decision_date: '2024-01-09T16:20:00Z',
-      decision_notes: 'Excellent credit score and references',
-      start_date: null,
-      end_date: null,
-      monthly_rent: null,
-      security_deposit: null,
-      has_conflicts: false,
-      conflicting_applications: [],
-      recommended_rooms: [5, 6],
-      applicant_initials: 'RB',
-      appliedDate: '5 days ago',
-      property_name: 'Sunset Boulevard Apartments'
-    },
-    {
-      id: 4,
-      tenant_name: 'Sarah Wilson',
-      tenant_email: 'sarah.wilson@email.com',
-      tenant_phone: '+1-555-0104',
-      property_ref: 1,
-      desired_move_in_date: '2024-01-20',
-      rent_budget: 1200,
-      status: 'lease_created',
-      priority_score: 88,
-      days_pending: 12,
-      created_at: '2023-12-31T11:00:00Z',
-      updated_at: '2024-01-08T14:30:00Z',
-      decision_date: '2024-01-02T10:15:00Z',
-      decision_notes: 'Good financial standing, assigned to Room A1',
-      start_date: '2024-01-20',
-      end_date: '2025-01-20',
-      monthly_rent: 1200,
-      security_deposit: 2400,
-      has_conflicts: false,
-      conflicting_applications: [],
-      recommended_rooms: [1],
-      applicant_initials: 'SW',
-      appliedDate: '12 days ago',
-      property_name: 'Downtown Coliving Hub'
-    },
-    {
-      id: 5,
-      tenant_name: 'Michael Chen',
-      tenant_email: 'michael.chen@email.com',
-      tenant_phone: '+1-555-0105',
-      property_ref: 2,
-      desired_move_in_date: '2024-01-01',
-      rent_budget: 1100,
-      status: 'moved_in',
-      priority_score: 95,
-      days_pending: 45,
-      created_at: '2023-11-28T09:00:00Z',
-      updated_at: '2024-01-01T12:00:00Z',
-      decision_date: '2023-12-01T15:20:00Z',
-      decision_notes: 'Excellent tenant, moved into Room B2',
-      start_date: '2024-01-01',
-      end_date: '2024-12-31',
-      monthly_rent: 1100,
-      security_deposit: 2200,
-      has_conflicts: false,
-      conflicting_applications: [],
-      recommended_rooms: [4],
-      applicant_initials: 'MC',
-      appliedDate: '45 days ago',
-      property_name: 'University District House'
-    },
-    {
-      id: 6,
-      tenant_name: 'Emily Davis',
-      tenant_email: 'emily.davis@email.com',
-      tenant_phone: '+1-555-0106',
-      property_ref: 3,
-      desired_move_in_date: '2024-01-25',
-      rent_budget: 1400,
-      status: 'rejected',
-      priority_score: 45,
-      days_pending: 8,
-      created_at: '2024-01-04T13:45:00Z',
-      updated_at: '2024-01-06T11:20:00Z',
-      decision_date: '2024-01-06T11:20:00Z',
-      decision_notes: 'Insufficient income verification',
-      start_date: null,
-      end_date: null,
-      monthly_rent: null,
-      security_deposit: null,
-      has_conflicts: false,
-      conflicting_applications: [],
-      recommended_rooms: [],
-      applicant_initials: 'ED',
-      appliedDate: '8 days ago',
-      property_name: 'Sunset Boulevard Apartments'
-    }
-  ];
-
-  const teamMembers = [
-    {
-      id: 1,
-      name: 'Emily Rodriguez',
-      initials: 'ER',
-      role: 'Property Manager',
-      properties: ['University District House', 'Oak Street Residences'],
-      status: 'Active',
-      joinedDate: '2023-01-15',
-      performance: 'Excellent'
-    },
-    {
-      id: 2,
-      name: 'Michael Chen',
-      initials: 'MC',
-      role: 'Property Manager',
-      properties: ['Sunset Boulevard Apartments', 'Maple Street Commons'],
-      status: 'Active',
-      joinedDate: '2022-08-20',
-      performance: 'Good'
-    },
-    {
-      id: 3,
-      name: 'Sarah Johnson',
-      initials: 'SJ',
-      role: 'Maintenance Coordinator',
-      properties: ['All Properties'],
-      status: 'Active',
-      joinedDate: '2023-03-10',
-      performance: 'Excellent'
-    },
-    {
-      id: 4,
-      name: 'David Park',
-      initials: 'DP',
-      role: 'Leasing Specialist',
-      properties: ['Riverside Student Housing'],
-      status: 'Active',
-      joinedDate: '2023-06-01',
-      performance: 'Good'
-    }
-  ];
   
   const userName = user?.full_name || user?.username || 'User';
 
@@ -668,162 +444,61 @@ function LandlordDashboard() {
   const weekday = today.toLocaleDateString('en-US', { weekday: 'long' });
   const dateString = today.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
+  // Helper functions to calculate property metrics from real data
+  const getPropertyOccupancy = (property: Property) => {
+    const totalRooms = property.total_rooms || 0;
+    const vacantRooms = property.vacant_rooms || 0;
+    const occupiedRooms = totalRooms - vacantRooms;
+    return {
+      occupancy: `${occupiedRooms}/${totalRooms}`,
+      occupancyPercent: totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0
+    };
+  };
+
+  const getPropertyRevenue = (property: Property) => {
+    // Calculate estimated monthly revenue based on monthly rent and occupancy
+    const monthlyRent = Number(property.monthly_rent) || Number(property.effective_rent) || 0;
+    const { occupancyPercent } = getPropertyOccupancy(property);
+    const estimatedRevenue = Math.round((monthlyRent * property.total_rooms * occupancyPercent) / 100);
+    return {
+      revenue: estimatedRevenue,
+      revenueChange: '+5%' // Default placeholder - would need historical data for real calculation
+    };
+  };
+
+  const getPropertyStatus = (property: Property) => {
+    // Determine status based on vacancy rate
+    const { occupancyPercent } = getPropertyOccupancy(property);
+    if (occupancyPercent < 50) return 'Maintenance';
+    return 'Active';
+  };
+
+  const getPropertyTasks = (property: Property) => {
+    // Default task count - in real app would come from a tasks/maintenance system
+    const { occupancyPercent } = getPropertyOccupancy(property);
+    return occupancyPercent < 90 ? Math.floor(Math.random() * 5) + 1 : 0;
+  };
+
+  const getPropertyInitials = (property: Property) => {
+    return property.name
+      .split(' ')
+      .map(word => word[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  const getPropertyColor = (property: Property) => {
+    // Generate consistent color based on property ID
+    const colors = ['#10b981', '#8b5cf6', '#f97316', '#dc2626', '#6366f1', '#3b82f6', '#8b5cf6'];
+    return colors[property.id % colors.length];
+  };
+
   const filteredProperties = propertyFilter === 'All'
     ? properties
-    : properties.filter((p) => p.status === propertyFilter);
+    : properties.filter((p) => getPropertyStatus(p) === propertyFilter);
 
-  // Demo properties and rooms data for the modal
-  const demoProperties: Property[] = [
-    { 
-      id: 1, 
-      landlord: 1,
-      name: 'Downtown Coliving Hub', 
-      address: '123 Main St',
-      address_line1: '123 Main St',
-      city: 'Downtown', 
-      state: 'CA', 
-      postal_code: '90210',
-      country: 'USA',
-      full_address: '123 Main St, Downtown, CA 90210',
-      property_type: 'Apartment',
-      timezone: 'America/Los_Angeles',
-      timezone_display: 'Pacific Time',
-      total_rooms: 2,
-      vacant_rooms: 2,
-      rent_type: 'per_room', 
-      monthly_rent: 1200, 
-      created_at: '2024-01-01T00:00:00Z'
-    },
-    { 
-      id: 2, 
-      landlord: 1,
-      name: 'University District House', 
-      address: '456 College Ave',
-      address_line1: '456 College Ave',
-      city: 'University District', 
-      state: 'CA', 
-      postal_code: '90211',
-      country: 'USA',
-      full_address: '456 College Ave, University District, CA 90211',
-      property_type: 'House',
-      timezone: 'America/Los_Angeles',
-      timezone_display: 'Pacific Time',
-      total_rooms: 2,
-      vacant_rooms: 1,
-      rent_type: 'per_room', 
-      monthly_rent: 1100, 
-      created_at: '2024-01-01T00:00:00Z'
-    },
-    { 
-      id: 3, 
-      landlord: 1,
-      name: 'Sunset Boulevard Apartments', 
-      address: '789 Sunset Blvd',
-      address_line1: '789 Sunset Blvd',
-      city: 'West Hollywood', 
-      state: 'CA', 
-      postal_code: '90212',
-      country: 'USA',
-      full_address: '789 Sunset Blvd, West Hollywood, CA 90212',
-      property_type: 'Apartment',
-      timezone: 'America/Los_Angeles',
-      timezone_display: 'Pacific Time',
-      total_rooms: 2,
-      vacant_rooms: 2,
-      rent_type: 'per_room', 
-      monthly_rent: 1300, 
-      created_at: '2024-01-01T00:00:00Z'
-    }
-  ];
-
-  const demoRooms: Room[] = [
-    { 
-      id: 1, 
-      property_ref: 1, 
-      name: 'Room A1', 
-      room_type: 'standard', 
-      max_capacity: 1,
-      current_occupancy: 0,
-      monthly_rent: 1200, 
-      is_vacant: true, 
-      occupancy_rate: 0,
-      property_name: 'Downtown Coliving Hub',
-      can_add_tenant: true,
-      created_at: '2024-01-01T00:00:00Z'
-    },
-    { 
-      id: 2, 
-      property_ref: 1, 
-      name: 'Room A2', 
-      room_type: 'standard', 
-      max_capacity: 1,
-      current_occupancy: 0,
-      monthly_rent: 1200, 
-      is_vacant: true, 
-      occupancy_rate: 0,
-      property_name: 'Downtown Coliving Hub',
-      can_add_tenant: true,
-      created_at: '2024-01-01T00:00:00Z'
-    },
-    { 
-      id: 3, 
-      property_ref: 2, 
-      name: 'Room B1', 
-      room_type: 'suite', 
-      max_capacity: 1,
-      current_occupancy: 0,
-      monthly_rent: 1100, 
-      is_vacant: true, 
-      occupancy_rate: 0,
-      property_name: 'University District House',
-      can_add_tenant: true,
-      created_at: '2024-01-01T00:00:00Z'
-    },
-    { 
-      id: 4, 
-      property_ref: 2, 
-      name: 'Room B2', 
-      room_type: 'standard', 
-      max_capacity: 1,
-      current_occupancy: 1,
-      monthly_rent: 1100, 
-      is_vacant: false, 
-      occupancy_rate: 100,
-      property_name: 'University District House',
-      can_add_tenant: false,
-      created_at: '2024-01-01T00:00:00Z'
-    },
-    { 
-      id: 5, 
-      property_ref: 3, 
-      name: 'Room C1', 
-      room_type: 'studio', 
-      max_capacity: 1,
-      current_occupancy: 0,
-      monthly_rent: 1300, 
-      is_vacant: true, 
-      occupancy_rate: 0,
-      property_name: 'Sunset Boulevard Apartments',
-      can_add_tenant: true,
-      created_at: '2024-01-01T00:00:00Z'
-    },
-    { 
-      id: 6, 
-      property_ref: 3, 
-      name: 'Room C2', 
-      room_type: 'standard', 
-      max_capacity: 1,
-      current_occupancy: 0,
-      monthly_rent: 1300, 
-      is_vacant: true, 
-      occupancy_rate: 0,
-      property_name: 'Sunset Boulevard Apartments',
-      can_add_tenant: true,
-      created_at: '2024-01-01T00:00:00Z'
-    }
-  ];
-
-  // Helper functions for display
+  // Helper functions for applications
   const getApplicantInitials = (application: Application) => {
     if (application.tenant_name) {
       return application.tenant_name.split(' ').map(n => n[0]).join('').toUpperCase();
@@ -832,7 +507,8 @@ function LandlordDashboard() {
   };
 
   const getPropertyName = (application: Application) => {
-    const property = demoProperties.find(p => p.id === application.property_ref);
+    if (application.property_name) return application.property_name;
+    const property = properties.find(p => p.id === application.property_ref);
     return property ? property.name : 'Unknown Property';
   };
 
@@ -842,6 +518,27 @@ function LandlordDashboard() {
     if (daysAgo === 1) return '1 day ago';
     return `${daysAgo} days ago`;
   };
+
+  // Helper functions for managers
+  const getManagerInitials = (manager: Manager) => {
+    if (manager.full_name) {
+      return manager.full_name.split(' ').map(n => n[0]).join('').toUpperCase();
+    }
+    return manager.username.slice(0, 2).toUpperCase();
+  };
+
+  const getManagerRole = (manager: Manager) => {
+    // Map the role field or provide default
+    return manager.role || 'Property Manager';
+  };
+
+  const getManagerStatus = (manager: Manager) => {
+    return manager.is_active ? 'Active' : 'Inactive';
+  };
+
+  // Demo properties and rooms data for the modal (keeping these for the modal)
+  const demoProperties: Property[] = properties.length > 0 ? properties.slice(0, 3) : [];
+  const demoRooms: Room[] = rooms.length > 0 ? rooms.slice(0, 6) : [];
 
   // Handler functions for the modal
   const handleViewApplication = (application: Application) => {
@@ -927,6 +624,47 @@ function LandlordDashboard() {
                 <line x1="9" y1="9" x2="15" y2="15"/>
               </svg>
               <span>Unable to load dashboard statistics. Showing default values.</span>
+            </div>
+          </div>
+        )}
+
+        {/* Data Error Display */}
+        {dataError && (
+          <div style={{ 
+            backgroundColor: '#fee2e2', 
+            border: '1px solid #fecaca', 
+            borderRadius: '8px', 
+            padding: '12px 16px', 
+            marginBottom: '24px',
+            color: '#dc2626'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="15" y1="9" x2="9" y2="15"/>
+                <line x1="9" y1="9" x2="15" y2="15"/>
+              </svg>
+              <span>Unable to load properties, applications, and team data. Please refresh the page.</span>
+            </div>
+          </div>
+        )}
+
+        {/* Loading State */}
+        {(dataLoading || statsLoading) && (
+          <div style={{ 
+            backgroundColor: '#f0f9ff', 
+            border: '1px solid #bae6fd', 
+            borderRadius: '8px', 
+            padding: '12px 16px', 
+            marginBottom: '24px',
+            color: '#0369a1'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: 'spin 1s linear infinite' }}>
+                <path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                <path d="M9 12l2 2 4-4"/>
+              </svg>
+              <span>Loading dashboard data...</span>
             </div>
           </div>
         )}
@@ -1357,7 +1095,13 @@ function LandlordDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                    {filteredProperties.map((property) => (
+                    {filteredProperties.map((property) => {
+                      const occupancyData = getPropertyOccupancy(property);
+                      const revenueData = getPropertyRevenue(property);
+                      const status = getPropertyStatus(property);
+                      const tasks = getPropertyTasks(property);
+                      
+                      return (
                     <tr key={property.id}>
                       <td className="table-left">
                         <div 
@@ -1368,8 +1112,8 @@ function LandlordDashboard() {
                         </div>
                       </td>
                       <td className="table-left">
-                        <span className={`status-badge ${property.status.toLowerCase()}`}>
-                          {property.status}
+                            <span className={`status-badge ${status.toLowerCase()}`}>
+                              {status}
                         </span>
                       </td>
                       <td className="table-center">
@@ -1379,15 +1123,15 @@ function LandlordDashboard() {
                               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
                               <circle cx="12" cy="7" r="4"/>
                             </svg>
-                            <span className="occupancy-text">{property.occupancy}</span>
-                            <span className="occupancy-percent">{property.occupancyPercent}%</span>
+                                <span className="occupancy-text">{occupancyData.occupancy}</span>
+                                <span className="occupancy-percent">{occupancyData.occupancyPercent}%</span>
                       </div>
                         </div>
                       </td>
                       <td className="table-center">
                         <div className="revenue-cell">
-                          <div className="revenue-amount">$ {property.revenue.toLocaleString()}</div>
-                          <div className="revenue-change">{property.revenueChange} vs last month</div>
+                              <div className="revenue-amount">$ {revenueData.revenue.toLocaleString()}</div>
+                              <div className="revenue-change">{revenueData.revenueChange} vs last month</div>
                         </div>
                       </td>
                       <td className="table-center">
@@ -1395,7 +1139,7 @@ function LandlordDashboard() {
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2">
                             <path d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
                           </svg>
-                          <span className="tasks-count">{property.tasks} pending</span>
+                              <span className="tasks-count">{tasks} pending</span>
                         </div>
                       </td>
                       <td className="table-center">
@@ -1411,7 +1155,8 @@ function LandlordDashboard() {
                         </button>
                       </td>
                     </tr>
-                  ))}
+                      );
+                    })}
                 </tbody>
               </table>
               </div>
@@ -1438,7 +1183,7 @@ function LandlordDashboard() {
 
             <div className="applications-scroll-container">
               <div className="applications-grid">
-                {recentApplications.slice(0, 3).map((application) => (
+                {applications.slice(0, 3).map((application) => (
                   <div key={application.id} className="application-card">
                     <div className="application-header">
                       <div className="applicant-avatar">{getApplicantInitials(application)}</div>
@@ -1488,19 +1233,19 @@ function LandlordDashboard() {
 
             <div className="teams-scroll-container">
               <div className="teams-list">
-                {teamMembers.map((member) => (
-                  <div key={member.id} className="team-member-row">
-                    <div className="member-avatar">{member.initials}</div>
+                {managers.map((manager) => (
+                  <div key={manager.id} className="team-member-row">
+                    <div className="member-avatar">{getManagerInitials(manager)}</div>
                     <div className="member-info">
-                      <div className="member-name">{member.name}</div>
-                      <div className="member-role">{member.role}</div>
+                      <div className="member-name">{manager.full_name}</div>
+                      <div className="member-role">{getManagerRole(manager)}</div>
                       <div className="member-properties">
-                        {member.properties.length === 1 && member.properties[0] === 'All Properties' ? 'All Properties' : `${member.properties.length} properties`}
+                        {properties.length} properties managed
                       </div>
-                      <div className="member-joined">Joined: <span className="date-highlight">{formatDate(member.joinedDate)}</span></div>
+                      <div className="member-joined">Email: <span className="date-highlight">{manager.email}</span></div>
                     </div>
                     <div className="member-status">
-                      <span className={`status-badge-small ${member.status.toLowerCase()}`}>{member.status}</span>
+                      <span className={`status-badge-small ${getManagerStatus(manager).toLowerCase()}`}>{getManagerStatus(manager)}</span>
                     </div>
                     <button className="contact-btn-small">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1530,7 +1275,7 @@ function LandlordDashboard() {
       <style jsx>{`
         .dashboard-container {
           width: 100%;
-          padding: 16px 20px 20px 20px; /* Reduced padding */
+          padding: 12px 16px 16px 16px; /* Further reduced padding */
           background: #f8fafc;
           min-height: calc(100vh - 72px); /* Updated for new topbar height */
           box-sizing: border-box;
@@ -1556,7 +1301,7 @@ function LandlordDashboard() {
 
         /* Custom Header */
         .dashboard-header {
-          margin-bottom: 24px; /* Reduced margin */
+          margin-bottom: 16px; /* Further reduced margin */
           position: relative;
           z-index: 1;
           pointer-events: auto;
@@ -1669,14 +1414,14 @@ function LandlordDashboard() {
         .metrics-grid { 
           display: grid; 
           grid-template-columns: repeat(4, 1fr);
-          gap: 12px; /* Reduced gap */
-          margin-bottom: 20px; /* Reduced margin */
+          gap: 10px; /* Further reduced gap */
+          margin-bottom: 16px; /* Further reduced margin */
         }
 
         .metric-card {
           background: white;
           border-radius: 6px; /* Reduced radius */
-          padding: 14px; /* Reduced padding */
+          padding: 12px; /* Further reduced padding */
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
           border: 1px solid #e2e8f0;
           transition: all 0.2s ease;

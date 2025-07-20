@@ -48,6 +48,20 @@ function Leases() {
     }
   };
 
+  // Helper functions for lease objects (use lease data directly)
+  const getTenantNameFromLease = (lease: Lease) => {
+    return lease.tenant_name || 'Unknown Tenant';
+  };
+
+  const getPropertyNameFromLease = (lease: Lease) => {
+    return lease.property_name || 'Unknown Property';
+  };
+
+  const getRoomNameFromLease = (lease: Lease) => {
+    return lease.room_name || 'Unknown Room';
+  };
+
+  // Legacy functions for backward compatibility (ID-based lookup)
   const getTenantName = (tenantId: number) => {
     const tenant = tenants.find(t => t.id === tenantId);
     return tenant ? tenant.full_name : 'Unknown Tenant';
@@ -87,8 +101,6 @@ function Leases() {
       timeZone: 'UTC',
     });
   };
-
-
 
   const handleActivateLease = async (lease: any) => {
     try {
@@ -173,6 +185,16 @@ function Leases() {
   const expiredLeases = leases.filter(lease => {
     const daysUntilExpiry = getDaysUntilExpiry(lease.end_date);
     return (lease.status === 'active' || lease.is_active) && daysUntilExpiry <= 0;
+  });
+  
+  // Create a unified, sorted list of leases
+  const sortedLeases = [...leases].sort((a, b) => {
+    // Sort by status: draft leases first
+    if (a.status === 'draft' && b.status !== 'draft') return -1;
+    if (a.status !== 'draft' && b.status === 'draft') return 1;
+    
+    // Then sort by end date (soonest expiring first)
+    return new Date(a.end_date).getTime() - new Date(b.end_date).getTime();
   });
   
   // Calculate total monthly revenue
@@ -344,12 +366,12 @@ function Leases() {
 
         {/* Main Content */}
         <div className="main-content">
-          {/* Active Leases Section */}
+          {/* Unified Leases Section */}
           <div className="leases-section">
             <div className="section-header">
               <div>
-                <h2 className="section-title">Active Leases ({activeLeases.length})</h2>
-                <p className="section-subtitle">Currently active leases across all properties</p>
+                <h2 className="section-title">All Leases ({leases.length})</h2>
+                <p className="section-subtitle">Manage all draft, active, and expiring leases in one place</p>
               </div>
               <div className="section-actions">
                 <button 
@@ -374,12 +396,12 @@ function Leases() {
                     <polyline points="7,10 12,15 17,10"/>
                     <line x1="12" y1="15" x2="12" y2="3"/>
                   </svg>
-                  Download Report
+                  Export CSV
                 </button>
               </div>
             </div>
 
-            {activeLeases.length === 0 ? (
+            {leases.length === 0 ? (
               <div className="empty-state">
                 <div className="empty-icon">
                   <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -387,8 +409,8 @@ function Leases() {
                     <polyline points="14,2 14,8 20,8"/>
                   </svg>
                 </div>
-                <h3>No active leases</h3>
-                <p>There are no active leases in the system yet.</p>
+                <h3>No leases found</h3>
+                <p>There are no leases in the system yet.</p>
               </div>
             ) : (
               <div className="leases-scroll-container">
@@ -404,12 +426,12 @@ function Leases() {
                       </tr>
                     </thead>
                     <tbody>
-                      {activeLeases.map((lease) => {
+                      {sortedLeases.map((lease) => {
                         const daysToExpiry = getDaysUntilExpiry(lease.end_date);
-                        const tenant = getTenantName(lease.tenant);
+                        const tenant = getTenantNameFromLease(lease);
                         const tenantContact = getTenantContact(lease.tenant);
-                        const property = getPropertyName(lease.property_ref);
-                        const room = getRoomName(lease.room);
+                        const property = getPropertyNameFromLease(lease);
+                        const room = getRoomNameFromLease(lease);
                         
                         return (
                           <tr key={lease.id}>
@@ -444,27 +466,41 @@ function Leases() {
                             </td>
                             <td className="table-center">
                               <span className={`status-badge ${
+                                lease.status === 'draft' ? 'draft' :
                                 daysToExpiry <= 30 ? 'critical' : 
                                 daysToExpiry <= 90 ? 'warning' : 'active'
                               }`}>
-                                {daysToExpiry <= 30 ? `${daysToExpiry} days left` : 
+                                {lease.status === 'draft' ? 'Draft' : 
+                                 daysToExpiry <= 30 ? `${daysToExpiry} days left` : 
                                  daysToExpiry <= 90 ? `${daysToExpiry} days left` : 'Active'}
                               </span>
                             </td>
                             <td className="table-center">
-                              <div className="action-buttons">
-                                <Link href={`/leases/${lease.id}`} legacyBehavior>
-                                  <a 
-                                    className="manage-lease-btn"
-                                    title={`Manage ${tenant}'s lease - view details, process renewals, handle move-outs`}
+                              {lease.status === 'draft' ? (
+                                <div className="action-buttons">
+                                  <button 
+                                    className="activate-btn" 
+                                    onClick={() => handleActivateLease(lease)}
+                                    title={`Activate ${getTenantNameFromLease(lease)}'s lease to make it active`}
                                   >
-                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                      <path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
-                                  </svg>
-                                    Manage Lease
-                                  </a>
-                                </Link>
-                              </div>
+                                    🚀 Activate
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="action-buttons">
+                                  <Link href={`/leases/${lease.id}`} legacyBehavior>
+                                    <a 
+                                      className="manage-lease-btn"
+                                      title={`Manage ${tenant}'s lease - view details, process renewals, handle move-outs`}
+                                    >
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                                    </svg>
+                                      Manage Lease
+                                    </a>
+                                  </Link>
+                                </div>
+                              )}
                             </td>
                           </tr>
                         );
@@ -576,20 +612,20 @@ function Leases() {
                             <div 
                               className="tenant-name clickable-name" 
                               onClick={() => router.push(`/tenants/${lease.tenant}`)}
-                              title={`View ${getTenantName(lease.tenant)}'s tenant profile and lease history`}
+                              title={`View ${getTenantNameFromLease(lease)}'s tenant profile and lease history`}
                             >
-                              {getTenantName(lease.tenant)}
+                              {getTenantNameFromLease(lease)}
                             </div>
                           </td>
                           <td className="table-left">
                             <div 
                               className="property-name clickable-property" 
                               onClick={() => router.push(`/properties/${lease.property_ref}/rooms`)}
-                              title={`View ${getPropertyName(lease.property_ref)} property details and room management`}
+                              title={`View ${getPropertyNameFromLease(lease)} property details and room management`}
                             >
-                              {getPropertyName(lease.property_ref)}
+                              {getPropertyNameFromLease(lease)}
                             </div>
-                            <div className="room-name">{getRoomName(lease.room)}</div>
+                            <div className="room-name">{getRoomNameFromLease(lease)}</div>
                           </td>
                           <td className="table-center">
                             <div className="expiry-date"><span className="date-highlight">{formatDate(lease.end_date)}</span></div>
@@ -604,7 +640,7 @@ function Leases() {
                             <Link href={`/leases/${lease.id}`} legacyBehavior>
                               <a 
                                 className="manage-lease-btn"
-                                title={`Manage ${getTenantName(lease.tenant)}'s lease - view details, process renewals, handle move-outs`}
+                                title={`Manage ${getTenantNameFromLease(lease)}'s lease - view details, process renewals, handle move-outs`}
                               >
                               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                   <path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
@@ -616,69 +652,6 @@ function Leases() {
                         </tr>
                       );
                     })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {draftLeases.length > 0 && (
-          <div className="drafts-section">
-            <div className="section-header">
-              <div>
-                <h2 className="section-title">Draft Leases ({draftLeases.length})</h2>
-                <p className="section-subtitle">Pending leases awaiting activation</p>
-              </div>
-            </div>
-            
-            <div className="drafts-scroll-container">
-              <div className="drafts-table-container">
-                <table className="drafts-table">
-                  <thead>
-                    <tr>
-                      <th className="table-left">Tenant</th>
-                      <th className="table-left">Property</th>
-                      <th className="table-left">Lease Details</th>
-                      <th className="table-center">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {draftLeases.map((lease) => (
-                      <tr key={lease.id}>
-                        <td className="table-left">
-                          <div 
-                            className="tenant-name clickable-name" 
-                            onClick={() => router.push(`/tenants/${lease.tenant}`)}
-                            title={`View ${getTenantName(lease.tenant)}'s tenant profile and lease history`}
-                          >
-                            {getTenantName(lease.tenant)}
-                          </div>
-                        </td>
-                        <td className="table-left">
-                          <div 
-                            className="property-name clickable-property" 
-                            onClick={() => router.push(`/properties/${lease.property_ref}/rooms`)}
-                            title={`View ${getPropertyName(lease.property_ref)} property details and room management`}
-                          >
-                            {getPropertyName(lease.property_ref)}
-                          </div>
-                          <div className="room-name">{getRoomName(lease.room)}</div>
-                        </td>
-                        <td className="table-left">
-                          <div className="lease-details">
-                            <div className="lease-term">Term: <span className="date-highlight">{formatDate(lease.start_date)}</span> to <span className="date-highlight">{formatDate(lease.end_date)}</span></div>
-                            <div className="lease-rent">Rent: ${lease.monthly_rent}/month</div>
-                          </div>
-                        </td>
-                        <td className="table-center">
-                          <div className="draft-actions">
-                            <button className="activate-btn" onClick={() => handleActivateLease(lease)}>Activate</button>
-                            <button className="delete-btn">Delete</button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
                   </tbody>
                 </table>
               </div>
@@ -1146,6 +1119,12 @@ function Leases() {
           color: #dc2626;
         }
 
+        .status-badge.draft {
+          background: #fff7ed;
+          color: #f59e0b;
+          border: 1px solid #fed7aa;
+        }
+
         .action-buttons {
           display: flex;
           gap: 8px;
@@ -1228,35 +1207,23 @@ function Leases() {
           justify-content: center;
         }
 
-        .activate-btn, .delete-btn {
-          padding: 8px 12px;
-          border-radius: 6px;
-          font-size: 12px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          border: 1px solid #e2e8f0;
-        }
-
         .activate-btn {
+          border: none;
+          padding: 6px 12px;
+          border-radius: 5px;
+          font-size: 12px;
+          font-weight: 500;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          transition: all 0.2s ease;
           background: #10b981;
           color: white;
-          border-color: #10b981;
         }
 
         .activate-btn:hover {
           background: #059669;
-          transform: translateY(-1px);
-        }
-
-        .delete-btn {
-          background: #ef4444;
-          color: white;
-          border-color: #ef4444;
-        }
-
-        .delete-btn:hover {
-          background: #dc2626;
           transform: translateY(-1px);
         }
 
