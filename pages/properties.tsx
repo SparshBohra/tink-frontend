@@ -254,7 +254,7 @@ function Properties() {
   const overallOccupancyRate = totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0;
 
   const handleCreateListing = () => {
-    setShowListingModal(true);
+    router.push('/listings');
   };
 
   const handlePlatformToggle = (platform: string) => {

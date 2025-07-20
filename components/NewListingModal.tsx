@@ -8,6 +8,7 @@ interface NewListingModalProps {
   onSuccess?: () => void;
   editMode?: boolean;
   existingListing?: any;
+  property_name?: string;
 }
 
 interface MediaFile {
@@ -87,13 +88,13 @@ const CheckCircleIcon = () => (
     </svg>
 );
 
-const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing }: NewListingModalProps) => {
+const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing, property_name }: NewListingModalProps) => {
   const [activeTab, setActiveTab] = useState('basic');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isFormDataPopulated, setIsFormDataPopulated] = useState(false);
   
-  console.log('NewListingModal render - activeTab:', activeTab, 'editMode:', editMode, 'existingListing:', !!existingListing);
+  console.log('NewListingModal render - activeTab:', activeTab, 'editMode:', editMode, 'existingListing:', !!existingListing, 'property_name:', property_name);
   // Properties and rooms data
   const [properties, setProperties] = useState<Property[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
@@ -162,19 +163,45 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
   ];
 
   useEffect(() => {
-    fetchProperties();
-  }, []);
+    // Only fetch properties if not in edit mode, or if we need them for room selection
+    if (!editMode) {
+      fetchProperties();
+    }
+  }, [editMode]);
 
   // Populate form with existing data in edit mode
   useEffect(() => {
-    console.log('useEffect triggered - editMode:', editMode, 'existingListing:', existingListing);
-    
+    console.log('--- Edit Mode Debug ---');
+    console.log('useEffect triggered for existing listing population.');
+    console.log('editMode:', editMode);
+    console.log('existingListing available:', !!existingListing);
+    console.log('existingListing data:', existingListing);
+    console.log('existingListing keys:', existingListing ? Object.keys(existingListing) : 'none');
+
     if (editMode && existingListing) {
       console.log('Populating form with existing listing data:', existingListing);
       
-      // Ensure property_ref is properly converted to string
-      const propertyRefValue = existingListing.property_ref ? existingListing.property_ref.toString() : '';
-      console.log('Setting property_ref to:', propertyRefValue);
+      // Ensure property_ref is properly converted to string - try multiple possible locations
+      let propertyRefValue = '';
+      if (existingListing.property_ref) {
+        propertyRefValue = existingListing.property_ref.toString();
+        console.log('Found property_ref at existingListing.property_ref:', existingListing.property_ref);
+      } else if (existingListing.property?.id) {
+        propertyRefValue = existingListing.property.id.toString();
+        console.log('Found property_ref at existingListing.property.id:', existingListing.property.id);
+      } else if (existingListing.property_details?.id) {
+        propertyRefValue = existingListing.property_details.id.toString();
+        console.log('Found property_ref at existingListing.property_details.id:', existingListing.property_details.id);
+      } else {
+        console.error('Could not find property reference in any expected location!');
+        console.log('Available property-related fields:');
+        console.log('- property_ref:', existingListing.property_ref);
+        console.log('- property:', existingListing.property);
+        console.log('- property_details:', existingListing.property_details);
+        console.log('- All keys:', Object.keys(existingListing));
+      }
+      
+      console.log('Final property_ref value:', propertyRefValue);
       
       // Map the API response to form data structure
       const newFormData = {
@@ -217,6 +244,8 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
       console.log('Setting form data to:', newFormData);
       setFormData(newFormData);
       setIsFormDataPopulated(true); // Mark form data as populated
+      
+      console.log('✅ Form data has been set. property_ref in form data:', newFormData.property_ref);
 
       // Load existing media if available
       if (existingListing.media && Array.isArray(existingListing.media) && existingListing.media.length > 0) {
@@ -231,14 +260,22 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
         setMediaFiles(existingMedia);
         console.log('Loaded existing media:', existingMedia);
       }
+    } else {
+      console.log('Conditions not met for populating form in edit mode.');
     }
+    console.log('--- End Edit Mode Debug ---');
   }, [editMode, existingListing]);
 
   useEffect(() => {
     if (formData.property_ref) {
       fetchRooms(parseInt(formData.property_ref));
+      
+      // If in edit mode and properties haven't been loaded yet, fetch them for room selection
+      if (editMode && properties.length === 0) {
+        fetchProperties();
+      }
     }
-  }, [formData.property_ref]);
+  }, [formData.property_ref, editMode, properties.length]);
 
   // Auto-adjust listing type based on available rooms
   useEffect(() => {
@@ -367,23 +404,35 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
 
     try {
       // Validation
-      if (!formData.property_ref || !formData.title || !formData.description) {
-        throw new Error('Please fill in all required fields (Property, Title, Description).');
+      if (!formData.title || !formData.description) {
+        throw new Error('Please fill in all required fields (Title, Description).');
       }
 
-      if (formData.listing_type === 'rooms' && formData.available_rooms.length === 0) {
+      if (!editMode && !formData.property_ref) {
+        throw new Error('Please select a property.');
+      }
+      
+      if (!editMode && formData.listing_type === 'rooms' && formData.available_rooms.length === 0) {
         throw new Error('Please select at least one room for room-based listings.');
       }
-
+      
+      // Determine the property reference to use
+      const propertyRefToUse = formData.property_ref ? parseInt(formData.property_ref) : 
+                               (existingListing?.property_ref || existingListing?.property?.id);
+      
       const selectedProperty = properties.find(p => p.id === parseInt(formData.property_ref));
+      
+      console.log('Using property_ref for API call:', propertyRefToUse);
+      console.log('Edit mode:', editMode);
       
       // First, create/update the listing
       const listingData = {
-        property_ref: parseInt(formData.property_ref),
+        ...(propertyRefToUse && { property_ref: propertyRefToUse }),
         title: formData.title,
         description: formData.description,
         listing_type: formData.listing_type,
-        available_rooms: formData.listing_type === 'rooms' ? formData.available_rooms : [],
+        available_rooms: formData.listing_type === 'rooms' ? formData.available_rooms : 
+                        (existingListing?.available_rooms || []),
         available_from: formData.available_from || undefined,
         featured_image_url: '', // Will be updated after upload
         
@@ -418,8 +467,8 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
         seo_title: formData.seo_title || formData.title,
         seo_description: formData.seo_description || formData.description,
         marketing_tags: formData.marketing_tags,
-        property_name: selectedProperty?.name || '',
-        property_address: selectedProperty?.full_address || '',
+        property_name: selectedProperty?.name || existingListing?.property_name || '',
+        property_address: selectedProperty?.full_address || existingListing?.property_address || '',
         
         // Remove media_info as it's not the correct way to handle uploads
         // media_info will be created from the actual uploaded files
@@ -586,7 +635,7 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
             <div className={styles.readOnlyField}>
               <input 
                 type="text" 
-                value={selectedProperty ? `${selectedProperty.name} - ${selectedProperty.full_address}` : 'Loading property...'} 
+                value={property_name || (selectedProperty ? `${selectedProperty.name} - ${selectedProperty.full_address}` : 'Loading property...')} 
                 readOnly 
                 className={styles.readOnlyInput}
               />

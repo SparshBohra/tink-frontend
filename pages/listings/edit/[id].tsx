@@ -108,6 +108,7 @@ const EditListingPage = () => {
       onSuccess={handleUpdateSuccess}
       editMode={true}
       existingListing={listing}
+      property_name={listing?.property_details?.name || listing?.property_name}
     />
   );
 };

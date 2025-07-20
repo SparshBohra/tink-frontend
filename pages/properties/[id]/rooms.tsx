@@ -207,7 +207,7 @@ export default function PropertyRooms() {
   };
 
   const handleCreateListing = () => {
-    setShowListingModal(true);
+    router.push('/listings');
   };
 
   const handleDeleteRoom = (roomId: number, roomName: string) => {
