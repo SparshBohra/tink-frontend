@@ -1252,37 +1252,7 @@ function Applications() {
           </div>
         </div>
 
-        {/* Workflow Guide Banner */}
-        <div style={{
-          backgroundColor: '#f0f9ff',
-          border: '1px solid #0ea5e9',
-          borderRadius: '8px',
-          padding: '16px',
-          marginBottom: '24px',
-          display: 'flex',
-          alignItems: 'flex-start',
-          gap: '12px'
-        }}>
-          <div style={{ color: '#0ea5e9', fontSize: '20px' }}>ℹ️</div>
-          <div>
-            <h4 style={{ margin: '0 0 8px 0', color: '#0f172a', fontSize: '16px', fontWeight: '600' }}>
-              Application Workflow Guide
-            </h4>
-            <p style={{ margin: '0 0 8px 0', color: '#475569', fontSize: '14px', lineHeight: '1.5' }}>
-              <strong>Step 1:</strong> Review and shortlist applications →
-              <strong>Step 2:</strong> Schedule or skip viewing →
-              <strong>Step 3:</strong> Complete viewing (if scheduled) →
-              <strong>Step 4:</strong> Generate lease
-            </p>
-            <div style={{ display: 'flex', gap: '16px', fontSize: '12px', color: '#64748b' }}>
-              <span>🔵 Pending Review</span>
-              <span>🟡 Shortlisted</span>
-              <span>🟠 Viewing Process</span>
-              <span>🟢 Ready for Lease</span>
-              <span>🏠 Active Tenant</span>
-            </div>
-          </div>
-        </div>
+
 
         {/* Alerts */}
         {error && (
