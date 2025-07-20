@@ -55,6 +55,12 @@ export default function PublicApplicationForm({ listing, onClose, onSubmit }: Pu
   const [currentStep, setCurrentStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Debug logging
+  React.useEffect(() => {
+    console.log('PublicApplicationForm mounted for listing:', listing?.title);
+  }, [listing]);
+
   const [formData, setFormData] = useState<FormData>({
     full_name: '',
     email: '',
@@ -114,6 +120,16 @@ export default function PublicApplicationForm({ listing, onClose, onSubmit }: Pu
           setError('Please fill in all required fields in Personal Information.');
           return false;
         }
+        // Basic email validation
+        if (!formData.email.includes('@')) {
+          setError('Please enter a valid email address.');
+          return false;
+        }
+        // Basic phone validation (more lenient)
+        if (formData.phone.length < 10) {
+          setError('Please enter a valid phone number (minimum 10 digits).');
+          return false;
+        }
         break;
       case 2:
         if (!formData.employment_status || !formData.annual_income) {
@@ -164,7 +180,10 @@ export default function PublicApplicationForm({ listing, onClose, onSubmit }: Pu
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    console.log('Form submission started for step:', currentStep);
+    
     if (!validateStep(currentStep)) {
+      console.log('Validation failed for step:', currentStep);
       return;
     }
 
@@ -172,8 +191,11 @@ export default function PublicApplicationForm({ listing, onClose, onSubmit }: Pu
     setError(null);
 
     try {
+      console.log('Submitting form data:', formData);
       await onSubmit(formData);
+      console.log('Form submission successful');
     } catch (err: any) {
+      console.error('Form submission error:', err);
       setError(err.message || 'Failed to submit application. Please try again.');
     } finally {
       setSubmitting(false);
@@ -776,28 +798,33 @@ export default function PublicApplicationForm({ listing, onClose, onSubmit }: Pu
 
       <style jsx>{`
         .modal-overlay {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(0, 0, 0, 0.5);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 1000;
-          padding: 20px;
+          position: fixed !important;
+          top: 0 !important;
+          left: 0 !important;
+          right: 0 !important;
+          bottom: 0 !important;
+          background: rgba(0, 0, 0, 0.5) !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          z-index: 9999 !important;
+          padding: 20px !important;
+          visibility: visible !important;
+          opacity: 1 !important;
         }
 
         .modal-content {
-          background: white;
-          border-radius: 12px;
-          box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-          max-width: 700px;
-          width: 100%;
-          max-height: 90vh;
-          overflow-y: auto;
-          position: relative;
+          background: white !important;
+          border-radius: 12px !important;
+          box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1) !important;
+          max-width: 700px !important;
+          width: 100% !important;
+          max-height: 90vh !important;
+          overflow-y: auto !important;
+          position: relative !important;
+          z-index: 10000 !important;
+          visibility: visible !important;
+          opacity: 1 !important;
         }
 
         .modal-header {
@@ -857,6 +884,7 @@ export default function PublicApplicationForm({ listing, onClose, onSubmit }: Pu
 
         .step-content {
           padding: 24px 0;
+          display: block;
         }
 
         .step-content h3 {

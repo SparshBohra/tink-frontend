@@ -16,6 +16,11 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
   const [showApplicationForm, setShowApplicationForm] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
+  // Debug modal state
+  React.useEffect(() => {
+    console.log('Modal state changed:', showApplicationForm ? 'OPEN' : 'CLOSED');
+  }, [showApplicationForm]);
+
   // Treat undefined as true so listings are open unless explicitly closed
   const canApply = listing?.is_active !== false;
 
@@ -37,11 +42,13 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
   }
 
   const handleStartApplication = () => {
+    console.log('Apply Now button clicked, opening modal for:', listing?.title);
     setShowApplicationForm(true);
   };
 
   const handleApplicationSubmit = async (applicationData: any) => {
     try {
+      console.log('Starting application submission...', applicationData);
       const { slug } = router.query;
       
       if (!listing) {
@@ -65,17 +72,22 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
         form_responses: applicationData
       };
       
+      console.log('Transformed data for API:', transformedData);
+      
       const response = await publicApiRequest(`/properties/public/listings/${slug}/apply/`, {
         method: 'POST',
         body: JSON.stringify(transformedData),
       });
 
+      console.log('Application submitted successfully:', response);
+      
       // Show success message and redirect
       alert('Application submitted successfully! We will contact you soon.');
       setShowApplicationForm(false);
     } catch (error: any) {
       console.error('Error submitting application:', error);
-      alert('Failed to submit application. Please try again.');
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to submit application. Please try again.';
+      alert(`Failed to submit application: ${errorMessage}`);
     }
   };
 
