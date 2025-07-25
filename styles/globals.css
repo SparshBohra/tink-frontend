@@ -1992,7 +1992,40 @@ select {
 .step-description {
   display: none;
 } 
- 
+
+/* Clickable tenant and room links */
+.tenant-link,
+.room-link {
+  text-decoration: none !important;
+  color: #4f46e5 !important;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tenant-link:hover,
+.room-link:hover {
+  text-decoration: underline !important;
+  color: #4338ca !important;
+}
+
+/* Tenant info styling with avatar */
+.tenant-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tenant-avatar {
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  fontSize: 14px;
+  font-weight: bold;
+  flex-shrink: 0;
+}
  
  
  

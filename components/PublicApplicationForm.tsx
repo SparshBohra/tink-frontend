@@ -247,56 +247,55 @@ export default function PublicApplicationForm({ listing, onClose, onSubmit }: Pu
             <div className="step-content">
               <h3>Personal Information</h3>
               
-              <div className="form-row">
-                <div className="form-group">
-                  <label className="form-label required">Full Name *</label>
-                  <input
-                    type="text"
-                    name="full_name"
-                    value={formData.full_name}
-                    onChange={handleInputChange}
-                    className="form-input"
-                    required
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label className="form-label required">Email *</label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    className="form-input"
-                    required
-                  />
-                </div>
+              <div className="form-group">
+                <label className="form-label required">Full Name *</label>
+                <input
+                  type="text"
+                  name="full_name"
+                  value={formData.full_name}
+                  onChange={handleInputChange}
+                  className="form-input"
+                  required
+                  placeholder="Enter your full name"
+                />
+              </div>
+              
+              <div className="form-group">
+                <label className="form-label required">Email *</label>
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  className="form-input"
+                  required
+                  placeholder="Enter your email address"
+                />
               </div>
 
-              <div className="form-row">
-                <div className="form-group">
-                  <label className="form-label required">Phone *</label>
-                  <input
-                    type="tel"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    className="form-input"
-                    required
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label className="form-label required">Date of Birth *</label>
-                  <input
-                    type="date"
-                    name="date_of_birth"
-                    value={formData.date_of_birth}
-                    onChange={handleInputChange}
-                    className="form-input"
-                    required
-                  />
-                </div>
+              <div className="form-group">
+                <label className="form-label required">Phone *</label>
+                <input
+                  type="tel"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                  className="form-input"
+                  required
+                  placeholder="Enter your phone number"
+                />
+              </div>
+              
+              <div className="form-group">
+                <label className="form-label required">Date of Birth *</label>
+                <input
+                  type="date"
+                  name="date_of_birth"
+                  value={formData.date_of_birth}
+                  onChange={handleInputChange}
+                  className="form-input"
+                  required
+                />
               </div>
             </div>
           )}

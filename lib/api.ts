@@ -36,7 +36,11 @@ import {
   StripeConnectAccountSession,
   StripeConnectAccountLink,
   StripeConnectSessionData,
-  StripeConnectLinkData
+  StripeConnectLinkData,
+  PaymentIntentRequest,
+  PaymentIntentResponse,
+  PaymentHistoryResponse,
+  PaymentSummaryResponse
 } from './types';
 
 // Smart environment-based API URL configuration
@@ -1882,6 +1886,25 @@ class ApiClient {
 
   async createStripeAccountLink(data: StripeConnectLinkData): Promise<StripeConnectAccountLink> {
     const response = await this.api.post('/auth/stripe/create-account-link/', data);
+    return response.data;
+  }
+
+  // PAYMENT API METHODS
+
+  async createRentPaymentIntent(data: PaymentIntentRequest): Promise<PaymentIntentResponse> {
+    const response = await this.api.post('/auth/payments/create-intent/', data);
+    return response.data;
+  }
+
+  async getPaymentHistory(params?: { page?: number; page_size?: number }): Promise<PaymentHistoryResponse> {
+    const queryString = params ? new URLSearchParams(params as any).toString() : '';
+    const url = `/auth/payments/history/${queryString ? `?${queryString}` : ''}`;
+    const response = await this.api.get(url);
+    return response.data;
+  }
+
+  async getLandlordPaymentSummary(): Promise<PaymentSummaryResponse> {
+    const response = await this.api.get('/auth/payments/summary/');
     return response.data;
   }
 }

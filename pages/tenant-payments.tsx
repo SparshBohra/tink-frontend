@@ -1,614 +1,306 @@
 import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements } from '@stripe/react-stripe-js';
 import { useAuth, withAuth } from '../lib/auth-context';
+import { apiClient } from '../lib/api';
+import { PaymentHistoryResponse, PaymentRecord, Lease } from '../lib/types';
+import PaymentForm from '../components/PaymentForm';
+import { Button } from '../components/ui/button';
+import { Card } from '../components/ui/card';
+import { CheckCircle, Clock, AlertCircle, CreditCard, Calendar, ArrowLeft } from 'lucide-react';
+
+// Initialize Stripe
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
 function TenantPayments() {
   const { user } = useAuth();
-  const [rentDue, setRentDue] = useState(1250);
-  const [daysUntilDue, setDaysUntilDue] = useState(8);
+  
+  // Data state
+  const [lease, setLease] = useState<Lease | null>(null);
+  const [paymentHistory, setPaymentHistory] = useState<PaymentRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  // UI state
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [paymentAmount, setPaymentAmount] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('');
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [paymentHistory, setPaymentHistory] = useState([
-    {
-      id: 1,
-      date: '2024-01-01',
-      amount: 1250,
-      method: 'Credit Card',
-      status: 'Paid',
-      reference: 'TXN001'
-    },
-    {
-      id: 2,
-      date: '2023-12-01',
-      amount: 1250,
-      method: 'Bank Transfer',
-      status: 'Paid',
-      reference: 'TXN002'
-    }
-  ]);
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
-  const handlePayment = async () => {
-    if (!paymentAmount || !paymentMethod) {
-      alert('Please fill in all payment details');
-      return;
-    }
-
-    setIsProcessing(true);
-    
-    // Simulate payment processing
-    setTimeout(() => {
-      const newPayment = {
-        id: Date.now(),
-        date: new Date().toISOString().split('T')[0],
-        amount: parseFloat(paymentAmount),
-        method: paymentMethod,
-        status: 'Paid',
-        reference: `TXN${Date.now().toString().slice(-6)}`
-      };
-      
-      setPaymentHistory([newPayment, ...paymentHistory]);
-      setShowPaymentModal(false);
-      setPaymentAmount('');
-      setPaymentMethod('');
-      setIsProcessing(false);
-      
-      // Update rent due if full payment
-      if (parseFloat(paymentAmount) >= rentDue) {
-        setRentDue(0);
-        setDaysUntilDue(30); // Reset to next month
-      } else {
-        setRentDue(rentDue - parseFloat(paymentAmount));
+  // Load tenant's active lease and payment history
+  useEffect(() => {
+    const loadTenantData = async () => {
+      try {
+        setLoading(true);
+        
+        // Get tenant's active lease
+        const leasesResponse = await apiClient.getLeases();
+        const activeLease = leasesResponse.results.find(l => l.status === 'active');
+        
+        if (activeLease) {
+          setLease(activeLease);
+        }
+        
+        // Load payment history
+        const paymentData: PaymentHistoryResponse = await apiClient.getPaymentHistory({ page: 1, page_size: 20 });
+        setPaymentHistory(paymentData.payments);
+        
+      } catch (err: any) {
+        console.error('Failed to load tenant data:', err);
+        setError(err.message || 'Failed to load payment information');
+      } finally {
+        setLoading(false);
       }
-      
-      alert('Payment processed successfully!');
-    }, 2000);
+    };
+
+    if (user) {
+      loadTenantData();
+    }
+  }, [user]);
+
+  const handlePaymentSuccess = async (paymentIntentId: string) => {
+    setPaymentSuccess(true);
+    setSuccessMessage(`Payment successful! Transaction ID: ${paymentIntentId}`);
+    setShowPaymentModal(false);
+    
+    // Refresh payment history
+    try {
+      const paymentData: PaymentHistoryResponse = await apiClient.getPaymentHistory({ page: 1, page_size: 20 });
+      setPaymentHistory(paymentData.payments);
+    } catch (err) {
+      console.error('Failed to refresh payment history:', err);
+    }
+  };
+
+  const handlePaymentError = (error: string) => {
+    console.error('Payment error:', error);
+    setError(error);
+  };
+
+  const getCurrentMonthPeriod = () => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+  };
+
+  const getCurrentMonthPayment = () => {
+    const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+    return paymentHistory.find(payment => 
+      payment.rent_period_start.startsWith(currentMonth) && 
+      payment.status === 'succeeded'
+    );
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(amount);
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'succeeded':
+        return <CheckCircle className="w-5 h-5 text-green-500" />;
+      case 'pending':
+        return <Clock className="w-5 h-5 text-yellow-500" />;
+      case 'failed':
+        return <AlertCircle className="w-5 h-5 text-red-500" />;
+      default:
+        return <Clock className="w-5 h-5 text-gray-500" />;
+    }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Paid': return 'var(--success-green)';
-      case 'Pending': return 'var(--warning-amber)';
-      case 'Failed': return 'var(--error-red)';
-      default: return 'var(--gray-500)';
+      case 'succeeded': return 'text-green-600 bg-green-50';
+      case 'pending': return 'text-yellow-600 bg-yellow-50';
+      case 'failed': return 'text-red-600 bg-red-50';
+      default: return 'text-gray-600 bg-gray-50';
     }
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading payment information...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!lease) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Card className="p-8 max-w-md mx-auto text-center">
+          <AlertCircle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">No Active Lease Found</h2>
+          <p className="text-gray-600 mb-4">
+            You don't have an active lease associated with your account. 
+            Please contact your property manager.
+          </p>
+          <Button onClick={() => window.history.back()}>
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Go Back
+          </Button>
+        </Card>
+      </div>
+    );
+  }
+
+  const currentMonthPayment = getCurrentMonthPayment();
+  const rentDue = currentMonthPayment ? 0 : lease.monthly_rent;
+
   return (
-    <div className="tenant-payments">
+    <div className="min-h-screen bg-gray-50">
       <Head>
         <title>Rent Payments - Tenant Portal</title>
       </Head>
 
-      {/* Header */}
-      <div className="page-header">
-        <h1 className="page-title">Rent Payments</h1>
-        <p className="page-subtitle">Manage your rent payments and view payment history</p>
-      </div>
-
-      {/* Current Rent Due */}
-      <div className="rent-due-section">
-        <div className="rent-due-card">
-          <div className="rent-due-header">
-            <h2 className="rent-due-title">Current Rent Due</h2>
-            <div className="rent-due-amount">${rentDue.toFixed(2)}</div>
-          </div>
-          <div className="rent-due-details">
-            <div className="rent-due-info">
-              <p className="rent-due-property">Sunset Gardens Apartments - Room A101</p>
-              <p className="rent-due-date">
-                {rentDue > 0 ? (
-                  daysUntilDue > 0 ? (
-                    <span className="due-upcoming">Due in {daysUntilDue} days</span>
-                  ) : (
-                    <span className="due-overdue">Overdue by {Math.abs(daysUntilDue)} days</span>
-                  )
-                ) : (
-                  <span className="due-paid">Paid for this month</span>
-                )}
-              </p>
-            </div>
-            {rentDue > 0 && (
-              <button
-                className="btn btn-primary pay-now-btn"
-                onClick={() => {
-                  setPaymentAmount(rentDue.toString());
-                  setShowPaymentModal(true);
-                }}
-              >
-                Pay Now
-              </button>
-            )}
-          </div>
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Rent Payments</h1>
+          <p className="text-gray-600 mt-2">Manage your rent payments and view payment history</p>
         </div>
-      </div>
 
-      {/* Payment History */}
-      <div className="payment-history-section">
-        <div className="section-header">
-          <h2 className="section-title">Payment History</h2>
-          <button
-            className="btn btn-secondary"
-            onClick={() => setShowPaymentModal(true)}
-          >
-            Make Payment
-          </button>
-        </div>
-        
-        <div className="payment-history-table">
-          <div className="table-header">
-            <div className="table-cell">Date</div>
-            <div className="table-cell">Amount</div>
-            <div className="table-cell">Method</div>
-            <div className="table-cell">Status</div>
-            <div className="table-cell">Reference</div>
-          </div>
-          
-          {paymentHistory.map((payment) => (
-            <div key={payment.id} className="table-row">
-              <div className="table-cell">{payment.date}</div>
-              <div className="table-cell">${payment.amount.toFixed(2)}</div>
-              <div className="table-cell">{payment.method}</div>
-              <div className="table-cell">
-                <span 
-                  className="status-badge"
-                  style={{ color: getStatusColor(payment.status) }}
-                >
-                  {payment.status}
-                </span>
+        {/* Success Message */}
+        {paymentSuccess && (
+          <Card className="p-4 mb-6 border-green-200 bg-green-50">
+            <div className="flex items-center space-x-3">
+              <CheckCircle className="w-6 h-6 text-green-600" />
+              <div>
+                <p className="text-green-800 font-medium">Payment Successful!</p>
+                <p className="text-green-700 text-sm">{successMessage}</p>
               </div>
-              <div className="table-cell">{payment.reference}</div>
             </div>
-          ))}
-        </div>
+          </Card>
+        )}
+
+        {/* Error Message */}
+        {error && (
+          <Card className="p-4 mb-6 border-red-200 bg-red-50">
+            <div className="flex items-center space-x-3">
+              <AlertCircle className="w-6 h-6 text-red-600" />
+              <div>
+                <p className="text-red-800 font-medium">Error</p>
+                <p className="text-red-700 text-sm">{error}</p>
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {/* Current Rent Status */}
+        <Card className="p-6 mb-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">Current Rent Status</h2>
+              <div className="space-y-1">
+                                 <p className="text-gray-600">
+                   Property {lease.property_ref} - Room {lease.room || 'N/A'}
+                 </p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {rentDue > 0 ? formatCurrency(rentDue) : 'Paid'}
+                </p>
+                {rentDue > 0 ? (
+                  <p className="text-red-600 font-medium">Due for {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</p>
+                ) : (
+                  <p className="text-green-600 font-medium">
+                    ✓ Paid for {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                  </p>
+                )}
+              </div>
+            </div>
+            <div>
+              {rentDue > 0 && (
+                <Button
+                  onClick={() => setShowPaymentModal(true)}
+                  size="lg"
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  <CreditCard className="w-5 h-5 mr-2" />
+                  Pay Now
+                </Button>
+              )}
+            </div>
+          </div>
+        </Card>
+
+        {/* Payment History */}
+        <Card className="p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Payment History</h3>
+          
+          {paymentHistory.length > 0 ? (
+            <div className="space-y-4">
+              {paymentHistory.map((payment) => (
+                <div key={payment.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                  <div className="flex items-center space-x-4">
+                    {getStatusIcon(payment.status)}
+                    <div>
+                      <p className="font-medium text-gray-900">{formatCurrency(payment.amount_dollars)}</p>
+                      <p className="text-sm text-gray-600">{payment.description}</p>
+                      <p className="text-xs text-gray-500">
+                        <Calendar className="w-3 h-3 inline mr-1" />
+                        {formatDate(payment.payment_date)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(payment.status)}`}>
+                      {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
+                    </span>
+                    {payment.status === 'succeeded' && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Net: {formatCurrency(payment.net_amount_dollars)}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <CreditCard className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-600">No payment history yet</p>
+              <p className="text-sm text-gray-500">Your payments will appear here once you make them</p>
+            </div>
+          )}
+        </Card>
       </div>
 
       {/* Payment Modal */}
       {showPaymentModal && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <div className="modal-header">
-              <h3 className="modal-title">Make a Payment</h3>
-              <button
-                className="modal-close"
-                onClick={() => setShowPaymentModal(false)}
-              >
-                ×
-              </button>
-            </div>
-            
-            <div className="modal-body">
-              <div className="form-group">
-                <label className="form-label">Payment Amount</label>
-                <input
-                  type="number"
-                  className="form-input"
-                  value={paymentAmount}
-                  onChange={(e) => setPaymentAmount(e.target.value)}
-                  placeholder="Enter amount"
-                  step="0.01"
-                  min="0"
-                />
-              </div>
-              
-              <div className="form-group">
-                <label className="form-label">Payment Method</label>
-                <select
-                  className="form-select"
-                  value={paymentMethod}
-                  onChange={(e) => setPaymentMethod(e.target.value)}
-                >
-                  <option value="">Select payment method</option>
-                  <option value="Credit Card">Credit Card</option>
-                  <option value="Bank Transfer">Bank Transfer</option>
-                  <option value="Debit Card">Debit Card</option>
-                </select>
-              </div>
-              
-              <div className="quick-amounts">
-                <span className="quick-amounts-label">Quick amounts:</span>
-                <button
-                  className="btn btn-outline btn-sm"
-                  onClick={() => setPaymentAmount(rentDue.toString())}
-                >
-                  Full Rent (${rentDue})
-                </button>
-                <button
-                  className="btn btn-outline btn-sm"
-                  onClick={() => setPaymentAmount((rentDue / 2).toString())}
-                >
-                  Half Rent (${rentDue / 2})
-                </button>
-              </div>
-            </div>
-            
-            <div className="modal-footer">
-              <button
-                className="btn btn-secondary"
-                onClick={() => setShowPaymentModal(false)}
-                disabled={isProcessing}
-              >
-                Cancel
-              </button>
-              <button
-                className="btn btn-primary"
-                onClick={handlePayment}
-                disabled={isProcessing || !paymentAmount || !paymentMethod}
-              >
-                {isProcessing ? 'Processing...' : 'Pay Now'}
-              </button>
-            </div>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="max-w-md w-full">
+            <Elements stripe={stripePromise}>
+                             <PaymentForm
+                 leaseId={lease.id}
+                 amount={lease.monthly_rent}
+                 landlordName="Landlord"
+                 propertyName={`Property ${lease.property_ref}`}
+                 rentPeriod={getCurrentMonthPeriod()}
+                onSuccess={handlePaymentSuccess}
+                onError={handlePaymentError}
+                onCancel={() => {
+                  setShowPaymentModal(false);
+                  setError(null);
+                }}
+              />
+            </Elements>
           </div>
         </div>
       )}
-
-      <style jsx>{`
-        .tenant-payments {
-          width: 100%;
-          padding: 32px 40px 20px 40px;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          min-height: 100vh;
-          box-sizing: border-box;
-        }
-
-        .page-header {
-          margin-bottom: 24px;
-        }
-
-        .page-title {
-          font-size: 22px;
-          font-weight: 700;
-          color: white;
-          margin: 0 0 4px 0;
-          line-height: 1.15;
-        }
-
-        .page-subtitle {
-          font-size: 14px;
-          color: rgba(255, 255, 255, 0.9);
-          margin: 0;
-          line-height: 1.45;
-        }
-
-        .rent-due-section {
-          margin-bottom: 20px;
-        }
-
-        .rent-due-card {
-          background: white;
-          border-radius: 16px;
-          padding: 18px;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-          border: 1px solid #e2e8f0;
-        }
-
-        .rent-due-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 16px;
-        }
-
-        .rent-due-title {
-          font-size: 14px;
-          font-weight: 700;
-          color: #1e293b;
-          margin: 0;
-        }
-
-        .rent-due-amount {
-          font-size: 24px;
-          font-weight: 700;
-          color: #4f46e5;
-        }
-
-        .rent-due-details {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-        }
-
-        .rent-due-info {
-          flex: 1;
-        }
-
-        .rent-due-property {
-          font-size: 14px;
-          color: #374151;
-          margin: 0 0 6px 0;
-        }
-
-        .rent-due-date {
-          margin: 0;
-        }
-
-        .due-upcoming {
-          color: #d97706;
-          font-weight: 600;
-        }
-
-        .due-overdue {
-          color: #dc2626;
-          font-weight: 600;
-        }
-
-        .due-paid {
-          color: #10b981;
-          font-weight: 600;
-        }
-
-        .pay-now-btn {
-          padding: 10px 16px;
-          font-size: 14px;
-          font-weight: 600;
-          background: #4f46e5;
-          color: white;
-          border: none;
-          border-radius: 6px;
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-
-        .pay-now-btn:hover {
-          background: #3730a3;
-        }
-
-        .payment-history-section {
-          background: white;
-          border-radius: 16px;
-          padding: 18px;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-          border: 1px solid #e2e8f0;
-        }
-
-        .section-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 16px;
-        }
-
-        .section-title {
-          font-size: 14px;
-          font-weight: 700;
-          color: #1e293b;
-          margin: 0;
-        }
-
-        .payment-history-table {
-          border: 1px solid #e2e8f0;
-          border-radius: 12px;
-          overflow: hidden;
-        }
-
-        .table-header {
-          background: #f8fafc;
-          display: grid;
-          grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
-          font-weight: 600;
-          color: #64748b;
-          font-size: 12px;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-        }
-
-        .table-row {
-          display: grid;
-          grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
-          border-top: 1px solid #f1f5f9;
-          transition: all 0.2s ease;
-        }
-
-        .table-row:hover {
-          background: #f9fafb;
-        }
-
-        .table-cell {
-          padding: 12px;
-          display: flex;
-          align-items: center;
-          font-size: 14px;
-          color: #374151;
-        }
-
-        .status-badge {
-          font-weight: 600;
-          font-size: 12px;
-        }
-
-        .modal-overlay {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(0, 0, 0, 0.5);
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          z-index: 1000;
-        }
-
-        .modal-content {
-          background: white;
-          border-radius: 8px;
-          width: 90%;
-          max-width: 500px;
-          max-height: 90vh;
-          overflow-y: auto;
-          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-        }
-
-        .modal-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 20px;
-          border-bottom: 1px solid #e2e8f0;
-        }
-
-        .modal-title {
-          font-size: 18px;
-          font-weight: 600;
-          color: #1e293b;
-          margin: 0;
-        }
-
-        .modal-close {
-          background: none;
-          border: none;
-          font-size: 24px;
-          cursor: pointer;
-          color: #64748b;
-          padding: 0;
-          width: 32px;
-          height: 32px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .modal-close:hover {
-          color: #374151;
-        }
-
-        .modal-body {
-          padding: 20px;
-        }
-
-        .form-group {
-          margin-bottom: 16px;
-        }
-
-        .form-label {
-          display: block;
-          font-weight: 500;
-          color: #374151;
-          margin-bottom: 6px;
-          font-size: 14px;
-        }
-
-        .form-input,
-        .form-select {
-          width: 100%;
-          padding: 10px 12px;
-          border: 1px solid #d1d5db;
-          border-radius: 6px;
-          font-size: 14px;
-          color: #374151;
-          background: white;
-          transition: border-color 0.2s;
-          box-sizing: border-box;
-        }
-
-        .form-input:focus,
-        .form-select:focus {
-          outline: none;
-          border-color: #3b82f6;
-          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-        }
-
-        .quick-amounts {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          margin-top: 12px;
-        }
-
-        .quick-amounts-label {
-          font-size: 12px;
-          color: #64748b;
-        }
-
-        .modal-footer {
-          display: flex;
-          justify-content: flex-end;
-          gap: 12px;
-          padding: 20px;
-          border-top: 1px solid #e2e8f0;
-        }
-
-        .btn {
-          padding: 10px 16px;
-          border-radius: 6px;
-          font-size: 14px;
-          font-weight: 500;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          border: none;
-          text-decoration: none;
-        }
-
-        .btn:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-        }
-
-        .btn-primary {
-          background: #4f46e5;
-          color: white;
-        }
-
-        .btn-primary:hover:not(:disabled) {
-          background: #3730a3;
-        }
-
-        .btn-secondary {
-          background: #f9fafb;
-          color: #374151;
-          border: 1px solid #d1d5db;
-        }
-
-        .btn-secondary:hover:not(:disabled) {
-          background: #f3f4f6;
-        }
-
-        .btn-outline {
-          background: transparent;
-          border: 1px solid #d1d5db;
-          color: #374151;
-        }
-
-        .btn-outline:hover:not(:disabled) {
-          background: #f9fafb;
-        }
-
-        .btn-sm {
-          padding: 6px 12px;
-          font-size: 12px;
-        }
-
-        @media (max-width: 768px) {
-          .tenant-payments {
-            padding: 24px 20px 20px 20px;
-          }
-
-          .rent-due-details {
-            flex-direction: column;
-            gap: 12px;
-            align-items: flex-start;
-          }
-
-          .section-header {
-            flex-direction: column;
-            gap: 12px;
-            align-items: flex-start;
-          }
-
-          .table-header,
-          .table-row {
-            grid-template-columns: 1fr;
-            gap: 8px;
-          }
-
-          .table-cell {
-            padding: 8px;
-          }
-        }
-      `}</style>
     </div>
   );
 }
 
-export default withAuth(TenantPayments, ['tenant']); 
+export default withAuth(TenantPayments); 

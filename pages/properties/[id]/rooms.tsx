@@ -278,7 +278,7 @@ export default function PropertyRooms() {
   };
 
   const openPropertyAssignment = () => {
-    console.log('openPropertyAssignment called', { property: property, rent_type: property?.rent_type });
+              console.log('openPropertyAssignment called', { property: property, rent_type: property?.rent_type });
     if (property?.rent_type === 'per_property') {
       console.log('Opening property assignment modal');
     setPropertyAssignmentModalOpen(true);
@@ -320,7 +320,7 @@ export default function PropertyRooms() {
     return (
         <tr key={room.id} className="room-row">
             <td>
-                <Link href={`/properties/${id}/edit-room/${room.id}`}>
+                <Link href={`/properties/${id}/edit-room/${room.id}`} className="room-link">
                     <div className="room-name">{room.name}</div>
                     <div className="room-type">{room.room_type}</div>
                 </Link>
@@ -343,13 +343,21 @@ export default function PropertyRooms() {
             <td>
                 {isActuallyOccupied && lease ? (
                     <div className="tenant-info">
-                        <span className="tenant-avatar" style={{ backgroundColor: '#E0E7FF' }}>{getTenantName(lease.tenant).charAt(0)}</span>
-                        {getTenantName(lease.tenant)}
+                        <span className="tenant-avatar" style={{ backgroundColor: '#E0E7FF' }}>
+                            {getTenantName(lease.tenant).charAt(0)}
+                        </span>
+                        <Link href={`/tenants/${lease.tenant}`} className="tenant-link">
+                            {getTenantName(lease.tenant)}
+                        </Link>
           </div>
                 ) : lease?.status === 'draft' ? (
                     <div className="tenant-info draft">
-                        <span className="tenant-avatar" style={{ backgroundColor: '#FEF3C7' }}>{getTenantName(lease.tenant).charAt(0)}</span>
-                        {getTenantName(lease.tenant)} (Draft)
+                        <span className="tenant-avatar" style={{ backgroundColor: '#FEF3C7' }}>
+                            {getTenantName(lease.tenant).charAt(0)}
+                        </span>
+                        <Link href={`/tenants/${lease.tenant}`} className="tenant-link">
+                            {getTenantName(lease.tenant)} (Draft)
+                        </Link>
           </div>
         ) : (
                     <span className="unassigned">-</span>
@@ -398,8 +406,20 @@ export default function PropertyRooms() {
   
   const renderTenantHistoryRow = (lease: Lease, index: number) => (
     <tr key={lease.id} className="history-row">
-      <td>{getTenantName(lease.tenant)}</td>
-      <td>{lease.room ? getRoomName(lease.room) : '— Whole Property —'}</td>
+      <td>
+        <Link href={`/tenants/${lease.tenant}`} className="tenant-link">
+          {getTenantName(lease.tenant)}
+        </Link>
+      </td>
+      <td>
+        {lease.room ? (
+          <Link href={`/properties/${id}/edit-room/${lease.room}`} className="room-link">
+            {getRoomName(lease.room)}
+          </Link>
+        ) : (
+          '— Whole Property —'
+        )}
+      </td>
       <td>{formatDate(lease.start_date)}</td>
       <td>{formatDate(lease.end_date)}</td>
       <td>
@@ -729,8 +749,18 @@ export default function PropertyRooms() {
                 <div className="metric-value">{occupancyRate}%</div>
                   <div className="metric-subtitle">current occupancy</div>
                   <div className="metric-progress">
-                    <span className="metric-label">{occupiedRooms} tenants</span>
-                    <span className="metric-change positive">active</span>
+                    <span className="metric-label">
+                      {property.rent_type === 'per_property' 
+                        ? (occupiedRooms > 0 ? 'property occupied' : 'property vacant')
+                        : `${occupiedRooms} tenants`
+                      }
+                    </span>
+                    <span className="metric-change positive">
+                      {property.rent_type === 'per_property' 
+                        ? (occupiedRooms > 0 ? 'leased' : 'available')
+                        : 'active'
+                      }
+                    </span>
                 </div>
               </div>
               </div>
@@ -749,7 +779,9 @@ export default function PropertyRooms() {
                 </div>
                 <div className="metric-content">
                 <div className="metric-value">{formatCurrency(totalRevenue)}</div>
-                  <div className="metric-subtitle">from all rooms</div>
+                  <div className="metric-subtitle">
+                    {property.rent_type === 'per_property' ? 'from property' : 'from all rooms'}
+                  </div>
                   <div className="metric-progress">
                     <span className="metric-label">monthly income</span>
                     <span className="metric-change positive">stable</span>
@@ -852,7 +884,11 @@ export default function PropertyRooms() {
                       <div className="lease-details">
                         <div className="lease-detail-item">
                           <span className="item-label">Tenant</span>
-                          <span className="item-value tenant-name">{getTenantName(propertyLevelLease.tenant)}</span>
+                          <span className="item-value tenant-name">
+                            <Link href={`/tenants/${propertyLevelLease.tenant}`} className="tenant-link">
+                              {getTenantName(propertyLevelLease.tenant)}
+                            </Link>
+                          </span>
                         </div>
                         <div className="lease-detail-item">
                           <span className="item-label">Rent</span>

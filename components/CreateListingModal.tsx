@@ -88,8 +88,16 @@ export default function CreateListingModal({ onClose, onSubmit }: CreateListingM
       case 1:
         return formData.property_id && formData.title && formData.description;
       case 2:
-        return formData.available_from && formData.max_occupancy && formData.min_lease_term;
+        // Photos & Media step - add validation for media fields when implemented
+        return true;
       case 3:
+        // Property Details step
+        return formData.available_from && formData.max_occupancy && formData.min_lease_term;
+      case 4:
+        // Application Settings step - add validation for application fields when implemented
+        return true;
+      case 5:
+        // Contact & Publish step
         return formData.contact_email;
       default:
         return true;
@@ -98,7 +106,7 @@ export default function CreateListingModal({ onClose, onSubmit }: CreateListingM
 
   const nextStep = () => {
     if (validateStep(currentStep)) {
-      setCurrentStep(prev => Math.min(prev + 1, 3));
+      setCurrentStep(prev => Math.min(prev + 1, 5));
       setError(null);
     } else {
       setError('Please fill in all required fields before continuing.');
@@ -113,7 +121,7 @@ export default function CreateListingModal({ onClose, onSubmit }: CreateListingM
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateStep(3)) {
+    if (!validateStep(5)) {
       setError('Please fill in all required fields.');
       return;
     }
@@ -193,11 +201,19 @@ export default function CreateListingModal({ onClose, onSubmit }: CreateListingM
           </div>
           <div className={`step ${currentStep >= 2 ? 'active' : ''} ${currentStep > 2 ? 'completed' : ''}`}>
             <div className="step-number">2</div>
-            <div className="step-label">Terms & Policies</div>
+            <div className="step-label">Photos & Media</div>
           </div>
           <div className={`step ${currentStep >= 3 ? 'active' : ''} ${currentStep > 3 ? 'completed' : ''}`}>
             <div className="step-number">3</div>
-            <div className="step-label">Contact & Finish</div>
+            <div className="step-label">Property Details</div>
+          </div>
+          <div className={`step ${currentStep >= 4 ? 'active' : ''} ${currentStep > 4 ? 'completed' : ''}`}>
+            <div className="step-number">4</div>
+            <div className="step-label">Application Settings</div>
+          </div>
+          <div className={`step ${currentStep >= 5 ? 'active' : ''} ${currentStep > 5 ? 'completed' : ''}`}>
+            <div className="step-number">5</div>
+            <div className="step-label">Contact & Publish</div>
           </div>
         </div>
 
@@ -269,11 +285,43 @@ export default function CreateListingModal({ onClose, onSubmit }: CreateListingM
             </div>
           )}
 
-          {/* Step 2: Terms & Policies */}
+          {/* Step 2: Photos & Media */}
           {currentStep === 2 && (
             <div className="step-content">
               <div className="form-section">
-                <h3 className="section-title">Availability & Terms</h3>
+                <h3 className="section-title">Photos & Media</h3>
+                <p className="section-description">Add photos and media to showcase your property</p>
+                
+                <div className="form-group">
+                  <label className="form-label">Property Photos</label>
+                  <div className="upload-area">
+                    <p>Photo upload functionality will be implemented here</p>
+                    <p className="form-hint">Add high-quality photos of your property, rooms, and amenities</p>
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="virtual_tour_url">Virtual Tour URL</label>
+                  <input
+                    type="url"
+                    id="virtual_tour_url"
+                    name="virtual_tour_url"
+                    value={formData.virtual_tour_url}
+                    onChange={handleInputChange}
+                    placeholder="https://..."
+                    className="form-input"
+                  />
+                  <p className="form-hint">Link to virtual tour, video, or 360° photos</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: Property Details */}
+          {currentStep === 3 && (
+            <div className="step-content">
+              <div className="form-section">
+                <h3 className="section-title">Property Details</h3>
                 
                 <div className="form-row">
                   <div className="form-group">
@@ -522,6 +570,148 @@ export default function CreateListingModal({ onClose, onSubmit }: CreateListingM
             </div>
           )}
 
+          {/* Step 4: Application Settings */}
+          {currentStep === 4 && (
+            <div className="step-content">
+              <h3 className="section-title">Application Settings</h3>
+              <div className="form-section">
+                <div className="form-group">
+                  <label htmlFor="application_fee">Application Fee ($)</label>
+                  <input
+                    type="number"
+                    id="application_fee"
+                    name="application_fee"
+                    value={formData.application_fee}
+                    onChange={handleInputChange}
+                    placeholder="e.g., 50"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="security_deposit">Security Deposit ($)</label>
+                  <input
+                    type="number"
+                    id="security_deposit"
+                    name="security_deposit"
+                    value={formData.security_deposit}
+                    onChange={handleInputChange}
+                    placeholder="e.g., 1500"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Pet Policy</label>
+                  <select
+                    name="pet_policy"
+                    value={formData.pet_policy}
+                    onChange={handleInputChange}
+                  >
+                    <option value="not_allowed">Not Allowed</option>
+                    <option value="cats_only">Cats Only</option>
+                    <option value="dogs_only">Dogs Only</option>
+                    <option value="cats_and_dogs">Cats and Dogs</option>
+                    <option value="all_pets">All Pets Welcome</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-checkbox">
+                    <input
+                      type="checkbox"
+                      name="smoking_allowed"
+                      checked={formData.smoking_allowed}
+                      onChange={handleInputChange}
+                    />
+                    Smoking allowed
+                  </label>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-checkbox">
+                    <input
+                      type="checkbox"
+                      name="furnished"
+                      checked={formData.furnished}
+                      onChange={handleInputChange}
+                    />
+                    Furnished
+                  </label>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 5: Contact & Publish */}
+          {currentStep === 5 && (
+            <div className="step-content">
+              <h3 className="section-title">Contact & Publish</h3>
+              <div className="form-section">
+                <div className="form-group">
+                  <label htmlFor="contact_email">Contact Email *</label>
+                  <input
+                    type="email"
+                    id="contact_email"
+                    name="contact_email"
+                    value={formData.contact_email}
+                    onChange={handleInputChange}
+                    required
+                    placeholder="landlord@example.com"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="contact_phone">Contact Phone</label>
+                  <input
+                    type="tel"
+                    id="contact_phone"
+                    name="contact_phone"
+                    value={formData.contact_phone}
+                    onChange={handleInputChange}
+                    placeholder="(555) 123-4567"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="virtual_tour_url">Virtual Tour URL</label>
+                  <input
+                    type="url"
+                    id="virtual_tour_url"
+                    name="virtual_tour_url"
+                    value={formData.virtual_tour_url}
+                    onChange={handleInputChange}
+                    placeholder="https://..."
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-checkbox">
+                    <input
+                      type="checkbox"
+                      name="is_active"
+                      checked={formData.is_active}
+                      onChange={handleInputChange}
+                    />
+                    Make this listing active immediately
+                  </label>
+                  <p className="form-hint">You can always activate/deactivate listings later</p>
+                </div>
+              </div>
+
+              {getSelectedProperty() && (
+                <div className="form-section">
+                  <h3 className="section-title">Selected Property</h3>
+                  <div className="property-preview">
+                    <div className="property-info">
+                      <h4 className="property-name">{getSelectedProperty()?.name}</h4>
+                      <p className="property-address">{getSelectedProperty()?.address}</p>
+                      <p className="property-type">{getSelectedProperty()?.property_type}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="modal-footer">
             <div className="navigation-buttons">
               {currentStep > 1 && (
@@ -537,7 +727,7 @@ export default function CreateListingModal({ onClose, onSubmit }: CreateListingM
                 </button>
               )}
               
-              {currentStep < 3 ? (
+              {currentStep < 5 ? (
                 <button
                   type="button"
                   onClick={nextStep}

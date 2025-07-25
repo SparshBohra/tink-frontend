@@ -6,7 +6,7 @@ import DashboardLayout from '../components/DashboardLayout';
 import { withAuth } from '../lib/auth-context';
 import { useAuth } from '../lib/auth-context';
 import ApplicationDetailModal from '../components/ApplicationDetailModal';
-import { Application, Property, Room, DashboardStats, Manager } from '../lib/types';
+import { Application, Property, Room, DashboardStats, Manager, PaymentSummaryResponse, PaymentHistoryResponse } from '../lib/types';
 import { apiClient } from '../lib/api';
 
 // Icon Components
@@ -96,6 +96,12 @@ function LandlordDashboard() {
   const [dataLoading, setDataLoading] = useState(true);
   const [dataError, setDataError] = useState<string | null>(null);
   
+  // Payment data state  
+  const [paymentSummary, setPaymentSummary] = useState<PaymentSummaryResponse | null>(null);
+  const [paymentHistory, setPaymentHistory] = useState<PaymentHistoryResponse | null>(null);
+  const [paymentLoading, setPaymentLoading] = useState(true);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  
   // Application modal state
   const [isApplicationDetailOpen, setIsApplicationDetailOpen] = useState(false);
   const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
@@ -168,6 +174,38 @@ function LandlordDashboard() {
       fetchRealData();
     }
   }, [user]);
+
+  // Fetch payment data
+  useEffect(() => {
+    const fetchPaymentData = async () => {
+      try {
+        setPaymentLoading(true);
+        setPaymentError(null);
+        
+        // Fetch payment summary and history in parallel
+        const [summaryData, historyData] = await Promise.all([
+          apiClient.getLandlordPaymentSummary(),
+          apiClient.getPaymentHistory({ page: 1, page_size: 10 })
+        ]);
+        
+        setPaymentSummary(summaryData);
+        setPaymentHistory(historyData);
+        
+      } catch (error: any) {
+        console.error('Failed to fetch payment data:', error);
+        setPaymentError('Failed to load payment data');
+        // Set fallback empty data
+        setPaymentSummary(null);
+        setPaymentHistory(null);
+      } finally {
+        setPaymentLoading(false);
+      }
+    };
+
+    if (user && (isLandlord() || isManager() || isAdmin())) {
+      fetchPaymentData();
+    }
+  }, [user]);
   
   const welcomeMessage = `Welcome back, ${user?.full_name || 'User'}! Here's an overview of your business operations.`;
   
@@ -193,7 +231,7 @@ function LandlordDashboard() {
       { text: `You have ${dashboardStats.applications.pending} pending applications to review.`, icon: <BriefcaseIcon /> },
       { text: `Your portfolio has ${dashboardStats.rooms.occupancy_rate}% occupancy rate.`, icon: <HouseIcon /> },
       { text: `${dashboardStats.applications.total} total applications this period.`, icon: <LightningIcon /> },
-      { text: `Monthly revenue: $${dashboardStats.revenue.monthly.toLocaleString()}.`, icon: <ChartIcon /> },
+              { text: `Monthly revenue: $${paymentSummary?.summary.current_month_total_dollars?.toLocaleString() || '0'}.`, icon: <ChartIcon /> },
       { text: `${dashboardStats.leases.active} active leases across your properties.`, icon: <BellIcon /> },
       { text: "Your portfolio performance is excellent.", icon: <TrendingUpIcon /> },
       { text: "All business operations are on track.", icon: <TargetIcon /> }
@@ -310,7 +348,7 @@ function LandlordDashboard() {
   const propertiesCount = useCounterAnimation(dashboardStats?.properties.total || 0, 1500);
   const occupancyRate = useCounterAnimation(dashboardStats?.rooms.occupancy_rate || 0, 2000);
   const teamCount = useCounterAnimation(dashboardStats?.managers.total || 0, 1800);
-  const revenueValue = useCounterAnimation(dashboardStats?.revenue.monthly || 0, 2200, true);
+  const revenueValue = useCounterAnimation(paymentSummary?.summary.current_month_total_dollars || 0, 2200, true);
   
   // Dynamic metrics based on real data
   const metrics = useMemo(() => {
@@ -343,9 +381,9 @@ function LandlordDashboard() {
         changeType: 'positive' 
       },
       revenue: { 
-        value: `$${dashboardStats.revenue.monthly.toLocaleString()}`, 
+        value: paymentLoading ? '$0' : `$${paymentSummary?.summary.current_month_total_dollars?.toLocaleString() || '0'}`, 
         subtitle: 'Monthly Revenue', 
-        change: `$${(dashboardStats.revenue.projected_annual / 1000).toFixed(0)}k annual`, 
+        change: paymentLoading ? 'Loading...' : `${paymentSummary?.summary.total_successful_payments || 0} payments this month`, 
         changeType: 'positive' 
       }
     };
@@ -806,7 +844,9 @@ function LandlordDashboard() {
                     </svg>
                   </div>
                   <div className="summary-content">
-                    <div className="summary-value">$38,400</div>
+                    <div className="summary-value">
+                      {paymentLoading ? '...' : `$${paymentSummary?.summary.current_month_total_dollars?.toLocaleString() || '0'}`}
+                    </div>
                     <div className="summary-label">Collected This Month</div>
                   </div>
                 </div>
@@ -819,7 +859,9 @@ function LandlordDashboard() {
                     </svg>
                   </div>
                   <div className="summary-content">
-                    <div className="summary-value">$7,200</div>
+                    <div className="summary-value">
+                      {paymentLoading ? '...' : `${paymentSummary?.summary.pending_payments || 0} payments`}
+                    </div>
                     <div className="summary-label">Pending Collection</div>
                   </div>
                 </div>
@@ -833,8 +875,10 @@ function LandlordDashboard() {
                     </svg>
                   </div>
                   <div className="summary-content">
-                    <div className="summary-value">$2,800</div>
-                    <div className="summary-label">Overdue</div>
+                    <div className="summary-value">
+                      {paymentLoading ? '...' : `${paymentSummary?.summary.failed_payments || 0} failed`}
+                    </div>
+                    <div className="summary-label">Failed Payments</div>
                   </div>
                 </div>
               </div>
@@ -891,111 +935,55 @@ function LandlordDashboard() {
                         <th>Date</th>
                         <th>Tenant</th>
                         <th>Property</th>
-                        <th>Unit</th>
                         <th>Amount</th>
                         <th>Status</th>
+                        <th>Period</th>
                         <th>Method</th>
                       </tr>
                     </thead>
                     <tbody>
-                      <tr>
-                        <td>Dec 15, 2024</td>
-                        <td>
-                          <div className="tenant-info">
-                            <div className="tenant-avatar">JS</div>
-                            <span>John Smith</span>
-                          </div>
-                        </td>
-                        <td>Sunset Apartments</td>
-                        <td>Unit 2A</td>
-                        <td className="amount-cell">$1,200</td>
-                        <td><span className="status-badge collected">Collected</span></td>
-                        <td>Bank Transfer</td>
-                      </tr>
-                      <tr>
-                        <td>Dec 14, 2024</td>
-                        <td>
-                          <div className="tenant-info">
-                            <div className="tenant-avatar">MJ</div>
-                            <span>Maria Johnson</span>
-                          </div>
-                        </td>
-                        <td>Oak Street Complex</td>
-                        <td>Unit 5B</td>
-                        <td className="amount-cell">$1,450</td>
-                        <td><span className="status-badge collected">Collected</span></td>
-                        <td>Credit Card</td>
-                      </tr>
-                      <tr>
-                        <td>Dec 13, 2024</td>
-                        <td>
-                          <div className="tenant-info">
-                            <div className="tenant-avatar">RW</div>
-                            <span>Robert Wilson</span>
-                          </div>
-                        </td>
-                        <td>Downtown Lofts</td>
-                        <td>Unit 12</td>
-                        <td className="amount-cell">$1,800</td>
-                        <td><span className="status-badge collected">Collected</span></td>
-                        <td>ACH</td>
-                      </tr>
-                      <tr>
-                        <td>Dec 12, 2024</td>
-                        <td>
-                          <div className="tenant-info">
-                            <div className="tenant-avatar">LB</div>
-                            <span>Lisa Brown</span>
-                          </div>
-                        </td>
-                        <td>Sunset Apartments</td>
-                        <td>Unit 1C</td>
-                        <td className="amount-cell">$1,100</td>
-                        <td><span className="status-badge pending">Pending</span></td>
-                        <td>Bank Transfer</td>
-                      </tr>
-                      <tr>
-                        <td>Dec 10, 2024</td>
-                        <td>
-                          <div className="tenant-info">
-                            <div className="tenant-avatar">DM</div>
-                            <span>David Miller</span>
-                          </div>
-                        </td>
-                        <td>Oak Street Complex</td>
-                        <td>Unit 3A</td>
-                        <td className="amount-cell">$1,350</td>
-                        <td><span className="status-badge overdue">Overdue</span></td>
-                        <td>-</td>
-                      </tr>
-                      <tr>
-                        <td>Dec 8, 2024</td>
-                        <td>
-                          <div className="tenant-info">
-                            <div className="tenant-avatar">ST</div>
-                            <span>Sarah Taylor</span>
-                          </div>
-                        </td>
-                        <td>Downtown Lofts</td>
-                        <td>Unit 8</td>
-                        <td className="amount-cell">$1,650</td>
-                        <td><span className="status-badge collected">Collected</span></td>
-                        <td>Credit Card</td>
-                      </tr>
-                      <tr>
-                        <td>Dec 5, 2024</td>
-                        <td>
-                          <div className="tenant-info">
-                            <div className="tenant-avatar">KA</div>
-                            <span>Kevin Anderson</span>
-                          </div>
-                        </td>
-                        <td>Sunset Apartments</td>
-                        <td>Unit 4B</td>
-                        <td className="amount-cell">$1,250</td>
-                        <td><span className="status-badge collected">Collected</span></td>
-                        <td>ACH</td>
-                      </tr>
+                      {paymentLoading ? (
+                        <tr>
+                          <td colSpan={7} className="loading-cell">Loading payment history...</td>
+                        </tr>
+                      ) : paymentError ? (
+                        <tr>
+                          <td colSpan={7} className="error-cell">Failed to load payments</td>
+                        </tr>
+                      ) : paymentHistory?.payments?.length ? (
+                        paymentHistory.payments.map((payment) => {
+                          const paymentDate = new Date(payment.payment_date);
+                          const tenantName = payment.tenant_name || 'Unknown Tenant';
+                          const initials = tenantName.split(' ').map(n => n[0]).join('').toUpperCase();
+                          const statusClass = payment.status === 'succeeded' ? 'collected' : 
+                                            payment.status === 'pending' ? 'pending' : 'overdue';
+                          const statusText = payment.status === 'succeeded' ? 'Collected' :
+                                           payment.status === 'pending' ? 'Pending' : 'Failed';
+                          
+                          return (
+                            <tr key={payment.id}>
+                              <td>{paymentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</td>
+                              <td>
+                                <div className="tenant-info">
+                                  <div className="tenant-avatar">{initials}</div>
+                                  <span>{tenantName}</span>
+                                </div>
+                              </td>
+                              <td>{payment.property_name || 'Property'}</td>
+                              <td className="amount-cell">${payment.amount_dollars}</td>
+                              <td><span className={`status-badge ${statusClass}`}>{statusText}</span></td>
+                              <td>{payment.rent_period_start ? 
+                                   `${new Date(payment.rent_period_start).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}` : 
+                                   'N/A'}</td>
+                              <td>Stripe</td>
+                            </tr>
+                          );
+                        })
+                      ) : (
+                        <tr>
+                          <td colSpan={7} className="empty-cell">No payments found</td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -2986,6 +2974,17 @@ function LandlordDashboard() {
 
         .rent-logs-table tbody tr:hover {
           background: #f8fafc;
+        }
+
+        .loading-cell, .error-cell, .empty-cell {
+          text-align: center;
+          padding: 20px;
+          color: #6b7280;
+          font-style: italic;
+        }
+
+        .error-cell {
+          color: #ef4444;
         }
 
         .tenant-info {

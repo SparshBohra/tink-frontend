@@ -682,3 +682,107 @@ export interface LandlordSignupData {
   password: string;
   password_confirm: string;
 } 
+
+// PAYMENT TYPES FOR STRIPE INTEGRATION
+
+export interface PaymentIntentRequest {
+  lease_id: number;
+  rent_period_start?: string; // ISO date string
+  amount?: number; // Optional custom amount in dollars
+}
+
+export interface PaymentIntentResponse {
+  success: true;
+  client_secret: string;
+  payment_intent_id: string;
+  amount_cents: number;
+  amount_dollars: number;
+  currency: string;
+  lease_id: number;
+  landlord: string;
+  property: string | null;
+  rent_period: string; // ISO date string
+}
+
+export interface PaymentRecord {
+  id: number;
+  payment_intent_id: string;
+  amount_dollars: number;
+  status: 'pending' | 'succeeded' | 'failed' | 'canceled' | 'refunded';
+  payment_date: string; // ISO datetime string
+  rent_period_start: string; // ISO date string
+  rent_period_end: string; // ISO date string
+  description: string;
+  tenant_name: string;
+  landlord_name: string;
+  property_name: string | null;
+  stripe_fee_dollars: number;
+  net_amount_dollars: number;
+  is_late_payment: boolean;
+}
+
+export interface PaymentHistoryResponse {
+  payments: PaymentRecord[];
+  pagination: {
+    current_page: number;
+    total_pages: number;
+    total_count: number;
+    has_next: boolean;
+    has_previous: boolean;
+  };
+}
+
+export interface PaymentSummary {
+  current_month_total_dollars: number;
+  last_30_days_total_dollars: number;
+  total_successful_payments: number;
+  pending_payments: number;
+  failed_payments: number;
+}
+
+export interface RecentPayment {
+  id: number;
+  amount_dollars: number;
+  tenant_name: string;
+  property_name: string | null;
+  payment_date: string; // ISO date string
+  status: 'pending' | 'succeeded' | 'failed' | 'canceled' | 'refunded';
+}
+
+export interface PaymentSummaryResponse {
+  summary: PaymentSummary;
+  recent_payments: RecentPayment[];
+}
+
+// Stripe-specific types
+export interface StripePaymentIntent {
+  id: string;
+  client_secret: string;
+  status: string;
+  amount: number;
+  currency: string;
+}
+
+export interface StripeError {
+  type: string;
+  code: string;
+  message: string;
+}
+
+export interface PaymentFormData {
+  amount: number;
+  lease_id: number;
+  rent_period_start: string;
+  save_payment_method?: boolean;
+}
+
+// API Error types
+export interface PaymentError {
+  error: string;
+  error_type?: 'account_missing' | 'charges_disabled' | 'stripe_error' | 'validation_error';
+  details?: {
+    stripe_account_id: boolean;
+    details_submitted: boolean;
+    charges_enabled: boolean;
+  };
+} 
