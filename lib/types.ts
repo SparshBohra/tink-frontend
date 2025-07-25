@@ -785,4 +785,84 @@ export interface PaymentError {
     details_submitted: boolean;
     charges_enabled: boolean;
   };
+}
+
+// Tenant Authentication Types
+export interface TenantOtpRequest {
+  phone_number: string;
+}
+
+export interface TenantOtpResponse {
+  success: boolean;
+  message: string;
+  phone_number?: string;
+  tenant_name?: string;
+  expires_in_minutes?: number;
+  error?: string;
+  error_type?: string;
+}
+
+export interface TenantOtpVerification {
+  phone_number: string;
+  otp_code: string;
+}
+
+export interface TenantAuthTokens {
+  refresh: string;
+  access: string;
+}
+
+export interface TenantAuthResponse {
+  success: boolean;
+  message: string;
+  tokens?: TenantAuthTokens;
+  tenant?: {
+    id: number;
+    full_name: string;
+    email: string;
+    phone: string;
+    is_verified: boolean;
+  };
+  error?: string;
+  error_type?: string;
+  remaining_attempts?: number;
+}
+
+export interface TenantProfile {
+  tenant: {
+    id: number;
+    full_name: string;
+    email: string;
+    phone: string;
+    is_verified: boolean;
+    last_login?: string;
+    created_at: string;
+  };
+  active_lease?: {
+    id: number;
+    monthly_rent: number;
+    start_date: string;
+    end_date: string;
+    status: string;
+    property: {
+      id: number;
+      name: string;
+      address: string;
+    };
+    room?: {
+      id: number;
+      name: string;
+    };
+  };
+  payment_status: {
+    has_active_lease: boolean;
+    current_rent?: number;
+    property_name?: string;
+    room_name?: string;
+  };
+}
+
+export interface TenantLogoutResponse {
+  success: boolean;
+  message: string;
 } 

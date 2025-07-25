@@ -40,7 +40,14 @@ import {
   PaymentIntentRequest,
   PaymentIntentResponse,
   PaymentHistoryResponse,
-  PaymentSummaryResponse
+  PaymentSummaryResponse,
+  TenantOtpRequest,
+  TenantOtpResponse,
+  TenantOtpVerification,
+  TenantAuthTokens,
+  TenantAuthResponse,
+  TenantProfile,
+  TenantLogoutResponse
 } from './types';
 
 // Smart environment-based API URL configuration
@@ -1905,6 +1912,57 @@ class ApiClient {
 
   async getLandlordPaymentSummary(): Promise<PaymentSummaryResponse> {
     const response = await this.api.get('/auth/payments/summary/');
+    return response.data;
+  }
+
+  // Tenant Authentication Methods
+  async requestTenantOtp(phoneNumber: string): Promise<TenantOtpResponse> {
+    try {
+      const response = await this.api.post('/auth/tenant-auth/request-otp/', {
+        phone_number: phoneNumber
+      });
+      return response.data;
+    } catch (error: any) {
+      if (error.response?.data) {
+        return {
+          success: false,
+          message: error.response.data.error || 'Failed to send OTP',
+          error: error.response.data.error,
+          error_type: error.response.data.error_type
+        };
+      }
+      throw this.handleError(error);
+    }
+  }
+
+  async verifyTenantOtp(phoneNumber: string, otpCode: string): Promise<TenantAuthResponse> {
+    try {
+      const response = await this.api.post('/auth/tenant-auth/verify-otp/', {
+        phone_number: phoneNumber,
+        otp_code: otpCode
+      });
+      return response.data;
+    } catch (error: any) {
+      if (error.response?.data) {
+        return {
+          success: false,
+          message: error.response.data.error || 'Failed to verify OTP',
+          error: error.response.data.error,
+          error_type: error.response.data.error_type,
+          remaining_attempts: error.response.data.remaining_attempts
+        };
+      }
+      throw this.handleError(error);
+    }
+  }
+
+  async getTenantProfile(): Promise<TenantProfile> {
+    const response = await this.api.get('/auth/tenant-auth/profile/');
+    return response.data;
+  }
+
+  async tenantLogout(): Promise<TenantLogoutResponse> {
+    const response = await this.api.post('/auth/tenant-auth/logout/');
     return response.data;
   }
 }

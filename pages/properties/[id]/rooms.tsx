@@ -278,7 +278,7 @@ export default function PropertyRooms() {
   };
 
   const openPropertyAssignment = () => {
-              console.log('openPropertyAssignment called', { property: property, rent_type: property?.rent_type });
+    console.log('openPropertyAssignment called', { property: property, rent_type: property?.rent_type });
     if (property?.rent_type === 'per_property') {
       console.log('Opening property assignment modal');
     setPropertyAssignmentModalOpen(true);
@@ -749,18 +749,8 @@ export default function PropertyRooms() {
                 <div className="metric-value">{occupancyRate}%</div>
                   <div className="metric-subtitle">current occupancy</div>
                   <div className="metric-progress">
-                    <span className="metric-label">
-                      {property.rent_type === 'per_property' 
-                        ? (occupiedRooms > 0 ? 'property occupied' : 'property vacant')
-                        : `${occupiedRooms} tenants`
-                      }
-                    </span>
-                    <span className="metric-change positive">
-                      {property.rent_type === 'per_property' 
-                        ? (occupiedRooms > 0 ? 'leased' : 'available')
-                        : 'active'
-                      }
-                    </span>
+                    <span className="metric-label">{occupiedRooms} tenants</span>
+                    <span className="metric-change positive">active</span>
                 </div>
               </div>
               </div>
@@ -779,9 +769,7 @@ export default function PropertyRooms() {
                 </div>
                 <div className="metric-content">
                 <div className="metric-value">{formatCurrency(totalRevenue)}</div>
-                  <div className="metric-subtitle">
-                    {property.rent_type === 'per_property' ? 'from property' : 'from all rooms'}
-                  </div>
+                  <div className="metric-subtitle">from all rooms</div>
                   <div className="metric-progress">
                     <span className="metric-label">monthly income</span>
                     <span className="metric-change positive">stable</span>
