@@ -704,6 +704,22 @@ export interface PaymentIntentResponse {
   rent_period: string; // ISO date string
 }
 
+export interface TenantPaymentIntentResponse {
+  success: true;
+  client_secret: string;
+  payment_intent_id: string;
+  payment_details: {
+    amount_cents: number;
+    amount_dollars: number;
+    rent_period_start: string; // ISO date string
+    rent_period_end: string; // ISO date string
+    due_date: string; // ISO date string
+    payment_month: string; // Human readable month/year
+    is_overdue: boolean;
+    days_overdue: number;
+  };
+}
+
 export interface PaymentRecord {
   id: number;
   payment_intent_id: string;

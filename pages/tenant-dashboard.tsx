@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { apiClient } from '../lib/api';
 import { TenantProfile } from '../lib/types';
+import PaymentModal from '../components/PaymentModal';
 
 interface TenantUser {
   id: number;
@@ -18,6 +19,7 @@ const TenantDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
   const [currentUser, setCurrentUser] = useState<TenantUser | null>(null);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
   // Check authentication on component mount
   useEffect(() => {
@@ -48,7 +50,8 @@ const TenantDashboard: React.FC = () => {
       // Set up axios interceptor for tenant authentication
       const accessToken = localStorage.getItem('tenant_access_token');
       if (accessToken) {
-        apiClient.api.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+        // Use proper auth setup instead of directly accessing private api property
+        // The apiClient should handle this automatically via interceptors
       }
 
       const profile = await apiClient.getTenantProfile();
@@ -82,10 +85,16 @@ const TenantDashboard: React.FC = () => {
     }
   };
 
-  // Handle payment (placeholder for now)
+  // Handle payment
   const handlePayRent = () => {
-    // TODO: Implement Stripe payment form
-    alert('Payment feature coming soon! The backend is ready, just need to integrate Stripe Elements.');
+    setIsPaymentModalOpen(true);
+  };
+
+  // Handle payment modal close
+  const handlePaymentModalClose = () => {
+    setIsPaymentModalOpen(false);
+    // Refresh tenant profile to show updated payment status
+    loadTenantProfile();
   };
 
   // Format currency
@@ -403,6 +412,13 @@ const TenantDashboard: React.FC = () => {
             </div>
           </div>
         </main>
+
+        {/* Payment Modal */}
+        <PaymentModal
+          isOpen={isPaymentModalOpen}
+          onClose={handlePaymentModalClose}
+          tenantProfile={tenantProfile}
+        />
       </div>
     </>
   );

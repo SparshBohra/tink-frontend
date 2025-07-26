@@ -39,6 +39,7 @@ import {
   StripeConnectLinkData,
   PaymentIntentRequest,
   PaymentIntentResponse,
+  TenantPaymentIntentResponse,
   PaymentHistoryResponse,
   PaymentSummaryResponse,
   TenantOtpRequest,
@@ -104,6 +105,18 @@ class ApiClient {
         const originalRequest = error.config as any;
 
         if (error.response?.status === 401 && !originalRequest._retry) {
+          // Check if this is a tenant authentication error
+          if (this.isTenantAuthenticated()) {
+            // For tenant auth errors, don't try to refresh - just redirect to tenant login
+            localStorage.removeItem('tenant_access_token');
+            localStorage.removeItem('tenant_refresh_token');
+            localStorage.removeItem('tenant_user');
+            if (typeof window !== 'undefined') {
+              window.location.href = '/tenant-login';
+            }
+            return Promise.reject(error);
+          }
+
           if (this.isRefreshing) {
             return new Promise((resolve, reject) => {
               this.failedQueue.push({ resolve, reject });
@@ -184,20 +197,40 @@ class ApiClient {
   }
 
   getAccessToken(): string | null {
+    // Check for tenant token first, then regular token
+    const tenantToken = localStorage.getItem('tenant_access_token');
+    if (tenantToken) {
+      return tenantToken;
+    }
     return Cookies.get('access_token') || null;
+  }
+
+  isTenantAuthenticated(): boolean {
+    return !!localStorage.getItem('tenant_access_token');
   }
 
   getRefreshToken(): string | null {
     return Cookies.get('refresh_token') || null;
   }
 
-  setAccessToken(token: string) {
-    Cookies.set('access_token', token, { expires: 1 });
+  setAccessToken(token: string, type: 'regular' | 'tenant' = 'regular') {
+    if (type === 'tenant') {
+      // For tenant tokens, store in localStorage (not cookies)
+      localStorage.setItem('tenant_access_token', token);
+    } else {
+      Cookies.set('access_token', token, { expires: 1 });
+    }
   }
 
   logout() {
+    // Clear regular auth tokens
     Cookies.remove('access_token');
     Cookies.remove('refresh_token');
+    
+    // Also clear tenant tokens if they exist
+    localStorage.removeItem('tenant_access_token');
+    localStorage.removeItem('tenant_refresh_token');
+    localStorage.removeItem('tenant_user');
   }
 
   isAuthenticated(): boolean {
@@ -1900,6 +1933,11 @@ class ApiClient {
 
   async createRentPaymentIntent(data: PaymentIntentRequest): Promise<PaymentIntentResponse> {
     const response = await this.api.post('/auth/payments/create-intent/', data);
+    return response.data;
+  }
+
+  async createTenantRentPaymentIntent(): Promise<TenantPaymentIntentResponse> {
+    const response = await this.api.post('/auth/tenant-auth/create-payment-intent/');
     return response.data;
   }
 

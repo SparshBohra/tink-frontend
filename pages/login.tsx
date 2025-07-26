@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
+import { useRouter } from 'next/router';
 import { useAuth } from '../lib/auth-context';
 import Link from 'next/link';
 
 export default function Login() {
+  const router = useRouter();
   const { login, isAuthenticated, loading, error, clearError } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -63,10 +65,12 @@ export default function Login() {
         setUsername('sarah_manager');
         setPassword('demo12345');
       } else {
-        // Tenant - Lives in properties and uses tenant portal
-        credentials = { username: 'john_tenant', password: 'tenant123' };
-        setUsername('john_tenant');
-        setPassword('tenant123');
+        // Tenant - Uses different auth system (phone + OTP), redirect to tenant login
+        setSuccess('Redirecting to Tenant Portal...');
+        setTimeout(() => {
+          router.push('/tenant-login');
+        }, 1000);
+        return;
       }
       
       console.log('Demo login - attempting login with:', credentials.username);
