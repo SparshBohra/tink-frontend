@@ -131,23 +131,35 @@ const TenantLogin: React.FC = () => {
         // Handle different error types
         if (response.error_type === 'phone_not_found') {
           setErrors({
-            phoneNumber: 'Phone number not found. Please contact your landlord to set up your account.'
+            phoneNumber: "Phone number not found in our system. Please contact your landlord to set up your tenant account."
           });
         } else if (response.error_type === 'rate_limited') {
           setErrors({
-            general: response.error || 'Too many requests. Please try again later.'
+            general: response.error || 'Too many requests. Please wait before trying again.'
           });
         } else {
           setErrors({
-            general: response.error || 'Failed to send OTP. Please try again.'
+            general: response.error || 'Failed to send OTP. Please try again or contact support.'
           });
         }
       }
     } catch (error: any) {
       console.error('OTP request error:', error);
-      setErrors({
-        general: 'An unexpected error occurred. Please try again.'
-      });
+      
+      // Handle specific error cases
+      if (error.response?.data?.error_type === 'phone_not_found') {
+        setErrors({
+          phoneNumber: "Phone number not found in our system. Please contact your landlord to set up your tenant account."
+        });
+      } else if (error.response?.data?.error) {
+        setErrors({
+          general: error.response.data.error
+        });
+      } else {
+        setErrors({
+          general: 'An unexpected error occurred. Please try again or contact support.'
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -181,20 +193,31 @@ const TenantLogin: React.FC = () => {
         // Redirect to tenant dashboard
         router.push('/tenant-dashboard');
       } else {
-        // Handle OTP verification errors
+        // Handle OTP verification errors with better messages
         setRemainingAttempts(response.remaining_attempts || null);
         
-        if (response.error_type === 'blocked') {
+        if (response.error_type === 'phone_not_found') {
+          setErrors({
+            general: "Phone number not found in our system. Please contact your landlord to set up your tenant account."
+          });
+        } else if (response.error_type === 'blocked') {
           setErrors({
             general: response.error || 'Too many failed attempts. Please try again later.'
           });
         } else if (response.error_type === 'expired') {
           setErrors({
-            otpCode: 'OTP has expired. Please request a new one.'
+            otpCode: 'Your OTP code has expired. Please request a new one below.'
+          });
+        } else if (response.error_type === 'no_otp') {
+          setErrors({
+            otpCode: 'No OTP found. Please request a new one below.'
           });
         } else if (response.error_type === 'invalid_otp') {
+          const remainingText = response.remaining_attempts 
+            ? ` ${response.remaining_attempts} attempts remaining.`
+            : '';
           setErrors({
-            otpCode: response.error || 'Invalid OTP code'
+            otpCode: `Invalid OTP code.${remainingText} Please check your code and try again.`
           });
         } else {
           setErrors({
@@ -204,9 +227,21 @@ const TenantLogin: React.FC = () => {
       }
     } catch (error: any) {
       console.error('OTP verification error:', error);
-      setErrors({
-        general: 'An unexpected error occurred. Please try again.'
-      });
+      
+      // Handle specific error cases
+      if (error.response?.data?.error_type === 'phone_not_found') {
+        setErrors({
+          general: "Phone number not found in our system. Please contact your landlord to set up your tenant account."
+        });
+      } else if (error.response?.data?.error) {
+        setErrors({
+          general: error.response.data.error
+        });
+      } else {
+        setErrors({
+          general: 'An unexpected error occurred. Please try again or contact support.'
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -225,16 +260,40 @@ const TenantLogin: React.FC = () => {
         startResendTimer();
         setErrors({});
         setFormData(prev => ({ ...prev, otpCode: '' })); // Clear OTP field
+        setRemainingAttempts(null); // Reset attempts counter
       } else {
-        setErrors({
-          general: response.error || 'Failed to resend OTP. Please try again.'
-        });
+        // Handle different error types for resend
+        if (response.error_type === 'phone_not_found') {
+          setErrors({
+            general: "Phone number not found in our system. Please contact your landlord to set up your tenant account."
+          });
+        } else if (response.error_type === 'rate_limited') {
+          setErrors({
+            general: response.error || 'Too many requests. Please wait before requesting another OTP.'
+          });
+        } else {
+          setErrors({
+            general: response.error || 'Failed to resend OTP. Please try again.'
+          });
+        }
       }
     } catch (error: any) {
       console.error('Resend OTP error:', error);
-      setErrors({
-        general: 'Failed to resend OTP. Please try again.'
-      });
+      
+      // Handle specific error cases for resend
+      if (error.response?.data?.error_type === 'phone_not_found') {
+        setErrors({
+          general: "Phone number not found in our system. Please contact your landlord to set up your tenant account."
+        });
+      } else if (error.response?.data?.error) {
+        setErrors({
+          general: error.response.data.error
+        });
+      } else {
+        setErrors({
+          general: 'Failed to resend OTP. Please try again or contact support.'
+        });
+      }
     } finally {
       setLoading(false);
     }
