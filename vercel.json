@@ -1,6 +1,6 @@
 {
     "version": 2,
     "builds": [
-      { "src": "tink-frontend/package.json", "use": "@vercel/next" }
+      { "src": "package.json", "use": "@vercel/next" }
     ]
   }
