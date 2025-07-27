@@ -38,6 +38,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // Check if user is authenticated on app load
   useEffect(() => {
     const initAuth = async () => {
+      // Don't run regular auth checks if tenant is authenticated
+      if (apiClient.isTenantAuthenticated()) {
+        console.log('Tenant is authenticated, skipping regular auth check');
+        setLoading(false);
+        return;
+      }
+
       if (apiClient.isAuthenticated()) {
         try {
           const profile = await apiClient.getProfile();

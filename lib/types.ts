@@ -895,7 +895,7 @@ export interface TenantProfile {
   };
   payment_status: {
     has_active_lease: boolean;
-    current_rent?: number;
+    current_rent: number | null;
     property_name?: string;
     room_name?: string;
     landlord_stripe_status?: {
@@ -903,6 +903,12 @@ export interface TenantProfile {
       stripe_enabled: boolean;
       can_accept_payments: boolean;
     };
+    recent_payment?: {
+      amount: number;
+      date: string;
+      period: string;
+      is_paid: boolean;
+    } | null;
   };
 }
 

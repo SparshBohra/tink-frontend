@@ -12,10 +12,12 @@ interface PaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
   tenantProfile: TenantProfile | null;
+  onPaymentSuccess?: () => void; // New callback for payment success
 }
 
-const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, tenantProfile }) => {
+const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, tenantProfile, onPaymentSuccess }) => {
   const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null); // Store payment intent ID
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
 
@@ -25,16 +27,12 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, tenantProf
     } else {
       // Reset when modal is closed or there's no lease
       setClientSecret(null);
+      setPaymentIntentId(null);
       setError('');
     }
   }, [isOpen, tenantProfile]);
 
   const createPaymentIntent = async () => {
-    if (!tenantProfile?.active_lease) {
-      setError('No active lease found. Cannot process payment.');
-      return;
-    }
-
     setLoading(true);
     setError('');
 
@@ -43,6 +41,10 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, tenantProf
 
       if (response.client_secret) {
         setClientSecret(response.client_secret);
+        
+        // Extract payment intent ID from client secret (format: pi_xxxxx_secret_yyyyy)
+        const piId = response.client_secret.split('_secret_')[0];
+        setPaymentIntentId(piId);
       } else {
         // @ts-ignore
         const errorMessage = response.error || 'Failed to initialize payment.';
@@ -50,18 +52,39 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, tenantProf
         console.error('Payment Intent Error:', response);
       }
     } catch (err: any) {
-      const errorMessage = err.response?.data?.error || 'An unexpected error occurred.';
-      setError(errorMessage);
+      // Handle 401 errors specifically
+      if (err.response?.status === 401) {
+        setError('Your session has expired. Please logout and login again to continue with payment.');
+      } else {
+        const errorMessage = err.response?.data?.error || 'An unexpected error occurred.';
+        setError(errorMessage);
+      }
       console.error('Create Payment Intent failed:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  const handlePaymentSuccess = () => {
-    console.log("Payment successful!");
+  const handlePaymentSuccess = async () => {
+    console.log("Payment successful! Processing...");
+    
+    // Mark payment as processed in the backend (for testing without webhooks)
+    if (paymentIntentId) {
+      try {
+        const result = await apiClient.markTenantPaymentProcessed(paymentIntentId);
+        console.log('Payment marked as processed:', result);
+      } catch (error) {
+        console.error('Failed to mark payment as processed:', error);
+        // Don't fail the whole flow if this fails
+      }
+    }
+    
+    // Notify parent component of successful payment
+    if (onPaymentSuccess) {
+      onPaymentSuccess();
+    }
+    
     onClose(); // Close the modal on success
-    // Optionally, you can trigger a data refresh on the dashboard here
   };
 
   if (!isOpen) {

@@ -1938,7 +1938,31 @@ class ApiClient {
   }
 
   async createTenantRentPaymentIntent(): Promise<TenantPaymentIntentResponse> {
-    const response = await this.api.post('/auth/tenant-auth/create-payment-intent/');
+    try {
+      const response = await this.api.post('/auth/tenant-auth/create-payment-intent/', {});
+      return response.data;
+    } catch (error: any) {
+      if (error.response?.data) {
+        return {
+          client_secret: '',
+          payment_details: {
+            amount_cents: 0,
+            amount_dollars: 0,
+            property_name: '',
+            monthly_rent: 0
+          },
+          // Forward the error from backend
+          ...error.response.data
+        };
+      }
+      throw this.handleError(error);
+    }
+  }
+
+  async markTenantPaymentProcessed(paymentIntentId: string): Promise<{ success: boolean; message: string; payment_id?: number }> {
+    const response = await this.api.post('/auth/tenant-auth/mark-payment-processed/', {
+      payment_intent_id: paymentIntentId
+    });
     return response.data;
   }
 
