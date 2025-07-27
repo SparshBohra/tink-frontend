@@ -1916,17 +1916,17 @@ class ApiClient {
   }
 
   async createStripeConnectedAccount(data: StripeConnectAccountData): Promise<{ account_id: string; status: string }> {
-    const response = await this.api.post('/auth/stripe/create-connected-account/', data);
+    const response = await this.api.post('/auth/stripe/create-account/', data);
     return response.data;
   }
 
   async createStripeAccountSession(data: StripeConnectSessionData): Promise<StripeConnectAccountSession> {
-    const response = await this.api.post('/auth/stripe/create-account-session/', data);
+    const response = await this.api.post('/auth/stripe/create-session/', data);
     return response.data;
   }
 
   async createStripeAccountLink(data: StripeConnectLinkData): Promise<StripeConnectAccountLink> {
-    const response = await this.api.post('/auth/stripe/create-account-link/', data);
+    const response = await this.api.post('/auth/stripe/create-link/', data);
     return response.data;
   }
 
