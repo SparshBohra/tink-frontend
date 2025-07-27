@@ -267,16 +267,15 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
     console.log('--- End Edit Mode Debug ---');
   }, [editMode, existingListing]);
 
+  // Fetch rooms when property selection changes
   useEffect(() => {
     if (formData.property_ref) {
+      console.log('Property selected, fetching rooms for ID:', formData.property_ref);
       fetchRooms(parseInt(formData.property_ref));
-      
-      // If in edit mode and properties haven't been loaded yet, fetch them for room selection
-      if (editMode && properties.length === 0) {
-        fetchProperties();
-      }
+    } else {
+      setRooms([]);
     }
-  }, [formData.property_ref, editMode, properties.length]);
+  }, [formData.property_ref]);
 
   // Auto-adjust listing type based on available rooms
   useEffect(() => {
@@ -724,7 +723,7 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
               </div>
 
               <div className={styles.formGroup}>
-                          <label htmlFor="available_from">Available From *</label>
+                          <label htmlFor="available_from">Available From <span className={styles.required}>*</span></label>
                 <input id="available_from" type="date" value={formData.available_from} onChange={(e) => handleInputChange('available_from', e.target.value)} required />
               </div>
             </div>
