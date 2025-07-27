@@ -898,6 +898,11 @@ export interface TenantProfile {
     current_rent?: number;
     property_name?: string;
     room_name?: string;
+    landlord_stripe_status?: {
+      has_stripe_account: boolean;
+      stripe_enabled: boolean;
+      can_accept_payments: boolean;
+    };
   };
 }
 
