@@ -164,16 +164,24 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
   ];
 
   useEffect(() => {
-    // This effect runs once when the modal opens or when the existingListing prop changes.
-    // It's responsible for populating the form for editing.
-    if (editMode && existingListing) {
-      console.log('--- Edit Mode Debug ---');
-      console.log('useEffect triggered for existing listing population.');
-      console.log('editMode:', editMode);
-      console.log('existingListing available:', !!existingListing);
-      console.log('existingListing data:', existingListing);
-      console.log('existingListing keys:', existingListing ? Object.keys(existingListing) : 'none');
+    // Only fetch properties if not in edit mode, or if we need them for room selection
+    if (!editMode) {
+      fetchProperties();
+    }
+  }, [editMode]);
 
+  // Populate form with existing data in edit mode
+  useEffect(() => {
+    console.log('--- Edit Mode Debug ---');
+    console.log('useEffect triggered for existing listing population.');
+    console.log('editMode:', editMode);
+    console.log('existingListing available:', !!existingListing);
+    console.log('existingListing data:', existingListing);
+    console.log('existingListing keys:', existingListing ? Object.keys(existingListing) : 'none');
+
+    if (editMode && existingListing) {
+      console.log('Populating form with existing listing data:', existingListing);
+      
       // Ensure property_ref is properly converted to string - try multiple possible locations
       let propertyRefValue = '';
       if (existingListing.property_ref) {
@@ -253,24 +261,42 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
         setMediaFiles(existingMedia);
         console.log('Loaded existing media:', existingMedia);
       }
+    } else {
+      console.log('Conditions not met for populating form in edit mode.');
     }
-    
-    // If a property is pre-selected (e.g., from the listings page), fetch its rooms.
-    if (selectedPropertyId) {
-        fetchRooms(selectedPropertyId);
-    }
-  }, [editMode, existingListing, selectedPropertyId]);
+    console.log('--- End Edit Mode Debug ---');
+  }, [editMode, existingListing]);
 
-  // Auto-adjust listing type based on available rooms
+  // Fetch rooms when property selection changes
   useEffect(() => {
-    if (formData.property_ref && rooms.length === 0) {
-      // If no rooms are available, default to whole property
+    if (formData.property_ref) {
+      console.log('Property selected, fetching rooms for ID:', formData.property_ref);
+      fetchRooms(parseInt(formData.property_ref));
+    } else {
+      console.log('No property selected, clearing rooms');
+      setRooms([]);
+    }
+  }, [formData.property_ref]);
+
+  // Add room loading state
+  const [roomsLoading, setRoomsLoading] = useState(false);
+
+  // Auto-adjust listing type based on available rooms (only on initial load, not after user selection)
+  useEffect(() => {
+    if (formData.property_ref && rooms.length === 0 && !roomsLoading && !editMode) {
+      // Only auto-adjust if we've finished loading and there are truly no rooms
+      // And only if user hasn't explicitly selected a listing type
+      if (formData.listing_type === 'rooms') {
+        // Don't auto-adjust if user explicitly chose rooms - let them see the "no rooms" message
+        return;
+      }
+      
       setFormData(prev => ({
         ...prev,
         listing_type: 'whole_property'
       }));
     }
-  }, [formData.property_ref, rooms.length]);
+  }, [formData.property_ref, rooms.length, roomsLoading, editMode]);
 
   const fetchProperties = async () => {
     try {
@@ -298,11 +324,16 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
 
   const fetchRooms = async (propertyId: number) => {
     try {
+      setRoomsLoading(true);
+      console.log('Fetching rooms for property:', propertyId);
       const roomsData = await apiClient.getPropertyRooms(propertyId);
+      console.log('Rooms fetched:', roomsData);
       setRooms(roomsData);
     } catch (error) {
       console.error('Failed to fetch rooms:', error);
       setRooms([]);
+    } finally {
+      setRoomsLoading(false);
     }
   };
 
@@ -311,11 +342,6 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
       ...prev,
       [field]: value
     }));
-
-    // If the property is changed, fetch the rooms for that property
-    if (field === 'property_ref' && value) {
-      fetchRooms(parseInt(value));
-    }
   };
 
   const handleArrayToggle = (field: string, value: string) => {
@@ -608,6 +634,7 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
     listing_type: formData.listing_type,
     available_from: formData.available_from,
     rooms_length: rooms.length,
+    roomsLoading: roomsLoading,
     available_rooms_length: formData.available_rooms.length,
     editMode,
     isFormValid,
@@ -717,52 +744,57 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
               </div>
             </div>
 
-      {formData.listing_type === 'rooms' && rooms.length > 0 && (
+      {formData.listing_type === 'rooms' && (
         <div className={styles.formSection}>
           <div className={styles.sectionHeader}>
             <h4>Select Available Rooms <span className={styles.required}>*</span></h4>
             <p>Choose which rooms you want to include in this listing.</p>
           </div>
-          {formData.available_rooms.length === 0 && (
-            <div className={`${styles.validationMessage} ${styles.error}`}>
-              Please select at least one room for room-based listings.
+          
+                      {roomsLoading ? (
+              <div style={{ padding: '20px', textAlign: 'center' }}>
+                <div className={styles.spinner}></div>
+                <span style={{ marginLeft: '10px' }}>Loading rooms...</span>
+              </div>
+          ) : rooms.length > 0 ? (
+            <>
+              {formData.available_rooms.length === 0 && (
+                <div className={`${styles.validationMessage} ${styles.error}`}>
+                  Please select at least one room for room-based listings.
+                </div>
+              )}
+              <div className={styles.roomsGrid}>
+                {rooms.map(room => (
+                  <div key={room.id} className={`${styles.roomCard} ${formData.available_rooms.includes(room.id) ? styles.selected : ''}`} onClick={() => handleRoomToggle(room.id)}>
+                    <div className={styles.roomHeader}>
+                      <h4>{room.name}</h4>
+                      <span className={styles.roomRent}>${room.monthly_rent}/mo</span>
+                    </div>
+                    <div className={styles.roomDetails}>
+                      <span className="room-type">{room.room_type}</span>
+                      <span className="room-capacity">Max {room.max_capacity} people</span>
+                    </div>
+                    <div className={styles.roomCheckbox}>
+                      {formData.available_rooms.includes(room.id) ? <CheckCircleIcon /> : <div className={styles.checkboxPlaceholder}></div>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : formData.property_ref ? (
+            <div style={{ padding: '20px', textAlign: 'center', backgroundColor: '#f9f9f9', borderRadius: '8px' }}>
+              <h5>No Rooms Available</h5>
+              <p>This property doesn't have any rooms configured. You can add rooms in the property management section, or select "Whole Property" instead.</p>
+            </div>
+          ) : (
+            <div style={{ padding: '20px', textAlign: 'center' }}>
+              <p>Please select a property first to see available rooms.</p>
             </div>
           )}
-          <div className={styles.roomsGrid}>
-                  {rooms.map(room => (
-              <div key={room.id} className={`${styles.roomCard} ${formData.available_rooms.includes(room.id) ? styles.selected : ''}`} onClick={() => handleRoomToggle(room.id)}>
-                <div className={styles.roomHeader}>
-                        <h4>{room.name}</h4>
-                  <span className={styles.roomRent}>${room.monthly_rent}/mo</span>
-                      </div>
-                <div className={styles.roomDetails}>
-                        <span className="room-type">{room.room_type}</span>
-                        <span className="room-capacity">Max {room.max_capacity} people</span>
-                      </div>
-                <div className={styles.roomCheckbox}>
-                  {formData.available_rooms.includes(room.id) ? <CheckCircleIcon /> : <div className={styles.checkboxPlaceholder}></div>}
-                      </div>
-                    </div>
-                  ))}
-                </div>
         </div>
       )}
 
-      {formData.listing_type === 'rooms' && rooms.length === 0 && formData.property_ref && (
-        <div className={styles.formSection}>
-          <div className={styles.sectionHeader}>
-            <h4>No Rooms Available</h4>
-            <p>This property doesn't have any rooms set up yet.</p>
-          </div>
-          <div className={`${styles.validationMessage} ${styles.warning}`}>
-            You need to add rooms to this property before creating a room-based listing.
-            <br />
-            <a href={`/properties/${formData.property_ref}/add-room`} target="_blank" rel="noopener noreferrer">
-              Add rooms to this property
-            </a>
-          </div>
-                </div>
-              )}
+
     </>
   );
 
