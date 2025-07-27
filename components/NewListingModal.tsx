@@ -409,6 +409,10 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
         throw new Error('Please fill in all required fields (Title, Description).');
       }
 
+      if (!formData.available_from) {
+        throw new Error('Please select an available from date.');
+      }
+
       if (!editMode && !formData.property_ref) {
         throw new Error('Please select a property.');
       }
@@ -603,8 +607,9 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
     formData.title && 
     formData.description && 
     formData.listing_type &&
+    formData.available_from && // Required field
     (formData.listing_type === 'whole_property' || 
-     (formData.listing_type === 'rooms' && rooms.length > 0 && formData.available_rooms.length > 0))
+     (formData.listing_type === 'rooms' && formData.available_rooms.length > 0))
   );
 
   // Debug logging
@@ -613,10 +618,19 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
     title: formData.title,
     description: formData.description,
     listing_type: formData.listing_type,
+    available_from: formData.available_from,
     rooms_length: rooms.length,
     available_rooms_length: formData.available_rooms.length,
     editMode,
-    isFormValid
+    isFormValid,
+    // Individual validation checks
+    has_property: !!formData.property_ref,
+    has_title: !!formData.title,
+    has_description: !!formData.description,
+    has_listing_type: !!formData.listing_type,
+    has_available_from: !!formData.available_from,
+    room_validation: formData.listing_type === 'whole_property' ? 'N/A' : 
+                    (formData.available_rooms.length > 0 ? 'PASS' : 'FAIL')
   });
 
   const handleNext = () => {
@@ -1030,6 +1044,17 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
         <div className={styles.modalFooter}>
           <div className={styles.footerLeft}>
             <span className={styles.formProgress}>Step {currentStep} of {tabs.length}: {tabs[currentStep - 1].label}</span>
+            {activeTab === 'contact' && !isFormValid && !editMode && (
+              <div style={{ fontSize: '12px', color: '#dc2626', marginTop: '4px' }}>
+                Missing: {[
+                  !formData.property_ref && 'Property',
+                  !formData.title && 'Title', 
+                  !formData.description && 'Description',
+                  !formData.available_from && 'Available Date',
+                  formData.listing_type === 'rooms' && formData.available_rooms.length === 0 && 'Select Rooms'
+                ].filter(Boolean).join(', ')}
+              </div>
+            )}
           </div>
           <div className={styles.footerRight}>
             <button className={`${styles.btn} ${styles.btnSecondary}`} onClick={onClose}>Cancel</button>
