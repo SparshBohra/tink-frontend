@@ -164,24 +164,16 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
   ];
 
   useEffect(() => {
-    // Only fetch properties if not in edit mode, or if we need them for room selection
-    if (!editMode) {
-      fetchProperties();
-    }
-  }, [editMode]);
-
-  // Populate form with existing data in edit mode
-  useEffect(() => {
-    console.log('--- Edit Mode Debug ---');
-    console.log('useEffect triggered for existing listing population.');
-    console.log('editMode:', editMode);
-    console.log('existingListing available:', !!existingListing);
-    console.log('existingListing data:', existingListing);
-    console.log('existingListing keys:', existingListing ? Object.keys(existingListing) : 'none');
-
+    // This effect runs once when the modal opens or when the existingListing prop changes.
+    // It's responsible for populating the form for editing.
     if (editMode && existingListing) {
-      console.log('Populating form with existing listing data:', existingListing);
-      
+      console.log('--- Edit Mode Debug ---');
+      console.log('useEffect triggered for existing listing population.');
+      console.log('editMode:', editMode);
+      console.log('existingListing available:', !!existingListing);
+      console.log('existingListing data:', existingListing);
+      console.log('existingListing keys:', existingListing ? Object.keys(existingListing) : 'none');
+
       // Ensure property_ref is properly converted to string - try multiple possible locations
       let propertyRefValue = '';
       if (existingListing.property_ref) {
@@ -261,21 +253,13 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
         setMediaFiles(existingMedia);
         console.log('Loaded existing media:', existingMedia);
       }
-    } else {
-      console.log('Conditions not met for populating form in edit mode.');
     }
-    console.log('--- End Edit Mode Debug ---');
-  }, [editMode, existingListing]);
-
-  // Fetch rooms when property selection changes
-  useEffect(() => {
-    if (formData.property_ref) {
-      console.log('Property selected, fetching rooms for ID:', formData.property_ref);
-      fetchRooms(parseInt(formData.property_ref));
-    } else {
-      setRooms([]);
+    
+    // If a property is pre-selected (e.g., from the listings page), fetch its rooms.
+    if (selectedPropertyId) {
+        fetchRooms(selectedPropertyId);
     }
-  }, [formData.property_ref]);
+  }, [editMode, existingListing, selectedPropertyId]);
 
   // Auto-adjust listing type based on available rooms
   useEffect(() => {
@@ -327,6 +311,11 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
       ...prev,
       [field]: value
     }));
+
+    // If the property is changed, fetch the rooms for that property
+    if (field === 'property_ref' && value) {
+      fetchRooms(parseInt(value));
+    }
   };
 
   const handleArrayToggle = (field: string, value: string) => {
