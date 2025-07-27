@@ -9,6 +9,7 @@ interface NewListingModalProps {
   editMode?: boolean;
   existingListing?: any;
   property_name?: string;
+  selectedPropertyId?: number | null;
 }
 
 interface MediaFile {
@@ -88,7 +89,7 @@ const CheckCircleIcon = () => (
     </svg>
 );
 
-const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing, property_name }: NewListingModalProps) => {
+const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing, property_name, selectedPropertyId }: NewListingModalProps) => {
   const [activeTab, setActiveTab] = useState('basic');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -103,7 +104,7 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
   // Form data
   const [formData, setFormData] = useState({
     // Basic Info
-    property_ref: '',
+    property_ref: selectedPropertyId ? selectedPropertyId.toString() : '',
     title: '',
     description: '',
     listing_type: 'rooms' as 'rooms' | 'whole_property',
@@ -122,7 +123,7 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
     smoking_policy: 'no_smoking' as 'no_smoking' | 'smoking_allowed' | 'designated_areas',
     
     // Application Settings
-    application_fee: 50,
+    application_fee: 0,
     require_background_check: true,
     require_income_verification: true,
     minimum_income_ratio: 3,
@@ -618,6 +619,20 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
     isFormValid
   });
 
+  const handleNext = () => {
+    const currentIndex = tabs.findIndex(t => t.id === activeTab);
+    if (currentIndex < tabs.length - 1) {
+      setActiveTab(tabs[currentIndex + 1].id);
+    }
+  };
+
+  const handleBack = () => {
+    const currentIndex = tabs.findIndex(t => t.id === activeTab);
+    if (currentIndex > 0) {
+      setActiveTab(tabs[currentIndex - 1].id);
+    }
+  };
+
   const currentStep = tabs.findIndex(t => t.id === activeTab) + 1;
 
   const renderBasicInfo = () => (
@@ -695,8 +710,8 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
               </div>
 
               <div className={styles.formGroup}>
-          <label htmlFor="available_from">Available From</label>
-          <input id="available_from" type="date" value={formData.available_from} onChange={(e) => handleInputChange('available_from', e.target.value)} />
+                          <label htmlFor="available_from">Available From *</label>
+                <input id="available_from" type="date" value={formData.available_from} onChange={(e) => handleInputChange('available_from', e.target.value)} required />
               </div>
             </div>
 
@@ -1018,8 +1033,12 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
           </div>
           <div className={styles.footerRight}>
             <button className={`${styles.btn} ${styles.btnSecondary}`} onClick={onClose}>Cancel</button>
-            <button className={`${styles.btn} ${styles.btnPrimary}`} onClick={handleSubmit} disabled={loading || !isFormValid}>
-                {loading ? (editMode ? 'Updating...' : 'Creating...') : (editMode ? 'Update Listing' : 'Create Listing')}
+            {currentStep > 1 && (
+              <button className={`${styles.btn} ${styles.btnSecondary}`} onClick={handleBack}>Back</button>
+            )}
+            <button className={`${styles.btn} ${styles.btnPrimary}`} onClick={activeTab === 'contact' ? handleSubmit : handleNext} disabled={loading || (activeTab === 'contact' && !isFormValid)}>
+                {loading ? (editMode ? 'Updating...' : 'Creating...') : 
+                 activeTab === 'contact' ? (editMode ? 'Update Listing' : 'Create Listing') : 'Next'}
               </button>
           </div>
         </div>

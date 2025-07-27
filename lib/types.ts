@@ -831,17 +831,46 @@ export interface TenantAuthTokens {
 export interface TenantAuthResponse {
   success: boolean;
   message: string;
+  requires_selection?: boolean;
+  // For single profile (immediate login)
   tokens?: TenantAuthTokens;
-  tenant?: {
-    id: number;
-    full_name: string;
-    email: string;
-    phone: string;
-    is_verified: boolean;
-  };
+  tenant?: TenantProfileData;
+  // For multiple profiles (selection required)
+  tenant_profiles?: TenantProfileData[];
+  phone_number?: string;
+  // Error fields
   error?: string;
   error_type?: string;
   remaining_attempts?: number;
+}
+
+export interface TenantProfileData {
+  tenant_user_id: number;
+  tenant_id: number;
+  full_name: string;
+  email: string;
+  phone: string;
+  is_verified: boolean;
+  // Property/lease info (if available)
+  property_name?: string;
+  property_address?: string;
+  landlord_name?: string;
+  monthly_rent?: number;
+  lease_id?: number;
+}
+
+export interface TenantProfileSelectionRequest {
+  phone_number: string;
+  tenant_user_id: number;
+}
+
+export interface TenantProfileSelectionResponse {
+  success: boolean;
+  message: string;
+  tokens?: TenantAuthTokens;
+  tenant?: TenantProfileData;
+  error?: string;
+  error_type?: string;
 }
 
 export interface TenantProfile {

@@ -48,7 +48,8 @@ import {
   TenantAuthTokens,
   TenantAuthResponse,
   TenantProfile,
-  TenantLogoutResponse
+  TenantLogoutResponse,
+  TenantProfileSelectionResponse
 } from './types';
 
 // Smart environment-based API URL configuration
@@ -1988,6 +1989,26 @@ class ApiClient {
           error: error.response.data.error,
           error_type: error.response.data.error_type,
           remaining_attempts: error.response.data.remaining_attempts
+        };
+      }
+      throw this.handleError(error);
+    }
+  }
+
+  async selectTenantProfile(phoneNumber: string, tenantUserId: number): Promise<TenantProfileSelectionResponse> {
+    try {
+      const response = await this.api.post('/auth/tenant-auth/select-profile/', {
+        phone_number: phoneNumber,
+        tenant_user_id: tenantUserId
+      });
+      return response.data;
+    } catch (error: any) {
+      if (error.response?.data) {
+        return {
+          success: false,
+          message: error.response.data.error || 'Failed to select profile',
+          error: error.response.data.error,
+          error_type: error.response.data.error_type
         };
       }
       throw this.handleError(error);

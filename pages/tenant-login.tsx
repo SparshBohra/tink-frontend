@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { apiClient } from '../lib/api';
-import { TenantOtpResponse, TenantAuthResponse } from '../lib/types';
+import { TenantOtpResponse, TenantAuthResponse, TenantProfileData } from '../lib/types';
+import TenantProfileSelector from '../components/TenantProfileSelector';
 
 interface FormData {
   phoneNumber: string;
@@ -15,9 +16,11 @@ interface FormErrors {
   general?: string;
 }
 
+type Step = 'phone' | 'otp' | 'profile_selection';
+
 const TenantLogin: React.FC = () => {
   const router = useRouter();
-  const [step, setStep] = useState<'phone' | 'otp'>('phone');
+  const [step, setStep] = useState<Step>('phone');
   const [formData, setFormData] = useState<FormData>({
     phoneNumber: '',
     otpCode: ''
@@ -25,9 +28,12 @@ const TenantLogin: React.FC = () => {
   const [errors, setErrors] = useState<FormErrors>({});
   const [loading, setLoading] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
-  const [tenantName, setTenantName] = useState<string>('');
   const [resendTimer, setResendTimer] = useState(0);
   const [remainingAttempts, setRemainingAttempts] = useState<number | null>(null);
+  
+  // Multi-tenant state
+  const [tenantProfiles, setTenantProfiles] = useState<TenantProfileData[]>([]);
+  const [verifiedPhone, setVerifiedPhone] = useState<string>('');
 
   // Format phone number as user types
   const formatPhoneNumber = (value: string): string => {
@@ -122,7 +128,6 @@ const TenantLogin: React.FC = () => {
       if (response.success) {
         setOtpSent(true);
         setStep('otp');
-        setTenantName(response.tenant_name || '');
         startResendTimer();
         
         // Clear general errors
@@ -184,14 +189,20 @@ const TenantLogin: React.FC = () => {
       const phoneE164 = toE164Format(formData.phoneNumber);
       const response: TenantAuthResponse = await apiClient.verifyTenantOtp(phoneE164, formData.otpCode);
 
-      if (response.success && response.tokens) {
-        // Store tokens in localStorage
-        localStorage.setItem('tenant_access_token', response.tokens.access);
-        localStorage.setItem('tenant_refresh_token', response.tokens.refresh);
-        localStorage.setItem('tenant_user', JSON.stringify(response.tenant));
-
-        // Redirect to tenant dashboard
-        router.push('/tenant-dashboard');
+      if (response.success) {
+        if (response.requires_selection && response.tenant_profiles) {
+          // Multiple profiles - show selection screen
+          setTenantProfiles(response.tenant_profiles);
+          setVerifiedPhone(response.phone_number || phoneE164);
+          setStep('profile_selection');
+        } else if (response.tokens && response.tenant) {
+          // Single profile - proceed with login
+          completeLogin(response.tokens, response.tenant);
+        } else {
+          setErrors({
+            general: 'Unexpected response format. Please try again.'
+          });
+        }
       } else {
         // Handle OTP verification errors with better messages
         setRemainingAttempts(response.remaining_attempts || null);
@@ -243,6 +254,41 @@ const TenantLogin: React.FC = () => {
         });
       }
     } finally {
+      setLoading(false);
+    }
+  };
+
+  // Complete login process
+  const completeLogin = (tokens: any, tenant: TenantProfileData) => {
+    // Store tokens in localStorage
+    localStorage.setItem('tenant_access_token', tokens.access);
+    localStorage.setItem('tenant_refresh_token', tokens.refresh);
+    localStorage.setItem('tenant_user', JSON.stringify(tenant));
+
+    // Redirect to tenant dashboard
+    router.push('/tenant-dashboard');
+  };
+
+  // Handle tenant profile selection
+  const handleProfileSelect = async (tenantUserId: number) => {
+    setLoading(true);
+    
+    try {
+      const response = await apiClient.selectTenantProfile(verifiedPhone, tenantUserId);
+      
+      if (response.success && response.tokens && response.tenant) {
+        completeLogin(response.tokens, response.tenant);
+      } else {
+        setErrors({
+          general: response.error || 'Failed to select profile. Please try again.'
+        });
+        setLoading(false);
+      }
+    } catch (error: any) {
+      console.error('Profile selection error:', error);
+      setErrors({
+        general: 'An unexpected error occurred. Please try again.'
+      });
       setLoading(false);
     }
   };
@@ -315,30 +361,38 @@ const TenantLogin: React.FC = () => {
         <meta name="description" content="Login to your tenant portal" />
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md w-full space-y-8">
-          {/* Header */}
-          <div className="text-center">
-            <div className="mx-auto h-16 w-16 bg-indigo-600 rounded-full flex items-center justify-center">
-              <svg className="h-8 w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2V7z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 21l4-4 4 4" />
-              </svg>
-            </div>
-            <h1 className="mt-6 text-3xl font-extrabold text-gray-900">
-              Tink Tenant Portal
-            </h1>
-            <p className="mt-2 text-sm text-gray-600">
-              {step === 'phone' 
-                ? 'Enter your phone number to get started'
-                : `Enter the 6-digit code sent to ${formData.phoneNumber}`
-              }
-            </p>
-            {tenantName && (
+      {step === 'profile_selection' ? (
+        <TenantProfileSelector
+          tenantProfiles={tenantProfiles}
+          phoneNumber={verifiedPhone}
+          onProfileSelect={handleProfileSelect}
+          loading={loading}
+        />
+      ) : (
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center px-4 sm:px-6 lg:px-8">
+          <div className="max-w-md w-full space-y-8">
+            {/* Header */}
+            <div className="text-center">
+              <div className="mx-auto h-16 w-16 bg-indigo-600 rounded-full flex items-center justify-center">
+                <svg className="h-8 w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2V7z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 21l4-4 4 4" />
+                </svg>
+              </div>
+              <h1 className="mt-6 text-3xl font-extrabold text-gray-900">
+                Tink Tenant Portal
+              </h1>
+              <p className="mt-2 text-sm text-gray-600">
+                {step === 'phone' 
+                  ? 'Enter your phone number to get started'
+                  : `Enter the 6-digit code sent to ${formData.phoneNumber}`
+                }
+              </p>
+            {/* tenantName && (
               <p className="mt-1 text-sm font-medium text-indigo-600">
                 Welcome, {tenantName}!
               </p>
-            )}
+            ) */}
           </div>
 
           {/* Form */}
@@ -479,6 +533,7 @@ const TenantLogin: React.FC = () => {
           </div>
         </div>
       </div>
+      )}
     </>
   );
 };

@@ -78,11 +78,13 @@ export default function ListingsDashboard(props: ListingsDashboardProps) {
     }
   }, [user]);
 
-  // Handle URL parameters for property filtering
+  // Handle URL parameters for property filtering and auto-open create modal
   useEffect(() => {
     if (router.isReady) {
-      const { property } = router.query;
-      console.log('URL parameter processing:', { property, isReady: router.isReady, query: router.query });
+      const { property, create } = router.query;
+      console.log('URL parameter processing:', { property, create, isReady: router.isReady, query: router.query });
+      
+      // Handle property filtering
       if (property && typeof property === 'string') {
         const propertyId = parseInt(property);
         console.log('Parsed property ID from URL:', propertyId);
@@ -90,22 +92,38 @@ export default function ListingsDashboard(props: ListingsDashboardProps) {
           setSelectedProperty(propertyId);
         }
       }
+      
+      // Handle auto-opening create modal
+      if (create === 'true') {
+        console.log('Auto-opening create modal from URL parameter');
+        setShowCreateModal(true);
+        // Clean up URL parameter after opening modal
+        router.replace(router.pathname + (property ? `?property=${property}` : ''), undefined, { shallow: true });
+      }
     }
   }, [router.isReady, router.query]);
 
   // Filter listings when property filter changes
   useEffect(() => {
     console.log('Filtering effect triggered:', { selectedProperty, listingsCount: listings.length });
+    console.log('All listings:', listings.map(l => ({ id: l.id, title: l.title, property_ref: l.property_ref, property_name: l.property_name })));
+    
     if (selectedProperty) {
       const filtered = listings.filter(listing => {
-        console.log('Checking listing:', { listingId: listing.id, property_ref: listing.property_ref, selectedProperty, types: { property_ref: typeof listing.property_ref, selectedProperty: typeof selectedProperty } });
-        // Handle both string and number comparison
-        const listingPropertyRef = typeof listing.property_ref === 'string' ? parseInt(listing.property_ref) : listing.property_ref;
-        return listingPropertyRef === selectedProperty;
+        console.log('Checking listing:', { 
+          listingId: listing.id, 
+          title: listing.title,
+          property_ref: listing.property_ref, 
+          selectedProperty, 
+          match: listing.property_ref === selectedProperty 
+        });
+        // property_ref should already be a number from the backend
+        return listing.property_ref === selectedProperty;
       });
-      console.log('Filtered listings:', filtered.length);
+      console.log('Filtered results:', filtered.map(l => ({ id: l.id, title: l.title, property_name: l.property_name })));
       setFilteredListings(filtered);
     } else {
+      console.log('No property filter, showing all listings');
       setFilteredListings(listings);
     }
   }, [listings, selectedProperty]);
@@ -562,6 +580,7 @@ export default function ListingsDashboard(props: ListingsDashboardProps) {
         <NewListingModal
           onClose={() => setShowCreateModal(false)}
           onSuccess={fetchListings}
+          selectedPropertyId={selectedProperty}
         />
       )}
 

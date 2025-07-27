@@ -254,7 +254,12 @@ function Properties() {
   const overallOccupancyRate = totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0;
 
   const handleCreateListing = () => {
-    router.push('/listings');
+    // If there's a selected property, pass it to the listings page to pre-select it
+    if (selectedProperty) {
+      router.push(`/listings?property=${selectedProperty.id}&create=true`);
+    } else {
+      router.push('/listings?create=true');
+    }
   };
 
   const handlePlatformToggle = (platform: string) => {
