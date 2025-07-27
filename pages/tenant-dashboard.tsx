@@ -323,23 +323,46 @@ const TenantDashboard: React.FC = () => {
                               <p className="text-sm text-gray-500">Due on the 1st of each month</p>
                             </div>
                             <div className="text-right">
-                              <span className="inline-flex px-3 py-1 text-sm font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                                Payment Due
-                              </span>
+                              {tenantProfile.active_lease.status === 'active' ? (
+                                <span className="inline-flex px-3 py-1 text-sm font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                                  Payment Due
+                                </span>
+                              ) : (
+                                <span className="inline-flex px-3 py-1 text-sm font-semibold rounded-full bg-blue-100 text-blue-800">
+                                  Lease Pending
+                                </span>
+                              )}
                             </div>
                           </div>
                         </div>
 
-                        <button
-                          onClick={handlePayRent}
-                          className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-4 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                        >
-                          Pay Rent Now
-                        </button>
-                        
-                        <p className="mt-3 text-xs text-gray-500 text-center">
-                          Secure payment powered by Stripe
-                        </p>
+                        {tenantProfile.active_lease.status === 'active' ? (
+                          <>
+                            <button
+                              onClick={handlePayRent}
+                              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-4 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                            >
+                              Pay Rent Now
+                            </button>
+                            
+                            <p className="mt-3 text-xs text-gray-500 text-center">
+                              Secure payment powered by Stripe
+                            </p>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              disabled
+                              className="w-full bg-gray-300 text-gray-500 font-medium py-3 px-4 rounded-md cursor-not-allowed"
+                            >
+                              Payment Unavailable
+                            </button>
+                            
+                            <p className="mt-3 text-xs text-gray-600 text-center">
+                              Payments will be available once your lease is activated
+                            </p>
+                          </>
+                        )}
                       </div>
                     </div>
                   )}

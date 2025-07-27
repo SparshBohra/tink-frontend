@@ -41,7 +41,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, tenantProf
     try {
       const response = await apiClient.createTenantRentPaymentIntent();
 
-      if (response.success && response.client_secret) {
+      if (response.client_secret) {
         setClientSecret(response.client_secret);
       } else {
         // @ts-ignore
