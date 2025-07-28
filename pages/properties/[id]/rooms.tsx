@@ -42,6 +42,8 @@ export default function PropertyRooms() {
   const [conversionWizardOpen, setConversionWizardOpen] = useState(false);
   const [roomCountEditorOpen, setRoomCountEditorOpen] = useState(false);
   const [showAllHistory, setShowAllHistory] = useState(false);
+  const [paymentHistory, setPaymentHistory] = useState<any[]>([]);
+  const [paymentLoading, setPaymentLoading] = useState(false);
 
   // This single useEffect handles both initial data fetching and the refresh after creation.
   useEffect(() => {
@@ -103,9 +105,71 @@ export default function PropertyRooms() {
     }
   };
 
+  // Fetch payment history for the property
+  const fetchPaymentHistory = async () => {
+    if (!property) return;
+    
+    setPaymentLoading(true);
+    try {
+      const response = await apiClient.getPaymentHistory({ page_size: 50 });
+      // Filter payments for this specific property
+      const propertyPayments = response.payments?.filter(payment => 
+        payment.property_name === property.name
+      ) || [];
+      setPaymentHistory(propertyPayments);
+    } catch (error) {
+      console.error('Failed to fetch payment history:', error);
+      setPaymentHistory([]);
+    } finally {
+      setPaymentLoading(false);
+    }
+  };
+
+  // Fetch payment history when property is loaded or rent tab is selected
+  useEffect(() => {
+    if (property && activeHistoryTab === 'rent') {
+      fetchPaymentHistory();
+    }
+  }, [property, activeHistoryTab]);
+
   const getTenantName = (tenantId: number) => {
     const tenant = tenants.find(t => t.id === tenantId);
     return tenant ? tenant.full_name : `Tenant ${tenantId}`;
+  };
+
+  // Render payment history row
+  const renderPaymentHistoryRow = (payment: any) => {
+    return (
+      <tr key={payment.id}>
+        <td>
+          <div className="tenant-info">
+            <div className="tenant-avatar">
+              {payment.tenant_name ? payment.tenant_name.split(' ').map((n: string) => n[0]).join('').toUpperCase() : 'UK'}
+            </div>
+            <span>{payment.tenant_name || 'Unknown Tenant'}</span>
+          </div>
+        </td>
+        <td>{formatCurrency(payment.amount_dollars || 0)}</td>
+        <td>{new Date(payment.payment_date).toLocaleDateString('en-US', { 
+          year: 'numeric', month: 'short', day: 'numeric' 
+        })}</td>
+        <td>
+          {payment.rent_period_start ? 
+            `${new Date(payment.rent_period_start).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}` : 
+            'N/A'
+          }
+        </td>
+        <td>
+          <StatusBadge
+            status={payment.status === 'succeeded' ? 'active' : 
+                   payment.status === 'pending' ? 'pending' : 'failed'}
+            text={payment.status === 'succeeded' ? 'Paid' : 
+                  payment.status === 'pending' ? 'Pending' : 'Failed'}
+          />
+        </td>
+        <td>{payment.description || 'Rent Payment'}</td>
+      </tr>
+    );
   };
 
   const getRoomName = (roomId: number) => {
@@ -970,10 +1034,32 @@ export default function PropertyRooms() {
                         )
                     )}
                     {activeHistoryTab === 'rent' && (
-                        <EmptyState
-                            title="Rent Collection History"
-                            description="This feature is under development."
-                        />
+                        paymentLoading ? (
+                            <div className="loading-container">
+                                <div className="loading-spinner"></div>
+                                <p>Loading payment history...</p>
+                            </div>
+                        ) : paymentHistory.length > 0 ? (
+                            <div className="history-table-container">
+                                <DataTable
+                                    columns={[
+                                        { header: 'Tenant', key: 'tenant' },
+                                        { header: 'Amount', key: 'amount' },
+                                        { header: 'Payment Date', key: 'payment_date' },
+                                        { header: 'Rent Period', key: 'rent_period' },
+                                        { header: 'Status', key: 'status' },
+                                        { header: 'Description', key: 'description' },
+                                    ]}
+                                    data={paymentHistory}
+                                    renderRow={renderPaymentHistoryRow}
+                                />
+                            </div>
+                        ) : (
+                            <EmptyState
+                                title="No Payment History"
+                                description="No rent payments have been recorded for this property yet."
+                            />
+                        )
                     )}
                 </div>
               </div>
@@ -2401,6 +2487,56 @@ export default function PropertyRooms() {
           .quick-action-text p {
             font-size: 13px;
           }
+        }
+
+        /* Payment history styles */
+        .loading-container {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 40px;
+          color: #64748b;
+        }
+
+        .loading-spinner {
+          width: 32px;
+          height: 32px;
+          border: 3px solid #e2e8f0;
+          border-top-color: #3b82f6;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+          margin-bottom: 16px;
+        }
+
+        @keyframes spin {
+          to {
+            transform: rotate(360deg);
+          }
+        }
+
+        .tenant-info {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .tenant-avatar {
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          background: #3b82f6;
+          color: white;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 12px;
+          font-weight: 600;
+          flex-shrink: 0;
+        }
+
+        .history-table-container {
+          padding: 0;
         }
       `}</style>
     </DashboardLayout>
