@@ -192,13 +192,6 @@ export default function Navigation() {
                 <span className="nav-text">Communication</span>
               </Link>
               <Link 
-                href="/managers" 
-                className={`nav-link ${isActive('/managers') ? 'active' : ''}`}
-              >
-                <span className="nav-icon team-icon"></span>
-                <span className="nav-text">My Team</span>
-              </Link>
-              <Link 
                 href="/stripe-connect" 
                 className={`nav-link ${isActive('/stripe-connect') ? 'active' : ''}`}
               >

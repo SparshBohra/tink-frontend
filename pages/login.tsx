@@ -40,7 +40,7 @@ export default function Login() {
     }
   };
 
-  const handleDemoLogin = async (role: 'admin' | 'owner' | 'manager' | 'tenant') => {
+  const handleDemoLogin = async (role: 'admin' | 'owner' | 'tenant') => {
     if (isLoading) return;
 
     try {
@@ -59,11 +59,6 @@ export default function Login() {
         credentials = { username: 'premium_owner', password: 'demo123' };
         setUsername('premium_owner');
         setPassword('demo123');
-      } else if (role === 'manager') {
-        // Manager - Works for landlords and manages day-to-day operations
-        credentials = { username: 'sarah_manager', password: 'demo12345' };
-        setUsername('sarah_manager');
-        setPassword('demo12345');
       } else {
         // Tenant - Uses different auth system (phone + OTP), redirect to tenant login
         setSuccess('Redirecting to Tenant Portal...');
@@ -76,7 +71,7 @@ export default function Login() {
       console.log('Demo login - attempting login with:', credentials.username);
       await login(credentials);
       console.log('Demo login completed successfully');
-      setSuccess(`${role === 'admin' ? 'Platform Admin' : role === 'owner' ? 'Landlord' : role === 'manager' ? 'Manager' : 'Tenant'} demo login successful! Redirecting...`);
+      setSuccess(`${role === 'admin' ? 'Platform Admin' : role === 'owner' ? 'Landlord' : 'Tenant'} demo login successful! Redirecting...`);
       // Login function will redirect based on role
     } catch (error: any) {
       console.error('Demo login failed:', error);
@@ -200,14 +195,6 @@ export default function Login() {
                 className="btn btn-warning btn-sm demo-btn"
               >
                 Landlord Demo
-              </button>
-              
-              <button 
-                onClick={() => handleDemoLogin('manager')}
-                disabled={isLoading || loading}
-                className="btn btn-success btn-sm demo-btn"
-              >
-                Property Manager Demo
               </button>
               
               <button 
