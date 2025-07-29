@@ -1,5 +1,6 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { apiRequest } from '../lib/api';
+import { getMediaUrl } from '../lib/utils';
 
 interface MediaUploadWidgetProps {
   onUpload: (uploadedFiles: UploadedFile[]) => void;
@@ -297,7 +298,7 @@ export default function MediaUploadWidget({
               <div key={index} className="file-item">
                 <div className="file-preview">
                   <img 
-                    src={file.file_url} 
+                    src={getMediaUrl(file.file_url)} 
                     alt={file.file_name}
                     onError={(e) => {
                       // Fallback to placeholder if image fails to load

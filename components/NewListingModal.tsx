@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { apiClient } from '../lib/api';
 import { Property, Room } from '../lib/types';
 import styles from './NewListingModal.module.css';
+import { getMediaUrl } from '../lib/utils';
 
 interface NewListingModalProps {
   onClose: () => void;
@@ -829,7 +830,7 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
               {mediaFiles.map(media => (
                 <div key={media.id} className={styles.mediaItem}>
                   <div className={styles.mediaImage}>
-                    <img src={media.url} alt="Property" />
+                    <img src={getMediaUrl(media.url)} alt="Property" />
                     {media.is_primary && <div className={styles.primaryBadge}>Featured</div>}
                   </div>
                   <div className={styles.mediaControls}>

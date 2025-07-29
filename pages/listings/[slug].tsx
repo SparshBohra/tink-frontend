@@ -5,6 +5,7 @@ import { GetServerSideProps } from 'next';
 import { publicApiRequest } from '../../lib/api';
 import { PropertyListing } from '../../lib/types';
 import PublicApplicationForm from '../../components/PublicApplicationForm';
+import { getMediaUrl } from '../../lib/utils';
 
 interface PublicListingPageProps {
   listing: PropertyListing | null;
@@ -194,7 +195,7 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
         <div className="image-gallery">
           <div className="main-image">
             <img 
-              src={listing.media[currentImageIndex].file_url} 
+              src={getMediaUrl(listing.media[currentImageIndex].file_url || '')} 
               alt={listing.title}
               className="gallery-image"
             />
@@ -230,7 +231,7 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
                   onClick={() => setCurrentImageIndex(index)}
                   className={`thumbnail ${index === currentImageIndex ? 'active' : ''}`}
                 >
-                  <img src={media.file_url} alt={`${listing.title} - Image ${index + 1}`} />
+                  <img src={getMediaUrl(media.file_url || '')} alt={`${listing.title} - Image ${index + 1}`} />
                 </button>
               ))}
             </div>
