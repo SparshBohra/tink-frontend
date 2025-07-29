@@ -423,7 +423,7 @@ export function getMediaUrl(url: string): string {
     if (mediaMatch) {
       const filePath = mediaMatch[1];
       const baseUrl = process.env.NODE_ENV === 'production' 
-        ? process.env.NEXT_PUBLIC_API_URL || 'https://yourdomain.com'
+        ? process.env.NEXT_PUBLIC_API_URL || 'https://tink.global'
         : 'http://localhost:8000';
       return `${baseUrl}/api/properties/media/${filePath}`;
     }
@@ -433,7 +433,7 @@ export function getMediaUrl(url: string): string {
   if (url.startsWith('/media/') || url.startsWith('media/')) {
     const filePath = url.replace(/^\/media\//, '').replace(/^media\//, '');
     const baseUrl = process.env.NODE_ENV === 'production' 
-      ? process.env.NEXT_PUBLIC_API_URL || 'https://yourdomain.com'
+      ? process.env.NEXT_PUBLIC_API_URL || 'https://tink.global'
       : 'http://localhost:8000';
     return `${baseUrl}/api/properties/media/${filePath}`;
   }
