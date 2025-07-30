@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { PropertyListing } from '../lib/types';
+import { apiClient } from '../lib/api';
 
 interface PublicApplicationFormProps {
   listing: PropertyListing;
@@ -46,15 +47,25 @@ interface FormData {
   smoking: string;
   additional_comments: string;
   
+  // Room Selection (for individual room listings)
+  selected_room: string;
+  preferred_lease_term: string;
+  
   // Agreements
   background_check_consent: boolean;
   terms_agreement: boolean;
+  message: string;
+  otp: string;
 }
 
 export default function PublicApplicationForm({ listing, onClose, onSubmit }: PublicApplicationFormProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isOtpSent, setIsOtpSent] = useState(false);
+  const [isOtpVerified, setIsOtpVerified] = useState(false);
+  const [otpError, setOtpError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   
   // Debug logging
   React.useEffect(() => {
@@ -88,8 +99,12 @@ export default function PublicApplicationForm({ listing, onClose, onSubmit }: Pu
     pet_details: '',
     smoking: 'no',
     additional_comments: '',
+    selected_room: '', // For individual room listings
+    preferred_lease_term: '12', // Default to 12 months
     background_check_consent: false,
     terms_agreement: false,
+    message: '',
+    otp: '',
   });
 
   const totalSteps = 5;
@@ -111,56 +126,102 @@ export default function PublicApplicationForm({ listing, onClose, onSubmit }: Pu
     }
   };
 
-  const validateStep = (step: number): boolean => {
-    setError(null);
-    
+  // Validation function without side effects (for disabled conditions)
+  const isStepValid = (step: number): boolean => {
     switch (step) {
       case 1:
         if (!formData.full_name || !formData.email || !formData.phone || !formData.date_of_birth) {
-          setError('Please fill in all required fields in Personal Information.');
           return false;
         }
         // Basic email validation
         if (!formData.email.includes('@')) {
-          setError('Please enter a valid email address.');
           return false;
         }
         // Basic phone validation (more lenient)
         if (formData.phone.length < 10) {
-          setError('Please enter a valid phone number (minimum 10 digits).');
           return false;
         }
         break;
       case 2:
         if (!formData.employment_status || !formData.annual_income) {
-          setError('Please fill in all required fields in Employment Information.');
           return false;
         }
         if (formData.employment_status === 'employed' && (!formData.employer_name || !formData.job_title)) {
-          setError('Please provide employer details.');
           return false;
         }
         break;
       case 3:
         if (!formData.desired_move_in_date || !formData.desired_lease_duration || !formData.rent_budget || !formData.previous_address || !formData.move_in_date) {
-          setError('Please fill in all required fields in Rental History & Preferences.');
+          return false;
+        }
+        // Room selection validation for individual room listings
+        if (listing.listing_type === 'rooms' && !formData.selected_room) {
+          return false;
+        }
+        // Preferred lease term validation for room listings
+        if (listing.listing_type === 'rooms' && !formData.preferred_lease_term) {
           return false;
         }
         break;
       case 4:
         if (!formData.reference_name || !formData.reference_phone || !formData.reference_relationship) {
-          setError('Please provide at least one reference.');
           return false;
         }
         break;
       case 5:
         if (!formData.background_check_consent || !formData.terms_agreement) {
-          setError('Please accept the required agreements to proceed.');
           return false;
         }
         break;
       default:
         return true;
+    }
+    
+    return true;
+  };
+
+  const validateStep = (step: number): boolean => {
+    setError(null);
+    
+    if (!isStepValid(step)) {
+      switch (step) {
+        case 1:
+          if (!formData.full_name || !formData.email || !formData.phone || !formData.date_of_birth) {
+            setError('Please fill in all required fields in Personal Information.');
+          } else if (!formData.email.includes('@')) {
+            setError('Please enter a valid email address.');
+          } else if (formData.phone.length < 10) {
+            setError('Please enter a valid phone number (minimum 10 digits).');
+          }
+          break;
+        case 2:
+          if (!formData.employment_status || !formData.annual_income) {
+            setError('Please fill in all required fields in Employment Information.');
+          } else if (formData.employment_status === 'employed' && (!formData.employer_name || !formData.job_title)) {
+            setError('Please provide employer details.');
+          }
+          break;
+        case 3:
+          if (!formData.desired_move_in_date || !formData.desired_lease_duration || !formData.rent_budget || !formData.previous_address || !formData.move_in_date) {
+            setError('Please fill in all required fields in Rental History & Preferences.');
+          } else if (listing.listing_type === 'rooms' && !formData.selected_room) {
+            setError('Please select a room for your application.');
+          } else if (listing.listing_type === 'rooms' && !formData.preferred_lease_term) {
+            setError('Please select your preferred lease term.');
+          }
+          break;
+        case 4:
+          if (!formData.reference_name || !formData.reference_phone || !formData.reference_relationship) {
+            setError('Please provide at least one reference.');
+          }
+          break;
+        case 5:
+          if (!formData.background_check_consent || !formData.terms_agreement) {
+            setError('Please accept the required agreements to proceed.');
+          }
+          break;
+      }
+      return false;
     }
     
     return true;
@@ -206,6 +267,46 @@ export default function PublicApplicationForm({ listing, onClose, onSubmit }: Pu
     if (e.target === e.currentTarget) {
       onClose();
     }
+  };
+
+  const handleSendOtp = async () => {
+    if (!formData.phone) {
+      setOtpError('Phone number is required.');
+      return;
+    }
+    setIsLoading(true);
+    setOtpError(null);
+    try {
+      const response = await apiClient.requestTenantOtp(formData.phone);
+      if (response.success) {
+        setIsOtpSent(true);
+      } else {
+        setOtpError(response.error || 'Failed to send OTP.');
+      }
+    } catch (err) {
+      setOtpError('An error occurred while sending the OTP.');
+    }
+    setIsLoading(false);
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!formData.otp) {
+      setOtpError('OTP is required.');
+      return;
+    }
+    setIsLoading(true);
+    setOtpError(null);
+    try {
+      const response = await apiClient.verifyTenantOtp(formData.phone, formData.otp);
+      if (response.success) {
+        setIsOtpVerified(true);
+      } else {
+        setOtpError(response.error || 'Invalid OTP.');
+      }
+    } catch (err) {
+      setOtpError('An error occurred while verifying the OTP.');
+    }
+    setIsLoading(false);
   };
 
   return (
@@ -275,16 +376,51 @@ export default function PublicApplicationForm({ listing, onClose, onSubmit }: Pu
 
               <div className="form-group">
                 <label className="form-label required">Phone *</label>
-                <input
-                  type="tel"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleInputChange}
-                  className="form-input"
-                  required
-                  placeholder="Enter your phone number"
-                />
+                <div className="form-group">
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                    className="form-input"
+                    required
+                    disabled={isOtpSent}
+                  />
+                  {!isOtpVerified && (
+                    <button
+                      type="button"
+                      onClick={handleSendOtp}
+                      className="btn btn-secondary"
+                      disabled={isLoading || isOtpSent}
+                    >
+                      {isLoading ? 'Sending...' : (isOtpSent ? 'Resend OTP' : 'Send OTP')}
+                    </button>
+                  )}
+                </div>
               </div>
+
+              {isOtpSent && !isOtpVerified && (
+                <div className="form-group">
+                  <label className="form-label required">Verification Code *</label>
+                  <input
+                    type="text"
+                    name="otp"
+                    value={formData.otp}
+                    onChange={handleInputChange}
+                    className="form-input"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={handleVerifyOtp}
+                    className="btn btn-secondary"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? 'Verifying...' : 'Verify OTP'}
+                  </button>
+                  {otpError && <p className="alert alert-error">{otpError}</p>}
+                </div>
+              )}
               
               <div className="form-group">
                 <label className="form-label required">Date of Birth *</label>
@@ -431,6 +567,87 @@ export default function PublicApplicationForm({ listing, onClose, onSubmit }: Pu
                     required
                   />
                 </div>
+
+                {/* Room Selection for Individual Room Listings */}
+                {listing.listing_type === 'rooms' && listing.available_room_details && listing.available_room_details.length > 0 && (
+                  <div className="form-group">
+                    <label className="form-label required">Select Room *</label>
+                    <div className="room-selection-info">
+                      <p className="form-hint">Choose which room you'd like to apply for:</p>
+                    </div>
+                    <div className="room-options">
+                      {listing.available_room_details.map((room, index) => (
+                        <label key={room.id || index} className={`room-option ${formData.selected_room === room.id?.toString() ? 'selected' : ''}`}>
+                          <input
+                            type="radio"
+                            name="selected_room"
+                            value={room.id?.toString() || ''}
+                            checked={formData.selected_room === room.id?.toString()}
+                            onChange={handleInputChange}
+                            className="room-radio"
+                          />
+                          <div className="room-option-content">
+                            <div className="room-option-header">
+                              <span className="room-name">{room.name}</span>
+                              <span className="room-rent">${room.monthly_rent}/month</span>
+                            </div>
+                            <div className="room-option-details">
+                              <span className="room-type">{room.room_type?.replace('_', ' ')}</span>
+                              {room.square_footage && <span className="room-size">{room.square_footage} sq ft</span>}
+                              {room.floor_number && <span className="room-floor">Floor {room.floor_number}</span>}
+                            </div>
+                            <div className="room-availability-dates">
+                              {room.available_from && (
+                                <span className="availability-date">
+                                  Available from: {new Date(room.available_from).toLocaleDateString()}
+                                </span>
+                              )}
+                              {room.available_until && (
+                                <span className="availability-date">
+                                  Until: {new Date(room.available_until).toLocaleDateString()}
+                                </span>
+                              )}
+                            </div>
+                            {room.room_features && room.room_features.length > 0 && (
+                              <div className="room-features">
+                                {room.room_features.slice(0, 3).map((feature, featureIndex) => (
+                                  <span key={featureIndex} className="room-feature-tag">
+                                    {feature.replace('_', ' ')}
+                                  </span>
+                                ))}
+                                {room.room_features.length > 3 && <span className="room-feature-more">+{room.room_features.length - 3} more</span>}
+                              </div>
+                            )}
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Preferred Lease Term for Room Applications */}
+                {listing.listing_type === 'rooms' && (
+                  <div className="form-group">
+                    <label className="form-label required">Preferred Lease Term *</label>
+                    <div className="form-hint">How long would you like to lease this room?</div>
+                    <select
+                      name="preferred_lease_term"
+                      value={formData.preferred_lease_term}
+                      onChange={handleInputChange}
+                      className="form-input"
+                      required
+                    >
+                      <option value="3">3 months</option>
+                      <option value="6">6 months</option>
+                      <option value="9">9 months</option>
+                      <option value="12">12 months</option>
+                      <option value="15">15 months</option>
+                      <option value="18">18 months</option>
+                      <option value="24">24 months</option>
+                      <option value="custom">Custom duration (specify in comments)</option>
+                    </select>
+                  </div>
+                )}
               </div>
               
               <div className="form-section">
@@ -771,7 +988,10 @@ export default function PublicApplicationForm({ listing, onClose, onSubmit }: Pu
                   type="button"
                   onClick={nextStep}
                   className="btn btn-primary"
-                  disabled={submitting}
+                                      disabled={
+                      (currentStep === 1 && !isOtpVerified) ||
+                      !isStepValid(currentStep)
+                    }
                 >
                   Next
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1315,6 +1535,134 @@ export default function PublicApplicationForm({ listing, onClose, onSubmit }: Pu
 
           .checkbox-description {
             font-size: 13px;
+          }
+        }
+
+        /* Room Selection Styles */
+        .room-selection-info {
+          margin-bottom: 16px;
+        }
+
+        .room-options {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        .room-option {
+          display: block;
+          cursor: pointer;
+          border: 2px solid #e2e8f0;
+          border-radius: 8px;
+          padding: 0;
+          transition: all 0.2s;
+          background: #ffffff;
+        }
+
+        .room-option:hover {
+          border-color: #3b82f6;
+          box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
+        }
+
+        .room-option.selected {
+          border-color: #3b82f6;
+          background: #eff6ff;
+          box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
+        }
+
+        .room-radio {
+          position: absolute;
+          opacity: 0;
+          pointer-events: none;
+        }
+
+        .room-option-content {
+          padding: 16px;
+        }
+
+        .room-option-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 8px;
+        }
+
+        .room-name {
+          font-size: 16px;
+          font-weight: 600;
+          color: #1f2937;
+        }
+
+        .room-rent {
+          font-size: 14px;
+          font-weight: 700;
+          color: #059669;
+          background: #ecfdf5;
+          padding: 4px 8px;
+          border-radius: 4px;
+        }
+
+        .room-option-details {
+          display: flex;
+          gap: 12px;
+          margin-bottom: 8px;
+          font-size: 14px;
+          color: #6b7280;
+        }
+
+        .room-availability-dates {
+          display: flex;
+          gap: 12px;
+          margin-bottom: 8px;
+          font-size: 13px;
+        }
+
+        .availability-date {
+          color: #059669;
+          font-weight: 500;
+          background: #ecfdf5;
+          padding: 2px 6px;
+          border-radius: 4px;
+        }
+
+        .room-type,
+        .room-size,
+        .room-floor {
+          text-transform: capitalize;
+        }
+
+        .room-features {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+        }
+
+        .room-feature-tag {
+          background: #e0f2fe;
+          color: #0369a1;
+          padding: 2px 6px;
+          border-radius: 12px;
+          font-size: 11px;
+          font-weight: 500;
+          text-transform: capitalize;
+        }
+
+        .room-feature-more {
+          color: #6b7280;
+          font-size: 11px;
+          font-style: italic;
+        }
+
+        @media (max-width: 768px) {
+          .room-option-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 4px;
+          }
+
+          .room-option-details {
+            flex-direction: column;
+            gap: 4px;
           }
         }
       `}</style>

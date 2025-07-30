@@ -868,6 +868,33 @@ class ApiClient {
     return response.data.viewings || response.data;
   }
 
+  // Get all viewings for management
+  async getAllViewings(): Promise<ApplicationViewing[]> {
+    try {
+      const response = await this.api.get('/tenants/viewings/');
+      return response.data.results || response.data;
+    } catch (error: any) {
+      console.error('Failed to fetch all viewings:', error);
+      throw new Error(error.message || 'Failed to fetch viewings');
+    }
+  }
+
+  // Update viewing status (cancel, reschedule, etc.)
+  async updateViewingStatus(viewingId: number, statusData: {
+    status: 'scheduled' | 'completed' | 'cancelled' | 'rescheduled';
+    notes?: string;
+    scheduled_date?: string;
+    scheduled_time?: string;
+  }): Promise<ApplicationViewing> {
+    try {
+      const response = await this.api.patch(`/tenants/viewings/${viewingId}/`, statusData);
+      return response.data;
+    } catch (error: any) {
+      console.error('Failed to update viewing status:', error);
+      throw new Error(error.message || 'Failed to update viewing');
+    }
+  }
+
   async assignRoom(applicationId: number, roomData: { room_id: number }): Promise<Application> {
     try {
       console.log(`Assigning room ${roomData.room_id} to application ${applicationId}`);

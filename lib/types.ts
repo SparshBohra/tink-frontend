@@ -102,6 +102,7 @@ export interface ApplicationViewing {
   application: number;
   scheduled_date: string;
   scheduled_time: string;
+  status: 'scheduled' | 'completed' | 'cancelled' | 'rescheduled' | 'no_show';
   contact_person: string;
   contact_phone: string;
   viewing_notes: string;
@@ -112,6 +113,10 @@ export interface ApplicationViewing {
   next_action?: string;
   created_at: string;
   updated_at: string;
+  // Additional fields from application lookup
+  tenant_name?: string;
+  property_name?: string;
+  room_name?: string;
 }
 
 export interface Application {
@@ -486,6 +491,7 @@ export interface PropertyListing {
   application_count: number;
   featured_image_url?: string;
   available_from?: string;
+  available_until?: string;
   created_at: string;
   updated_at: string;
   // Additional fields from API response
@@ -532,6 +538,8 @@ export interface AvailableRoomDetail {
   square_footage?: number;
   room_features?: string[];
   floor_number?: number;
+  available_from?: string;
+  available_until?: string;
 }
 
 export interface PropertyDetail {

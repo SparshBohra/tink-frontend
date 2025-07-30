@@ -18,7 +18,10 @@ export default function RoomAssignmentModal({
   onClose,
   onAssignRoom
 }: RoomAssignmentModalProps) {
-  const [selectedRoomId, setSelectedRoomId] = useState<number | null>(null);
+  const [selectedRoomId, setSelectedRoomId] = useState<number | null>(
+    // Auto-select the room that the tenant originally applied for
+    application.room || null
+  );
   const [roomCompatibilityScores, setRoomCompatibilityScores] = useState<{[key: number]: number}>({});
 
   const propertyRooms = availableRooms.filter(room => room.property_ref === application.property_ref);
@@ -114,6 +117,15 @@ export default function RoomAssignmentModal({
                 <span className="label">Priority Score:</span>
                 <span className="value">{application.priority_score || 0}</span>
               </div>
+              {application.room && (
+                <div className="detail-item requested-room">
+                  <span className="label">Originally Requested:</span>
+                  <span className="value">
+                    {getRoomDetails(application.room)?.name || `Room ID ${application.room}`}
+                    <span className="auto-selected-badge">✓ Auto-selected</span>
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -595,6 +607,35 @@ export default function RoomAssignmentModal({
 
         .detail .value.compatibility {
           font-weight: 600;
+        }
+
+        .requested-room {
+          background: #f0f9ff;
+          border-radius: 6px;
+          padding: 8px 12px;
+          border: 1px solid #0ea5e9;
+        }
+
+        .requested-room .label {
+          color: #0c4a6e;
+          font-weight: 600;
+        }
+
+        .requested-room .value {
+          color: #0c4a6e;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .auto-selected-badge {
+          background: #16a34a;
+          color: white;
+          padding: 2px 8px;
+          border-radius: 12px;
+          font-size: 11px;
+          font-weight: 500;
+          white-space: nowrap;
         }
 
         .compatibility-breakdown {

@@ -5,7 +5,7 @@ import { GetServerSideProps } from 'next';
 import { publicApiRequest } from '../../lib/api';
 import { PropertyListing } from '../../lib/types';
 import PublicApplicationForm from '../../components/PublicApplicationForm';
-import { getMediaUrl } from '../../lib/utils';
+import { getMediaUrl, formatUTCDate } from '../../lib/utils';
 
 interface PublicListingPageProps {
   listing: PropertyListing | null;
@@ -257,12 +257,18 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
                 </div>
                 <div className="detail-item">
                   <div className="detail-label">Available From</div>
-                  <div className="detail-value">{listing.available_from ? formatDate(listing.available_from) : 'TBD'}</div>
+                  <div className="detail-value">{listing.available_from ? formatUTCDate(listing.available_from) : 'TBD'}</div>
                 </div>
+                {listing.available_until && (
+                  <div className="detail-item">
+                    <div className="detail-label">Available Until</div>
+                    <div className="detail-value">{listing.available_until ? formatUTCDate(listing.available_until) : 'TBD'}</div>
+                  </div>
+                )}
                 {listing.application_deadline && (
                   <div className="detail-item">
                     <div className="detail-label">Application Deadline</div>
-                    <div className="detail-value">{listing.application_deadline ? formatDate(listing.application_deadline) : 'TBD'}</div>
+                    <div className="detail-value">{listing.application_deadline ? formatUTCDate(listing.application_deadline) : 'TBD'}</div>
                   </div>
                 )}
                 <div className="detail-item">
@@ -315,6 +321,86 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
                       {amenity.replace('_', ' ').toUpperCase()}
                     </span>
                   ))}
+                </div>
+              </section>
+            )}
+
+            {/* Room Availability Section for Individual Room Listings */}
+            {listing.listing_type === 'rooms' && listing.available_room_details && listing.available_room_details.length > 0 && (
+              <section className="details-section">
+                <h2>Available Rooms</h2>
+                <div className="rooms-availability">
+                  {listing.available_room_details.map((room, index) => (
+                    <div key={room.id || index} className="room-card">
+                      <div className="room-header">
+                        <h3 className="room-name">{room.name}</h3>
+                        <div className="room-rent">{formatPrice(room.monthly_rent)}/month</div>
+                      </div>
+                      <div className="room-details">
+                        <div className="room-detail-item">
+                          <span className="room-detail-label">Type:</span>
+                          <span className="room-detail-value">{room.room_type?.replace('_', ' ')}</span>
+                        </div>
+                        {room.square_footage && (
+                          <div className="room-detail-item">
+                            <span className="room-detail-label">Size:</span>
+                            <span className="room-detail-value">{room.square_footage} sq ft</span>
+                          </div>
+                        )}
+                        {room.floor_number && (
+                          <div className="room-detail-item">
+                            <span className="room-detail-label">Floor:</span>
+                            <span className="room-detail-value">{room.floor_number}</span>
+                          </div>
+                        )}
+                        {room.available_from && (
+                          <div className="room-detail-item">
+                            <span className="room-detail-label">Available From:</span>
+                            <span className="room-detail-value">{new Date(room.available_from).toLocaleDateString()}</span>
+                          </div>
+                        )}
+                        {room.available_until && (
+                          <div className="room-detail-item">
+                            <span className="room-detail-label">Available Until:</span>
+                            <span className="room-detail-value">{new Date(room.available_until).toLocaleDateString()}</span>
+                          </div>
+                        )}
+                        {room.room_features && room.room_features.length > 0 && (
+                          <div className="room-features">
+                            <span className="room-detail-label">Features:</span>
+                            <div className="features-list">
+                              {room.room_features.map((feature, featureIndex) => (
+                                <span key={featureIndex} className="feature-tag">
+                                  {feature.replace('_', ' ')}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Whole Property Rent Information */}
+            {listing.listing_type === 'whole_property' && listing.available_room_details && !Array.isArray(listing.available_room_details) && (
+              <section className="details-section">
+                <h2>Rental Information</h2>
+                <div className="property-rent-info">
+                  <div className="detail-item">
+                    <div className="detail-label">Monthly Rent</div>
+                    <div className="detail-value">{formatPrice((listing.available_room_details as any).monthly_rent)}</div>
+                  </div>
+                  <div className="detail-item">
+                    <div className="detail-label">Total Rooms</div>
+                    <div className="detail-value">{(listing.available_room_details as any).total_rooms}</div>
+                  </div>
+                  <div className="detail-item">
+                    <div className="detail-label">Rent Type</div>
+                    <div className="detail-value">{(listing.available_room_details as any).rent_type?.replace('_', ' ')}</div>
+                  </div>
                 </div>
               </section>
             )}
@@ -783,6 +869,102 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
           width: 100%;
         }
 
+        .rooms-availability {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+          gap: 20px;
+          margin-top: 20px;
+        }
+
+        .room-card {
+          background: #f9fafb;
+          border: 1px solid #e5e7eb;
+          border-radius: 8px;
+          padding: 16px;
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          transition: all 0.2s ease-in-out;
+        }
+
+        .room-card:hover {
+          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+          transform: translateY(-2px);
+        }
+
+        .room-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 8px;
+        }
+
+        .room-name {
+          font-size: 18px;
+          font-weight: 600;
+          color: #1f2937;
+          margin: 0;
+        }
+
+        .room-rent {
+          font-size: 16px;
+          font-weight: 500;
+          color: #3b82f6;
+          background: rgba(59, 130, 246, 0.1);
+          padding: 4px 10px;
+          border-radius: 6px;
+        }
+
+        .room-details {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .room-detail-item {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          font-size: 14px;
+          color: #4b5563;
+        }
+
+        .room-detail-label {
+          font-weight: 500;
+          color: #6b7280;
+        }
+
+        .room-detail-value {
+          font-weight: 600;
+          color: #1f2937;
+        }
+
+        .room-features {
+          margin-top: 8px;
+        }
+
+        .features-list {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+
+        .feature-tag {
+          background: #e0f2fe;
+          color: #1f2937;
+          padding: 4px 10px;
+          border-radius: 12px;
+          font-size: 12px;
+          font-weight: 500;
+        }
+
+        .property-rent-info {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 16px;
+          margin-top: 20px;
+        }
+
         @media (max-width: 1024px) {
           .content-grid {
             grid-template-columns: 1fr;
@@ -827,6 +1009,120 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
 
           .next-btn {
             right: 10px;
+          }
+        }
+
+        /* Room Availability Styles */
+        .rooms-availability {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+          gap: 20px;
+          margin-top: 16px;
+        }
+
+        .room-card {
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          padding: 20px;
+          transition: all 0.2s;
+        }
+
+        .room-card:hover {
+          border-color: #3b82f6;
+          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
+        }
+
+        .room-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 16px;
+          padding-bottom: 12px;
+          border-bottom: 1px solid #e2e8f0;
+        }
+
+        .room-name {
+          font-size: 18px;
+          font-weight: 600;
+          color: #1f2937;
+          margin: 0;
+        }
+
+        .room-rent {
+          font-size: 16px;
+          font-weight: 700;
+          color: #059669;
+          background: #ecfdf5;
+          padding: 4px 8px;
+          border-radius: 4px;
+        }
+
+        .room-details {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .room-detail-item {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+
+        .room-detail-label {
+          font-weight: 500;
+          color: #6b7280;
+        }
+
+        .room-detail-value {
+          color: #1f2937;
+          text-transform: capitalize;
+        }
+
+        .room-detail-value .availability-date {
+          color: #059669;
+          font-weight: 500;
+        }
+
+        .room-features {
+          margin-top: 12px;
+        }
+
+        .features-list {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+          margin-top: 8px;
+        }
+
+        .feature-tag {
+          background: #e0f2fe;
+          color: #0369a1;
+          padding: 2px 8px;
+          border-radius: 12px;
+          font-size: 12px;
+          font-weight: 500;
+          text-transform: capitalize;
+        }
+
+        .property-rent-info {
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          padding: 20px;
+          margin-top: 16px;
+        }
+
+        @media (max-width: 768px) {
+          .rooms-availability {
+            grid-template-columns: 1fr;
+          }
+          
+          .room-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
           }
         }
       `}</style>

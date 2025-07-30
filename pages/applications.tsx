@@ -25,6 +25,7 @@ import RoomAssignmentModal from '../components/RoomAssignmentModal';
 import PropertyRoomManagement from '../components/PropertyRoomManagement';
 import ApplicationDetailModal from '../components/ApplicationDetailModal';
 import ImprovedLeaseGenerationModal from '../components/ImprovedLeaseGenerationModal';
+import ViewingManagementModal from '../components/ViewingManagementModal';
 
 function Applications() {
   const router = useRouter();
@@ -63,9 +64,14 @@ function Applications() {
   const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false);
   const [selectedApplicationForApproval, setSelectedApplicationForApproval] = useState<Application | null>(null);
   const [selectedPropertyForApproval, setSelectedPropertyForApproval] = useState<Property | null>(null);
+  
+  // Add state for viewing management modal
+  const [isViewingManagementOpen, setIsViewingManagementOpen] = useState(false);
+  const [viewingsCount, setViewingsCount] = useState<number>(0);
 
   useEffect(() => {
     fetchData();
+    fetchViewingsCount();
   }, []);
   
   useEffect(() => {
@@ -86,6 +92,17 @@ function Applications() {
       setFilteredApplications(applications);
     }
   }, [applications, selectedProperty]);
+
+  const fetchViewingsCount = async () => {
+    try {
+      const viewings = await apiClient.getAllViewings();
+      const scheduledViewings = viewings.filter(v => v.status === 'scheduled');
+      setViewingsCount(scheduledViewings.length);
+    } catch (error) {
+      console.error('Failed to fetch viewings count:', error);
+      setViewingsCount(0);
+    }
+  };
 
   const fetchData = async () => {
     try {
@@ -875,6 +892,15 @@ function Applications() {
     }
   };
 
+  const handleRescheduleViewing = (app: Application) => {
+    if (app.status === 'viewing_scheduled') {
+      // Reschedule existing viewing - open ViewingManagement modal
+      setIsViewingManagementOpen(true);
+    } else {
+      alert(`Cannot reschedule viewing for application in ${app.status} status`);
+    }
+  };
+
   const handleScheduleViewing = async (viewingData: {
     scheduled_date: string;
     scheduled_time: string;
@@ -905,6 +931,7 @@ function Applications() {
       
       // Refresh data from backend (this will happen in background)
       fetchData(); // Don't await this - let it refresh in background
+      fetchViewingsCount(); // Refresh viewings count
       
       // Enhanced success message with next steps
       const successMessage = `✅ Viewing Scheduled Successfully!\n\n📅 Details:\n• Date: ${viewingData.scheduled_date}\n• Time: ${viewingData.scheduled_time}\n• Contact: ${viewingData.contact_person}\n• Notes: ${viewingData.viewing_notes || 'None'}\n\n🎯 Next Steps:\n• The tenant will be notified about the viewing\n• Complete the viewing after it takes place\n• Use "Complete Viewing" button when done\n• Or "Reschedule" if changes are needed`;
@@ -992,6 +1019,7 @@ function Applications() {
       
       // Refresh data from backend (this will happen in background)
       fetchData(); // Don't await this - let it refresh in background
+      fetchViewingsCount(); // Refresh viewings count
       
       // Enhanced success message based on outcome
       let nextSteps = '';
@@ -1231,6 +1259,20 @@ function Applications() {
               </button>
 
               <button
+                onClick={() => setIsViewingManagementOpen(true)}
+                className="view-all-btn"
+                title="Manage property viewings and track completion status"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                  <line x1="16" y1="2" x2="16" y2="6"/>
+                  <line x1="8" y1="2" x2="8" y2="6"/>
+                  <line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                {viewingsCount > 0 ? `View Viewings (${viewingsCount})` : 'No Viewings'}
+              </button>
+
+              <button
                 onClick={() => {
                   const property = properties.find(p => p.id === selectedProperty);
                   if (property) {
@@ -1369,6 +1411,7 @@ function Applications() {
           onGenerateLease={handleGenerateLease}
           onMessage={handleMessage}
           onSetupViewing={handleSetupViewing}
+          onRescheduleViewing={handleRescheduleViewing}
           onActivateLease={handleActivateLease}
           onSkipViewing={handleSkipViewing}
           onDelete={handleDelete}
@@ -1485,6 +1528,16 @@ function Applications() {
             setSelectedApplicationForViewing(null);
           }}
           onSchedule={handleScheduleViewing}
+        />
+      )}
+
+      {isViewingManagementOpen && (
+        <ViewingManagementModal
+          isOpen={isViewingManagementOpen}
+          onClose={() => {
+            setIsViewingManagementOpen(false);
+            fetchViewingsCount(); // Refresh count when modal closes
+          }}
         />
       )}
 

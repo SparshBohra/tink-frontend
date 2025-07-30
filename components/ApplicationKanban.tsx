@@ -13,6 +13,7 @@ interface ApplicationKanbanProps {
   onGenerateLease?: (application: Application) => void;
   onMessage?: (application: Application) => void;
   onSetupViewing?: (application: Application) => void;
+  onRescheduleViewing?: (application: Application) => void;
   onActivateLease?: (application: Application) => void;
   onSkipViewing?: (applicationId: number) => void; /* New prop */
   onDelete?: (applicationId: number) => void; /* New prop for delete functionality */
@@ -291,7 +292,7 @@ const ApplicationListView: React.FC<ApplicationListViewProps> = ({
                               <button className="btn-sm success" onClick={() => onSetupViewing && onSetupViewing(app)}>
                                 Complete Viewing
                               </button>
-                              <button className="btn-sm secondary" onClick={() => onSetupViewing && onSetupViewing(app)}>
+                              <button className="btn-sm secondary" onClick={() => onRescheduleViewing && onRescheduleViewing(app)}>
                                 Reschedule
                               </button>
                             </>
@@ -404,6 +405,7 @@ export default function ApplicationKanban({
   onGenerateLease,
   onMessage,
   onSetupViewing,
+  onRescheduleViewing,
   onActivateLease,
   onSkipViewing,
   onDelete,
@@ -646,7 +648,7 @@ export default function ApplicationKanban({
                             <button className="btn-sm success" onClick={() => onSetupViewing && onSetupViewing(app)}>
                               Complete Viewing
                             </button>
-                            <button className="btn-sm secondary" onClick={() => onSetupViewing && onSetupViewing(app)}>
+                            <button className="btn-sm secondary" onClick={() => onRescheduleViewing && onRescheduleViewing(app)}>
                               Reschedule
                             </button>
                           </>

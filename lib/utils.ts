@@ -1,3 +1,4 @@
+import { format, toZonedTime } from 'date-fns-tz';
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 
@@ -440,4 +441,19 @@ export function getMediaUrl(url: string): string {
   
   // Return original URL if no conversion needed
   return url;
-} 
+}
+
+export function classNames(...classes: string[]) {
+  return classes.filter(Boolean).join(' ');
+}
+
+export const formatUTCDate = (dateString: string, timeZone: string = 'UTC') => {
+  if (!dateString) return '';
+  try {
+    const zonedDate = toZonedTime(dateString, timeZone);
+    return format(zonedDate, 'MMMM d, yyyy');
+  } catch (error) {
+    console.error('Error formatting date:', error);
+    return dateString; // Fallback to original string
+  }
+};
