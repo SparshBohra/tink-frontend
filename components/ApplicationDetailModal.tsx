@@ -34,7 +34,7 @@ const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
   onReject,
   onAssignRoom
 }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'timeline' | 'analysis' | 'documents'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'timeline' | 'documents'>('overview');
   const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
 
   useEffect(() => {
@@ -215,12 +215,6 @@ const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
             Timeline
           </button>
           <button
-            className={`tab-button ${activeTab === 'analysis' ? 'active' : ''}`}
-            onClick={() => setActiveTab('analysis')}
-          >
-            Analysis
-          </button>
-          <button
             className={`tab-button ${activeTab === 'documents' ? 'active' : ''}`}
             onClick={() => setActiveTab('documents')}
           >
@@ -369,100 +363,6 @@ const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
                     </div>
                   </div>
                 ))}
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'analysis' && (
-            <div className="analysis-tab">
-              <h3 className="section-title">Application Analysis</h3>
-              <div className="analysis-grid">
-                <div className="analysis-section">
-                  <h4 className="analysis-subtitle">Priority Score Breakdown</h4>
-                  <div className="score-breakdown">
-                    <div className="score-item">
-                      <span className="score-label">Days Pending (40%)</span>
-                      <div className="score-bar">
-                        <div className="score-fill" style={{ width: `${Math.min((application.days_pending || 0) * 10, 100)}%` }}></div>
-                      </div>
-                      <span className="score-value">{application.days_pending || 0} days</span>
-                    </div>
-                    <div className="score-item">
-                      <span className="score-label">Budget Compatibility (30%)</span>
-                      <div className="score-bar">
-                        <div className="score-fill" style={{ width: application.is_budget_compatible ? '100%' : '0%' }}></div>
-                      </div>
-                      <span className="score-value">{application.is_budget_compatible ? 'Compatible' : 'Not Compatible'}</span>
-                    </div>
-                    <div className="score-item">
-                      <span className="score-label">Room Match (20%)</span>
-                      <div className="score-bar">
-                        <div className="score-fill" style={{ width: `${application.match_score || 0}%` }}></div>
-                      </div>
-                      <span className="score-value">{application.match_score || 0}%</span>
-                    </div>
-                    <div className="score-item">
-                      <span className="score-label">Urgency Level (10%)</span>
-                      <div className="score-bar">
-                        <div className="score-fill" style={{ width: `${Math.min((application.days_pending || 0) * 5, 100)}%` }}></div>
-                      </div>
-                      <span className="score-value">{urgencyIndicator.text}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="analysis-section">
-                  <h4 className="analysis-subtitle">Recommended Actions</h4>
-                  <div className="recommendations">
-                    {application.priority_score && application.priority_score >= 80 && (
-                      <div className="recommendation high-priority">
-                        <div className="recommendation-icon">🔥</div>
-                        <div className="recommendation-content">
-                          <div className="recommendation-title">High Priority - Immediate Action Required</div>
-                          <div className="recommendation-description">
-                            This application has a high priority score and should be processed immediately.
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {application.has_conflicts && (
-                      <div className="recommendation conflict">
-                        <div className="recommendation-icon">⚠️</div>
-                        <div className="recommendation-content">
-                          <div className="recommendation-title">Resolve Conflicts</div>
-                          <div className="recommendation-description">
-                            This application conflicts with other applications. Review and resolve conflicts.
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {availableRooms.length === 0 && (
-                      <div className="recommendation no-rooms">
-                        <div className="recommendation-icon">🏠</div>
-                        <div className="recommendation-content">
-                          <div className="recommendation-title">No Available Rooms</div>
-                          <div className="recommendation-description">
-                            There are no available rooms in the selected property.
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {!application.has_conflicts && availableRooms.length > 0 && application.is_budget_compatible && (
-                      <div className="recommendation approve">
-                        <div className="recommendation-icon">✅</div>
-                        <div className="recommendation-content">
-                          <div className="recommendation-title">Ready for Approval</div>
-                          <div className="recommendation-description">
-                            This application meets all criteria and can be approved.
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
               </div>
             </div>
           )}

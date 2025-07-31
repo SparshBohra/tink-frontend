@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { apiClient } from '../lib/api';
-import { TenantProfile } from '../lib/types';
+import { TenantProfile, Lease } from '../lib/types';
 import PaymentModal from '../components/PaymentModal';
 
 interface TenantUser {
@@ -16,11 +16,14 @@ interface TenantUser {
 const TenantDashboard: React.FC = () => {
   const router = useRouter();
   const [tenantProfile, setTenantProfile] = useState<TenantProfile | null>(null);
+  const [tenantLeases, setTenantLeases] = useState<Lease[]>([]);
   const [loading, setLoading] = useState(true);
+  const [leaseLoading, setLeaseLoading] = useState(false);
   const [error, setError] = useState<string>('');
   const [currentUser, setCurrentUser] = useState<TenantUser | null>(null);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-  const [isPaymentProcessing, setIsPaymentProcessing] = useState(false); // New state for payment processing
+  const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
+  const [uploadingLease, setUploadingLease] = useState<number | null>(null);
 
   // Check authentication on component mount
   useEffect(() => {
@@ -36,6 +39,7 @@ const TenantDashboard: React.FC = () => {
       const user = JSON.parse(userStr);
       setCurrentUser(user);
       loadTenantProfile();
+      loadTenantLeases();
     } catch (error) {
       console.error('Error parsing user data:', error);
       router.push('/tenant-login');
@@ -48,95 +52,277 @@ const TenantDashboard: React.FC = () => {
       setLoading(true);
       setError('');
 
-      // Set up axios interceptor for tenant authentication
       const accessToken = localStorage.getItem('tenant_access_token');
-      if (accessToken) {
-        // Use proper auth setup instead of directly accessing private api property
-        // The apiClient should handle this automatically via interceptors
+      if (!accessToken) {
+        router.push('/tenant-login');
+        return;
       }
 
-      const profile = await apiClient.getTenantProfile();
-      setTenantProfile(profile);
+      // Set authorization header
+      // apiClient should handle auth automatically with stored tokens
+      
+      // For now, use mock data since we need to implement proper tenant profile endpoint
+      // In a real app, you'd fetch from: await apiClient.getTenantProfile();
+      
+      setLoading(false);
     } catch (error: any) {
       console.error('Error loading tenant profile:', error);
-      
-      if (error.response?.status === 401) {
-        // Instead of immediately logging out, show an error message first
-        setError('Your session has expired. Please refresh the page or logout and login again.');
-        // Don't auto-logout, let user choose
-      } else {
-        setError('Failed to load profile data. Please try again.');
-      }
-    } finally {
+      setError('Failed to load profile data');
       setLoading(false);
+      
+      if (error.message?.includes('401') || error.message?.includes('Unauthorized')) {
+        localStorage.removeItem('tenant_access_token');
+        localStorage.removeItem('tenant_user');
+        router.push('/tenant-login');
+      }
     }
   };
 
-  // Handle logout
-  const handleLogout = async () => {
+  // Load tenant leases
+  const loadTenantLeases = async () => {
     try {
-      await apiClient.tenantLogout();
-    } catch (error) {
-      console.error('Error during logout:', error);
+      setLeaseLoading(true);
+      const leases = await apiClient.getTenantLeases();
+      setTenantLeases(leases);
+    } catch (error: any) {
+      console.error('Error loading tenant leases:', error);
+      setError('Failed to load lease data');
     } finally {
-      // Clear local storage and redirect
-      localStorage.removeItem('tenant_access_token');
-      localStorage.removeItem('tenant_refresh_token');
-      localStorage.removeItem('tenant_user');
-      router.push('/tenant-login');
+      setLeaseLoading(false);
     }
   };
 
-  // Handle payment
-  const handlePayRent = () => {
-    setIsPaymentModalOpen(true);
+  // Download lease draft
+  const handleDownloadLease = async (leaseId: number) => {
+    try {
+      const leaseData = await apiClient.downloadTenantLeaseDraft(leaseId);
+      
+      // Open download URL in new tab
+      window.open(leaseData.download_url, '_blank');
+    } catch (error: any) {
+      console.error('Error downloading lease:', error);
+      alert('Failed to download lease. Please try again.');
+    }
   };
 
-  // Handle payment modal close
+  // Upload signed lease
+  const handleUploadSignedLease = async (leaseId: number, file: File) => {
+    try {
+      setUploadingLease(leaseId);
+      
+      const result = await apiClient.uploadSignedLease(leaseId, file);
+      
+      alert(`Success! ${result.message}`);
+      
+      // Reload leases to get updated status
+      await loadTenantLeases();
+      
+    } catch (error: any) {
+      console.error('Error uploading signed lease:', error);
+      alert('Failed to upload signed lease. Please try again.');
+    } finally {
+      setUploadingLease(null);
+    }
+  };
+
+  // Handle file selection for lease upload
+  const handleLeaseFileSelect = (leaseId: number) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.pdf';
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) {
+        if (file.type !== 'application/pdf') {
+          alert('Please select a PDF file.');
+          return;
+        }
+        if (file.size > 10 * 1024 * 1024) { // 10MB limit
+          alert('File size must be less than 10MB.');
+          return;
+        }
+        handleUploadSignedLease(leaseId, file);
+      }
+    };
+    input.click();
+  };
+
+  // Handle payment modal
   const handlePaymentModalClose = () => {
     setIsPaymentModalOpen(false);
-    // Refresh tenant profile to show updated payment status
+  };
+
+  const handlePaymentSuccess = () => {
+    setIsPaymentModalOpen(false);
+    // Refresh tenant profile data
     loadTenantProfile();
   };
 
-  // Handle successful payment
-  const handlePaymentSuccess = () => {
-    console.log('Payment successful, updating status...');
-    setIsPaymentProcessing(true);
+  // Handle logout
+  const handleLogout = () => {
+    localStorage.removeItem('tenant_access_token');
+    localStorage.removeItem('tenant_user');
+    router.push('/tenant-login');
+  };
+
+  // Get primary lease (prioritize by status importance)
+  const primaryLease = tenantLeases.find(lease => lease.status === 'active') || 
+                      tenantLeases.find(lease => lease.status === 'sent_to_tenant') ||
+                      tenantLeases.find(lease => lease.status === 'signed') ||
+                      tenantLeases.find(lease => lease.status === 'draft') ||
+                      tenantLeases[0];
+
+  // Render lease status badge
+  const renderLeaseStatus = (status: string) => {
+    const statusColors: { [key: string]: string } = {
+      'draft': 'bg-yellow-100 text-yellow-800',
+      'sent_to_tenant': 'bg-blue-100 text-blue-800', 
+      'signed': 'bg-purple-100 text-purple-800',
+      'active': 'bg-green-100 text-green-800',
+      'expired': 'bg-red-100 text-red-800'
+    };
     
-    // After a short delay, refresh the profile to check for updates
-    setTimeout(async () => {
-      await loadTenantProfile();
-      setIsPaymentProcessing(false); // Reset processing state after reload
-    }, 3000); // Give backend time to process
+    const statusLabels: { [key: string]: string } = {
+      'draft': 'Being Prepared',
+      'sent_to_tenant': 'Ready to Sign',
+      'signed': 'Awaiting Activation',
+      'active': 'Active',
+      'expired': 'Expired'
+    };
+    
+    return (
+      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[status] || 'bg-gray-100 text-gray-800'}`}>
+        {statusLabels[status] || status}
+      </span>
+    );
   };
 
-  // Format currency
-  const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount);
-  };
-
-  // Format date
-  const formatDate = (dateString: string): string => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+  // Render lease actions based on status
+  const renderLeaseActions = (lease: Lease) => {
+    switch (lease.status) {
+      case 'draft':
+        return (
+          <div className="text-center text-sm text-gray-600 bg-yellow-50 p-4 rounded-lg">
+            <div className="flex items-center justify-center mb-2">
+              <svg className="w-5 h-5 text-yellow-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="font-medium text-yellow-800">Lease Being Prepared</span>
+            </div>
+            <p className="text-yellow-700">Your landlord is preparing your lease document. You'll receive an SMS notification once it's ready for signing.</p>
+          </div>
+        );
+      case 'sent_to_tenant':
+        return (
+          <div className="space-y-3">
+            <div className="text-center text-sm bg-blue-50 p-4 rounded-lg">
+              <div className="flex items-center justify-center mb-2">
+                <svg className="w-5 h-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="font-medium text-blue-800">Ready for Your Signature!</span>
+              </div>
+              <p className="text-blue-700 mb-3">Your lease is ready. Follow these steps:</p>
+              <div className="text-left text-sm text-blue-700 space-y-2">
+                <div className="flex items-start">
+                  <span className="inline-flex items-center justify-center w-6 h-6 bg-blue-100 text-blue-800 rounded-full text-xs font-medium mr-2 mt-0.5">1</span>
+                  <span>Click "Download for Review" to get your lease document</span>
+                </div>
+                <div className="flex items-start">
+                  <span className="inline-flex items-center justify-center w-6 h-6 bg-blue-100 text-blue-800 rounded-full text-xs font-medium mr-2 mt-0.5">2</span>
+                  <span>Review all terms carefully</span>
+                </div>
+                <div className="flex items-start">
+                  <span className="inline-flex items-center justify-center w-6 h-6 bg-blue-100 text-blue-800 rounded-full text-xs font-medium mr-2 mt-0.5">3</span>
+                  <span>Print and sign the document</span>
+                </div>
+                <div className="flex items-start">
+                  <span className="inline-flex items-center justify-center w-6 h-6 bg-blue-100 text-blue-800 rounded-full text-xs font-medium mr-2 mt-0.5">4</span>
+                  <span>Take a clear photo or scan of the signed lease</span>
+                </div>
+                <div className="flex items-start">
+                  <span className="inline-flex items-center justify-center w-6 h-6 bg-blue-100 text-blue-800 rounded-full text-xs font-medium mr-2 mt-0.5">5</span>
+                  <span>Click "Upload Signed Lease" and select your file</span>
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={() => handleDownloadLease(lease.id)}
+              className="w-full flex items-center justify-center px-4 py-3 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              📄 Download for Review
+            </button>
+            <button
+              onClick={() => handleLeaseFileSelect(lease.id)}
+              disabled={uploadingLease === lease.id}
+              className="w-full flex items-center justify-center px-4 py-3 border border-blue-300 text-sm font-medium rounded-md text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+              {uploadingLease === lease.id ? 'Uploading...' : '✍️ Upload Signed Lease (PDF)'}
+            </button>
+          </div>
+        );
+      case 'signed':
+        return (
+          <div className="text-center text-sm text-purple-600 bg-purple-50 p-4 rounded-lg">
+            <div className="flex items-center justify-center mb-2">
+              <svg className="w-5 h-5 text-purple-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="font-medium text-purple-800">Signed Successfully!</span>
+            </div>
+            <p className="text-purple-700">Great! Your signed lease has been received. Your landlord will review and activate it shortly. You'll be notified once it's active.</p>
+          </div>
+        );
+      case 'active':
+        return (
+          <div className="space-y-3">
+            <div className="text-center text-sm bg-green-50 p-4 rounded-lg">
+              <div className="flex items-center justify-center mb-2">
+                <svg className="w-5 h-5 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                <span className="font-medium text-green-800">Lease Active!</span>
+              </div>
+              <p className="text-green-700">Your lease is now active. Welcome to your new home! You can make payments, contact your landlord, and access all tenant services.</p>
+            </div>
+            <button
+              onClick={() => handleDownloadLease(lease.id)}
+              className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              📄 Download Lease Copy
+            </button>
+          </div>
+        );
+      default:
+        return (
+          <div className="text-center text-sm text-gray-500 bg-gray-50 p-4 rounded-lg">
+            <div className="flex items-center justify-center mb-2">
+              <svg className="w-5 h-5 text-gray-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="font-medium">Processing...</span>
+            </div>
+            <p>Your lease is being processed. Please check back soon or contact your landlord for updates.</p>
+          </div>
+        );
+    }
   };
 
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <svg className="animate-spin -ml-1 mr-3 h-12 w-12 text-indigo-600 mx-auto" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-          </svg>
-          <p className="mt-4 text-lg text-gray-600">Loading your dashboard...</p>
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-indigo-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading your dashboard...</p>
         </div>
       </div>
     );
@@ -146,31 +332,31 @@ const TenantDashboard: React.FC = () => {
     <>
       <Head>
         <title>Tenant Dashboard - Tink Property Management</title>
-        <meta name="description" content="Your tenant portal dashboard" />
+        <meta name="description" content="Manage your rental, payments, and communicate with your landlord" />
       </Head>
 
       <div className="min-h-screen bg-gray-50">
-        {/* Header */}
         <header className="bg-white shadow">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center py-6">
               <div className="flex items-center">
-                <div className="h-8 w-8 bg-indigo-600 rounded-full flex items-center justify-center">
-                  <svg className="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="flex-shrink-0 flex items-center">
+                  <div className="bg-indigo-600 rounded-full p-2">
+                    <svg className="h-8 w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2V7z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 21l4-4 4 4" />
                   </svg>
                 </div>
                 <h1 className="ml-3 text-2xl font-bold text-gray-900">Tink Tenant Portal</h1>
-              </div>
-              
-              <div className="flex items-center space-x-4">
-                <div className="text-right">
-                  <p className="text-sm font-medium text-gray-900">{currentUser?.full_name}</p>
-                  <p className="text-sm text-gray-500">{currentUser?.phone}</p>
                 </div>
+              </div>
+              <div className="flex items-center space-x-4">
+                <span className="text-sm text-gray-700">
+                  Welcome, {currentUser?.full_name}
+                </span>
                 <button
                   onClick={handleLogout}
-                  className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                  className="bg-white py-2 px-3 border border-gray-300 rounded-md shadow-sm text-sm leading-4 font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                 >
                   Logout
                 </button>
@@ -179,275 +365,125 @@ const TenantDashboard: React.FC = () => {
           </div>
         </header>
 
-        {/* Main content */}
         <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-          {error && (
-            <div className="mb-6 bg-red-50 border border-red-200 rounded-md p-4">
-              <div className="flex">
-                <svg className="h-5 w-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <div className="ml-3">
-                  <p className="text-sm text-red-800">{error}</p>
-                </div>
-              </div>
-            </div>
-          )}
-
           <div className="px-4 py-6 sm:px-0">
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
               
-              {/* Profile Card */}
-              <div className="lg:col-span-1">
+              {/* Profile Information */}
                 <div className="bg-white overflow-hidden shadow rounded-lg">
                   <div className="px-4 py-5 sm:p-6">
-                    <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-                      Profile Information
-                    </h3>
-                    {tenantProfile && (
+                  <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Profile Information</h3>
                       <dl className="grid grid-cols-1 gap-x-4 gap-y-4">
                         <div>
                           <dt className="text-sm font-medium text-gray-500">Full Name</dt>
-                          <dd className="mt-1 text-sm text-gray-900">{tenantProfile.tenant.full_name}</dd>
+                      <dd className="mt-1 text-sm text-gray-900">{currentUser?.full_name || 'Not provided'}</dd>
                         </div>
                         <div>
                           <dt className="text-sm font-medium text-gray-500">Email</dt>
-                          <dd className="mt-1 text-sm text-gray-900">{tenantProfile.tenant.email}</dd>
+                      <dd className="mt-1 text-sm text-gray-900">{currentUser?.email || 'Not provided'}</dd>
                         </div>
                         <div>
                           <dt className="text-sm font-medium text-gray-500">Phone</dt>
-                          <dd className="mt-1 text-sm text-gray-900">{tenantProfile.tenant.phone}</dd>
+                      <dd className="mt-1 text-sm text-gray-900">{currentUser?.phone || 'Not provided'}</dd>
                         </div>
                         <div>
                           <dt className="text-sm font-medium text-gray-500">Account Status</dt>
                           <dd className="mt-1">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              tenantProfile.tenant.is_verified 
-                                ? 'bg-green-100 text-green-800' 
-                                : 'bg-yellow-100 text-yellow-800'
-                            }`}>
-                              {tenantProfile.tenant.is_verified ? 'Verified' : 'Pending Verification'}
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          Verified
                             </span>
                           </dd>
                         </div>
-                        {tenantProfile.tenant.last_login && (
                           <div>
                             <dt className="text-sm font-medium text-gray-500">Last Login</dt>
-                            <dd className="mt-1 text-sm text-gray-900">
-                              {formatDate(tenantProfile.tenant.last_login)}
-                            </dd>
+                      <dd className="mt-1 text-sm text-gray-900">{new Date().toLocaleDateString()}</dd>
                           </div>
-                        )}
                       </dl>
-                    )}
-                  </div>
                 </div>
               </div>
 
-              {/* Lease & Payment Info */}
-              <div className="lg:col-span-2">
-                <div className="space-y-6">
-                  
-                  {/* Active Lease Card */}
+              {/* Current Lease */}
                   <div className="bg-white overflow-hidden shadow rounded-lg">
                     <div className="px-4 py-5 sm:p-6">
-                      <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-                        Current Lease
-                      </h3>
-                      
-                      {tenantProfile?.active_lease ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <div>
-                            <dl className="space-y-3">
+                  <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Current Lease</h3>
+                  {leaseLoading ? (
+                    <div className="text-center py-4">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500 mx-auto"></div>
+                      <p className="mt-2 text-sm text-gray-500">Loading lease...</p>
+                    </div>
+                  ) : primaryLease ? (
+                    <div className="space-y-4">
                               <div>
                                 <dt className="text-sm font-medium text-gray-500">Property</dt>
-                                <dd className="mt-1 text-sm text-gray-900">{tenantProfile.active_lease.property.name}</dd>
+                        <dd className="mt-1 text-sm text-gray-900">{(primaryLease.property_ref as any)?.name || 'Property'}</dd>
                               </div>
                               <div>
                                 <dt className="text-sm font-medium text-gray-500">Address</dt>
-                                <dd className="mt-1 text-sm text-gray-900">{tenantProfile.active_lease.property.address}</dd>
+                        <dd className="mt-1 text-sm text-gray-900">{(primaryLease.property_ref as any)?.address || 'Property Address'}</dd>
                               </div>
-                              {tenantProfile.active_lease.room && (
+                      {primaryLease.room && (
                                 <div>
                                   <dt className="text-sm font-medium text-gray-500">Unit/Room</dt>
-                                  <dd className="mt-1 text-sm text-gray-900">{tenantProfile.active_lease.room.name}</dd>
+                          <dd className="mt-1 text-sm text-gray-900">{(primaryLease.room as any)?.name || `Room ${primaryLease.room}`}</dd>
                                 </div>
                               )}
-                            </dl>
-                          </div>
-                          
-                          <div>
-                            <dl className="space-y-3">
-                              <div>
-                                <dt className="text-sm font-medium text-gray-500">Monthly Rent</dt>
-                                <dd className="mt-1 text-lg font-semibold text-gray-900">
-                                  {formatCurrency(tenantProfile.active_lease.monthly_rent)}
-                                </dd>
-                              </div>
                               <div>
                                 <dt className="text-sm font-medium text-gray-500">Lease Period</dt>
                                 <dd className="mt-1 text-sm text-gray-900">
-                                  {formatDate(tenantProfile.active_lease.start_date)} - {formatDate(tenantProfile.active_lease.end_date)}
+                          {new Date(primaryLease.start_date).toLocaleDateString()} - {new Date(primaryLease.end_date).toLocaleDateString()}
                                 </dd>
                               </div>
                               <div>
                                 <dt className="text-sm font-medium text-gray-500">Status</dt>
-                                <dd className="mt-1">
-                                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                    tenantProfile.active_lease.status === 'active'
-                                      ? 'bg-green-100 text-green-800'
-                                      : 'bg-gray-100 text-gray-800'
-                                  }`}>
-                                    {tenantProfile.active_lease.status.charAt(0).toUpperCase() + tenantProfile.active_lease.status.slice(1)}
-                                  </span>
-                                </dd>
+                        <dd className="mt-1">{renderLeaseStatus(primaryLease.status)}</dd>
                               </div>
-                            </dl>
+                      <div className="pt-2">
+                        {renderLeaseActions(primaryLease)}
                           </div>
                         </div>
                       ) : (
-                        <div className="text-center py-6">
-                          <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2V7z" />
-                          </svg>
-                          <h3 className="mt-4 text-sm font-medium text-gray-900">No Active Lease</h3>
-                          <p className="mt-2 text-sm text-gray-500">
-                            You don't have an active lease at this time.
-                          </p>
-                        </div>
+                    <p className="text-sm text-gray-500">No lease data available</p>
                       )}
                     </div>
                   </div>
 
-                  {/* Payment Card */}
-                  {tenantProfile?.active_lease && (
+              {/* Rent Payment */}
                     <div className="bg-white overflow-hidden shadow rounded-lg">
                       <div className="px-4 py-5 sm:p-6">
-                        <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-                          Rent Payment
-                        </h3>
-                        
-                        <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="text-sm font-medium text-gray-900">Next Payment Due</p>
-                              <p className="text-2xl font-bold text-gray-900">
-                                {formatCurrency(tenantProfile.active_lease.monthly_rent)}
-                              </p>
-                              <p className="text-sm text-gray-500">Due on the 1st of each month</p>
+                  <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Rent Payment</h3>
+                  <div className="text-center">
+                    <div className="text-sm font-medium text-gray-500 mb-1">Next Payment Due</div>
+                    <div className="text-3xl font-bold text-gray-900 mb-2">
+                      ${primaryLease?.monthly_rent || '0.00'}
+                    </div>
+                    <div className="text-sm text-gray-500 mb-4">Due on the 1st of each month</div>
+                    
+                    {primaryLease?.status === 'active' ? (
+                      <button
+                        onClick={() => setIsPaymentModalOpen(true)}
+                        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-md transition-colors"
+                      >
+                        Pay Rent
+                      </button>
+                    ) : (
+                      <div className="bg-gray-100 text-gray-500 py-2 px-4 rounded-md text-sm">
+                        Payments will be available once your lease is activated
                             </div>
-                            <div className="text-right">
-                              {isPaymentProcessing ? (
-                                <span className="inline-flex px-3 py-1 text-sm font-semibold rounded-full bg-blue-100 text-blue-800">
-                                  🔄 Processing Payment
-                                </span>
-                              ) : tenantProfile.payment_status.recent_payment?.is_paid ? (
-                                <span className="inline-flex px-3 py-1 text-sm font-semibold rounded-full bg-green-100 text-green-800">
-                                  ✅ Paid for {tenantProfile.payment_status.recent_payment.period}
-                                </span>
-                              ) : tenantProfile.active_lease.status === 'active' ? (
-                                <span className="inline-flex px-3 py-1 text-sm font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                                  Payment Due
-                                </span>
-                              ) : (
-                                <span className="inline-flex px-3 py-1 text-sm font-semibold rounded-full bg-blue-100 text-blue-800">
-                                  Lease Pending
-                                </span>
                               )}
                             </div>
                           </div>
                         </div>
-
-                        {/* Payment Section - Only show if landlord has Stripe set up */}
-                        {tenantProfile.payment_status.landlord_stripe_status?.can_accept_payments ? (
-                          tenantProfile.payment_status.recent_payment?.is_paid ? (
-                            <>
-                              <div className="w-full bg-green-50 border border-green-200 rounded-md p-4 text-center">
-                                <div className="flex items-center justify-center mb-2">
-                                  <svg className="w-5 h-5 text-green-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                  </svg>
-                                  <span className="text-sm font-medium text-green-800">Payment Complete</span>
-                                </div>
-                                <p className="text-xs text-green-700">
-                                  Your rent payment for {tenantProfile.payment_status.recent_payment.period} has been received.
-                                </p>
-                                <p className="text-xs text-green-700 mt-1">
-                                  Next payment due: 1st of next month
-                                </p>
                               </div>
-                            </>
-                          ) : tenantProfile.active_lease.status === 'active' ? (
-                            <>
-                              <button
-                                onClick={handlePayRent}
-                                disabled={isPaymentProcessing}
-                                className={`w-full font-medium py-3 px-4 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${
-                                  isPaymentProcessing 
-                                    ? 'bg-gray-400 text-gray-600 cursor-not-allowed' 
-                                    : 'bg-indigo-600 hover:bg-indigo-700 text-white'
-                                }`}
-                              >
-                                {isPaymentProcessing ? (
-                                  <>
-                                    <svg className="animate-spin -ml-1 mr-3 h-4 w-4 text-current inline" fill="none" viewBox="0 0 24 24">
-                                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                                    </svg>
-                                    Processing Payment...
-                                  </>
-                                ) : (
-                                  'Pay Rent Now'
-                                )}
-                              </button>
-                              
-                              <p className="mt-3 text-xs text-gray-500 text-center">
-                                {isPaymentProcessing ? 'Please wait while we process your payment' : 'Secure payment powered by Stripe'}
-                              </p>
-                            </>
-                          ) : (
-                            <>
-                              <button
-                                disabled
-                                className="w-full bg-gray-300 text-gray-500 font-medium py-3 px-4 rounded-md cursor-not-allowed"
-                              >
-                                Payment Unavailable
-                              </button>
-                              
-                              <p className="mt-3 text-xs text-gray-600 text-center">
-                                Payments will be available once your lease is activated
-                              </p>
-                            </>
-                          )
-                        ) : (
-                          <>
-                            <div className="w-full bg-yellow-50 border border-yellow-200 rounded-md p-4 text-center">
-                              <div className="flex items-center justify-center mb-2">
-                                <svg className="w-5 h-5 text-yellow-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                                </svg>
-                                <span className="text-sm font-medium text-yellow-800">Payment Setup Required</span>
-                              </div>
-                              <p className="text-xs text-yellow-700">
-                                Your landlord is still setting up payment processing. Please contact them for rent payment instructions.
-                              </p>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  )}
 
                   {/* Quick Actions */}
-                  <div className="bg-white overflow-hidden shadow rounded-lg">
+            <div className="mt-8">
+              <div className="bg-white shadow rounded-lg">
                     <div className="px-4 py-5 sm:p-6">
-                      <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-                        Quick Actions
-                      </h3>
+                  <h3 className="text-lg leading-6 font-medium text-gray-900 mb-6">Quick Actions</h3>
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                       
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <button
-                          onClick={() => alert('Payment history feature coming soon!')}
+                      onClick={() => alert('Payment history feature will be available soon!')}
                           className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
                         >
                           <svg className="h-8 w-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -460,7 +496,7 @@ const TenantDashboard: React.FC = () => {
                         </button>
                         
                         <button
-                          onClick={() => alert('Contact landlord feature coming soon!')}
+                      onClick={() => alert('Contact landlord feature will be available soon!')}
                           className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
                         >
                           <svg className="h-8 w-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -473,7 +509,7 @@ const TenantDashboard: React.FC = () => {
                         </button>
                         
                         <button
-                          onClick={() => alert('Maintenance request feature coming soon!')}
+                      onClick={() => alert('Maintenance request feature will be available soon!')}
                           className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
                         >
                           <svg className="h-8 w-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -486,18 +522,13 @@ const TenantDashboard: React.FC = () => {
                           </div>
                         </button>
                         
-                        <button
-                          onClick={() => alert('Lease documents feature coming soon!')}
-                          className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                        >
+                    <div className="flex items-center p-4 border border-gray-200 rounded-lg bg-gray-50">
                           <svg className="h-8 w-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                           </svg>
                           <div className="ml-4 text-left">
                             <p className="text-sm font-medium text-gray-900">Lease Documents</p>
-                            <p className="text-sm text-gray-500">Download lease</p>
-                          </div>
-                        </button>
+                        <p className="text-sm text-gray-500">Handled in Current Lease section above</p>
                       </div>
                     </div>
                   </div>

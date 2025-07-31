@@ -945,6 +945,116 @@ class ApiClient {
     }
   }
 
+  // Lease Signing Workflow API Methods
+  async sendLeaseToTenant(leaseId: number): Promise<{ message: string; lease_status: string; sent_at: string; draft_lease_url: string }> {
+    try {
+      console.log(`Sending lease ${leaseId} to tenant for signing`);
+      const response = await this.api.post(`/tenants/leases/${leaseId}/send_to_tenant/`);
+      console.log('Lease sent to tenant successfully:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Failed to send lease ${leaseId} to tenant:`, error);
+      
+      if (error.response?.status === 400) {
+        const details = error.response?.data?.error || error.response?.data?.detail || 'Invalid lease status';
+        throw new Error(details);
+      }
+      throw new Error(error.message || 'Failed to send lease to tenant');
+    }
+  }
+
+  async activateLease(leaseId: number): Promise<{ message: string; lease_status: string; activated_at: string }> {
+    try {
+      console.log(`Activating lease ${leaseId}`);
+      const response = await this.api.post(`/tenants/leases/${leaseId}/activate_lease/`);
+      console.log('Lease activated successfully:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Failed to activate lease ${leaseId}:`, error);
+      
+      if (error.response?.status === 400) {
+        const details = error.response?.data?.error || error.response?.data?.detail || 'Invalid lease status';
+        throw new Error(details);
+      }
+      throw new Error(error.message || 'Failed to activate lease');
+    }
+  }
+
+  async downloadDraftLease(leaseId: number): Promise<{ download_url: string; document_name: string }> {
+    try {
+      const response = await this.api.get(`/tenants/leases/${leaseId}/download_draft_lease/`);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Failed to get draft lease ${leaseId}:`, error);
+      throw new Error(error.message || 'Failed to get draft lease');
+    }
+  }
+
+  async downloadSignedLease(leaseId: number): Promise<{ download_url: string; document_name: string }> {
+    try {
+      const response = await this.api.get(`/tenants/leases/${leaseId}/download_signed_lease/`);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Failed to get signed lease ${leaseId}:`, error);
+      throw new Error(error.message || 'Failed to get signed lease');
+    }
+  }
+
+  // Tenant-specific lease methods (for tenant portal)
+  async getTenantLeases(): Promise<Lease[]> {
+    try {
+      const response = await this.api.get(`/tenants/tenant-leases/`);
+      return response.data || []; // The endpoint returns a list directly now
+    } catch (error: any) {
+      console.error('Failed to get tenant leases:', error);
+      throw new Error(error.message || 'Failed to get tenant leases');
+    }
+  }
+
+  async downloadTenantLeaseDraft(leaseId: number): Promise<{
+    download_url: string;
+    document_name: string;
+    lease_status: string;
+    property: string;
+    room?: string;
+    monthly_rent: number;
+    start_date: string;
+    end_date: string;
+  }> {
+    try {
+      const response = await this.api.get(`/tenants/tenant-leases/${leaseId}/download_draft/`);
+      return response.data;
+    } catch (error: any) {
+      console.error('Failed to download tenant lease draft:', error);
+      throw new Error(error.message || 'Failed to download lease');
+    }
+  }
+
+  async uploadSignedLease(leaseId: number, signedLeaseFile: File): Promise<{
+    message: string;
+    lease_status: string;
+    signed_at: string;
+  }> {
+    try {
+      const formData = new FormData();
+      formData.append('signed_lease', signedLeaseFile);
+      
+      const response = await this.api.post(
+        `/tenants/tenant-leases/${leaseId}/upload_signed_lease/`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
+      return response.data;
+    } catch (error: any) {
+      console.error('Failed to upload signed lease:', error);
+      throw new Error(error.message || 'Failed to upload signed lease');
+    }
+  }
+
   async getApplicationsPipeline(): Promise<{
     summary: {
       total_applications: number;
@@ -1247,8 +1357,15 @@ class ApiClient {
     return response.data;
   }
 
-  async updateLease(id: number, data: Partial<LeaseFormData>): Promise<Lease> {
-    const response = await this.api.put(`/tenants/leases/${id}/`, data);
+  async updateLease(leaseId: number, updates: any): Promise<Lease> {
+    const response = await this.api.put(`/tenants/leases/${leaseId}/`, {
+      ...updates,
+      // Only include the fields that can be updated, not the required relationship fields
+      start_date: updates.start_date,
+      end_date: updates.end_date,
+      monthly_rent: parseFloat(updates.monthly_rent),
+      security_deposit: parseFloat(updates.security_deposit)
+    });
     return response.data;
   }
 
@@ -2011,7 +2128,11 @@ class ApiClient {
       const response = await this.api.post('/auth/tenant-auth/request-otp/', {
         phone_number: phoneNumber
       });
-      return response.data;
+      return {
+        success: true,
+        message: response.data.message || 'OTP sent successfully',
+        expires_in_minutes: response.data.expires_in_minutes || 5
+      };
     } catch (error: any) {
       if (error.response?.data) {
         return {
@@ -2021,7 +2142,12 @@ class ApiClient {
           error_type: error.response.data.error_type
         };
       }
-      throw this.handleError(error);
+      return {
+        success: false,
+        message: 'Failed to send OTP',
+        error: 'Network error',
+        error_type: 'network_error'
+      };
     }
   }
 
@@ -2031,7 +2157,15 @@ class ApiClient {
         phone_number: phoneNumber,
         otp_code: otpCode
       });
-      return response.data;
+      return {
+        success: true,
+        message: response.data.message || 'OTP verified successfully',
+        requires_selection: response.data.requires_selection || false,
+        tokens: response.data.tokens,
+        tenant: response.data.tenant,
+        tenant_profiles: response.data.tenant_profiles,
+        phone_number: response.data.phone_number
+      };
     } catch (error: any) {
       if (error.response?.data) {
         return {
@@ -2042,7 +2176,38 @@ class ApiClient {
           remaining_attempts: error.response.data.remaining_attempts
         };
       }
-      throw this.handleError(error);
+      return {
+        success: false,
+        message: 'Failed to verify OTP',
+        error: 'Network error',
+        error_type: 'network_error'
+      };
+    }
+  }
+
+  // Public Application OTP methods (NEW - for anyone applying to listings)
+  async requestPublicApplicationOtp(phoneNumber: string): Promise<{ success: boolean; message: string; expires_in_minutes: number }> {
+    try {
+      const response = await this.api.post('/auth/public-application/request-otp/', {
+        phone_number: phoneNumber
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('Failed to request public application OTP:', error);
+      throw new Error(error.response?.data?.error || 'Failed to send verification code');
+    }
+  }
+
+  async verifyPublicApplicationOtp(phoneNumber: string, otpCode: string): Promise<{ success: boolean; message: string; phone_number: string; verified: boolean }> {
+    try {
+      const response = await this.api.post('/auth/public-application/verify-otp/', {
+        phone_number: phoneNumber,
+        otp_code: otpCode
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('Failed to verify public application OTP:', error);
+      throw new Error(error.response?.data?.error || 'Failed to verify code');
     }
   }
 

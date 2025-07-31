@@ -143,23 +143,13 @@ export interface Application {
   decision_date?: string;
   decision_notes?: string;
   lease_id?: number;
+  lease?: Lease;
   lease_start_date?: string;
   lease_end_date?: string;
   monthly_rent?: number;
   security_deposit?: number;
   room_assignment?: any;
   lease_terms?: any;
-  viewings?: ApplicationViewing[];
-  created_at: string;
-  updated_at: string;
-  // Enhanced fields for MVP improvements
-  priority_score?: number; // 0-100 scoring
-  match_score?: number; // Room compatibility score
-  has_conflicts?: boolean; // Conflict detection
-  conflicting_applications?: number[]; // Related conflicts
-  is_budget_compatible?: boolean; // Budget validation
-  urgency_level?: 'low' | 'medium' | 'high'; // Priority level
-  recommended_rooms?: number[]; // Suggested room IDs
 }
 
 // Application status constants - Enhanced workflow with 9 states
@@ -243,21 +233,22 @@ export const getStatusColor = (status: ApplicationStatus): string => {
 export interface Lease {
   id: number;
   tenant: number;
-  room: number;
-  property_ref?: number;
+  property_ref: number;
+  room?: number;
   start_date: string;
   end_date: string;
   monthly_rent: number;
   security_deposit: number;
-  status: string;
-  is_active?: boolean;
+  status: 'draft' | 'sent_to_tenant' | 'signed' | 'active' | 'expired';
   created_at: string;
   updated_at: string;
-  // Additional fields from backend serializer
-  tenant_name?: string;
-  tenant_email?: string;
-  property_name?: string;
-  room_name?: string;
+  created_by: number;
+  auto_generated: boolean;
+  draft_lease_s3_url?: string;
+  signed_lease_s3_url?: string;
+  sent_to_tenant_at?: string;
+  signed_at?: string;
+  activated_at?: string;
 }
 
 export interface Landlord {

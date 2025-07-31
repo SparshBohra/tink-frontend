@@ -20,7 +20,14 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
   // Debug modal state
   React.useEffect(() => {
     console.log('Modal state changed:', showApplicationForm ? 'OPEN' : 'CLOSED');
-  }, [showApplicationForm]);
+    if (listing && listing.media) {
+      console.log('🖼️ Listing Media:', JSON.stringify(listing.media, null, 2));
+      listing.media.forEach((item, index) => {
+        console.log(`📸 Image ${index + 1} Original URL:`, item.file_url);
+        console.log(`🔗 Image ${index + 1} Processed URL:`, getMediaUrl(item.file_url || ''));
+      });
+    }
+  }, [showApplicationForm, listing]);
 
   // Treat undefined as true so listings are open unless explicitly closed
   const canApply = listing?.is_active !== false;

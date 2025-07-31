@@ -1,0 +1,83 @@
+
+> tink-frontend@0.1.0 dev
+> next dev --turbopack
+
+   ▲ Next.js 15.3.3 (Turbopack)
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.1.7:3000
+   - Environments: .env.local, .env.development
+
+ ✓ Starting...
+ ✓ Ready in 3s
+ ○ Compiling /tenant-login ...
+Warning: viewport meta tags should not be used in _document.js's <Head>. https://nextjs.org/docs/messages/no-document-viewport-meta
+ GET /landlord-dashboard 200 in 27817ms
+Warning: viewport meta tags should not be used in _document.js's <Head>. https://nextjs.org/docs/messages/no-document-viewport-meta
+ GET /tenant-login 200 in 29114ms
+ ✓ Compiled /tenant-login in 28.8s
+Warning: viewport meta tags should not be used in _document.js's <Head>. https://nextjs.org/docs/messages/no-document-viewport-meta
+ GET /listings/123-test-fe3e591e 404 in 29253ms
+Warning: viewport meta tags should not be used in _document.js's <Head>. https://nextjs.org/docs/messages/no-document-viewport-meta
+ GET /listings/db-woods-64daad2b 404 in 32166ms
+Warning: viewport meta tags should not be used in _document.js's <Head>. https://nextjs.org/docs/messages/no-document-viewport-meta
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 5204ms
+Warning: viewport meta tags should not be used in _document.js's <Head>. https://nextjs.org/docs/messages/no-document-viewport-meta
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 5539ms
+Warning: viewport meta tags should not be used in _document.js's <Head>. https://nextjs.org/docs/messages/no-document-viewport-meta
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 1415ms
+Warning: viewport meta tags should not be used in _document.js's <Head>. https://nextjs.org/docs/messages/no-document-viewport-meta
+React expects the `children` prop of <title> tags to be a string, number, bigint, or object with a novel `toString` method but found an Array with length 2 instead. Browsers treat all child Nodes of <title> tags as Text content and React expects to be able to convert `children` of <title> tags to a single string value which is why Arrays of length greater than 1 are not supported. When using JSX it can be common to combine text nodes and value nodes. For example: <title>hello {nameOfUser}</title>. While not immediately apparent, `children` in this case is an Array with length 2. If your `children` prop is using this form try rewriting it using a template string: <title>{`hello ${nameOfUser}`}</title>.
+ GET /listings/db-woods-64daad2b 200 in 7712ms
+ ○ Compiling /applications ...
+ ✓ Compiled /applications in 1867ms
+ GET /landlord-dashboard 500 in 5245ms
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+Warning: viewport meta tags should not be used in _document.js's <Head>. https://nextjs.org/docs/messages/no-document-viewport-meta
+ GET /landlord-dashboard 200 in 6667ms
+ ✓ Compiled in 15.4s
+ ○ Compiling /listings/[slug] ...
+ ✓ Compiled in 3.4s
+ ✓ Compiled in 0ms
+ ✓ Compiled /listings/[slug] in 2.4s
+Error fetching listing: { message: 'An error occurred', errors: undefined, status: 500 }
+ GET /_next/data/development/listings/db-woods-64daad2b.json?slug=db-woods-64daad2b 200 in 3388ms
+ ○ Compiling /listings/[slug] ...
+ ✓ Compiled in 1107ms
+ ✓ Compiled /listings/[slug] in 903ms
+Error fetching listing: { message: 'An error occurred', errors: undefined, status: 500 }
+ GET /_next/data/development/listings/db-woods-64daad2b.json?slug=db-woods-64daad2b 200 in 1083ms
+ ✓ Compiled in 801ms
+ ✓ Compiled in 1773ms
+ ○ Compiling /login ...
+Warning: viewport meta tags should not be used in _document.js's <Head>. https://nextjs.org/docs/messages/no-document-viewport-meta
+ GET /landlord-dashboard 200 in 9757ms
+ ✓ Compiled /login in 22.5s
+ ○ Compiling /properties ...
+ ✓ Compiled /properties in 3.4s
+ ○ Compiling /properties/add ...
+ ✓ Compiled /properties/add in 1603ms
+ ○ Compiling /properties/[id]/rooms ...
+ ✓ Compiled /properties/[id]/rooms in 2.5s
+ ○ Compiling /leases ...
+ ✓ Compiled /leases in 17.1s
+ ○ Compiling /tenant-dashboard ...
+ ✓ Compiled /tenant-dashboard in 8s
+ ✓ Compiled in 1971ms
+ ✓ Compiled in 1860ms
+ ✓ Compiled in 1199ms
+ ✓ Compiled in 1546ms
+ ✓ Compiled in 1485ms
+ ✓ Compiled in 1230ms
+ ✓ Compiled in 3.2s
+ ✓ Compiled in 941ms
+ ✓ Compiled in 818ms
+ ✓ Compiled in 1752ms
+ ✓ Compiled in 1806ms
+ ✓ Compiled in 1004ms
+ ✓ Compiled in 2.1s
+Warning: viewport meta tags should not be used in _document.js's <Head>. https://nextjs.org/docs/messages/no-document-viewport-meta
+ GET /applications 200 in 1535ms
+Warning: viewport meta tags should not be used in _document.js's <Head>. https://nextjs.org/docs/messages/no-document-viewport-meta
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 706ms
+ ○ Compiling /leases/[id] ...
+ ✓ Compiled /leases/[id] in 24.9s

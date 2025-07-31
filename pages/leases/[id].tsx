@@ -7,6 +7,7 @@ import { withAuth } from '../../lib/auth-context';
 import { apiClient } from '../../lib/api';
 import { Lease, Tenant, Property, Room } from '../../lib/types';
 import { formatCurrency } from '../../lib/utils';
+import LeaseSigningActions from '../../components/LeaseSigningActions';
 
 function LeaseDetail() {
   const router = useRouter();
@@ -31,6 +32,24 @@ function LeaseDetail() {
     damage_charges: 0,
     deposit_returned: 0
   });
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editData, setEditData] = useState({
+    start_date: '',
+    end_date: '',
+    monthly_rent: '',
+    security_deposit: ''
+  });
+
+  useEffect(() => {
+    if (lease) {
+      setEditData({
+        start_date: lease.start_date,
+        end_date: lease.end_date,
+        monthly_rent: String(lease.monthly_rent),
+        security_deposit: String(lease.security_deposit)
+      });
+    }
+  }, [lease]);
 
   useEffect(() => {
     if (id) {
@@ -136,6 +155,34 @@ function LeaseDetail() {
     }
   };
 
+  const handleUpdateLease = async () => {
+    if (!lease) return;
+    try {
+      const payload = {
+        ...editData,
+        monthly_rent: parseFloat(editData.monthly_rent),
+        security_deposit: parseFloat(editData.security_deposit),
+      };
+      await apiClient.updateLease(lease.id, payload);
+      setShowEditModal(false);
+      fetchLeaseData();
+      alert('Lease updated successfully!');
+    } catch (error) {
+      console.error('Failed to update lease:', error);
+      alert('Failed to update lease. Please check the console for details.');
+    }
+  };
+
+  const handleDownloadLease = async () => {
+    if (!lease) return;
+    try {
+      await apiClient.downloadDraftLease(lease.id);
+      alert('Lease downloaded successfully!');
+    } catch (error: any) {
+      alert(`Failed to download lease: ${error.message}`);
+    }
+  };
+
   const getLeaseStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
       case 'active':
@@ -174,7 +221,8 @@ function LeaseDetail() {
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
@@ -236,6 +284,16 @@ function LeaseDetail() {
                     Back
                   </a>
                 </Link>
+                {lease.status === 'draft' && (
+                  <>
+                    <button onClick={() => setShowEditModal(true)} className="btn btn-secondary">
+                      Edit Lease
+                    </button>
+                    <button onClick={handleDownloadLease} className="btn btn-outline">
+                      Download Lease
+                    </button>
+                  </>
+                )}
                 <div 
                   className="status-badge" 
                   style={{ 
@@ -386,6 +444,62 @@ function LeaseDetail() {
                   </div>
                 </div>
               </div>
+
+              {/* Lease Timeline */}
+              <div className="info-section">
+                <div className="section-header">
+                  <div>
+                    <h2 className="section-title">Lease Timeline</h2>
+                    <p className="section-subtitle">Workflow progress and key dates</p>
+                  </div>
+                </div>
+                <div className="timeline">
+                  <div className={`timeline-item ${lease.created_at ? 'completed' : 'pending'}`}>
+                    <div className="timeline-marker"></div>
+                    <div className="timeline-content">
+                      <h4 className="timeline-title">Lease Created</h4>
+                      <p className="timeline-date">
+                        {lease.created_at ? formatDate(lease.created_at) : 'Pending'}
+                      </p>
+                      <p className="timeline-description">Draft lease generated and ready for review</p>
+                    </div>
+                  </div>
+                  
+                  <div className={`timeline-item ${lease.sent_to_tenant_at ? 'completed' : lease.status === 'draft' ? 'current' : 'pending'}`}>
+                    <div className="timeline-marker"></div>
+                    <div className="timeline-content">
+                      <h4 className="timeline-title">Sent to Tenant</h4>
+                      <p className="timeline-date">
+                        {lease.sent_to_tenant_at ? formatDate(lease.sent_to_tenant_at) : 
+                         lease.status === 'sent_to_tenant' ? 'Sent (date not recorded)' : 'Pending'}
+                      </p>
+                      <p className="timeline-description">Lease document sent to tenant for review and signing</p>
+                    </div>
+                  </div>
+                  
+                  <div className={`timeline-item ${lease.signed_at ? 'completed' : lease.status === 'sent_to_tenant' ? 'current' : 'pending'}`}>
+                    <div className="timeline-marker"></div>
+                    <div className="timeline-content">
+                      <h4 className="timeline-title">Tenant Signed</h4>
+                      <p className="timeline-date">
+                        {lease.signed_at ? formatDate(lease.signed_at) : 'Awaiting tenant signature'}
+                      </p>
+                      <p className="timeline-description">Tenant has reviewed and signed the lease agreement</p>
+                    </div>
+                  </div>
+                  
+                  <div className={`timeline-item ${lease.activated_at ? 'completed' : lease.status === 'signed' ? 'current' : 'pending'}`}>
+                    <div className="timeline-marker"></div>
+                    <div className="timeline-content">
+                      <h4 className="timeline-title">Lease Activated</h4>
+                      <p className="timeline-date">
+                        {lease.activated_at ? formatDate(lease.activated_at) : 'Pending activation'}
+                      </p>
+                      <p className="timeline-description">Lease is now active and tenant can move in</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div className="right-column">
@@ -450,8 +564,82 @@ function LeaseDetail() {
                   </div>
                 </div>
               </div>
+
+              {/* Lease Signing Workflow */}
+              <div className="info-section">
+                <div className="section-header">
+                  <div>
+                    <h2 className="section-title">Lease Signing</h2>
+                    <p className="section-subtitle">Manage lease documents and signing workflow</p>
+                  </div>
+                </div>
+                <LeaseSigningActions 
+                  lease={lease} 
+                  onLeaseUpdated={fetchLeaseData}
+                />
+              </div>
             </div>
           </div>
+
+          {/* Edit Lease Modal */}
+          {showEditModal && (
+            <div className="modal-overlay">
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h3 className="modal-title">Edit Lease</h3>
+                  <button className="modal-close" onClick={() => setShowEditModal(false)}>
+                    &times;
+                  </button>
+                </div>
+                <div className="modal-body">
+                  <div className="form-group">
+                    <label className="form-label">Start Date</label>
+                    <input
+                      type="date"
+                      value={editData.start_date}
+                      onChange={(e) => setEditData({ ...editData, start_date: e.target.value })}
+                      className="form-input"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">End Date</label>
+                    <input
+                      type="date"
+                      value={editData.end_date}
+                      onChange={(e) => setEditData({ ...editData, end_date: e.target.value })}
+                      className="form-input"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Monthly Rent</label>
+                    <input
+                      type="number"
+                      value={editData.monthly_rent}
+                      onChange={(e) => setEditData({ ...editData, monthly_rent: e.target.value })}
+                      className="form-input"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Security Deposit</label>
+                    <input
+                      type="number"
+                      value={editData.security_deposit}
+                      onChange={(e) => setEditData({ ...editData, security_deposit: e.target.value })}
+                      className="form-input"
+                    />
+                  </div>
+                </div>
+                <div className="modal-footer">
+                  <button className="btn btn-secondary" onClick={() => setShowEditModal(false)}>
+                    Cancel
+                  </button>
+                  <button className="btn btn-primary" onClick={handleUpdateLease}>
+                    Save Changes
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Renewal Form Modal */}
           {showRenewalForm && (
@@ -857,6 +1045,12 @@ function LeaseDetail() {
             border-color: #e9d5ff;
           }
 
+          .action-card.outline {
+            background: #f8fafc;
+            border-color: #e2e8f0;
+            color: #4f46e5;
+          }
+
           .action-icon {
             width: 32px;
             height: 32px;
@@ -878,6 +1072,11 @@ function LeaseDetail() {
 
           .action-card.purple .action-icon {
             background: #8b5cf6;
+          }
+
+          .action-card.outline .action-icon {
+            background: #e2e8f0;
+            color: #4f46e5;
           }
 
           .action-content {
@@ -964,6 +1163,16 @@ function LeaseDetail() {
           }
 
           .btn-secondary:hover {
+            background: #e2e8f0;
+          }
+
+          .btn-outline {
+            background: #f8fafc;
+            color: #4f46e5;
+            border: 1px solid #e2e8f0;
+          }
+
+          .btn-outline:hover {
             background: #e2e8f0;
           }
 
@@ -1063,6 +1272,91 @@ function LeaseDetail() {
 
           .form-textarea {
             resize: vertical;
+          }
+
+          .timeline {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            padding: 16px 0;
+          }
+
+          .timeline-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            position: relative;
+          }
+
+          .timeline-item::before {
+            content: '';
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: 2px;
+            height: calc(100% - 20px);
+            background: #e0e0e0;
+            z-index: -1;
+          }
+
+          .timeline-item.completed::before {
+            background: #10b981; /* Green for completed */
+          }
+
+          .timeline-item.current::before {
+            background: #f59e0b; /* Orange for current */
+          }
+
+          .timeline-item.pending::before {
+            background: #e0e0e0; /* Grey for pending */
+          }
+
+          .timeline-marker {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #e0e0e0;
+            flex-shrink: 0;
+            border: 2px solid white;
+            box-shadow: 0 0 0 2px #e0e0e0;
+          }
+
+          .timeline-item.completed .timeline-marker {
+            background: #10b981;
+            box-shadow: 0 0 0 2px #10b981;
+          }
+
+          .timeline-item.current .timeline-marker {
+            background: #f59e0b;
+            box-shadow: 0 0 0 2px #f59e0b;
+          }
+
+          .timeline-item.pending .timeline-marker {
+            background: #e0e0e0;
+            box-shadow: 0 0 0 2px #e0e0e0;
+          }
+
+          .timeline-content {
+            flex: 1;
+          }
+
+          .timeline-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #1e293b;
+            margin: 0 0 4px 0;
+          }
+
+          .timeline-date {
+            font-size: 11px;
+            color: #64748b;
+            margin-bottom: 4px;
+          }
+
+          .timeline-description {
+            font-size: 11px;
+            color: #94a3b8;
+            margin: 0;
           }
 
           @media (max-width: 768px) {

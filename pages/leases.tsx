@@ -145,6 +145,27 @@ function Leases() {
     }
   };
 
+  const handleSendToTenant = async (lease: Lease) => {
+    try {
+      setError(null);
+      await apiClient.sendLeaseToTenant(lease.id);
+      await fetchData();
+      alert('Lease sent to tenant successfully!');
+    } catch (e: any) {
+      setError(e.message || 'Failed to send lease to tenant');
+    }
+  };
+
+  const handleDownloadLease = async (lease: Lease) => {
+    try {
+      setError(null);
+      await apiClient.downloadDraftLease(lease.id);
+      alert('Lease downloaded successfully!');
+    } catch (e: any) {
+      setError(e.message || 'Failed to download lease PDF');
+    }
+  };
+
   const downloadLeasesReport = () => {
     const csvData = [
       ['Tenant', 'Email', 'Phone', 'Property', 'Room', 'Start Date', 'End Date', 'Monthly Rent', 'Security Deposit', 'Status', 'Days to Expiry'],
@@ -467,10 +488,16 @@ function Leases() {
                             <td className="table-center">
                               <span className={`status-badge ${
                                 lease.status === 'draft' ? 'draft' :
+                                lease.status === 'sent_to_tenant' ? 'sent' :
+                                lease.status === 'signed' ? 'signed' :
+                                lease.status === 'active' ? 'active' :
                                 daysToExpiry <= 30 ? 'critical' : 
                                 daysToExpiry <= 90 ? 'warning' : 'active'
                               }`}>
-                                {lease.status === 'draft' ? 'Draft' : 
+                                {lease.status === 'draft' ? 'Draft' :
+                                 lease.status === 'sent_to_tenant' ? 'Sent to Tenant' :
+                                 lease.status === 'signed' ? 'Signed' :
+                                 lease.status === 'active' ? 'Active' :
                                  daysToExpiry <= 30 ? `${daysToExpiry} days left` : 
                                  daysToExpiry <= 90 ? `${daysToExpiry} days left` : 'Active'}
                               </span>
@@ -479,19 +506,64 @@ function Leases() {
                               {lease.status === 'draft' ? (
                                 <div className="action-buttons">
                                   <button 
+                                    className="send-to-tenant-btn" 
+                                    onClick={() => handleSendToTenant(lease)}
+                                    title={`Send lease to ${getTenantNameFromLease(lease)} for signing`}
+                                  >
+                                    📤 Send to Tenant
+                                  </button>
+                                  <Link href={`/leases/${lease.id}`} legacyBehavior>
+                                    <a 
+                                      className="edit-lease-btn"
+                                      title={`Edit ${getTenantNameFromLease(lease)}'s lease details`}
+                                    >
+                                      ✏️ Edit Lease
+                                    </a>
+                                  </Link>
+                                  <button 
+                                    className="download-lease-btn" 
+                                    onClick={() => handleDownloadLease(lease)}
+                                    title={`Download ${getTenantNameFromLease(lease)}'s lease PDF`}
+                                  >
+                                    📄 Download
+                                  </button>
+                                </div>
+                              ) : lease.status === 'sent_to_tenant' ? (
+                                <div className="action-buttons">
+                                  <div className="status-text">📤 Sent to Tenant - Awaiting Signature</div>
+                                  <Link href={`/leases/${lease.id}`} legacyBehavior>
+                                    <a 
+                                      className="manage-lease-btn"
+                                      title={`View ${getTenantNameFromLease(lease)}'s lease details`}
+                                    >
+                                      👁️ View Lease
+                                    </a>
+                                  </Link>
+                                </div>
+                              ) : lease.status === 'signed' ? (
+                                <div className="action-buttons">
+                                  <button 
                                     className="activate-btn" 
                                     onClick={() => handleActivateLease(lease)}
-                                    title={`Activate ${getTenantNameFromLease(lease)}'s lease to make it active`}
+                                    title={`Activate ${getTenantNameFromLease(lease)}'s signed lease`}
                                   >
-                                    🚀 Activate
+                                    🚀 Activate Lease
                                   </button>
+                                  <Link href={`/leases/${lease.id}`} legacyBehavior>
+                                    <a 
+                                      className="manage-lease-btn"
+                                      title={`Manage ${getTenantNameFromLease(lease)}'s lease`}
+                                    >
+                                      📋 Manage Lease
+                                    </a>
+                                  </Link>
                                 </div>
                               ) : (
                                 <div className="action-buttons">
                                   <Link href={`/leases/${lease.id}`} legacyBehavior>
                                     <a 
                                       className="manage-lease-btn"
-                                      title={`Manage ${tenant}'s lease - view details, process renewals, handle move-outs`}
+                                      title={`Manage ${getTenantNameFromLease(lease)}'s lease - view details, process renewals, handle move-outs`}
                                     >
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                         <path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
@@ -1104,25 +1176,24 @@ function Leases() {
           min-width: 95px;
         }
 
+        .status-badge.draft {
+          background: #f3f4f6;
+          color: #6b7280;
+        }
+
+        .status-badge.sent {
+          background: #dbeafe;
+          color: #1d4ed8;
+        }
+
+        .status-badge.signed {
+          background: #d1fae5;
+          color: #065f46;
+        }
+
         .status-badge.active {
           background: #dcfce7;
-          color: #16a34a;
-        }
-
-        .status-badge.warning {
-          background: #fef3c7;
-          color: #d97706;
-        }
-
-        .status-badge.critical {
-          background: #fee2e2;
-          color: #dc2626;
-        }
-
-        .status-badge.draft {
-          background: #fff7ed;
-          color: #f59e0b;
-          border: 1px solid #fed7aa;
+          color: #166534;
         }
 
         .action-buttons {
@@ -1130,6 +1201,55 @@ function Leases() {
           gap: 8px;
           justify-content: center;
           align-items: center;
+        }
+
+        .send-to-tenant-btn, .edit-lease-btn, .download-lease-btn {
+          border: none;
+          padding: 6px 12px;
+          border-radius: 5px;
+          font-size: 12px;
+          font-weight: 500;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          transition: all 0.2s ease;
+        }
+        
+        .send-to-tenant-btn {
+          background: #4f46e5;
+          color: white;
+        }
+
+        .send-to-tenant-btn:hover {
+          background: #3730a3;
+          transform: translateY(-1px);
+        }
+
+        .edit-lease-btn {
+          background: #3b82f6;
+          color: white;
+        }
+
+        .edit-lease-btn:hover {
+          background: #2563eb;
+          transform: translateY(-1px);
+        }
+
+        .download-lease-btn {
+          background: #10b981;
+          color: white;
+        }
+
+        .download-lease-btn:hover {
+          background: #059669;
+          transform: translateY(-1px);
+        }
+
+        .status-text {
+          font-size: 12px;
+          color: #64748b;
+          margin-bottom: 8px;
         }
 
         .renew-btn, .moveout-btn {

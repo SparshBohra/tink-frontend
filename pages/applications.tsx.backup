@@ -11,7 +11,7 @@ import LeaseGenerationModal from '../components/LeaseGenerationModal';
 import ApplicationApprovalModal from '../components/ApplicationApprovalModal';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useAuth, withAuth } from '../lib/auth-context';
-import { Application, Property, Room } from '../lib/types';
+import { Application, Property, Room, Lease, PaginatedResponse } from '../lib/types';
 import { apiClient } from '../lib/api';
 
 interface ConflictResolution {
@@ -26,6 +26,40 @@ import PropertyRoomManagement from '../components/PropertyRoomManagement';
 import ApplicationDetailModal from '../components/ApplicationDetailModal';
 import ImprovedLeaseGenerationModal from '../components/ImprovedLeaseGenerationModal';
 import ViewingManagementModal from '../components/ViewingManagementModal';
+
+interface KanbanStage {
+  title: string;
+  description: string;
+  statuses: (Application['status'])[];
+}
+
+const kanbanStages: Record<string, KanbanStage> = {
+  pending: {
+    title: 'Pending Applications',
+    description: 'New applications awaiting review',
+    statuses: ['pending', 'processing']
+  },
+  approved: {
+    title: 'Approved',
+    description: 'Applications approved, awaiting viewing or room assignment',
+    statuses: ['approved']
+  },
+  viewing: {
+    title: 'Viewing Process',
+    description: 'Viewing scheduled or completed',
+    statuses: ['viewing_scheduled', 'viewing_completed']
+  },
+  lease: {
+    title: 'Lease Process',
+    description: 'Room assigned and lease documents in preparation, generation, or signing process',
+    statuses: ['room_assigned', 'lease_created', 'lease_signed']
+  },
+  active: {
+    title: 'Active Tenants',
+    description: 'Completed applications - active tenants',
+    statuses: ['moved_in']
+  }
+};
 
 function Applications() {
   const router = useRouter();
@@ -68,9 +102,10 @@ function Applications() {
   // Add state for viewing management modal
   const [isViewingManagementOpen, setIsViewingManagementOpen] = useState(false);
   const [viewingsCount, setViewingsCount] = useState<number>(0);
+  const [leases, setLeases] = useState<Lease[]>([]);
 
   useEffect(() => {
-    fetchData();
+    loadData();
     fetchViewingsCount();
   }, []);
   
@@ -104,7 +139,7 @@ function Applications() {
     }
   };
 
-  const fetchData = async () => {
+  const loadData = async () => {
     try {
       setLoading(true);
       setError(null);
@@ -116,31 +151,13 @@ function Applications() {
         apiClient.getLeases()
       ]);
 
-      const activeLeases = (leasesResponse.results || []).filter((l:any) => l.status === 'active' || l.is_active);
-      const draftedLeases = (leasesResponse.results || []).filter((l:any) => l.status === 'draft');
-
-      const apps = (applicationsResponse.results || []).map((app:any) => {
-        // If an active lease exists, the applicant has moved in
-          const hasActiveLease = activeLeases.some((l:any) => l.tenant === app.tenant && l.property_ref === app.property_ref);
-          if (hasActiveLease) {
-            return { ...app, status: 'moved_in' };
-          }
-
-        // If a drafted lease exists for this application, it's in the lease created stage
-        const hasDraftedLease = draftedLeases.some((l:any) => l.application === app.id);
-        if (hasDraftedLease) {
-          return { ...app, status: 'lease_created' };
-        }
-        
-        return app; // Default to backend status if no specific override
-      });
-      setApplications(apps);
-      setFilteredApplications(apps);
+      setApplications(applicationsResponse.results || []);
       setProperties(propertiesResponse.results || []);
       setRooms(roomsResponse.results || []);
+      setLeases(leasesResponse.results || []);
     } catch (error: unknown) {
       console.error('Failed to fetch applications data:', error);
-      setError(error instanceof Error ? error.message : 'Failed to load applications data');
+      setError(error instanceof Error ? error.message : 'An unknown error occurred');
     } finally {
       setLoading(false);
     }
@@ -196,7 +213,7 @@ function Applications() {
             status: 'pending'
           } as any);
           
-          await fetchData();
+          await loadData();
           alert('✅ Application restored to pending status!');
           return;
           
@@ -213,7 +230,7 @@ function Applications() {
                 status: 'pending'
               } as any);
               
-              await fetchData();
+              await loadData();
               alert('✅ Application restored to pending status!');
               return;
               
@@ -247,7 +264,7 @@ function Applications() {
       await apiClient.decideApplication(applicationId, decisionData);
       
       // Only refresh data if the API call was successful
-      await fetchData();
+      await loadData();
       
       // Show success message
       alert('✅ Application qualified and moved to Shortlisted!');
@@ -269,7 +286,7 @@ function Applications() {
           } as any);
           
           // Refresh data to show the updated status
-          await fetchData();
+          await loadData();
           
           // Show success message (no mention of fallback)
           alert('✅ Application qualified and moved to Shortlisted!');
@@ -380,7 +397,7 @@ function Applications() {
           throw new Error('Failed to create lease: ' + (leaseError instanceof Error ? leaseError.message : 'Unknown error'));
         }
         
-        fetchData(); // Refresh data
+        loadData(); // Refresh data
         setIsApprovalModalOpen(false);
         setSelectedApplicationForApproval(null);
         setSelectedPropertyForApproval(null);
@@ -388,7 +405,7 @@ function Applications() {
       } else {
         // For pending applications, use the original decide workflow
         await apiClient.decideApplication(applicationId, approvalData);
-        fetchData(); // Refresh data
+        loadData(); // Refresh data
         setIsApprovalModalOpen(false);
         setSelectedApplicationForApproval(null);
         setSelectedPropertyForApproval(null);
@@ -500,7 +517,7 @@ function Applications() {
       );
       
       // Refresh data from backend (this will happen in background)
-      fetchData(); // Don't await this - let it refresh in background
+      loadData(); // Don't await this - let it refresh in background
       
       // Enhanced success message with details
       const successMessage = `✅ Application Approved Successfully!\n\n👤 Tenant: ${application.tenant_name}\n🏠 Assigned: ${assignedRoomName}\n💰 Monthly Rent: $${monthlyRent.toFixed(2)}\n🔒 Security Deposit: $${securityDeposit.toFixed(2)}\n\n🎯 Next Steps:\n• Lease document created automatically\n• Send lease to tenant for signing\n• Coordinate move-in date\n• Collect security deposit`;
@@ -581,7 +598,7 @@ function Applications() {
       );
       
       // Refresh data from backend (this will happen in background)
-      fetchData(); // Don't await this - let it refresh in background
+      loadData(); // Don't await this - let it refresh in background
       
       // Enhanced success message for rejection
       const application = applications.find(app => app.id === applicationId);
@@ -604,7 +621,7 @@ function Applications() {
         
         // The fallback mechanism in decideApplication should have handled this
         // If we're here, it means the fallback worked, so just refresh and show success
-        await fetchData();
+        await loadData();
         const application = applications.find(app => app.id === applicationId);
         const successMessage = `✅ Application Rejected Successfully!\n\n👤 Tenant: ${application?.tenant_name || 'Unknown'}\n📝 Reason: ${reason}\n📅 Date: ${new Date().toLocaleDateString()}`;
         alert(successMessage);
@@ -655,7 +672,7 @@ function Applications() {
     
     try {
       await apiClient.deleteApplication(applicationId);
-      await fetchData(); // Refresh data
+      await loadData(); // Refresh data
       
       const successMessage = `✅ Application Deleted Successfully!\n\n👤 Tenant: ${application?.tenant_name || 'Unknown'}\n📅 Date: ${new Date().toLocaleDateString()}\n\n🎯 Next Steps:\n• Application removed from system\n• Consider informing the tenant if necessary\n• Review remaining applications for this property`;
       
@@ -672,7 +689,7 @@ function Applications() {
         errorTitle = '❌ Application Not Found';
         errorDetails = 'The application you\'re trying to delete no longer exists.';
         suggestions = '• The application may have already been deleted\n• Refresh the page to see current applications\n• No further action needed';
-        await fetchData(); // Refresh to show current state
+        await loadData(); // Refresh to show current state
       } else if (error.message.includes('400') || error.message.includes('Bad Request')) {
         errorTitle = '❌ Cannot Delete Application';
         errorDetails = 'This application cannot be deleted in its current status.';
@@ -728,7 +745,7 @@ function Applications() {
       setSelectedApplicationForAssignment(null);
       
       // Refresh data from backend (this will happen in background)
-      fetchData(); // Don't await this - let it refresh in background
+      loadData(); // Don't await this - let it refresh in background
       
       alert('✅ Room assigned successfully!');
     } catch (error: any) {
@@ -757,7 +774,7 @@ function Applications() {
     );
     
     // Refresh data to make sure we have the latest backend state
-    fetchData();
+    loadData();
     
     // Enhanced success message with clear next steps
     const successMessage = `✅ Lease Generated Successfully!\n\n📋 Lease Details:\n• Tenant: ${leaseData.tenantName}\n• Room: ${leaseData.roomName}\n• Period: ${leaseData.leaseStartDate} to ${leaseData.leaseEndDate}\n\n🎯 Next Steps:\n• Go to "Leases" page to activate the lease\n• The lease is currently in "Draft" status\n• Click "Activate" to make it active\n• Then tenant can move in\n\n📍 Navigate: Leases → Draft Leases → Click "Activate"`;
@@ -814,7 +831,7 @@ function Applications() {
     console.log('Conflict resolutions:', resolutions);
     setIsConflictModalOpen(false);
     setConflictingApplications([]);
-    fetchData();
+    loadData();
   };
 
   const getApproveButtonTooltip = (propertyId: number) => {
@@ -930,7 +947,7 @@ function Applications() {
       setSelectedApplicationForViewing(null);
       
       // Refresh data from backend (this will happen in background)
-      fetchData(); // Don't await this - let it refresh in background
+      loadData(); // Don't await this - let it refresh in background
       fetchViewingsCount(); // Refresh viewings count
       
       // Enhanced success message with next steps
@@ -1018,7 +1035,7 @@ function Applications() {
       setSelectedViewingForCompletion(null);
       
       // Refresh data from backend (this will happen in background)
-      fetchData(); // Don't await this - let it refresh in background
+      loadData(); // Don't await this - let it refresh in background
       fetchViewingsCount(); // Refresh viewings count
       
       // Enhanced success message based on outcome
@@ -1098,49 +1115,37 @@ function Applications() {
     setIsLeaseGenerationOpen(true);
   };
 
-  const handleActivateLease = async (application: Application) => {
+  const handleActivateLeaseFromApplication = async (app: Application) => {
     try {
-      await apiClient.activateLease(application.lease_id!);
-      await fetchData();
-      alert('Lease activated successfully!');
+      // First, we need to find the lease associated with this application
+      const leasesResponse = await apiClient.getLeases();
+      const leases = leasesResponse.results || [];
+      
+      // Find lease by matching tenant and property (and room if specified)
+      const associatedLease = leases.find(lease => 
+        lease.tenant === app.tenant && 
+        lease.property_ref === app.property_ref &&
+        lease.status === 'draft' // Only activate draft leases
+      );
+      
+      if (!associatedLease) {
+        throw new Error('No draft lease found for this application');
+      }
+      
+      // Use the move-in endpoint to activate the lease
+      const moveInData = {
+        move_in_date: new Date().toISOString().split('T')[0], // Today's date
+        move_in_condition: 'Good condition',
+        deposit_collected: associatedLease.security_deposit || 0
+      };
+      
+      await apiClient.processMovein(associatedLease.id, moveInData);
+      loadData(); // Refresh data
+      alert(`✅ Move-in processed successfully for ${app.tenant_name || `Applicant #${app.id}`}!`);
     } catch (error: any) {
-      alert(`Failed to activate lease: ${error.message}`);
-    }
-  };
-
-  const handleSendToTenant = async (application: Application) => {
-    if (!application.lease_id) {
-      alert('No lease found for this application');
-      return;
-    }
-    try {
-      await apiClient.sendLeaseToTenant(application.lease_id);
-      await fetchData();
-      alert('Lease sent to tenant successfully!');
-    } catch (error: any) {
-      alert(`Failed to send lease to tenant: ${error.message}`);
-    }
-  };
-
-  const handleEditLease = (application: Application) => {
-    if (!application.lease_id) {
-      alert('No lease found for this application');
-      return;
-    }
-    // Navigate to lease detail page for editing
-    window.location.href = `/leases/${application.lease_id}`;
-  };
-
-  const handleDownloadLease = async (application: Application) => {
-    if (!application.lease_id) {
-      alert('No lease found for this application');
-      return;
-    }
-    try {
-      await apiClient.downloadDraftLease(application.lease_id);
-      alert('Lease downloaded successfully!');
-    } catch (error: any) {
-      alert(`Failed to download lease: ${error.message}`);
+      console.error('Move-in processing error:', error);
+      const errorMessage = error.message || 'Failed to process move-in. Please try again.';
+      alert(`❌ ${errorMessage}`);
     }
   };
 
@@ -1159,7 +1164,7 @@ function Applications() {
       );
       
       // Refresh data from backend (this will happen in background)
-      fetchData(); // Don't await this - let it refresh in background
+      loadData(); // Don't await this - let it refresh in background
       
       // Enhanced success message for skip viewing
       const successMessage = `✅ Viewing Skipped Successfully!\n\n⏭️ Status Update:\n• Application moved to "Viewing Completed" stage\n• No viewing record created\n• Ready for lease generation\n\n🎯 Next Steps:\n• Review application details\n• Generate lease document\n• Assign room and finalize terms\n• Send lease to tenant for signing`;
@@ -1204,6 +1209,42 @@ function Applications() {
     }
   };
 
+  const handleViewLease = (leaseId: number) => {
+    router.push(`/leases/${leaseId}`);
+  };
+
+  const handleSendToTenant = async (leaseId: number) => {
+    try {
+      await apiClient.sendLeaseToTenant(leaseId);
+      alert('Lease sent to tenant successfully!');
+      loadData();
+    } catch (error) {
+      console.error('Failed to send lease to tenant:', error);
+      alert('Failed to send lease to tenant. Please check the console for details.');
+    }
+  };
+
+  const handleDownloadDraftLease = async (leaseId: number) => {
+    try {
+      const { download_url } = await apiClient.downloadDraftLease(leaseId);
+      window.open(download_url, '_blank');
+    } catch (error) {
+      console.error('Failed to download draft lease:', error);
+      alert('Failed to download draft lease. Please check the console for details.');
+    }
+  };
+
+  const handleActivateLease = async (leaseId: number) => {
+    try {
+      await apiClient.activateLease(leaseId);
+      alert('Lease activated successfully!');
+      loadData();
+    } catch (error) {
+      console.error('Failed to activate lease:', error);
+      alert('Failed to activate lease. Please check the console for details.');
+    }
+  };
+
   if (loading) {
     return (
       <DashboardLayout
@@ -1228,8 +1269,16 @@ function Applications() {
       Math.round(filteredApplications.reduce((sum, app) => sum + (app.days_pending || 0), 0) / filteredApplications.length) : 0,
   };
 
+  const applicationsWithLeases = applications.map(app => {
+    const lease = leases.find(l => l.application === app.id);
+    return { ...app, lease };
+  });
+
   return (
-    <DashboardLayout title="">
+    <DashboardLayout 
+      title="Applications Review" 
+      subtitle="Manage rental applications and tenant workflow"
+    >
       <Head>
         <title>Applications Review - Tink Property Management</title>
       </Head>
@@ -1413,54 +1462,57 @@ function Applications() {
         </div>
 
         {/* Kanban Board View */}
-        <ApplicationKanban
-          applications={filteredApplications}
-          onReview={openApplicationDetail}
-          onApprove={handleApprove}
-          onQualify={handleQualify}
-          onReject={handleReject}
-          onAssignRoom={openRoomAssignmentModal}
-          onGenerateLease={handleGenerateLease}
-          onMessage={handleMessage}
-          onSetupViewing={handleSetupViewing}
-          onRescheduleViewing={handleRescheduleViewing}
-          onActivateLease={handleActivateLease}
-          onSkipViewing={handleSkipViewing}
-          onDelete={handleDelete}
-          onSendToTenant={handleSendToTenant}
-          onEditLease={handleEditLease}
-          onDownloadLease={handleDownloadLease}
-          getPropertyName={getPropertyName}
-          formatDate={formatDate}
-          extraActions={(
-            <>
-                <button 
-                  onClick={fetchData} 
-                  className="refresh-btn"
-                  title="Refresh applications data to get the latest information"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polyline points="23 4 23 10 17 10" />
-                  <polyline points="1 20 1 14 7 14" />
-                  <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15" />
-                  </svg>
-                  Refresh
-                </button>
-                <button 
-                  onClick={downloadApplicationsReport} 
-                  className="view-all-btn"
-                  title="Download a comprehensive report of all applications with analytics and insights"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                  <polyline points="7,10 12,15 17,10" />
-                  <path d="M12 15V3" />
-                  </svg>
-                  Download Report
-                </button>
-            </>
-          )}
-        />
+        <div className="kanban-board">
+          {Object.keys(kanbanStages).map((stageKey) => (
+            <div key={stageKey} className="kanban-column">
+              {/* ... */}
+              <ApplicationKanban
+                applications={applicationsWithLeases.filter(app => kanbanStages[stageKey].statuses.includes(app.status))}
+                onReview={openApplicationDetail}
+                onApprove={handleApprove}
+                onQualify={handleQualify}
+                onReject={handleReject}
+                onAssignRoom={openRoomAssignmentModal}
+                onGenerateLease={handleGenerateLease}
+                onMessage={handleMessage}
+                onSetupViewing={handleSetupViewing}
+                onRescheduleViewing={handleRescheduleViewing}
+                onActivateLease={handleActivateLeaseFromApplication}
+                onSkipViewing={handleSkipViewing}
+                onDelete={handleDelete}
+                onViewLease={handleViewLease}
+                onSendToTenant={handleSendToTenant}
+                onDownloadDraftLease={handleDownloadDraftLease}
+                getPropertyName={getPropertyName}
+                formatDate={formatDate}
+                extraActions={(
+                  <>
+                      <button 
+                        onClick={loadData} 
+                        className="refresh-btn"
+                        title="Refresh applications data to get the latest information"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="23 4 23 10 17 10" />
+                        <polyline points="1 20 1 14 7 14" />
+                        <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15" />
+                        </svg>
+                        Refresh
+                      </button>
+                      <button 
+                        onClick={downloadApplicationsReport} 
+                        className="view-all-btn"
+                        title="Download a comprehensive report of all applications with analytics and insights"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="7,10 12,15 17,10" />
+                        <path d="M12 15V3" />
+                        </svg>
+                        Download Report
+                      </button>
+                  </>
+                )}
 
         {/* Legacy pending & processed application tables removed – all workflow management is now handled via the Kanban board */}
       </div>
@@ -1499,7 +1551,7 @@ function Applications() {
             setIsPropertyRoomManagementOpen(false);
             setSelectedPropertyForManagement(null);
           }}
-          onRoomUpdate={fetchData}
+          onRoomUpdate={loadData}
         />
       )}
 

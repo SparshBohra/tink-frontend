@@ -17,6 +17,9 @@ interface ApplicationKanbanProps {
   onActivateLease?: (application: Application) => void;
   onSkipViewing?: (applicationId: number) => void; /* New prop */
   onDelete?: (applicationId: number) => void; /* New prop for delete functionality */
+  onSendToTenant?: (application: Application) => void;
+  onEditLease?: (application: Application) => void;
+  onDownloadLease?: (application: Application) => void;
   getPropertyName: (propertyId: number) => string;
   formatDate: (date: string | null) => string;
   extraActions?: React.ReactNode;
@@ -331,12 +334,31 @@ const ApplicationListView: React.FC<ApplicationListViewProps> = ({
                               <button className="btn-sm primary" onClick={() => onReview(app)}>
                                 View Lease
                               </button>
-                              {app.status === 'lease_created' && (
+                              {/* Show different buttons based on lease status */}
+                              {app.lease?.status === 'draft' && (
+                                <>
+                                  <button className="btn-sm success" onClick={() => onSendToTenant && onSendToTenant(app)}>
+                                    Send to Tenant
+                                  </button>
+                                  <button className="btn-sm secondary" onClick={() => onEditLease && onEditLease(app)}>
+                                    Edit Lease
+                                  </button>
+                                  <button className="btn-sm outline" onClick={() => onDownloadLease && onDownloadLease(app)}>
+                                    Download Lease
+                                  </button>
+                                </>
+                              )}
+                              {app.lease?.status === 'sent_to_tenant' && (
+                                <div className="status-text">
+                                  📤 Sent to Tenant - Awaiting Signature
+                                </div>
+                              )}
+                              {app.lease?.status === 'signed' && (
                                 <button className="btn-sm success" onClick={() => onActivateLease && onActivateLease(app)}>
-                                  Send to Tenant
+                                  Activate Lease
                                 </button>
                               )}
-                              {app.status === 'lease_signed' && (
+                              {app.lease?.status === 'active' && (
                                 <button className="btn-sm success" onClick={() => onActivateLease && onActivateLease(app)}>
                                   Schedule Move-in
                                 </button>
@@ -409,6 +431,9 @@ export default function ApplicationKanban({
   onActivateLease,
   onSkipViewing,
   onDelete,
+  onSendToTenant,
+  onEditLease,
+  onDownloadLease,
   getPropertyName,
   formatDate,
   extraActions,
@@ -589,8 +614,14 @@ export default function ApplicationKanban({
                         {app.status === 'processing' && 'Processing Application'}
                         {app.status === 'room_assigned' && 'Room Assigned'}
                         {app.status === 'lease_ready' && 'Lease Ready'}
-                        {app.status === 'lease_created' && 'Lease Generated'}
-                        {app.status === 'lease_signed' && 'Lease Signed'}
+                        {app.status === 'lease_created' && (
+                              app.lease?.status === 'draft' ? 'Draft Lease Created' :
+                              app.lease?.status === 'sent_to_tenant' ? 'Sent to Tenant' :
+                              app.lease?.status === 'signed' ? 'Lease Signed' :
+                              app.lease?.status === 'active' ? 'Lease Active' :
+                              'Lease Generated'
+                            )}
+                            {app.status === 'lease_signed' && 'Lease Signed'}
                         {app.status === 'moved_in' && 'Tenant Moved In'}
                         {app.status === 'active' && 'Active Tenant'}
                       </div>
@@ -685,12 +716,31 @@ export default function ApplicationKanban({
                             <button className="btn-sm primary" onClick={() => onReview(app)}>
                               View Lease
                             </button>
-                            {app.status === 'lease_created' && (
+                            {/* Show different buttons based on lease status */}
+                            {app.lease?.status === 'draft' && (
+                              <>
+                                <button className="btn-sm success" onClick={() => onSendToTenant && onSendToTenant(app)}>
+                                  Send to Tenant
+                                </button>
+                                <button className="btn-sm secondary" onClick={() => onEditLease && onEditLease(app)}>
+                                  Edit Lease
+                                </button>
+                                <button className="btn-sm outline" onClick={() => onDownloadLease && onDownloadLease(app)}>
+                                  Download Lease
+                                </button>
+                              </>
+                            )}
+                            {app.lease?.status === 'sent_to_tenant' && (
+                              <div className="status-text">
+                                📤 Sent to Tenant - Awaiting Signature
+                              </div>
+                            )}
+                            {app.lease?.status === 'signed' && (
                               <button className="btn-sm success" onClick={() => onActivateLease && onActivateLease(app)}>
-                                Send to Tenant
+                                Activate Lease
                               </button>
                             )}
-                            {app.status === 'lease_signed' && (
+                            {app.lease?.status === 'active' && (
                               <button className="btn-sm success" onClick={() => onActivateLease && onActivateLease(app)}>
                                 Schedule Move-in
                               </button>
@@ -1279,6 +1329,15 @@ export default function ApplicationKanban({
         .btn-sm.btn-error:hover {
           background: #dc2626;
           transform: translateY(-1px);
+        }
+        .btn-sm.outline {
+          background: #f8fafc;
+          color: #4f46e5;
+          border: 1px solid #e2e8f0;
+        }
+        
+        .btn-sm.outline:hover {
+          background: #e2e8f0;
         }
       `}</style>
     </div>

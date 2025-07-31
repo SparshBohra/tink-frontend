@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { PropertyListing } from '../lib/types';
+import React, { useState, useEffect } from 'react';
 import { apiClient } from '../lib/api';
+import { PropertyListing } from '../lib/types';
 
 interface PublicApplicationFormProps {
   listing: PropertyListing;
@@ -277,34 +277,34 @@ export default function PublicApplicationForm({ listing, onClose, onSubmit }: Pu
     setIsLoading(true);
     setOtpError(null);
     try {
-      const response = await apiClient.requestTenantOtp(formData.phone);
+      const response = await apiClient.requestPublicApplicationOtp(formData.phone);
       if (response.success) {
         setIsOtpSent(true);
       } else {
-        setOtpError(response.error || 'Failed to send OTP.');
+        setOtpError('Failed to send verification code.');
       }
-    } catch (err) {
-      setOtpError('An error occurred while sending the OTP.');
+    } catch (err: any) {
+      setOtpError(err.message || 'An error occurred while sending the verification code.');
     }
     setIsLoading(false);
   };
 
   const handleVerifyOtp = async () => {
     if (!formData.otp) {
-      setOtpError('OTP is required.');
+      setOtpError('Verification code is required.');
       return;
     }
     setIsLoading(true);
     setOtpError(null);
     try {
-      const response = await apiClient.verifyTenantOtp(formData.phone, formData.otp);
-      if (response.success) {
+      const response = await apiClient.verifyPublicApplicationOtp(formData.phone, formData.otp);
+      if (response.success && response.verified) {
         setIsOtpVerified(true);
       } else {
-        setOtpError(response.error || 'Invalid OTP.');
+        setOtpError('Invalid verification code.');
       }
-    } catch (err) {
-      setOtpError('An error occurred while verifying the OTP.');
+    } catch (err: any) {
+      setOtpError(err.message || 'An error occurred while verifying the code.');
     }
     setIsLoading(false);
   };
@@ -393,7 +393,7 @@ export default function PublicApplicationForm({ listing, onClose, onSubmit }: Pu
                       className="btn btn-secondary"
                       disabled={isLoading || isOtpSent}
                     >
-                      {isLoading ? 'Sending...' : (isOtpSent ? 'Resend OTP' : 'Send OTP')}
+                      {isLoading ? 'Sending...' : (isOtpSent ? 'Resend Code' : 'Send Code')}
                     </button>
                   )}
                 </div>
@@ -416,7 +416,7 @@ export default function PublicApplicationForm({ listing, onClose, onSubmit }: Pu
                     className="btn btn-secondary"
                     disabled={isLoading}
                   >
-                    {isLoading ? 'Verifying...' : 'Verify OTP'}
+                    {isLoading ? 'Verifying...' : 'Verify Code'}
                   </button>
                   {otpError && <p className="alert alert-error">{otpError}</p>}
                 </div>
@@ -597,14 +597,14 @@ export default function PublicApplicationForm({ listing, onClose, onSubmit }: Pu
                               {room.floor_number && <span className="room-floor">Floor {room.floor_number}</span>}
                             </div>
                             <div className="room-availability-dates">
-                              {room.available_from && (
+                              {(room.available_from || listing.available_from) && (
                                 <span className="availability-date">
-                                  Available from: {new Date(room.available_from).toLocaleDateString()}
+                                  Available from: {new Date(room.available_from || listing.available_from || '').toLocaleDateString()}
                                 </span>
                               )}
-                              {room.available_until && (
+                              {(room.available_until || listing.available_until) && (
                                 <span className="availability-date">
-                                  Until: {new Date(room.available_until).toLocaleDateString()}
+                                  Until: {new Date(room.available_until || listing.available_until || '').toLocaleDateString()}
                                 </span>
                               )}
                             </div>

@@ -1,5 +1,4 @@
-import { format } from 'date-fns';
-import { toZonedTime } from 'date-fns-tz';
+import { format, toZonedTime } from 'date-fns-tz';
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 
@@ -405,45 +404,6 @@ export const phoneUtils = {
   }
 }; 
 
-/**
- * Convert S3 media URLs to Django serving URLs
- * This solves the S3 public access issue by serving files through Django
- */
-export function getMediaUrl(url: string): string {
-  if (!url) return '';
-  
-  // If it's already a Django URL, return as-is
-  if (url.includes('/api/properties/media/')) {
-    return url;
-  }
-  
-  // Convert S3 URLs to Django URLs
-  if (url.includes('s3.amazonaws.com') || url.includes('.s3.')) {
-    // Extract the file path from S3 URL
-    // Example: https://bucket.s3.amazonaws.com/media/path/file.jpg -> path/file.jpg
-    const mediaMatch = url.match(/\/media\/(.+)$/);
-    if (mediaMatch) {
-      const filePath = mediaMatch[1];
-      const baseUrl = process.env.NODE_ENV === 'production' 
-        ? process.env.NEXT_PUBLIC_API_URL || 'https://tink.global'
-        : 'http://localhost:8000';
-      return `${baseUrl}/api/properties/media/${filePath}`;
-    }
-  }
-  
-  // If it's a local URL path, convert to Django URL
-  if (url.startsWith('/media/') || url.startsWith('media/')) {
-    const filePath = url.replace(/^\/media\//, '').replace(/^media\//, '');
-    const baseUrl = process.env.NODE_ENV === 'production' 
-      ? process.env.NEXT_PUBLIC_API_URL || 'https://tink.global'
-      : 'http://localhost:8000';
-    return `${baseUrl}/api/properties/media/${filePath}`;
-  }
-  
-  // Return original URL if no conversion needed
-  return url;
-}
-
 export function classNames(...classes: string[]) {
   return classes.filter(Boolean).join(' ');
 }
@@ -457,4 +417,4 @@ export const formatUTCDate = (dateString: string, timeZone: string = 'UTC') => {
     console.error('Error formatting date:', error);
     return dateString; // Fallback to original string
   }
-};
+}; 
