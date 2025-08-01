@@ -506,6 +506,7 @@ function AddRoom() {
                         value={formData.available_from}
                         onChange={handleChange}
                         className="form-input"
+                        min={new Date().toISOString().split('T')[0]}
                       />
                       <div className="form-hint">Optional availability start date</div>
                     </div>

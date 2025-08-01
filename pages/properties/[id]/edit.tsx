@@ -6,6 +6,7 @@ import { apiClient } from '../../../lib/api';
 import DashboardLayout from '../../../components/DashboardLayout';
 import { usStates } from '../../../lib/states';
 import { PropertyFormData, Property } from '../../../lib/types';
+import MapboxAddressAutocomplete from '../../../components/MapboxAddressAutocomplete';
 
 // Updated to match backend API specifications
 const PROPERTY_TYPES = [
@@ -183,6 +184,17 @@ export default function EditProperty() {
     setFormData(prev => ({
       ...prev,
       [name]: value,
+    }));
+  };
+
+  // Handle address selection from Mapbox autocomplete
+  const handleAddressSelect = (addressComponents: any) => {
+    setFormData(prev => ({
+      ...prev,
+      address_line1: addressComponents.address_line1,
+      city: addressComponents.city,
+      state: addressComponents.state,
+      postal_code: addressComponents.postal_code,
     }));
   };
 
@@ -386,14 +398,14 @@ export default function EditProperty() {
                 {/* Address Information */}
                 <div className="form-group">
                   <label htmlFor="address_line1" className="form-label required">Address Line 1</label>
-                  <input
-                    type="text"
+                  <MapboxAddressAutocomplete
                     id="address_line1"
                     name="address_line1"
                     value={formData.address_line1}
-                    onChange={handleChange}
-                    className="form-input"
+                    onChange={(value) => setFormData(prev => ({ ...prev, address_line1: value }))}
+                    onAddressSelect={handleAddressSelect}
                     placeholder="123 Main Street"
+                    className="form-input"
                     required
                   />
                 </div>

@@ -11,26 +11,26 @@ const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY 
 interface PaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  tenantProfile: TenantProfile | null;
+  lease: any | null; // Accept lease directly instead of tenantProfile
   onPaymentSuccess?: () => void; // New callback for payment success
 }
 
-const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, tenantProfile, onPaymentSuccess }) => {
+const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, lease, onPaymentSuccess }) => {
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null); // Store payment intent ID
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
 
   useEffect(() => {
-    if (isOpen && tenantProfile?.active_lease) {
+    if (isOpen && lease && lease.status === 'active') {
       createPaymentIntent();
     } else {
-      // Reset when modal is closed or there's no lease
+      // Reset when modal is closed or there's no active lease
       setClientSecret(null);
       setPaymentIntentId(null);
       setError('');
     }
-  }, [isOpen, tenantProfile]);
+  }, [isOpen, lease]);
 
   const createPaymentIntent = async () => {
     setLoading(true);
@@ -126,6 +126,34 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, tenantProf
 
         {/* Modal Body */}
         <div>
+          {!lease && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
+              <div className="flex">
+                <svg className="h-5 w-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div className="ml-3 text-center w-full">
+                  <p className="text-sm text-yellow-800 font-medium">No Lease Found</p>
+                  <p className="text-sm text-yellow-700 mt-1">You don't have an active lease to make payments against.</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {lease && lease.status !== 'active' && (
+            <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
+              <div className="flex">
+                <svg className="h-5 w-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div className="ml-3 text-center w-full">
+                  <p className="text-sm text-blue-800 font-medium">Lease Not Active</p>
+                  <p className="text-sm text-blue-700 mt-1">Your lease must be active before you can make payments. Current status: <span className="font-medium">{lease.status}</span></p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {loading && (
             <div className="text-center py-8">
               <svg className="animate-spin h-8 w-8 text-indigo-600 mx-auto" fill="none" viewBox="0 0 24 24">
@@ -157,12 +185,12 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, tenantProf
             </div>
           )}
 
-          {clientSecret && options && (
+          {clientSecret && options && lease && lease.status === 'active' && (
             <Elements options={options} stripe={stripePromise}>
               <StripePaymentForm 
                 onSuccess={handlePaymentSuccess} 
                 onClose={onClose} 
-                rentAmount={tenantProfile?.active_lease?.monthly_rent || 0}
+                rentAmount={lease?.monthly_rent || 0}
               />
             </Elements>
           )}

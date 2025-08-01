@@ -374,11 +374,23 @@ export const phoneUtils = {
 
   // Format phone number for display
   displayPhoneNumber: (phoneNumber: string): string => {
-    const cleaned = phoneNumber.replace(/\D/g, '');
+    if (!phoneNumber) return '';
+    
+    // Handle E.164 format (+1XXXXXXXXXX)
+    let cleaned = phoneNumber.replace(/\D/g, '');
+    
+    // If it's 11 digits and starts with 1 (US country code), remove the 1
+    if (cleaned.length === 11 && cleaned.startsWith('1')) {
+      cleaned = cleaned.slice(1);
+    }
+    
+    // Format 10-digit US phone numbers
     if (cleaned.length === 10) {
       return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
     }
-    return phoneNumber; // Return as-is if not 10 digits
+    
+    // For other formats, return the original
+    return phoneNumber;
   },
 
   // Convert phone number to E.164 format for API (e.g., +15551234567)

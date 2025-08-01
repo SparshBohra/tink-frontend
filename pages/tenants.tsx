@@ -9,6 +9,7 @@ import { apiClient } from '../lib/api';
 import { Tenant, TenantFormData, Application, Lease, Property, Room } from '../lib/types';
 import ApplicationDetailModal from '../components/ApplicationDetailModal';
 import { phoneUtils } from '../lib/utils';
+import USPhoneInput, { validateUSPhone, getUSPhoneError, toE164Format } from '../components/USPhoneInput';
 
 function Tenants() {
   const router = useRouter();
@@ -205,7 +206,7 @@ function Tenants() {
       } else {
         // Multiple applications - show selection dialog
         const appList = applications.map((app, index) => 
-          `${index + 1}. Property: ${getPropertyName(app.property_ref)} - Status: ${app.status.toUpperCase()} - Applied: ${new Date(app.created_at).toLocaleDateString()}`
+          `${index + 1}. Property: ${getPropertyName(app.property_ref)} - Status: ${app.status.toUpperCase()} - Applied: ${new Date(app.application_date).toLocaleDateString()}`
         ).join('\n');
         
         const selection = prompt(
@@ -599,26 +600,19 @@ function Tenants() {
                         <label htmlFor="phone" className="form-label">
                           Phone Number *
                         </label>
-                        <input
+                        <USPhoneInput
                           id="phone"
                           name="phone"
-                          type="tel"
                           value={formData.phone}
-                          onChange={(e) => {
-                            const formattedPhone = phoneUtils.formatPhoneNumber(e.target.value);
-                            setFormData({...formData, phone: formattedPhone});
-                            const phoneErrorMsg = phoneUtils.getPhoneErrorMessage(formattedPhone);
+                          onChange={(value) => {
+                            setFormData({...formData, phone: value});
+                            const phoneErrorMsg = getUSPhoneError(value);
                             setPhoneError(phoneErrorMsg);
                           }}
                           required
-                          className={`form-input ${phoneError ? 'error' : ''}`}
+                          error={phoneError}
                           placeholder="(555) 123-4567"
                         />
-                        {phoneError && (
-                          <div className="field-error">
-                            {phoneError}
-                          </div>
-                        )}
                         {formData.phone && !phoneError && (
                           <div className="field-success">
                             ✓ Valid phone number
@@ -645,31 +639,24 @@ function Tenants() {
                         <label htmlFor="emergency_contact_phone" className="form-label">
                           Emergency Contact Phone
                         </label>
-                        <input
+                        <USPhoneInput
                           id="emergency_contact_phone"
                           name="emergency_contact_phone"
-                          type="tel"
                           value={formData.emergency_contact_phone || ''}
-                          onChange={(e) => {
-                            const formattedPhone = phoneUtils.formatPhoneNumber(e.target.value);
-                            setFormData({...formData, emergency_contact_phone: formattedPhone});
+                          onChange={(value) => {
+                            setFormData({...formData, emergency_contact_phone: value});
                             
                             // Only validate if there's a value (emergency phone is optional)
-                            if (formattedPhone.trim()) {
-                              const phoneErrorMsg = phoneUtils.getPhoneErrorMessage(formattedPhone);
+                            if (value.trim()) {
+                              const phoneErrorMsg = getUSPhoneError(value);
                               setEmergencyPhoneError(phoneErrorMsg);
                             } else {
                               setEmergencyPhoneError(null);
                             }
                           }}
-                          className={`form-input ${emergencyPhoneError ? 'error' : ''}`}
+                          error={emergencyPhoneError}
                           placeholder="(555) 987-6543"
                         />
-                        {emergencyPhoneError && (
-                          <div className="field-error">
-                            {emergencyPhoneError}
-                          </div>
-                        )}
                         {formData.emergency_contact_phone && !emergencyPhoneError && (
                           <div className="field-success">
                             ✓ Valid phone number
@@ -750,7 +737,7 @@ function Tenants() {
                               
                             <td className="table-left">
                               <div className="tenant-contact">
-                                <div className="tenant-phone">{tenant.phone}</div>
+                                <div className="tenant-phone">{phoneUtils.displayPhoneNumber(tenant.phone)}</div>
                                 <div className="tenant-email">{tenant.email}</div>
                               </div>
                             </td>
@@ -759,7 +746,7 @@ function Tenants() {
                               {tenant.emergency_contact_name ? (
                                 <div>
                                   <div className="emergency-name">{tenant.emergency_contact_name}</div>
-                                  <div className="emergency-phone">{tenant.emergency_contact_phone || 'No phone'}</div>
+                                  <div className="emergency-phone">{tenant.emergency_contact_phone ? phoneUtils.displayPhoneNumber(tenant.emergency_contact_phone) : 'No phone'}</div>
                                 </div>
                               ) : (
                                 <span className="text-muted">Not provided</span>

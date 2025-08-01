@@ -4,6 +4,8 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { useAuth } from '../lib/auth-context';
 import { phoneUtils } from '../lib/utils';
+import USPhoneInput, { validateUSPhone, getUSPhoneError, toE164Format } from '../components/USPhoneInput';
+import MapboxAddressAutocomplete from '../components/MapboxAddressAutocomplete';
 
 export default function LandlordSignup() {
   const router = useRouter();
@@ -24,23 +26,28 @@ export default function LandlordSignup() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    clearError();
+  };
+
+  const handlePhoneChange = (value: string) => {
+    setFormData(prev => ({ ...prev, contact_phone: value }));
     
-    if (name === 'contact_phone') {
-      // Format phone number as user types
-      const formattedPhone = phoneUtils.formatPhoneNumber(value);
-      setFormData(prev => ({ ...prev, [name]: formattedPhone }));
-      
-      // Only validate if there's a value (since phone is optional)
-      if (formattedPhone.trim()) {
-        const phoneErrorMsg = phoneUtils.getPhoneErrorMessage(formattedPhone);
-        setPhoneError(phoneErrorMsg);
-      } else {
-        setPhoneError(null);
-      }
+    // Only validate if there's a value (since phone is optional)
+    if (value.trim()) {
+      const phoneErrorMsg = getUSPhoneError(value);
+      setPhoneError(phoneErrorMsg);
     } else {
-      setFormData(prev => ({ ...prev, [name]: value }));
+      setPhoneError(null);
     }
     
+    clearError();
+  };
+
+  // Handle address selection from Mapbox - full address will be set via onChange
+  const handleAddressSelect = (addressComponents: any) => {
+    // The full address is already set via onChange when usePlaceName=true
+    // This is just for any additional processing if needed
     clearError();
   };
 
@@ -135,21 +142,15 @@ export default function LandlordSignup() {
                 </div>
                 <div className="form-group">
                   <label htmlFor="contact_phone" className="form-label">Business Phone</label>
-                  <input 
+                  <USPhoneInput 
                     id="contact_phone" 
                     name="contact_phone" 
-                    type="tel" 
                     value={formData.contact_phone} 
-                    onChange={handleChange} 
+                    onChange={handlePhoneChange} 
                     placeholder="(555) 123-4567"
                     disabled={loading} 
-                    className={`form-input ${phoneError ? 'error' : ''}`}
+                    error={phoneError}
                   />
-                  {phoneError && (
-                    <div className="field-error">
-                      {phoneError}
-                    </div>
-                  )}
                   {formData.contact_phone && !phoneError && (
                     <div className="field-success">
                       ✓ Valid phone number
@@ -160,15 +161,16 @@ export default function LandlordSignup() {
 
               <div className="form-group">
                 <label htmlFor="address" className="form-label">Business Address</label>
-                <input 
-                  id="address" 
-                  name="address" 
-                  type="text" 
-                  value={formData.address} 
-                  onChange={handleChange} 
+                <MapboxAddressAutocomplete
+                  id="address"
+                  name="address"
+                  value={formData.address}
+                  onChange={(value) => setFormData(prev => ({ ...prev, address: value }))}
+                  onAddressSelect={handleAddressSelect}
                   placeholder="123 Business St, City, State"
-                  disabled={loading} 
-                  className="form-input" 
+                  disabled={loading}
+                  className="form-input"
+                  usePlaceName={true}
                 />
               </div>
             </div>

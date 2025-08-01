@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useAuth } from '../lib/auth-context';
@@ -14,12 +14,41 @@ interface NavigationItem {
   label: string;
   icon: React.ReactElement;
   badge?: number;
+  hasDropdown?: boolean;
 }
 
 export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
   const router = useRouter();
   const { user, logout, isAdmin, isLandlord, isManager } = useAuth();
   const [pendingApplicationsCount, setPendingApplicationsCount] = useState(0);
+  const [showPropertiesDropdown, setShowPropertiesDropdown] = useState(false);
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0 });
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const propertiesNavRef = useRef<HTMLButtonElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowPropertiesDropdown(false);
+      }
+    };
+
+    const handleResize = () => {
+      if (showPropertiesDropdown && propertiesNavRef.current) {
+        const rect = propertiesNavRef.current.getBoundingClientRect();
+        setDropdownPosition({ top: rect.top + rect.height / 2 });
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    window.addEventListener('resize', handleResize);
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [showPropertiesDropdown]);
 
   // Fetch pending applications count
   useEffect(() => {
@@ -53,10 +82,24 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
   };
 
   const handleNavigation = (path: string) => {
+    if (path === '/properties') {
+      if (propertiesNavRef.current) {
+        const rect = propertiesNavRef.current.getBoundingClientRect();
+        setDropdownPosition({ top: rect.top + rect.height / 2 });
+      }
+      setShowPropertiesDropdown(!showPropertiesDropdown);
+      return;
+    }
     if (path === '/settings' || path === '/support') {
       router.push('/settings');
       return;
     }
+    setShowPropertiesDropdown(false);
+    router.push(path);
+  };
+
+  const handleDropdownNavigation = (path: string) => {
+    setShowPropertiesDropdown(false);
     router.push(path);
   };
 
@@ -166,7 +209,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
       return [
         ...baseItems,
         { path: '/applications', label: 'Applications', icon: <ApplicationsIcon />, badge: pendingApplicationsCount },
-        { path: '/properties', label: 'Properties', icon: <PropertiesIcon /> },
+        { path: '/properties', label: 'Properties', icon: <PropertiesIcon />, hasDropdown: true },
         { path: '/leases', label: 'Leases', icon: <LeasesIcon /> },
         { path: '/tenants', label: 'Tenants', icon: <TenantsIcon /> },
         { path: '/managers', label: 'Managers', icon: <ManagersIcon /> },
@@ -177,7 +220,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
       return [
         ...baseItems,
         { path: '/applications', label: 'Applications', icon: <ApplicationsIcon />, badge: pendingApplicationsCount },
-        { path: '/properties', label: 'Properties', icon: <PropertiesIcon /> },
+        { path: '/properties', label: 'Properties', icon: <PropertiesIcon />, hasDropdown: true },
         { path: '/leases', label: 'Leases', icon: <LeasesIcon /> },
         { path: '/tenants', label: 'Tenants', icon: <TenantsIcon /> },
         { path: '/accounting', label: 'Accounting', icon: <AccountingIcon /> },
@@ -189,7 +232,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
       return [
         ...baseItems,
         { path: '/applications', label: 'Applications', icon: <ApplicationsIcon />, badge: pendingApplicationsCount },
-        { path: '/properties', label: 'Properties', icon: <PropertiesIcon /> },
+        { path: '/properties', label: 'Properties', icon: <PropertiesIcon />, hasDropdown: true },
         { path: '/leases', label: 'Leases', icon: <LeasesIcon /> },
         { path: '/tenants', label: 'Tenants', icon: <TenantsIcon /> },
         { path: '/accounting', label: 'Accounting', icon: <AccountingIcon /> },
@@ -218,21 +261,78 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         {/* Navigation */}
         <nav className="sidebar-nav">
           {navigationItems.map((item) => (
-            <button
-              key={item.path}
-              onClick={() => handleNavigation(item.path)}
-              className={`nav-item ${router.pathname === item.path ? 'active' : ''}`}
-            >
-              <span className="nav-icon">{item.icon}</span>
-              {!isCollapsed && (
-                <>
-                  <span className="nav-label">{item.label}</span>
-                  {item.badge && item.badge > 0 && (
-                    <span className="nav-badge">{item.badge}</span>
-                  )}
-                </>
+            <div key={item.path} className="nav-item-container" ref={item.hasDropdown ? dropdownRef : undefined}>
+              <button
+                ref={item.path === '/properties' ? propertiesNavRef : undefined}
+                onClick={() => handleNavigation(item.path)}
+                className={`nav-item ${router.pathname === item.path || (item.path === '/properties' && (router.pathname === '/properties' || router.pathname === '/listings')) ? 'active' : ''}`}
+              >
+                <span className="nav-icon">{item.icon}</span>
+                {!isCollapsed && (
+                  <>
+                    <span className="nav-label">{item.label}</span>
+                    {item.badge && item.badge > 0 && (
+                      <span className="nav-badge">{item.badge}</span>
+                    )}
+                    {item.hasDropdown && (
+                      <span className={`dropdown-arrow ${showPropertiesDropdown ? 'open' : ''}`}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <polyline points="9,18 15,12 9,6"/>
+                        </svg>
+                      </span>
+                    )}
+                  </>
+                )}
+              </button>
+              
+              {/* Properties Dropdown */}
+              {item.hasDropdown && showPropertiesDropdown && !isCollapsed && (
+                <div 
+                  className="properties-dropdown"
+                  style={{ top: `${dropdownPosition.top}px` }}
+                >
+                  <div className="dropdown-content">
+                    <div className="dropdown-options">
+                      <button
+                        onClick={() => handleDropdownNavigation('/properties')}
+                        className={`dropdown-option ${router.pathname === '/properties' ? 'active' : ''}`}
+                      >
+                        <div className="option-icon">
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <rect x="3" y="3" width="7" height="7"/>
+                            <rect x="14" y="3" width="7" height="7"/>
+                            <rect x="14" y="14" width="7" height="7"/>
+                            <rect x="3" y="14" width="7" height="7"/>
+                          </svg>
+                        </div>
+                        <div className="option-content">
+                          <div className="option-title">View Properties</div>
+                          <div className="option-subtitle">Manage property portfolio</div>
+                        </div>
+                      </button>
+                      
+                      <button
+                        onClick={() => handleDropdownNavigation('/listings')}
+                        className={`dropdown-option ${router.pathname === '/listings' ? 'active' : ''}`}
+                      >
+                        <div className="option-icon">
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M14 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V8L14 2Z"/>
+                            <path d="M14 2V8H20"/>
+                            <path d="M16 13H8"/>
+                            <path d="M16 17H8"/>
+                          </svg>
+                        </div>
+                        <div className="option-content">
+                          <div className="option-title">View Listings</div>
+                          <div className="option-subtitle">Browse available rentals</div>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+                </div>
               )}
-            </button>
+            </div>
           ))}
         </nav>
 
@@ -364,6 +464,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
           flex: 1;
           padding: 16px 12px;
           overflow-y: auto;
+          overflow-x: visible;
           pointer-events: auto;
         }
 
@@ -378,6 +479,10 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         .sidebar-nav::-webkit-scrollbar-thumb {
           background: rgba(255, 255, 255, 0.2);
           border-radius: 2px;
+        }
+
+        .nav-item-container {
+          position: relative;
         }
 
         .nav-item {
@@ -467,6 +572,120 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
           box-shadow: 0 2px 6px rgba(239, 68, 68, 0.15), 0 0 0 1px #fff;
           letter-spacing: 0.02em;
           display: inline-block;
+        }
+
+        .dropdown-arrow {
+          transition: transform 0.3s ease;
+          transform: rotate(0deg); /* Points right when closed */
+        }
+
+        .dropdown-arrow.open {
+          transform: rotate(180deg); /* Points left when open */
+        }
+
+        .properties-dropdown {
+          position: fixed;
+          top: auto;
+          left: 252px; /* Add 12px space from sidebar (240px + 12px) */
+          width: 320px;
+          background: #1e293b;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 12px;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+          z-index: 1001;
+          transform: translateY(-50%);
+          display: flex;
+          flex-direction: column;
+          pointer-events: auto;
+        }
+
+        .sidebar.collapsed .properties-dropdown {
+          left: 82px; /* Add 12px space from collapsed sidebar (70px + 12px) */
+        }
+
+        .dropdown-content {
+          padding: 16px;
+          display: flex;
+          flex-direction: column;
+        }
+
+        .dropdown-options {
+          display: flex;
+          flex-direction: column;
+        }
+
+        .dropdown-option {
+          display: flex;
+          align-items: center;
+          width: 100%;
+          padding: 12px 16px;
+          margin-bottom: 6px;
+          border: none;
+          background: transparent;
+          color: rgba(243, 244, 246, 0.85);
+          border-radius: 12px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          text-align: left;
+          font-size: 14px;
+          font-weight: 400;
+          position: relative;
+          gap: 12px;
+          z-index: 10;
+          pointer-events: auto;
+        }
+
+        .dropdown-option:hover {
+          background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%);
+          color: #ffffff;
+          transform: translateX(2px);
+          box-shadow: none;
+        }
+
+        .dropdown-option.active {
+          background: linear-gradient(135deg, rgba(102, 126, 234, 0.3) 0%, rgba(118, 75, 162, 0.3) 100%);
+          color: #ffffff;
+        }
+
+        .dropdown-option:focus {
+          outline: none;
+          background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%);
+          color: #ffffff;
+        }
+
+        .option-icon {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+          color: inherit;
+          opacity: 0.85;
+        }
+
+        .option-icon svg {
+          width: 20px;
+          height: 20px;
+        }
+
+        .option-content {
+          flex: 1;
+        }
+
+        .option-title {
+          font-size: 14px;
+          font-weight: 600;
+          color: rgba(255, 255, 255, 0.9);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .option-subtitle {
+          font-size: 12px;
+          color: rgba(255, 255, 255, 0.6);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
 
         .sidebar-bottom {
@@ -582,6 +801,14 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         :global(.dark-mode) .nav-item:hover {
           background: #222222 !important;
         }
+        :global(.dark-mode) .properties-dropdown {
+          background: #111111 !important;
+          border: 1px solid #333333 !important;
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+        }
+        :global(.dark-mode) .dropdown-option:hover {
+          background: #222222 !important;
+        }
         :global(.dark-mode) .sidebar-bottom,
         :global(.dark-mode) .sidebar-user {
           border-top: 1px solid #333333 !important;
@@ -593,6 +820,24 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         :global(.dark-mode) .logout-btn:hover,
         :global(.dark-mode) .logout-btn-collapsed:hover {
           background: #ef4444 !important;
+        }
+
+        /* Collapsed state - hide dropdown */
+        .sidebar.collapsed .properties-dropdown {
+          display: none;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+          .properties-dropdown {
+            width: 280px;
+            left: 240px;
+            transform: translateY(-50%);
+          }
+
+          .sidebar.collapsed .properties-dropdown {
+            left: 70px;
+          }
         }
       `}</style>
     </>

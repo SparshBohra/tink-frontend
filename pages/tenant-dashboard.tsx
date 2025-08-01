@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { apiClient } from '../lib/api';
-import { TenantProfile, Lease } from '../lib/types';
+import { Lease } from '../lib/types';
 import PaymentModal from '../components/PaymentModal';
 
 interface TenantUser {
@@ -15,7 +15,6 @@ interface TenantUser {
 
 const TenantDashboard: React.FC = () => {
   const router = useRouter();
-  const [tenantProfile, setTenantProfile] = useState<TenantProfile | null>(null);
   const [tenantLeases, setTenantLeases] = useState<Lease[]>([]);
   const [loading, setLoading] = useState(true);
   const [leaseLoading, setLeaseLoading] = useState(false);
@@ -38,45 +37,17 @@ const TenantDashboard: React.FC = () => {
     try {
       const user = JSON.parse(userStr);
       setCurrentUser(user);
-      loadTenantProfile();
-      loadTenantLeases();
+      
+      // Load tenant leases and set main loading to false when complete
+      loadTenantLeases().finally(() => {
+        setLoading(false);
+      });
     } catch (error) {
       console.error('Error parsing user data:', error);
+      setLoading(false); // Set loading to false even on error
       router.push('/tenant-login');
     }
   }, [router]);
-
-  // Load tenant profile data
-  const loadTenantProfile = async () => {
-    try {
-      setLoading(true);
-      setError('');
-
-      const accessToken = localStorage.getItem('tenant_access_token');
-      if (!accessToken) {
-        router.push('/tenant-login');
-        return;
-      }
-
-      // Set authorization header
-      // apiClient should handle auth automatically with stored tokens
-      
-      // For now, use mock data since we need to implement proper tenant profile endpoint
-      // In a real app, you'd fetch from: await apiClient.getTenantProfile();
-      
-      setLoading(false);
-    } catch (error: any) {
-      console.error('Error loading tenant profile:', error);
-      setError('Failed to load profile data');
-      setLoading(false);
-      
-      if (error.message?.includes('401') || error.message?.includes('Unauthorized')) {
-        localStorage.removeItem('tenant_access_token');
-        localStorage.removeItem('tenant_user');
-        router.push('/tenant-login');
-      }
-    }
-  };
 
   // Load tenant leases
   const loadTenantLeases = async () => {
@@ -154,8 +125,8 @@ const TenantDashboard: React.FC = () => {
 
   const handlePaymentSuccess = () => {
     setIsPaymentModalOpen(false);
-    // Refresh tenant profile data
-    loadTenantProfile();
+    // Refresh lease data to get updated payment status
+    loadTenantLeases();
   };
 
   // Handle logout
@@ -542,7 +513,7 @@ const TenantDashboard: React.FC = () => {
         <PaymentModal
           isOpen={isPaymentModalOpen}
           onClose={handlePaymentModalClose}
-          tenantProfile={tenantProfile}
+          lease={primaryLease}
           onPaymentSuccess={handlePaymentSuccess}
         />
       </div>

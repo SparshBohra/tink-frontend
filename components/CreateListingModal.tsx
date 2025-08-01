@@ -332,6 +332,7 @@ export default function CreateListingModal({ onClose, onSubmit }: CreateListingM
                       value={formData.available_from}
                       onChange={handleInputChange}
                       className="form-input"
+                      min={new Date().toISOString().split('T')[0]}
                       required
                     />
                   </div>

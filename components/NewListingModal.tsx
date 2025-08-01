@@ -741,7 +741,7 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
 
               <div className={styles.formGroup}>
                           <label htmlFor="available_from">Available From <span className={styles.required}>*</span></label>
-                <input id="available_from" type="date" value={formData.available_from} onChange={(e) => handleInputChange('available_from', e.target.value)} required />
+                <input id="available_from" type="date" value={formData.available_from} onChange={(e) => handleInputChange('available_from', e.target.value)} min={new Date().toISOString().split('T')[0]} required />
               </div>
             </div>
 

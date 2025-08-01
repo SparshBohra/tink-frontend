@@ -82,6 +82,9 @@ function LandlordDashboard() {
   const [statsLoading, setStatsLoading] = useState(true);
   const [statsError, setStatsError] = useState<string | null>(null);
   const [propertyFilter, setPropertyFilter] = useState('All');
+  const [rentHistoryPropertyFilter, setRentHistoryPropertyFilter] = useState('all');
+  const [rentHistoryStatusFilter, setRentHistoryStatusFilter] = useState('all');
+  const [rentHistoryTimeFilter, setRentHistoryTimeFilter] = useState('all');
   const [isTyping, setIsTyping] = useState(true);
   const [messageIndex, setMessageIndex] = useState(0);
   const [isFading, setIsFading] = useState(false);
@@ -536,6 +539,64 @@ function LandlordDashboard() {
     ? properties
     : properties.filter((p) => getPropertyStatus(p) === propertyFilter);
 
+  // Filter payment history based on selected filters
+  const filteredPaymentHistory = useMemo(() => {
+    if (!paymentHistory?.payments) return [];
+    
+    return paymentHistory.payments.filter((payment) => {
+      // Property filter
+      if (rentHistoryPropertyFilter !== 'all') {
+        const selectedProperty = properties.find(p => p.id === parseInt(rentHistoryPropertyFilter));
+        if (!selectedProperty || payment.property_name !== selectedProperty.address) {
+          return false;
+        }
+      }
+      
+      // Status filter
+      if (rentHistoryStatusFilter !== 'all') {
+        const paymentStatus = payment.status === 'succeeded' ? 'collected' : 
+                            payment.status === 'pending' ? 'pending' : 'overdue';
+        if (paymentStatus !== rentHistoryStatusFilter) {
+          return false;
+        }
+      }
+      
+      // Time period filter
+      if (rentHistoryTimeFilter !== 'all') {
+        const paymentDate = new Date(payment.payment_date);
+        const now = new Date();
+        
+        switch (rentHistoryTimeFilter) {
+          case 'this-month':
+            if (paymentDate.getMonth() !== now.getMonth() || paymentDate.getFullYear() !== now.getFullYear()) {
+              return false;
+            }
+            break;
+          case 'last-month':
+            const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1);
+            if (paymentDate.getMonth() !== lastMonth.getMonth() || paymentDate.getFullYear() !== lastMonth.getFullYear()) {
+              return false;
+            }
+            break;
+          case 'last-3-months':
+            const threeMonthsAgo = new Date();
+            threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+            if (paymentDate < threeMonthsAgo) {
+              return false;
+            }
+            break;
+          case 'this-year':
+            if (paymentDate.getFullYear() !== now.getFullYear()) {
+              return false;
+            }
+            break;
+        }
+      }
+      
+      return true;
+    });
+  }, [paymentHistory?.payments, rentHistoryPropertyFilter, rentHistoryStatusFilter, rentHistoryTimeFilter]);
+
   // Helper functions for applications
   const getApplicantInitials = (application: Application) => {
     if (application.tenant_name) {
@@ -889,17 +950,27 @@ function LandlordDashboard() {
                   <div className="filter-controls">
                     <div className="filter-group">
                       <label className="filter-label">Property:</label>
-                      <select className="filter-select">
+                      <select 
+                        className="filter-select"
+                        value={rentHistoryPropertyFilter}
+                        onChange={(e) => setRentHistoryPropertyFilter(e.target.value)}
+                      >
                         <option value="all">All Properties</option>
-                        <option value="sunset-apartments">Sunset Apartments</option>
-                        <option value="oak-street">Oak Street Complex</option>
-                        <option value="downtown-lofts">Downtown Lofts</option>
+                        {properties?.map((property) => (
+                          <option key={property.id} value={property.id}>
+                            {property.address}
+                          </option>
+                        ))}
                       </select>
                     </div>
                     
                     <div className="filter-group">
                       <label className="filter-label">Status:</label>
-                      <select className="filter-select">
+                      <select 
+                        className="filter-select"
+                        value={rentHistoryStatusFilter}
+                        onChange={(e) => setRentHistoryStatusFilter(e.target.value)}
+                      >
                         <option value="all">All Status</option>
                         <option value="collected">Collected</option>
                         <option value="pending">Pending</option>
@@ -909,7 +980,11 @@ function LandlordDashboard() {
                     
                     <div className="filter-group">
                       <label className="filter-label">Time Period:</label>
-                      <select className="filter-select">
+                      <select 
+                        className="filter-select"
+                        value={rentHistoryTimeFilter}
+                        onChange={(e) => setRentHistoryTimeFilter(e.target.value)}
+                      >
                         <option value="all">All Time</option>
                         <option value="this-month">This Month</option>
                         <option value="last-month">Last Month</option>
@@ -918,7 +993,14 @@ function LandlordDashboard() {
                       </select>
                     </div>
                     
-                    <button className="filter-reset-btn">
+                    <button 
+                      className="filter-reset-btn"
+                      onClick={() => {
+                        setRentHistoryPropertyFilter('all');
+                        setRentHistoryStatusFilter('all');
+                        setRentHistoryTimeFilter('all');
+                      }}
+                    >
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
                         <path d="M3 3v5h5"/>
@@ -950,8 +1032,8 @@ function LandlordDashboard() {
                         <tr>
                           <td colSpan={7} className="error-cell">Failed to load payments</td>
                         </tr>
-                      ) : paymentHistory?.payments?.length ? (
-                        paymentHistory.payments.map((payment) => {
+                      ) : filteredPaymentHistory?.length ? (
+                        filteredPaymentHistory.map((payment) => {
                           const paymentDate = new Date(payment.payment_date);
                           const tenantName = payment.tenant_name || 'Unknown Tenant';
                           const initials = tenantName.split(' ').map(n => n[0]).join('').toUpperCase();

@@ -7,6 +7,7 @@ import { Tenant, TenantFormData, Property, Room } from '../../../lib/types';
 import DashboardLayout from '../../../components/DashboardLayout';
 import LoadingSpinner from '../../../components/LoadingSpinner';
 import { phoneUtils } from '../../../lib/utils';
+import USPhoneInput, { validateUSPhone, getUSPhoneError, toE164Format } from '../../../components/USPhoneInput';
 
 export default function EditTenant() {
   const router = useRouter();
@@ -65,26 +66,20 @@ export default function EditTenant() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    
-    if (name === 'phone' || name === 'emergency_contact_phone') {
-      // Format phone number as user types
-      const formattedPhone = phoneUtils.formatPhoneNumber(value);
-      setFormData(prev => ({
-        ...prev,
-        [name]: formattedPhone
-      }));
-      
-      // Validate phone number
-      if (name === 'phone') {
-        const phoneErrorMsg = phoneUtils.getPhoneErrorMessage(formattedPhone);
-        setPhoneError(phoneErrorMsg);
-      }
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        [name]: value
-      }));
-    }
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handlePhoneChange = (value: string) => {
+    setFormData(prev => ({ ...prev, phone: value }));
+    const phoneErrorMsg = getUSPhoneError(value);
+    setPhoneError(phoneErrorMsg);
+  };
+
+  const handleEmergencyPhoneChange = (value: string) => {
+    setFormData(prev => ({ ...prev, emergency_contact_phone: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -116,9 +111,9 @@ export default function EditTenant() {
       const updateData: Partial<TenantFormData> = {
         full_name: formData.full_name,
         email: formData.email,
-        phone: phoneUtils.toE164Format(formData.phone),
+        phone: toE164Format(formData.phone),
         emergency_contact_name: formData.emergency_contact_name || undefined,
-        emergency_contact_phone: formData.emergency_contact_phone ? phoneUtils.toE164Format(formData.emergency_contact_phone) : undefined,
+        emergency_contact_phone: formData.emergency_contact_phone ? toE164Format(formData.emergency_contact_phone) : undefined,
         current_address: formData.current_address || undefined
       };
 
@@ -290,24 +285,13 @@ export default function EditTenant() {
                     <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
                       Phone *
                     </label>
-                    <input
-                      type="tel"
+                    <USPhoneInput
                       name="phone"
                       value={formData.phone}
-                      onChange={handleChange}
+                      onChange={handlePhoneChange}
                       required
-                      style={{
-                        width: '100%',
-                        padding: '10px',
-                        borderRadius: '4px',
-                        border: phoneError ? '2px solid #dc3545' : '1px solid #ddd'
-                      }}
+                      error={phoneError}
                     />
-                    {phoneError && (
-                      <div style={{ color: '#dc3545', fontSize: '0.875rem', marginTop: '5px' }}>
-                        {phoneError}
-                      </div>
-                    )}
                   </div>
 
                   <h3 style={{ fontSize: '1.1rem', marginBottom: '15px', marginTop: '25px', color: '#333' }}>
@@ -337,17 +321,10 @@ export default function EditTenant() {
                       <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
                         Emergency Contact Phone
                       </label>
-                      <input
-                        type="tel"
+                      <USPhoneInput
                         name="emergency_contact_phone"
-                        value={formData.emergency_contact_phone}
-                        onChange={handleChange}
-                        style={{
-                          width: '100%',
-                          padding: '10px',
-                          borderRadius: '4px',
-                          border: '1px solid #ddd'
-                        }}
+                        value={formData.emergency_contact_phone || ''}
+                        onChange={handleEmergencyPhoneChange}
                       />
                     </div>
                   </div>

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { apiClient } from '../lib/api';
 import { PropertyListing } from '../lib/types';
+import USPhoneInput, { validateUSPhone, getUSPhoneError, toE164Format } from './USPhoneInput';
+import MapboxAddressAutocomplete from './MapboxAddressAutocomplete';
 
 interface PublicApplicationFormProps {
   listing: PropertyListing;
@@ -67,6 +69,11 @@ export default function PublicApplicationForm({ listing, onClose, onSubmit }: Pu
   const [otpError, setOtpError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   
+  // Phone validation errors
+  const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [previousLandlordPhoneError, setPreviousLandlordPhoneError] = useState<string | null>(null);
+  const [referencePhoneError, setReferencePhoneError] = useState<string | null>(null);
+  
   // Debug logging
   React.useEffect(() => {
     console.log('PublicApplicationForm mounted for listing:', listing?.title);
@@ -124,6 +131,25 @@ export default function PublicApplicationForm({ listing, onClose, onSubmit }: Pu
         [name]: value
       }));
     }
+  };
+
+  // Phone change handlers
+  const handlePhoneChange = (value: string) => {
+    setFormData(prev => ({ ...prev, phone: value }));
+    const error = getUSPhoneError(value);
+    setPhoneError(error);
+  };
+
+  const handlePreviousLandlordPhoneChange = (value: string) => {
+    setFormData(prev => ({ ...prev, previous_landlord_phone: value }));
+    const error = value ? getUSPhoneError(value) : null; // Optional field
+    setPreviousLandlordPhoneError(error);
+  };
+
+  const handleReferencePhoneChange = (value: string) => {
+    setFormData(prev => ({ ...prev, reference_phone: value }));
+    const error = getUSPhoneError(value);
+    setReferencePhoneError(error);
   };
 
   // Validation function without side effects (for disabled conditions)
@@ -377,14 +403,13 @@ export default function PublicApplicationForm({ listing, onClose, onSubmit }: Pu
               <div className="form-group">
                 <label className="form-label required">Phone *</label>
                 <div className="form-group">
-                  <input
-                    type="tel"
+                  <USPhoneInput
                     name="phone"
                     value={formData.phone}
-                    onChange={handleInputChange}
-                    className="form-input"
+                    onChange={handlePhoneChange}
                     required
                     disabled={isOtpSent}
+                    error={phoneError}
                   />
                   {!isOtpVerified && (
                     <button
@@ -654,14 +679,18 @@ export default function PublicApplicationForm({ listing, onClose, onSubmit }: Pu
                 <h4>Previous Rental History</h4>
                 <div className="form-group">
                   <label className="form-label required">Current/Previous Address *</label>
-                  <input
-                    type="text"
+                  <MapboxAddressAutocomplete
                     name="previous_address"
                     value={formData.previous_address}
-                    onChange={handleInputChange}
-                    className="form-input"
+                    onChange={(address) => setFormData(prev => ({ ...prev, previous_address: address }))}
+                    onAddressSelect={(addressComponents) => {
+                      // For rental history, we just need the full address string
+                      // The onChange above already handles the address value
+                    }}
                     placeholder="Enter your current/previous address"
+                    className="form-input"
                     required
+                    usePlaceName={true}
                   />
                 </div>
 
@@ -704,12 +733,11 @@ export default function PublicApplicationForm({ listing, onClose, onSubmit }: Pu
                   
                   <div className="form-group">
                     <label className="form-label">Previous Landlord Phone</label>
-                    <input
-                      type="tel"
+                    <USPhoneInput
                       name="previous_landlord_phone"
                       value={formData.previous_landlord_phone}
-                      onChange={handleInputChange}
-                      className="form-input"
+                      onChange={handlePreviousLandlordPhoneChange}
+                      error={previousLandlordPhoneError}
                     />
                   </div>
                 </div>
@@ -751,13 +779,12 @@ export default function PublicApplicationForm({ listing, onClose, onSubmit }: Pu
                   
                   <div className="form-group">
                     <label className="form-label required">Reference Phone *</label>
-                    <input
-                      type="tel"
+                    <USPhoneInput
                       name="reference_phone"
                       value={formData.reference_phone}
-                      onChange={handleInputChange}
-                      className="form-input"
+                      onChange={handleReferencePhoneChange}
                       required
+                      error={referencePhoneError}
                     />
                   </div>
                 </div>
@@ -1651,6 +1678,54 @@ export default function PublicApplicationForm({ listing, onClose, onSubmit }: Pu
           color: #6b7280;
           font-size: 11px;
           font-style: italic;
+        }
+
+        /* Mapbox Address Autocomplete Styles */
+        .mapbox-address-container {
+          width: 100%;
+          position: relative;
+        }
+
+        .mapbox-input-wrapper {
+          position: relative;
+          width: 100%;
+        }
+
+        .mapbox-loading {
+          position: absolute;
+          right: 12px;
+          top: 50%;
+          transform: translateY(-50%);
+          pointer-events: none;
+        }
+
+        .mapbox-spinner {
+          width: 16px;
+          height: 16px;
+          animation: spin 1s linear infinite;
+          color: #6b7280;
+        }
+
+        .mapbox-warning {
+          margin-top: 4px;
+          color: #f59e0b;
+          font-size: 12px;
+        }
+
+        .field-error {
+          margin-top: 4px;
+          color: #ef4444;
+          font-size: 12px;
+          font-weight: 500;
+        }
+
+        @keyframes spin {
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(360deg);
+          }
         }
 
         @media (max-width: 768px) {

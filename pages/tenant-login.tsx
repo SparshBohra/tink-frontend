@@ -4,6 +4,7 @@ import Head from 'next/head';
 import { apiClient } from '../lib/api';
 import { TenantOtpResponse, TenantAuthResponse, TenantProfileData } from '../lib/types';
 import TenantProfileSelector from '../components/TenantProfileSelector';
+import USPhoneInput, { validateUSPhone, getUSPhoneError, toE164Format } from '../components/USPhoneInput';
 
 interface FormData {
   phoneNumber: string;
@@ -35,35 +36,8 @@ const TenantLogin: React.FC = () => {
   const [tenantProfiles, setTenantProfiles] = useState<TenantProfileData[]>([]);
   const [verifiedPhone, setVerifiedPhone] = useState<string>('');
 
-  // Format phone number as user types
-  const formatPhoneNumber = (value: string): string => {
-    // Remove all non-digits
-    const digits = value.replace(/\D/g, '');
-    
-    // Format based on length
-    if (digits.length <= 3) {
-      return digits;
-    } else if (digits.length <= 6) {
-      return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
-    } else if (digits.length <= 10) {
-      return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
-    } else {
-      // Limit to 10 digits
-      return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
-    }
-  };
-
-  // Convert formatted phone to E.164 format
-  const toE164Format = (formattedPhone: string): string => {
-    const digits = formattedPhone.replace(/\D/g, '');
-    return digits.length === 10 ? `+1${digits}` : formattedPhone;
-  };
-
-  // Validate phone number
-  const validatePhoneNumber = (phone: string): boolean => {
-    const digits = phone.replace(/\D/g, '');
-    return digits.length === 10;
-  };
+  // State for phone error
+  const [phoneError, setPhoneError] = useState<string | null>(null);
 
   // Validate OTP code
   const validateOtpCode = (otp: string): boolean => {
@@ -71,9 +45,12 @@ const TenantLogin: React.FC = () => {
   };
 
   // Handle phone number input
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatPhoneNumber(e.target.value);
-    setFormData(prev => ({ ...prev, phoneNumber: formatted }));
+  const handlePhoneChange = (value: string) => {
+    setFormData(prev => ({ ...prev, phoneNumber: value }));
+    
+    // Validate phone number and set error
+    const phoneErrorMsg = getUSPhoneError(value);
+    setPhoneError(phoneErrorMsg);
     
     // Clear phone number error when user starts typing
     if (errors.phoneNumber) {
@@ -114,7 +91,7 @@ const TenantLogin: React.FC = () => {
     setErrors({});
     
     // Validate phone number
-    if (!validatePhoneNumber(formData.phoneNumber)) {
+    if (!validateUSPhone(formData.phoneNumber)) {
       setErrors({ phoneNumber: 'Please enter a valid 10-digit phone number' });
       return;
     }
@@ -403,22 +380,18 @@ const TenantLogin: React.FC = () => {
                   <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700">
                     Phone Number
                   </label>
-                  <div className="mt-1 relative">
-                    <input
+                  <div className="mt-1">
+                    <USPhoneInput
                       id="phoneNumber"
-                      type="tel"
+                      name="phoneNumber"
                       value={formData.phoneNumber}
                       onChange={handlePhoneChange}
                       placeholder="(555) 123-4567"
-                      className={`appearance-none block w-full px-3 py-2 border rounded-md placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${
-                        errors.phoneNumber ? 'border-red-300' : 'border-gray-300'
-                      }`}
                       disabled={loading}
+                      error={errors.phoneNumber || phoneError}
+                      required
                     />
                   </div>
-                  {errors.phoneNumber && (
-                    <p className="mt-2 text-sm text-red-600">{errors.phoneNumber}</p>
-                  )}
                 </div>
 
                 {errors.general && (
