@@ -601,7 +601,7 @@ export interface PublicApplicationData {
     annual_income?: number;
   };
   [key: string]: any; // For additional form fields
-} 
+}
 
 // Stripe Connect Types
 export interface StripeConnectAccountData {
@@ -680,7 +680,7 @@ export interface LandlordSignupData {
   username: string;
   password: string;
   password_confirm: string;
-} 
+}
 
 // PAYMENT TYPES FOR STRIPE INTEGRATION
 
@@ -914,4 +914,45 @@ export interface TenantProfile {
 export interface TenantLogoutResponse {
   success: boolean;
   message: string;
+}
+
+// Search result types
+export interface SearchTenantResult {
+  id: number;
+  full_name: string;
+  email: string;
+  phone: string;
+  type: 'tenant';
+  match_field: 'name' | 'email';
+}
+
+export interface SearchPropertyResult {
+  id: number;
+  name: string;
+  address_line1: string;
+  city: string;
+  state: string;
+  full_address: string;
+  property_type: string;
+  type: 'property';
+  match_field: 'name' | 'address' | 'city' | 'state';
+}
+
+export interface SearchApplicationResult {
+  id: number;
+  tenant_name: string;
+  tenant_email: string;
+  property_name: string;
+  property_address: string;
+  status: string;
+  desired_move_in_date: string;
+  type: 'application';
+  match_field: 'tenant_name' | 'tenant_email';
+}
+
+export interface GlobalSearchResponse {
+  tenants: SearchTenantResult[];
+  properties: SearchPropertyResult[];
+  applications: SearchApplicationResult[];
+  total_results: number;
 } 

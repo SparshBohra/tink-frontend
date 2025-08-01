@@ -49,7 +49,8 @@ import {
   TenantAuthResponse,
   TenantProfile,
   TenantLogoutResponse,
-  TenantProfileSelectionResponse
+  TenantProfileSelectionResponse,
+  GlobalSearchResponse
 } from './types';
 
 // Smart environment-based API URL configuration
@@ -311,6 +312,12 @@ class ApiClient {
 
   async getApplicationAnalytics(): Promise<any> {
     const response = await this.api.get('/dashboard/application-analytics/');
+    return response.data;
+  }
+
+  // Global search endpoint
+  async globalSearch(query: string): Promise<GlobalSearchResponse> {
+    const response = await this.api.get(`/dashboard/search/?q=${encodeURIComponent(query)}`);
     return response.data;
   }
 

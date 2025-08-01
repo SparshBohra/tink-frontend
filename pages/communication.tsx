@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import DashboardLayout from '../components/DashboardLayout';
+import LoadingSpinner from '../components/LoadingSpinner';
 import { withAuth } from '../lib/auth-context';
 import { apiClient } from '../lib/api';
 import { phoneUtils } from '../lib/utils';
@@ -551,23 +552,7 @@ function CommunicationPage() {
         title="Communication"
         subtitle="Loading communication data..."
       >
-        <div className="loading-state">
-          <div className="loading-spinner">Loading communication...</div>
-        </div>
-        
-        <style jsx>{`
-          .loading-state {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 400px;
-          }
-          
-          .loading-spinner {
-            font-size: 18px;
-            color: var(--gray-600);
-          }
-        `}</style>
+        <LoadingSpinner message="Loading communication..." />
       </DashboardLayout>
     );
   }

@@ -360,20 +360,6 @@ function Tenants() {
         subtitle="Manage active tenants across all properties"
       >
         <LoadingSpinner />
-        
-        <style jsx>{`
-          .loading-state {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 400px;
-          }
-          
-          .loading-spinner {
-            font-size: 18px;
-            color: var(--gray-600);
-          }
-        `}</style>
       </DashboardLayout>
     );
   }

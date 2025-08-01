@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import { useAuth } from '../lib/auth-context';
 import { useTheme } from '../lib/theme-context';
 import { apiClient } from '../lib/api';
+import { GlobalSearchResponse, SearchTenantResult, SearchPropertyResult, SearchApplicationResult } from '../lib/types';
 
 interface TopBarProps {
   onSidebarToggle: () => void;
@@ -48,6 +49,9 @@ export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarPr
   const { user, isAdmin, isLandlord, isManager, logout } = useAuth();
   const { isDarkMode, toggleDarkMode } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<GlobalSearchResponse | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showSearchResults, setShowSearchResults] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -56,6 +60,8 @@ export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarPr
   // Refs for click outside detection
   const notificationsRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLDivElement>(null);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Handle outside clicks and auto-close functionality
   useEffect(() => {
@@ -71,6 +77,11 @@ export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarPr
       if (showUserMenu && userMenuRef.current && !userMenuRef.current.contains(target)) {
         setShowUserMenu(false);
       }
+
+      // Close search results if clicking outside search container
+      if (showSearchResults && searchRef.current && !searchRef.current.contains(target)) {
+        setShowSearchResults(false);
+      }
     };
 
     // Add event listener
@@ -80,20 +91,75 @@ export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarPr
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [showNotifications, showUserMenu]);
+  }, [showNotifications, showUserMenu, showSearchResults]);
 
   // Auto-close menus when other menus are opened
   useEffect(() => {
     if (showNotifications) {
       setShowUserMenu(false);
+      setShowSearchResults(false);
     }
   }, [showNotifications]);
 
   useEffect(() => {
     if (showUserMenu) {
       setShowNotifications(false);
+      setShowSearchResults(false);
     }
   }, [showUserMenu]);
+
+  useEffect(() => {
+    if (showSearchResults) {
+      setShowNotifications(false);
+      setShowUserMenu(false);
+    }
+  }, [showSearchResults]);
+
+  // Debounced search functionality
+  useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    if (searchQuery.trim().length >= 2) {
+      setIsSearching(true);
+      searchTimeoutRef.current = setTimeout(async () => {
+        try {
+          const results = await apiClient.globalSearch(searchQuery);
+          setSearchResults(results);
+          setShowSearchResults(true);
+        } catch (error) {
+          console.error('Search error:', error);
+          setSearchResults(null);
+        } finally {
+          setIsSearching(false);
+        }
+      }, 300); // 300ms debounce
+    } else {
+      setSearchResults(null);
+      setShowSearchResults(false);
+      setIsSearching(false);
+    }
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [searchQuery]);
+
+  // Navigate to search result
+  const handleResultClick = (result: SearchTenantResult | SearchPropertyResult | SearchApplicationResult) => {
+    if (result.type === 'tenant') {
+      router.push(`/tenants/${result.id}`);
+    } else if (result.type === 'property') {
+      router.push(`/properties/${result.id}`);
+    } else if (result.type === 'application') {
+      router.push(`/applications?highlight=${result.id}`);
+    }
+    setShowSearchResults(false);
+    setSearchQuery('');
+  };
 
   // Fetch real notifications data
   useEffect(() => {
@@ -247,7 +313,7 @@ export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarPr
               {getTimeBasedGreeting()}, {user?.full_name?.split(' ')[0] || 'User'}
             </span>
           </div>
-          <div className="search-container">
+          <div className="search-container" ref={searchRef}>
             <div className="search-input-wrapper">
               <span className="search-icon"><SearchIcon /></span>
               <input
@@ -258,6 +324,58 @@ export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarPr
                 className="search-input"
               />
             </div>
+            {showSearchResults && (
+              <div className="search-results-dropdown">
+                <div className="search-results-header">
+                  <h3>Search Results</h3>
+                  {isSearching && <span className="search-loading">Searching...</span>}
+                </div>
+                <div className="search-results-list">
+                  {searchResults?.tenants && searchResults.tenants.length > 0 && (
+                    <div className="search-results-section">
+                      <h4>Tenants</h4>
+                      {searchResults.tenants.map((tenant) => (
+                                                 <div key={tenant.id} className="search-result-item" onClick={() => handleResultClick(tenant)}>
+                           <span className="result-icon"><BriefcaseIcon /></span>
+                           <span className="result-text">{tenant.full_name}</span>
+                         </div>
+                      ))}
+                    </div>
+                  )}
+                  {searchResults?.properties && searchResults.properties.length > 0 && (
+                    <div className="search-results-section">
+                      <h4>Properties</h4>
+                      {searchResults.properties.map((property) => (
+                                                 <div key={property.id} className="search-result-item" onClick={() => handleResultClick(property)}>
+                           <span className="result-icon"><HouseIcon /></span>
+                           <span className="result-text">{property.name}</span>
+                         </div>
+                      ))}
+                    </div>
+                  )}
+                  {searchResults?.applications && searchResults.applications.length > 0 && (
+                    <div className="search-results-section">
+                      <h4>Applications</h4>
+                      {searchResults.applications.map((application) => (
+                        <div key={application.id} className="search-result-item" onClick={() => handleResultClick(application)}>
+                          <span className="result-icon"><BriefcaseIcon /></span>
+                          <span className="result-text">{application.property_name || 'Unknown Property'} - {application.tenant_name || 'Unknown Tenant'}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                                     {searchResults?.total_results === 0 && (
+                    <div className="search-result-item">
+                      <span className="result-icon"><SparklesIcon /></span>
+                      <span className="result-text">No results found for "{searchQuery}"</span>
+                    </div>
+                  )}
+                </div>
+                <div className="search-results-footer">
+                  <button className="view-all-btn">View all results</button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -416,6 +534,7 @@ export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarPr
         .search-container {
           flex-grow: 1;
           max-width: 600px;
+          position: relative;
         }
 
         .search-input-wrapper {
@@ -456,6 +575,105 @@ export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarPr
           border-color: #667eea;
           box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
           background: white;
+        }
+
+        .search-results-dropdown {
+          position: absolute;
+          top: calc(100% + 8px);
+          left: 0;
+          width: 100%;
+          max-height: 300px;
+          overflow-y: auto;
+          background: white;
+          border: 1px solid #e5e7eb;
+          border-radius: 16px;
+          box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+          z-index: 1000;
+          max-height: 400px;
+          overflow: hidden;
+        }
+
+        .search-results-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 20px 24px 16px;
+          border-bottom: 1px solid #f3f4f6;
+        }
+
+        .search-results-header h3 {
+          font-size: 16px;
+          font-weight: 600;
+          color: #1f2937;
+          margin: 0;
+        }
+
+        .search-loading {
+          font-size: 14px;
+          color: #6b7280;
+        }
+
+        .search-results-list {
+          padding: 0 24px 16px;
+        }
+
+        .search-results-section {
+          margin-bottom: 16px;
+        }
+
+        .search-results-section h4 {
+          font-size: 14px;
+          font-weight: 600;
+          color: #4b5563;
+          margin-bottom: 8px;
+          padding-bottom: 8px;
+          border-bottom: 1px solid #f3f4f6;
+        }
+
+        .search-result-item {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 12px 0;
+          cursor: pointer;
+          transition: background 0.2s ease;
+        }
+
+        .search-result-item:hover {
+          background: #f9fafb;
+        }
+
+        .result-icon {
+          color: #667eea;
+          font-size: 20px;
+        }
+
+        .result-text {
+          font-size: 14px;
+          color: #374151;
+          flex-grow: 1;
+        }
+
+        .search-results-footer {
+          padding: 16px 24px;
+          border-top: 1px solid #f3f4f6;
+        }
+
+        .view-all-btn {
+          width: 100%;
+          padding: 8px;
+          background: none;
+          border: none;
+          color: #667eea;
+          font-size: 14px;
+          font-weight: 500;
+          cursor: pointer;
+          border-radius: 8px;
+          transition: background 0.2s ease;
+        }
+
+        .view-all-btn:hover {
+          background: #f3f4f6;
         }
 
         .topbar-center {
