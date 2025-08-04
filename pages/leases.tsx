@@ -159,8 +159,9 @@ function Leases() {
   const handleDownloadLease = async (lease: Lease) => {
     try {
       setError(null);
-      await apiClient.downloadDraftLease(lease.id);
-      alert('Lease downloaded successfully!');
+      const downloadData = await apiClient.downloadDraftLease(lease.id);
+      // Open download URL in new tab
+      window.open(downloadData.download_url, '_blank');
     } catch (e: any) {
       setError(e.message || 'Failed to download lease PDF');
     }
@@ -494,7 +495,7 @@ function Leases() {
                                 daysToExpiry <= 30 ? 'critical' : 
                                 daysToExpiry <= 90 ? 'warning' : 'active'
                               }`}>
-                                {lease.status === 'draft' ? 'Draft' :
+                                {lease.status === 'draft' ? 'Draft' : 
                                  lease.status === 'sent_to_tenant' ? 'Sent to Tenant' :
                                  lease.status === 'signed' ? 'Signed' :
                                  lease.status === 'active' ? 'Active' :

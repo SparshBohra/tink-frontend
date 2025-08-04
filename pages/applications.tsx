@@ -1137,8 +1137,9 @@ function Applications() {
       return;
     }
     try {
-      await apiClient.downloadDraftLease(application.lease_id);
-      alert('Lease downloaded successfully!');
+      const downloadData = await apiClient.downloadDraftLease(application.lease_id);
+      // Open download URL in new tab
+      window.open(downloadData.download_url, '_blank');
     } catch (error: any) {
       alert(`Failed to download lease: ${error.message}`);
     }

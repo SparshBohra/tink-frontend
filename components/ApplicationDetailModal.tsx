@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Application, Property, Room } from '../lib/types';
 import { formatPriorityScore, getStatusDisplayText } from '../lib/applicationUtils';
 import StatusBadge from './StatusBadge';
+import { apiClient } from '../lib/api';
 
 interface ApplicationDetailModalProps {
   isOpen: boolean;
@@ -52,7 +53,7 @@ const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
       type: 'application_created',
       title: 'Application Submitted',
       description: `${app.tenant_name} submitted their rental application`,
-      timestamp: app.created_at,
+      timestamp: app.created_at || new Date().toISOString(),
       icon: '📝',
       color: '#3b82f6'
     });
@@ -64,7 +65,7 @@ const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
         type: 'priority_calculated',
         title: 'Priority Score Calculated',
         description: `Assigned priority score of ${app.priority_score}/100 based on application criteria`,
-        timestamp: app.created_at,
+        timestamp: app.created_at || new Date().toISOString(),
         icon: '📊',
         color: '#8b5cf6'
       });
@@ -77,7 +78,7 @@ const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
         type: 'conflict_detected',
         title: 'Conflict Detected',
         description: `Application conflicts with ${app.conflicting_applications?.length || 0} other applications`,
-        timestamp: app.created_at,
+        timestamp: app.created_at || new Date().toISOString(),
         icon: '⚠️',
         color: '#f59e0b'
       });
@@ -90,7 +91,7 @@ const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
         type: 'room_recommended',
         title: 'Room Recommendations Generated',
         description: `${app.recommended_rooms.length} compatible rooms identified`,
-        timestamp: app.created_at,
+        timestamp: app.created_at || new Date().toISOString(),
         icon: '🏠',
         color: '#10b981'
       });
@@ -98,20 +99,59 @@ const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
 
     // Status changes
     if (app.status !== 'pending') {
+      const statusDescriptions: Record<string, string> = {
+        'under_review': 'Application is being reviewed by the property manager',
+        'approved': 'Application has been approved and is ready for lease generation',
+        'qualified': 'Applicant has been qualified and room assignment is pending', 
+        'room_assigned': 'Room has been assigned to the applicant',
+        'lease_created': 'Lease agreement has been generated',
+        'rejected': 'Application has been rejected'
+      };
+
       events.push({
         id: 'status_change',
-        type: 'status_changed',
-        title: `Status Changed to ${getStatusDisplayText(app.status)}`,
-        description: app.decision_notes || 'Status updated',
-        timestamp: app.decision_date || app.updated_at,
-        icon: app.status === 'approved' ? '✅' : app.status === 'rejected' ? '❌' : '🔄',
-        color: app.status === 'approved' ? '#10b981' : app.status === 'rejected' ? '#ef4444' : '#6b7280'
+        type: 'status_updated',
+        title: `Status Updated: ${app.status.replace('_', ' ').toUpperCase()}`,
+        description: statusDescriptions[app.status] || `Application status changed to ${app.status}`,
+        timestamp: app.updated_at || app.created_at || new Date().toISOString(),
+        icon: app.status === 'rejected' ? '❌' : app.status === 'approved' ? '✅' : '🔄',
+        color: app.status === 'rejected' ? '#ef4444' : app.status === 'approved' ? '#10b981' : '#3b82f6'
       });
     }
 
-    // Sort by timestamp
+    // Sort events by timestamp
     events.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    
     setTimeline(events);
+  };
+
+  // Handler functions for lease document actions
+  const handleDownloadLease = async (leaseId: number) => {
+    try {
+      const downloadData = await apiClient.downloadDraftLease(leaseId);
+      window.open(downloadData.download_url, '_blank');
+    } catch (error: any) {
+      alert(`Failed to download lease: ${error.message}`);
+    }
+  };
+
+  const handleEditLease = (leaseId: number) => {
+    window.location.href = `/leases/${leaseId}`;
+  };
+
+  const handleActivateLease = async (leaseId: number) => {
+    try {
+      await apiClient.activateLease(leaseId);
+      alert('Lease activated successfully!');
+      // Refresh the application data to show updated status
+      window.location.reload();
+    } catch (error: any) {
+      alert(`Failed to activate lease: ${error.message}`);
+    }
+  };
+
+  const handleViewLease = (leaseId: number) => {
+    window.location.href = `/leases/${leaseId}`;
   };
 
   const getProperty = () => {
@@ -371,13 +411,86 @@ const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
             <div className="documents-tab">
               <h3 className="section-title">Documents & Attachments</h3>
               <div className="documents-section">
+                {application.lease && application.lease.status ? (
+                  <div className="documents-list">
+                    <div className="document-item">
+                      <div className="document-info">
+                        <div className="document-icon">📄</div>
+                        <div className="document-details">
+                          <h4 className="document-name">Lease Agreement</h4>
+                          <div className="document-meta">
+                            <span className="document-type">PDF Document</span>
+                            <span className="document-status">Status: {application.lease.status.replace('_', ' ').toUpperCase()}</span>
+                      </div>
+                          <div className="document-info-row">
+                            <span>Monthly Rent: ${application.lease.monthly_rent}</span>
+                            <span>Security Deposit: ${application.lease.security_deposit}</span>
+                    </div>
+                          <div className="document-info-row">
+                            <span>Start Date: {new Date(application.lease.start_date).toLocaleDateString()}</span>
+                            <span>End Date: {new Date(application.lease.end_date).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                      </div>
+                      <div className="document-actions">
+                        {application.lease.status === 'draft' && (
+                          <>
+                            <button 
+                              className="doc-action-btn download"
+                              onClick={() => handleDownloadLease(application.lease_id)}
+                              title="Download lease document"
+                            >
+                              📥 Download
+                            </button>
+                            <button 
+                              className="doc-action-btn edit"
+                              onClick={() => handleEditLease(application.lease_id)}
+                              title="Edit lease terms"
+                            >
+                              ✏️ Edit
+                            </button>
+                          </>
+                        )}
+                        {application.lease.status === 'sent_to_tenant' && (
+                          <div className="lease-status-info">
+                            <span className="status-badge sent">📧 Sent to Tenant</span>
+                            <small>Awaiting tenant signature</small>
+                      </div>
+                    )}
+                        {application.lease.status === 'signed' && (
+                          <div className="lease-status-info">
+                            <span className="status-badge signed">✍️ Signed by Tenant</span>
+                            <button 
+                              className="doc-action-btn activate"
+                              onClick={() => handleActivateLease(application.lease_id)}
+                            >
+                              ✅ Activate Lease
+                            </button>
+                      </div>
+                    )}
+                        {application.lease.status === 'active' && (
+                          <div className="lease-status-info">
+                            <span className="status-badge active">✅ Active Lease</span>
+                            <button 
+                              className="doc-action-btn view"
+                              onClick={() => handleViewLease(application.lease_id)}
+                            >
+                              👁️ View Details
+                            </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+                ) : (
                 <div className="documents-placeholder">
                   <div className="placeholder-icon">📄</div>
                   <div className="placeholder-text">
                     <h4>No Documents Available</h4>
-                    <p>Document management functionality will be available in a future update.</p>
+                      <p>Generate a lease for this application to see documents here.</p>
                   </div>
                 </div>
+                )}
               </div>
             </div>
           )}
@@ -960,6 +1073,163 @@ const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
           justify-content: center;
           align-items: center;
           min-height: 300px;
+        }
+
+        .documents-list {
+          width: 100%;
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+
+        .document-item {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          padding: 20px;
+          background: white;
+          border: 1px solid #e5e7eb;
+          border-radius: 8px;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .document-info {
+          display: flex;
+          gap: 16px;
+          flex: 1;
+        }
+
+        .document-icon {
+          font-size: 32px;
+          flex-shrink: 0;
+        }
+
+        .document-details {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .document-name {
+          font-size: 18px;
+          font-weight: 600;
+          color: #1f2937;
+          margin: 0;
+        }
+
+        .document-meta {
+          display: flex;
+          gap: 16px;
+        }
+
+        .document-type {
+          font-size: 14px;
+          color: #6b7280;
+        }
+
+        .document-status {
+          font-size: 14px;
+          font-weight: 500;
+          color: #3b82f6;
+        }
+
+        .document-info-row {
+          display: flex;
+          gap: 24px;
+          font-size: 14px;
+          color: #6b7280;
+        }
+
+        .document-actions {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          align-items: flex-end;
+        }
+
+        .doc-action-btn {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 8px 16px;
+          border: none;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 14px;
+          font-weight: 500;
+          transition: all 0.2s;
+          white-space: nowrap;
+        }
+
+        .doc-action-btn.download {
+          background: #3b82f6;
+          color: white;
+        }
+
+        .doc-action-btn.download:hover {
+          background: #2563eb;
+        }
+
+        .doc-action-btn.edit {
+          background: #f59e0b;
+          color: white;
+        }
+
+        .doc-action-btn.edit:hover {
+          background: #d97706;
+        }
+
+        .doc-action-btn.activate {
+          background: #10b981;
+          color: white;
+        }
+
+        .doc-action-btn.activate:hover {
+          background: #059669;
+        }
+
+        .doc-action-btn.view {
+          background: #6b7280;
+          color: white;
+        }
+
+        .doc-action-btn.view:hover {
+          background: #4b5563;
+        }
+
+        .lease-status-info {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          align-items: flex-end;
+        }
+
+        .status-badge {
+          padding: 4px 12px;
+          border-radius: 12px;
+          font-size: 12px;
+          font-weight: 500;
+          white-space: nowrap;
+        }
+
+        .status-badge.sent {
+          background: #dbeafe;
+          color: #1d4ed8;
+        }
+
+        .status-badge.signed {
+          background: #fef3c7;
+          color: #d97706;
+        }
+
+        .status-badge.active {
+          background: #dcfce7;
+          color: #166534;
+        }
+
+        .lease-status-info small {
+          font-size: 12px;
+          color: #6b7280;
         }
 
         .documents-placeholder {

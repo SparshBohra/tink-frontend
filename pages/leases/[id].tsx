@@ -176,8 +176,9 @@ function LeaseDetail() {
   const handleDownloadLease = async () => {
     if (!lease) return;
     try {
-      await apiClient.downloadDraftLease(lease.id);
-      alert('Lease downloaded successfully!');
+      const downloadData = await apiClient.downloadDraftLease(lease.id);
+      // Open download URL in new tab
+      window.open(downloadData.download_url, '_blank');
     } catch (error: any) {
       alert(`Failed to download lease: ${error.message}`);
     }
