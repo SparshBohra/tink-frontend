@@ -6,8 +6,8 @@ import DashboardLayout from '../components/DashboardLayout';
 import { withAuth } from '../lib/auth-context';
 import { useAuth } from '../lib/auth-context';
 import ApplicationDetailModal from '../components/ApplicationDetailModal';
-import { Application, Property, Room, DashboardStats, Manager, PaymentSummaryResponse, PaymentHistoryResponse } from '../lib/types';
-import { apiClient } from '../lib/api';
+import { Application, Property, Room, DashboardStats, Manager, PaymentSummaryResponse, PaymentHistoryResponse, Vendor } from '../lib/types';
+import { apiClient, expenseApi } from '../lib/api';
 
 // Icon Components
 const SparklesIcon = () => (
@@ -95,6 +95,7 @@ function LandlordDashboard() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
   const [managers, setManagers] = useState<Manager[]>([]);
+  const [vendors, setVendors] = useState<Vendor[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [dataError, setDataError] = useState<string | null>(null);
@@ -148,16 +149,18 @@ function LandlordDashboard() {
         setDataError(null);
         
         // Fetch all data in parallel
-        const [propertiesResponse, applicationsResponse, managersResponse, roomsResponse] = await Promise.all([
+        const [propertiesResponse, applicationsResponse, managersResponse, vendorsResponse, roomsResponse] = await Promise.all([
           apiClient.getProperties(),
           apiClient.getApplications({ status: 'pending' }), // Only get pending applications
           apiClient.getManagers(),
+          expenseApi.getVendors().catch(() => []), // Get vendors, fallback to empty array on error
           apiClient.getRooms()
         ]);
         
         setProperties(propertiesResponse.results || []);
         setApplications(applicationsResponse.results || []);
         setManagers(managersResponse.results || []);
+        setVendors(vendorsResponse || []);
         setRooms(roomsResponse.results || []);
         
       } catch (error: any) {
@@ -167,6 +170,7 @@ function LandlordDashboard() {
         setProperties([]);
         setApplications([]);
         setManagers([]);
+        setVendors([]);
         setRooms([]);
       } finally {
         setDataLoading(false);
@@ -351,6 +355,7 @@ function LandlordDashboard() {
   const propertiesCount = useCounterAnimation(dashboardStats?.properties.total || 0, 1500);
   const occupancyRate = useCounterAnimation(dashboardStats?.rooms.occupancy_rate || 0, 2000);
   const teamCount = useCounterAnimation(dashboardStats?.managers.total || 0, 1800);
+  const vendorsCount = useCounterAnimation(vendors.length || 0, 1900);
   const revenueValue = useCounterAnimation(paymentSummary?.summary.current_month_total_dollars || 0, 2200, true);
   
   // Dynamic metrics based on real data
@@ -828,7 +833,37 @@ function LandlordDashboard() {
           <div className="metric-card">
             <div className="metric-header">
               <div className="metric-info">
-                <h3 className="metric-title">My Team</h3>
+                <h3 className="metric-title">Vendors</h3>
+                <div className="metric-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 15.999h.01"/>
+                    <path d="M21 12.999h.01"/>
+                    <path d="M21 8.999h.01"/>
+                    <path d="M3 7l4-4h14l-4 4H3z"/>
+                    <path d="M17 7v10c0 .55-.45 1-1 1H8c-.55 0-1-.45-1-1V7"/>
+                    <line x1="5" y1="7" x2="19" y2="7"/>
+                  </svg>
+                </div>
+              </div>
+            </div>
+            <div className="metric-content">
+              <div className="metric-value">{statsLoading ? '...' : vendorsCount}</div>
+              <div className="metric-subtitle">Active vendors</div>
+              <div className="metric-progress">
+                <span className="metric-label">
+                  {statsLoading ? 'Loading...' : 'service providers'}
+                </span>
+                <span className="metric-change positive">
+                  +{vendorsCount > 0 ? '1' : '0'}
+                </span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="metric-card">
+            <div className="metric-header">
+              <div className="metric-info">
+                <h3 className="metric-title">Vendors (Removed)</h3>
                 <div className="metric-icon">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
@@ -1286,44 +1321,65 @@ function LandlordDashboard() {
             </div>
           </div>
 
-          {/* My Teams Section */}
-          <div className="teams-section">
+          {/* Vendors Section */}
+          <div className="vendors-section">
             <div className="section-header">
               <div>
-                <h2 className="section-title">My Teams</h2>
-                <p className="section-subtitle">Manage your property management team</p>
+                <h2 className="section-title">My Vendors</h2>
+                <p className="section-subtitle">Manage your service providers and contractors</p>
               </div>
               <button 
                 className="view-all-btn"
-                onClick={() => router.push('/managers')}
+                onClick={() => router.push('/tenants')}
               >
-                Manage Team
+                Manage Vendors
               </button>
             </div>
 
-            <div className="teams-scroll-container">
-              <div className="teams-list">
-                {managers.map((manager) => (
-                  <div key={manager.id} className="team-member-row">
-                    <div className="member-avatar">{getManagerInitials(manager)}</div>
-                    <div className="member-info">
-                      <div className="member-name">{manager.full_name}</div>
-                      <div className="member-role">{getManagerRole(manager)}</div>
-                      <div className="member-properties">
-                        {properties.length} properties managed
+            <div className="vendors-scroll-container">
+              <div className="vendors-list">
+                {vendors.length > 0 ? vendors.slice(0, 5).map((vendor) => (
+                  <div key={vendor.id} className="vendor-row">
+                    <div className="vendor-avatar">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                      </svg>
+                    </div>
+                    <div className="vendor-info">
+                      <div className="vendor-name">{vendor.name}</div>
+                      <div className="vendor-type">{vendor.vendor_type_display}</div>
+                      <div className="vendor-expenses">
+                        Total expenses: ${vendor.total_expense_amount || 0}
                       </div>
-                      <div className="member-joined">Email: <span className="date-highlight">{manager.email}</span></div>
+                      <div className="vendor-contact">
+                        {vendor.contact_email && (
+                          <span className="date-highlight">{vendor.contact_email}</span>
+                        )}
+                      </div>
                     </div>
-                    <div className="member-status">
-                      <span className={`status-badge-small ${getManagerStatus(manager).toLowerCase()}`}>{getManagerStatus(manager)}</span>
+                    <div className="vendor-status">
+                      <span className={`status-badge-small ${vendor.is_active ? 'active' : 'inactive'}`}>
+                        {vendor.is_active ? 'Active' : 'Inactive'}
+                      </span>
                     </div>
-                    <button className="contact-btn-small">
+                    <button className="contact-btn-small" onClick={() => vendor.contact_phone && window.open(`tel:${vendor.contact_phone}`)}>
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
                       </svg>
                     </button>
                   </div>
-                ))}
+                )) : (
+                  <div className="empty-vendors">
+                    <p>No vendors added yet</p>
+                    <button 
+                      className="add-vendor-btn"
+                      onClick={() => router.push('/tenants')}
+                    >
+                      Add First Vendor
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -2229,7 +2285,7 @@ function LandlordDashboard() {
           margin-top: 32px;
         }
 
-        .applications-section, .teams-section {
+        .applications-section, .vendors-section {
           background: white;
           border-radius: 6px;
           padding: 20px;
@@ -2241,7 +2297,7 @@ function LandlordDashboard() {
           flex: 2;
         }
 
-        .teams-section {
+        .vendors-section {
           flex: 1;
         }
 
@@ -3250,6 +3306,122 @@ function LandlordDashboard() {
         :global(.dark-mode) .status-badge.overdue {
           background: rgba(239, 68, 68, 0.3) !important;
           color: #ef4444 !important;
+        }
+
+        .vendors-scroll-container {
+          height: 320px;
+          overflow-y: auto;
+          margin-top: 16px;
+        }
+
+        .vendors-scroll-container::-webkit-scrollbar {
+          width: 6px;
+        }
+
+        .vendors-scroll-container::-webkit-scrollbar-track {
+          background: rgba(226, 232, 240, 0.3);
+          border-radius: 3px;
+        }
+
+        .vendors-scroll-container::-webkit-scrollbar-thumb {
+          background: rgba(156, 163, 175, 0.5);
+          border-radius: 3px;
+        }
+
+        .vendors-list {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .vendor-row {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          padding: 12px;
+          border-radius: 6px;
+          transition: all 0.2s ease;
+          border: 1px solid transparent;
+        }
+
+        .vendor-row:hover {
+          background-color: #f9fafb;
+          border-color: #e2e8f0;
+        }
+
+        .vendor-avatar {
+          width: 40px;
+          height: 40px;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background-color: #f0f9ff;
+          color: #0284c7;
+          font-weight: 600;
+          flex-shrink: 0;
+        }
+
+        .vendor-info {
+          flex: 1;
+          min-width: 0;
+        }
+
+        .vendor-name {
+          font-size: 14px;
+          font-weight: 600;
+          color: #1e293b;
+          margin-bottom: 2px;
+        }
+
+        .vendor-type {
+          font-size: 12px;
+          color: #64748b;
+          margin-bottom: 3px;
+        }
+
+        .vendor-expenses {
+          font-size: 11px;
+          color: #059669;
+          font-weight: 500;
+          margin-bottom: 2px;
+        }
+
+        .vendor-contact {
+          font-size: 11px;
+          color: #64748b;
+        }
+
+        .vendor-status {
+          flex-shrink: 0;
+        }
+
+        .empty-vendors {
+          text-align: center;
+          padding: 40px 20px;
+          color: #64748b;
+        }
+
+        .empty-vendors p {
+          margin: 0 0 16px 0;
+          font-size: 14px;
+        }
+
+        .add-vendor-btn {
+          background: #4f46e5;
+          color: white;
+          border: none;
+          padding: 8px 16px;
+          border-radius: 6px;
+          font-size: 12px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .add-vendor-btn:hover {
+          background: #3730a3;
+          transform: translateY(-1px);
         }
       `}</style>
     </DashboardLayout>
