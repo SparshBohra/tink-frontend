@@ -1176,7 +1176,7 @@ function LandlordDashboard() {
                       <td className="table-left">
                         <div 
                           className="property-name-link"
-                          onClick={() => router.push(`/properties/${property.id}/rooms`)}
+                          onClick={() => router.push(`/properties/${property.id}`)}
                         >
                           {property.name}
                         </div>
@@ -1215,7 +1215,7 @@ function LandlordDashboard() {
                       <td className="table-center">
                         <button 
                           className="manage-btn"
-                          onClick={() => router.push(`/properties/${property.id}/rooms`)}
+                          onClick={() => router.push(`/properties/${property.id}`)}
                         >
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <path d="M12 20h9"/>

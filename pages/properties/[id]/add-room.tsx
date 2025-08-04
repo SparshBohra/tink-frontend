@@ -150,7 +150,7 @@ function AddRoom() {
       
       // Redirect after short delay
       setTimeout(() => {
-        router.push(`/properties/${propertyId}/rooms`);
+        router.push(`/properties/${propertyId}`);
       }, 1500);
     } catch (err: any) {
       console.error('Failed to add room:', err);
@@ -254,7 +254,7 @@ function AddRoom() {
                 </p>
               </div>
               <div className="header-right">
-                <Link href={`/properties/${propertyId}/rooms`} className="back-btn">
+                <Link href={`/properties/${propertyId}`} className="back-btn">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M19 12H5"/>
                     <path d="M12 19l-7-7 7-7"/>
@@ -554,7 +554,7 @@ function AddRoom() {
                     )}
                   </button>
 
-                  <Link href={`/properties/${propertyId}/rooms`} className="btn btn-secondary">
+                  <Link href={`/properties/${propertyId}`} className="btn btn-secondary">
                     Cancel
                   </Link>
                 </div>
@@ -573,7 +573,7 @@ function AddRoom() {
               <div className="actions-grid">
                 <div 
                   className="action-card blue"
-                  onClick={() => router.push(`/properties/${propertyId}/rooms`)}
+                  onClick={() => router.push(`/properties/${propertyId}`)}
                   style={{ cursor: 'pointer' }}
                 >
                   <div className="action-icon">

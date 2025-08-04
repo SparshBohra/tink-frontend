@@ -5,8 +5,9 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useAuth, withAuth } from '../lib/auth-context';
-import { apiClient } from '../lib/api';
+import { apiClient, expenseApi } from '../lib/api';
 import { formatCurrency } from '../lib/utils';
+import { Expense, Vendor, ExpenseFormData, VendorFormData } from '../lib/types';
 
 interface PropertyFinancials {
   id: number;
@@ -75,9 +76,409 @@ function Accounting() {
   const [selectedProperty, setSelectedProperty] = useState<string>('all');
   const [activeTab, setActiveTab] = useState<'overview' | 'rentroll' | 'expenses' | 'analytics'>('overview');
 
+  // Expense management state
+  const [realExpenses, setRealExpenses] = useState<Expense[]>([]);
+  const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [properties, setProperties] = useState<any[]>([]);
+  const [showExpenseModal, setShowExpenseModal] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const [expenseFormData, setExpenseFormData] = useState<ExpenseFormData>({
+    title: '',
+    description: '',
+    amount: '',
+    vendor: undefined,
+    vendor_name_override: '',
+    property_ref: 0,
+    expense_date: new Date().toISOString().split('T')[0],
+    due_date: '',
+    is_recurring: false,
+    recurrence_type: 'monthly',
+    recurrence_end_date: '',
+    receipt_file: null,
+    status: 'pending',
+    tags: '',
+    notes: ''
+  });
+  const [expenseLoading, setExpenseLoading] = useState(false);
+  
+  // Vendor creation from expense modal
+  const [showCreateVendorModal, setShowCreateVendorModal] = useState(false);
+  const [vendorInputType, setVendorInputType] = useState<'quick' | 'existing'>('quick');
+  const [vendorFormData, setVendorFormData] = useState<VendorFormData>({
+    name: '',
+    vendor_type: 'utility',
+    contact_email: '',
+    contact_phone: '',
+    contact_person: '',
+    address: '',
+    tax_id: '',
+    website: '',
+    notes: '',
+    landlord: 0,
+    is_active: true
+  });
+  const [vendorLoading, setVendorLoading] = useState(false);
+
+  // Analytics filtering state
+  const [analyticsTimeRange, setAnalyticsTimeRange] = useState<'all' | 'month' | 'year'>('all');
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+
   useEffect(() => {
     fetchData();
   }, [selectedPeriod, selectedProperty]);
+
+  useEffect(() => {
+    fetchExpenseData();
+  }, []);
+
+  const fetchExpenseData = async () => {
+    try {
+      const [expensesResponse, vendorsResponse, propertiesResponse] = await Promise.all([
+        expenseApi.getExpenses(),
+        expenseApi.getVendors(),
+        apiClient.getProperties()
+      ]);
+      
+      setRealExpenses(expensesResponse);
+      setVendors(vendorsResponse);
+      setProperties(propertiesResponse.results || []);
+    } catch (error) {
+      console.error('Error fetching expense data:', error);
+      setError('Failed to load expense data');
+    }
+  };
+
+  const handleCreateExpense = () => {
+    setEditingExpense(null);
+    setExpenseFormData({
+      title: '',
+      description: '',
+      amount: '',
+      vendor: undefined,
+      vendor_name_override: '',
+      property_ref: 0,
+      expense_date: new Date().toISOString().split('T')[0],
+      due_date: '',
+      is_recurring: false,
+      recurrence_type: 'monthly',
+      recurrence_end_date: '',
+      receipt_file: null,
+      status: 'pending',
+      tags: '',
+      notes: ''
+    });
+    setShowExpenseModal(true);
+  };
+
+  const handleEditExpense = (expense: Expense) => {
+    setEditingExpense(expense);
+    setExpenseFormData({
+      title: expense.title,
+      description: expense.description || '',
+      amount: expense.amount.toString(),
+      vendor: expense.vendor,
+      vendor_name_override: expense.vendor_name || '',
+      property_ref: expense.property_ref,
+      expense_date: expense.expense_date,
+      due_date: expense.due_date || '',
+      is_recurring: expense.is_recurring,
+      recurrence_type: expense.recurrence_type || 'monthly',
+      recurrence_end_date: expense.recurrence_end_date || '',
+      receipt_file: null,
+      status: expense.status,
+      tags: expense.tags || '',
+      notes: expense.notes || ''
+    });
+    setShowExpenseModal(true);
+  };
+
+  const createExpenseFormData = (data: ExpenseFormData): FormData => {
+    const formData = new FormData();
+    
+    formData.append('title', data.title);
+    formData.append('description', data.description);
+    formData.append('amount', data.amount);
+    formData.append('expense_date', data.expense_date);
+    formData.append('due_date', data.due_date);
+    formData.append('is_recurring', data.is_recurring.toString());
+    formData.append('recurrence_type', data.recurrence_type);
+    formData.append('recurrence_end_date', data.recurrence_end_date);
+    formData.append('status', data.status);
+    formData.append('tags', data.tags);
+    formData.append('notes', data.notes);
+    formData.append('property_ref', data.property_ref.toString());
+    formData.append('vendor_name_override', data.vendor_name_override);
+    
+    if (data.vendor) {
+      formData.append('vendor', data.vendor.toString());
+    }
+    
+    if (data.receipt_file) {
+      formData.append('receipt_file', data.receipt_file);
+    }
+    
+    return formData;
+  };
+
+  const handleSubmitExpense = async () => {
+    try {
+      setExpenseLoading(true);
+      setError(null);
+
+      const formData = createExpenseFormData(expenseFormData);
+
+      if (editingExpense) {
+        await expenseApi.updateExpense(editingExpense.id, formData);
+      } else {
+        await expenseApi.createExpense(formData);
+      }
+
+      setShowExpenseModal(false);
+      await fetchExpenseData();
+    } catch (error: any) {
+      console.error('Error saving expense:', error);
+      setError(error.message || 'Failed to save expense');
+    } finally {
+      setExpenseLoading(false);
+    }
+  };
+
+  const handleExpenseAction = async (expense: Expense, action: 'approve' | 'reject' | 'pay') => {
+    try {
+      setExpenseLoading(true);
+      
+      if (action === 'approve') {
+        await expenseApi.approveExpense(expense.id);
+      } else if (action === 'pay') {
+        await expenseApi.markExpensePaid(expense.id);
+      }
+      // Note: reject functionality would need to be added to backend if needed
+      
+      await fetchExpenseData();
+    } catch (error: any) {
+      console.error(`Error ${action}ing expense:`, error);
+      setError(error.message || `Failed to ${action} expense`);
+    } finally {
+      setExpenseLoading(false);
+    }
+  };
+
+  const handleExpenseFormChange = (field: keyof ExpenseFormData, value: any) => {
+    setExpenseFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const cancelExpenseForm = () => {
+    setShowExpenseModal(false);
+    setEditingExpense(null);
+  };
+
+  const handleCreateVendorFromExpense = () => {
+    setVendorFormData({
+      name: expenseFormData.vendor_name_override || '',
+      vendor_type: 'utility',
+      contact_email: '',
+      contact_phone: '',
+      contact_person: '',
+      address: '',
+      tax_id: '',
+      website: '',
+      notes: '',
+      landlord: properties.length > 0 ? properties[0].landlord : 0,
+      is_active: true
+    });
+    setShowCreateVendorModal(true);
+  };
+
+  const handleVendorFormChange = (field: keyof VendorFormData, value: any) => {
+    setVendorFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleSubmitVendor = async () => {
+    try {
+      setVendorLoading(true);
+      
+      const newVendor = await expenseApi.createVendor(vendorFormData);
+      
+      // Update vendors list
+      await fetchExpenseData();
+      
+      // Select the new vendor in expense form
+      handleExpenseFormChange('vendor', newVendor.id);
+      handleExpenseFormChange('vendor_name_override', newVendor.name);
+      
+      setShowCreateVendorModal(false);
+    } catch (error: any) {
+      console.error('Error creating vendor:', error);
+      setError(error.message || 'Failed to create vendor');
+    } finally {
+      setVendorLoading(false);
+    }
+  };
+
+  const cancelVendorForm = () => {
+    setShowCreateVendorModal(false);
+  };
+
+  // Expense Analytics Calculations
+  const calculateExpenseAnalytics = () => {
+    // Filter expenses based on selected time range
+    let filteredExpenses = realExpenses;
+    
+    if (analyticsTimeRange === 'month') {
+      filteredExpenses = realExpenses.filter(expense => {
+        const expenseDate = new Date(expense.expense_date);
+        return expenseDate.getMonth() === selectedMonth && 
+               expenseDate.getFullYear() === selectedYear;
+      });
+    } else if (analyticsTimeRange === 'year') {
+      filteredExpenses = realExpenses.filter(expense => {
+        const expenseDate = new Date(expense.expense_date);
+        return expenseDate.getFullYear() === selectedYear;
+      });
+    }
+
+    if (!filteredExpenses.length) {
+      const periodLabel = analyticsTimeRange === 'month' 
+        ? `${new Date(selectedYear, selectedMonth).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`
+        : analyticsTimeRange === 'year' 
+        ? `${selectedYear}`
+        : 'selected period';
+        
+      return {
+        totalExpenses: 0,
+        expensesByCategory: {},
+        expensesByStatus: {},
+        topVendors: [],
+        insights: [],
+        periodLabel,
+        expenseCount: 0,
+        averageExpense: 0,
+        categoryCounts: {}
+      };
+    }
+
+    const totalExpenses = filteredExpenses.reduce((sum, expense) => sum + parseFloat(expense.amount), 0);
+    const expenseCount = filteredExpenses.length;
+    const averageExpense = totalExpenses / expenseCount;
+
+    // Group by category (vendor type) with better labeling
+    const expensesByCategory = filteredExpenses.reduce((acc, expense) => {
+      const category = expense.vendor_type || 'Other';
+      acc[category] = (acc[category] || 0) + parseFloat(expense.amount);
+      return acc;
+    }, {} as Record<string, number>);
+
+    // Add category counts for better context
+    const categoryCounts = filteredExpenses.reduce((acc, expense) => {
+      const category = expense.vendor_type || 'Other';
+      acc[category] = (acc[category] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    // Group by status
+    const expensesByStatus = filteredExpenses.reduce((acc, expense) => {
+      acc[expense.status] = (acc[expense.status] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    // Top vendors by spending
+    const vendorTotals = filteredExpenses.reduce((acc, expense) => {
+      const vendor = expense.effective_vendor_name;
+      acc[vendor] = (acc[vendor] || 0) + parseFloat(expense.amount);
+      return acc;
+    }, {} as Record<string, number>);
+
+    const vendorCounts = filteredExpenses.reduce((acc, expense) => {
+      const vendor = expense.effective_vendor_name;
+      acc[vendor] = (acc[vendor] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const topVendors = Object.entries(vendorTotals)
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, 5)
+      .map(([vendor, amount]) => ({ 
+        vendor, 
+        amount, 
+        count: vendorCounts[vendor] || 0,
+        percentage: ((amount / totalExpenses) * 100).toFixed(1)
+      }));
+
+    // Enhanced insights with period context
+    const insights = [];
+    const overdueExpenses = filteredExpenses.filter(expense => expense.is_overdue).length;
+    const recurringExpenses = filteredExpenses.filter(expense => expense.is_recurring).length;
+    const pendingCount = expensesByStatus['pending'] || 0;
+    
+    const periodLabel = analyticsTimeRange === 'month' 
+      ? `${new Date(selectedYear, selectedMonth).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`
+      : analyticsTimeRange === 'year' 
+      ? `${selectedYear}`
+      : 'all time';
+
+    // Time-specific insights
+    if (analyticsTimeRange !== 'all') {
+      insights.push({
+        type: 'neutral',
+        icon: '📅',
+        text: `Showing data for ${periodLabel} (${expenseCount} expenses)`
+      });
+    }
+    
+    if (overdueExpenses > 0) {
+      insights.push({
+        type: 'warning',
+        icon: '⚠',
+        text: `${overdueExpenses} expense${overdueExpenses > 1 ? 's' : ''} overdue for payment in ${periodLabel}`
+      });
+    }
+    
+    if (recurringExpenses > 0) {
+      insights.push({
+        type: 'neutral',
+        icon: '🔄',
+        text: `${recurringExpenses} recurring expense${recurringExpenses > 1 ? 's' : ''} scheduled`
+      });
+    }
+
+    if (pendingCount > 0) {
+      insights.push({
+        type: 'warning',
+        icon: '⏳',
+        text: `${pendingCount} expense${pendingCount > 1 ? 's' : ''} awaiting approval`
+      });
+    }
+
+    // Average expense insight
+    if (averageExpense > 0) {
+      insights.push({
+        type: 'neutral',
+        icon: '📊',
+        text: `Average expense: ${formatCurrency(averageExpense)} across ${expenseCount} transactions`
+      });
+    }
+
+    return {
+      totalExpenses,
+      expensesByCategory,
+      expensesByStatus,
+      topVendors,
+      insights,
+      periodLabel,
+      expenseCount,
+      averageExpense,
+      categoryCounts
+    };
+  };
+
+  const expenseAnalytics = calculateExpenseAnalytics();
 
   const fetchData = async () => {
     try {
@@ -732,11 +1133,11 @@ function Accounting() {
             <div className="expenses-section">
               <div className="section-header">
                 <div>
-                  <h2 className="section-title">Expense Tracking ({filteredData.expenses.length})</h2>
+                  <h2 className="section-title">Expense Tracking ({realExpenses.length})</h2>
                   <p className="section-subtitle">Property expenses and vendor payments</p>
                 </div>
                 <div className="section-actions">
-                  <button className="action-btn primary">
+                  <button className="action-btn primary" onClick={handleCreateExpense}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <line x1="12" y1="5" x2="12" y2="19"/>
                       <line x1="5" y1="12" x2="19" y2="12"/>
@@ -769,25 +1170,25 @@ function Accounting() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredData.expenses.map((expense) => (
+                    {realExpenses.map((expense) => (
                       <tr key={expense.id}>
                         <td className="table-left">
-                          <div className="expense-date">{formatDate(expense.date)}</div>
+                          <div className="expense-date">{formatDate(expense.expense_date)}</div>
                         </td>
                         <td className="table-left">
-                          <div className="expense-property">{expense.propertyName}</div>
+                          <div className="expense-property">{expense.property_name}</div>
                         </td>
                         <td className="table-left">
-                          <span className="category-badge">{expense.category}</span>
+                          <span className="category-badge">{expense.vendor_type || 'General'}</span>
                         </td>
                         <td className="table-left">
-                          <div className="expense-description">{expense.description}</div>
+                          <div className="expense-description">{expense.title}</div>
                         </td>
                         <td className="table-left">
-                          <div className="expense-vendor">{expense.vendor}</div>
+                          <div className="expense-vendor">{expense.effective_vendor_name}</div>
                         </td>
                         <td className="table-right">
-                          <div className="expense-amount">{formatCurrency(expense.amount)}</div>
+                          <div className="expense-amount">{formatCurrency(parseFloat(expense.amount))}</div>
                         </td>
                         <td className="table-center">
                           <span className={`expense-status-badge ${expense.status}`}>
@@ -800,15 +1201,45 @@ function Accounting() {
                           <div className="expense-actions">
                             {expense.status === 'pending' && (
                               <>
-                                <button className="expense-action-btn approve">Approve</button>
-                                <button className="expense-action-btn reject">Reject</button>
+                                <button 
+                                  className="expense-action-btn approve"
+                                  onClick={() => handleExpenseAction(expense, 'approve')}
+                                  disabled={expenseLoading}
+                                >
+                                  Approve
+                                </button>
+                                <button 
+                                  className="expense-action-btn edit"
+                                  onClick={() => handleEditExpense(expense)}
+                                >
+                                  Edit
+                                </button>
                               </>
                             )}
                             {expense.status === 'approved' && (
-                              <button className="expense-action-btn pay">Pay</button>
+                              <>
+                                <button 
+                                  className="expense-action-btn pay"
+                                  onClick={() => handleExpenseAction(expense, 'pay')}
+                                  disabled={expenseLoading}
+                                >
+                                  Pay
+                                </button>
+                                <button 
+                                  className="expense-action-btn edit"
+                                  onClick={() => handleEditExpense(expense)}
+                                >
+                                  Edit
+                                </button>
+                              </>
                             )}
                             {expense.status === 'paid' && (
-                              <button className="expense-action-btn view">View</button>
+                              <button 
+                                className="expense-action-btn view"
+                                onClick={() => handleEditExpense(expense)}
+                              >
+                                View
+                              </button>
                             )}
                           </div>
                         </td>
@@ -824,6 +1255,84 @@ function Accounting() {
         {activeTab === 'analytics' && (
           <div className="tab-content">
             <div className="analytics-section">
+              {/* Analytics Time Filter */}
+              <div className="analytics-filters">
+                <div className="filter-group">
+                  <h3 className="analytics-section-title">
+                    Financial Analytics
+                    <span className="analytics-subtitle">
+                      {expenseAnalytics.periodLabel === 'all time' 
+                        ? `All expense data (${expenseAnalytics.expenseCount} total expenses)`
+                        : `Data for ${expenseAnalytics.periodLabel} (${expenseAnalytics.expenseCount} expenses)`
+                      }
+                    </span>
+                  </h3>
+                </div>
+                
+                <div className="filter-controls">
+                  <div className="filter-item">
+                    <label>Time Period:</label>
+                    <select 
+                      value={analyticsTimeRange} 
+                      onChange={(e) => setAnalyticsTimeRange(e.target.value as 'all' | 'month' | 'year')}
+                      className="filter-select"
+                    >
+                      <option value="all">All Time</option>
+                      <option value="month">Monthly View</option>
+                      <option value="year">Yearly View</option>
+                    </select>
+                  </div>
+
+                  {analyticsTimeRange === 'month' && (
+                    <>
+                      <div className="filter-item">
+                        <label>Month:</label>
+                        <select 
+                          value={selectedMonth} 
+                          onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+                          className="filter-select"
+                        >
+                          {Array.from({length: 12}, (_, i) => (
+                            <option key={i} value={i}>
+                              {new Date(2024, i).toLocaleDateString('en-US', { month: 'long' })}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="filter-item">
+                        <label>Year:</label>
+                        <select 
+                          value={selectedYear} 
+                          onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                          className="filter-select"
+                        >
+                          {Array.from({length: 5}, (_, i) => {
+                            const year = new Date().getFullYear() - 2 + i;
+                            return <option key={year} value={year}>{year}</option>
+                          })}
+                        </select>
+                      </div>
+                    </>
+                  )}
+
+                  {analyticsTimeRange === 'year' && (
+                    <div className="filter-item">
+                      <label>Year:</label>
+                      <select 
+                        value={selectedYear} 
+                        onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                        className="filter-select"
+                      >
+                        {Array.from({length: 5}, (_, i) => {
+                          const year = new Date().getFullYear() - 2 + i;
+                          return <option key={year} value={year}>{year}</option>
+                        })}
+                      </select>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               <div className="analytics-grid">
                 <div className="analytics-card">
                   <h3 className="analytics-title">Cash Flow Trend</h3>
@@ -856,36 +1365,117 @@ function Accounting() {
                 </div>
 
                 <div className="analytics-card">
-                  <h3 className="analytics-title">Expense Breakdown</h3>
+                  <h3 className="analytics-title">
+                    Expense Breakdown by Category
+                    <span className="card-subtitle">Percentage of total spending: {formatCurrency(expenseAnalytics.totalExpenses)}</span>
+                  </h3>
                   <div className="expense-breakdown">
-                    <div className="expense-item">
-                      <span className="expense-category">Maintenance</span>
-                      <span className="expense-percentage">35%</span>
-                      <div className="expense-bar">
-                        <div className="expense-fill maintenance" style={{ width: '35%' }}></div>
+                    {Object.entries(expenseAnalytics.expensesByCategory).length > 0 ? (
+                      Object.entries(expenseAnalytics.expensesByCategory)
+                        .sort(([,a], [,b]) => b - a)
+                        .map(([category, amount]) => {
+                          const percentage = ((amount / expenseAnalytics.totalExpenses) * 100).toFixed(1);
+                          const categoryClass = category.toLowerCase().replace(/[^a-z]/g, '');
+                          const count = expenseAnalytics.categoryCounts[category] || 0;
+                          const avgPerExpense = amount / count;
+                          
+                          return (
+                            <div key={category} className="expense-item" title={`${count} expense${count !== 1 ? 's' : ''} • Average: ${formatCurrency(avgPerExpense)}`}>
+                              <div className="expense-category-info">
+                                <span className="expense-category">{category}</span>
+                                <span className="expense-details">{count} expense{count !== 1 ? 's' : ''}</span>
+                              </div>
+                              <div className="expense-amounts">
+                                <span className="expense-amount">{formatCurrency(amount)}</span>
+                                <span className="expense-percentage">{percentage}%</span>
+                              </div>
+                              <div className="expense-bar">
+                                <div 
+                                  className={`expense-fill ${categoryClass}`} 
+                                  style={{ width: `${percentage}%` }}
+                                ></div>
+                              </div>
+                            </div>
+                          );
+                        })
+                    ) : (
+                      <div className="no-data">
+                        <p>No expense data available</p>
+                        <small>Add some expenses to see category breakdown</small>
                       </div>
-                    </div>
-                    <div className="expense-item">
-                      <span className="expense-category">Utilities</span>
-                      <span className="expense-percentage">25%</span>
-                      <div className="expense-bar">
-                        <div className="expense-fill utilities" style={{ width: '25%' }}></div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="analytics-card">
+                  <h3 className="analytics-title">
+                    Top Vendors by Spending
+                    <span className="card-subtitle">Ranked by total amount spent • {expenseAnalytics.topVendors.length} vendors</span>
+                  </h3>
+                  <div className="top-vendors">
+                    {expenseAnalytics.topVendors.length > 0 ? (
+                      expenseAnalytics.topVendors.map((vendor, index) => {
+                        return (
+                          <div key={vendor.vendor} className="vendor-item" title={`${vendor.count} transaction${vendor.count !== 1 ? 's' : ''} • Average: ${formatCurrency(vendor.amount / vendor.count)}`}>
+                            <div className="vendor-rank">#{index + 1}</div>
+                            <div className="vendor-info">
+                              <div className="vendor-name">{vendor.vendor}</div>
+                              <div className="vendor-amount">
+                                {formatCurrency(vendor.amount)} • {vendor.count} transaction{vendor.count !== 1 ? 's' : ''}
+                              </div>
+                            </div>
+                            <div className="vendor-percentage">{vendor.percentage}%</div>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="no-data">
+                        <p>No vendor data available</p>
+                        <small>Add expenses to see top vendors</small>
                       </div>
-                    </div>
-                    <div className="expense-item">
-                      <span className="expense-category">Insurance</span>
-                      <span className="expense-percentage">20%</span>
-                      <div className="expense-bar">
-                        <div className="expense-fill insurance" style={{ width: '20%' }}></div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="analytics-card">
+                  <h3 className="analytics-title">Expense Status Overview</h3>
+                  <div className="status-overview">
+                    {Object.entries(expenseAnalytics.expensesByStatus).length > 0 ? (
+                      Object.entries(expenseAnalytics.expensesByStatus).map(([status, count]) => {
+                        const statusColors = {
+                          pending: '#f59e0b',
+                          approved: '#3b82f6', 
+                          paid: '#10b981',
+                          draft: '#6b7280',
+                          cancelled: '#ef4444'
+                        };
+                        const statusLabels = {
+                          pending: 'Pending Approval',
+                          approved: 'Approved',
+                          paid: 'Paid',
+                          draft: 'Draft',
+                          cancelled: 'Cancelled'
+                        };
+                        
+                        return (
+                          <div key={status} className="status-item">
+                            <div 
+                              className="status-dot" 
+                              style={{ backgroundColor: statusColors[status as keyof typeof statusColors] || '#6b7280' }}
+                            ></div>
+                            <div className="status-info">
+                              <div className="status-label">{statusLabels[status as keyof typeof statusLabels] || status}</div>
+                              <div className="status-count">{count} expense{count !== 1 ? 's' : ''}</div>
+                            </div>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="no-data">
+                        <p>No expense status data</p>
+                        <small>Add expenses to see status breakdown</small>
                       </div>
-                    </div>
-                    <div className="expense-item">
-                      <span className="expense-category">Other</span>
-                      <span className="expense-percentage">20%</span>
-                      <div className="expense-bar">
-                        <div className="expense-fill other" style={{ width: '20%' }}></div>
-                      </div>
-                    </div>
+                    )}
                   </div>
                 </div>
 
@@ -896,10 +1486,23 @@ function Accounting() {
                       <div className="insight-icon">↗</div>
                       <div className="insight-text">Collection rate improved by 2.1% this month</div>
                     </div>
-                    <div className="insight-item warning">
-                      <div className="insight-icon">⚠</div>
-                      <div className="insight-text">Maintenance costs 15% above budget</div>
-                    </div>
+                    
+                    {expenseAnalytics.insights.map((insight, index) => (
+                      <div key={index} className={`insight-item ${insight.type}`}>
+                        <div className="insight-icon">{insight.icon}</div>
+                        <div className="insight-text">{insight.text}</div>
+                      </div>
+                    ))}
+                    
+                    {expenseAnalytics.totalExpenses > 0 && (
+                      <div className="insight-item neutral">
+                        <div className="insight-icon">💰</div>
+                        <div className="insight-text">
+                          Total expenses: {formatCurrency(expenseAnalytics.totalExpenses)} across {Object.keys(expenseAnalytics.expensesByCategory).length} categories
+                        </div>
+                      </div>
+                    )}
+                    
                     <div className="insight-item positive">
                       <div className="insight-icon">✓</div>
                       <div className="insight-text">Sunset Gardens has highest profitability</div>
@@ -1822,7 +2425,974 @@ function Accounting() {
           border-color: #333333 !important;
           color: #ffffff !important;
         }
+
+        /* Modal Styles */
+        .modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.5);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 1000;
+          padding: 20px;
+        }
+
+        .modal-container {
+          background: white;
+          border-radius: 12px;
+          width: 100%;
+          max-width: 800px;
+          max-height: 90vh;
+          overflow-y: auto;
+          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+
+        .modal-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 24px 32px 16px;
+          border-bottom: 1px solid #e2e8f0;
+        }
+
+        .modal-header h2 {
+          font-size: 18px;
+          font-weight: 600;
+          color: #1e293b;
+          margin: 0;
+        }
+
+        .modal-close {
+          background: none;
+          border: none;
+          font-size: 24px;
+          color: #64748b;
+          cursor: pointer;
+          padding: 4px;
+          border-radius: 4px;
+          transition: all 0.2s ease;
+        }
+
+        .modal-close:hover {
+          background: #f1f5f9;
+          color: #1e293b;
+        }
+
+        .modal-body {
+          padding: 24px 32px 32px;
+        }
+
+        .form-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 20px;
+        }
+
+        .form-group {
+          display: flex;
+          flex-direction: column;
+        }
+
+        .form-group.full-width {
+          grid-column: 1 / -1;
+        }
+
+        .form-group label {
+          font-size: 14px;
+          font-weight: 500;
+          color: #374151;
+          margin-bottom: 8px;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+          padding: 10px 12px;
+          border: 1px solid #d1d5db;
+          border-radius: 6px;
+          font-size: 14px;
+          transition: border-color 0.2s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+          outline: none;
+          border-color: #4f46e5;
+          box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        .form-group input[type="checkbox"] {
+          width: auto;
+          margin-right: 8px;
+        }
+
+        .form-group label:has(input[type="checkbox"]) {
+          flex-direction: row;
+          align-items: center;
+          font-weight: 400;
+        }
+
+        .modal-actions {
+          display: flex;
+          justify-content: flex-end;
+          gap: 12px;
+          margin-top: 32px;
+          padding-top: 24px;
+          border-top: 1px solid #e2e8f0;
+        }
+
+        .btn-primary,
+        .btn-secondary {
+          padding: 10px 20px;
+          border-radius: 6px;
+          font-size: 14px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          border: none;
+        }
+
+        .btn-primary {
+          background: #4f46e5;
+          color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+          background: #4338ca;
+        }
+
+        .btn-primary:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        .btn-secondary {
+          background: #f8fafc;
+          color: #64748b;
+          border: 1px solid #e2e8f0;
+        }
+
+        .btn-secondary:hover {
+          background: #f1f5f9;
+          color: #475569;
+        }
+
+        /* Vendor Selection Styles */
+        .vendor-selection {
+          display: flex;
+          gap: 8px;
+          align-items: stretch;
+        }
+
+        .vendor-selection select {
+          flex: 1;
+        }
+
+        .create-vendor-btn {
+          background: #10b981;
+          color: white;
+          border: none;
+          border-radius: 6px;
+          padding: 10px 16px;
+          font-size: 13px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          white-space: nowrap;
+        }
+
+        .create-vendor-btn:hover {
+          background: #059669;
+        }
+
+        /* Vendor Option Group Styles */
+        .vendor-option-group {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+          margin-top: 8px;
+        }
+
+        .vendor-option {
+          padding: 16px;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          background: #f8fafc;
+        }
+
+        .vendor-option:has(input:checked) {
+          border-color: #4f46e5;
+          background: #f0f4ff;
+        }
+
+        .radio-label {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-bottom: 12px;
+          font-weight: 500;
+          color: #374151;
+          cursor: pointer;
+        }
+
+        .radio-label input[type="radio"] {
+          margin: 0;
+          width: 16px;
+          height: 16px;
+        }
+
+        .quick-vendor-input {
+          width: 100%;
+          padding: 10px 12px;
+          border: 1px solid #d1d5db;
+          border-radius: 6px;
+          font-size: 14px;
+          margin-top: 8px;
+        }
+
+        .quick-vendor-input:focus {
+          outline: none;
+          border-color: #4f46e5;
+          box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        /* File Upload Styles */
+        .file-upload-container {
+          position: relative;
+        }
+
+        .file-input {
+          position: absolute;
+          opacity: 0;
+          pointer-events: none;
+          width: 100%;
+          height: 100%;
+        }
+
+        .file-upload-label {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 12px 16px;
+          border: 2px dashed #d1d5db;
+          border-radius: 8px;
+          background: #f9fafb;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          min-height: 48px;
+        }
+
+        .file-upload-label:hover {
+          border-color: #4f46e5;
+          background: #f8fafc;
+        }
+
+        .file-upload-label svg {
+          color: #6b7280;
+          flex-shrink: 0;
+        }
+
+        .file-upload-label span {
+          color: #374151;
+          font-size: 14px;
+        }
+
+        .file-info {
+          font-size: 12px;
+          color: #6b7280;
+          margin-top: 4px;
+        }
+
+        .file-upload-label:hover svg {
+          color: #4f46e5;
+        }
+
+        /* Drag and drop states */
+        .file-upload-label.dragover {
+          border-color: #4f46e5;
+          background: #f0f4ff;
+        }
+
+        /* Dark Mode Styles */
+        .expense-fill.other {
+          background: #6b7280;
+        }
+
+        /* New Analytics Styles */
+        .no-data {
+          text-align: center;
+          padding: 40px 20px;
+          color: #6b7280;
+        }
+
+        .no-data p {
+          margin: 0 0 8px 0;
+          font-size: 16px;
+          font-weight: 500;
+        }
+
+        .no-data small {
+          font-size: 14px;
+          color: #9ca3af;
+        }
+
+        /* Expense Item Updates */
+        .expense-item {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 16px;
+          padding: 12px 0;
+          border-bottom: 1px solid #f1f5f9;
+        }
+
+        .expense-item:last-child {
+          border-bottom: none;
+          margin-bottom: 0;
+        }
+
+        .expense-category {
+          font-weight: 500;
+          color: #374151;
+          flex: 1;
+        }
+
+        .expense-amount {
+          font-weight: 600;
+          color: #1f2937;
+          margin: 0 12px;
+          min-width: 80px;
+          text-align: right;
+        }
+
+        .expense-percentage {
+          font-weight: 500;
+          color: #6b7280;
+          min-width: 40px;
+          text-align: right;
+          margin-right: 12px;
+        }
+
+        .expense-bar {
+          flex: 2;
+          height: 8px;
+          background: #f1f5f9;
+          border-radius: 4px;
+          overflow: hidden;
+        }
+
+        .expense-fill {
+          height: 100%;
+          border-radius: 4px;
+          transition: width 0.3s ease;
+        }
+
+        /* Dynamic category colors */
+        .expense-fill.utility { background: #3b82f6; }
+        .expense-fill.maintenance { background: #ef4444; }
+        .expense-fill.insurance { background: #10b981; }
+        .expense-fill.professional { background: #8b5cf6; }
+        .expense-fill.supplier { background: #f59e0b; }
+        .expense-fill.other { background: #6b7280; }
+
+        /* Top Vendors Styles */
+        .top-vendors {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        .vendor-item {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 12px;
+          background: #f8fafc;
+          border-radius: 8px;
+          border: 1px solid #e2e8f0;
+        }
+
+        .vendor-rank {
+          width: 32px;
+          height: 32px;
+          background: #4f46e5;
+          color: white;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 600;
+          font-size: 14px;
+          flex-shrink: 0;
+        }
+
+        .vendor-info {
+          flex: 1;
+        }
+
+        .vendor-name {
+          font-weight: 500;
+          color: #374151;
+          margin-bottom: 2px;
+        }
+
+        .vendor-amount {
+          font-size: 14px;
+          color: #6b7280;
+        }
+
+        .vendor-percentage {
+          font-weight: 600;
+          color: #4f46e5;
+          font-size: 16px;
+        }
+
+        /* Status Overview Styles */
+        .status-overview {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        .status-item {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 8px 0;
+        }
+
+        .status-dot {
+          width: 12px;
+          height: 12px;
+          border-radius: 50%;
+          flex-shrink: 0;
+        }
+
+        .status-info {
+          flex: 1;
+        }
+
+        .status-label {
+          font-weight: 500;
+          color: #374151;
+          margin-bottom: 2px;
+        }
+
+        .status-count {
+          font-size: 14px;
+          color: #6b7280;
+        }
+
+        /* Analytics Filters */
+        .analytics-filters {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-end;
+          margin-bottom: 24px;
+          padding: 20px;
+          background: white;
+          border-radius: 12px;
+          border: 1px solid #e2e8f0;
+        }
+
+        .analytics-section-title {
+          font-size: 20px;
+          font-weight: 700;
+          color: #1e293b;
+          margin: 0;
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+
+        .analytics-subtitle {
+          font-size: 14px;
+          font-weight: 400;
+          color: #64748b;
+        }
+
+        .filter-controls {
+          display: flex;
+          gap: 16px;
+          align-items: flex-end;
+        }
+
+        .filter-item {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+
+        .filter-item label {
+          font-size: 12px;
+          font-weight: 500;
+          color: #64748b;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+        }
+
+        .filter-select {
+          padding: 8px 12px;
+          border: 1px solid #d1d5db;
+          border-radius: 6px;
+          font-size: 14px;
+          background: white;
+          min-width: 120px;
+          cursor: pointer;
+        }
+
+        .filter-select:focus {
+          outline: none;
+          border-color: #4f46e5;
+          box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        /* Enhanced Card Styles */
+        .card-subtitle {
+          display: block;
+          font-size: 13px;
+          font-weight: 400;
+          color: #64748b;
+          margin-top: 4px;
+        }
+
+        .analytics-title {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+
+        /* Enhanced Expense Item Styles */
+        .expense-category-info {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+
+        .expense-details {
+          font-size: 12px;
+          color: #6b7280;
+        }
+
+        .expense-amounts {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-end;
+          gap: 2px;
+          margin-right: 12px;
+        }
+
+        .expense-item:hover {
+          background: #f8fafc;
+          border-radius: 6px;
+          padding: 12px;
+          margin: -12px 0;
+        }
+
+        /* Enhanced Vendor Item Styles */
+        .vendor-item:hover {
+          background: #f0f4ff;
+          border-color: #4f46e5;
+        }
+
+        /* Dark Mode Styles */
       `}</style>
+
+      {/* Expense Modal */}
+      {showExpenseModal && (
+        <div className="modal-overlay" onClick={cancelExpenseForm}>
+          <div className="modal-container" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>{editingExpense ? 'Edit Expense' : 'Add Expense'}</h2>
+              <button onClick={cancelExpenseForm} className="modal-close">×</button>
+            </div>
+            <div className="modal-body">
+              <form onSubmit={(e) => { e.preventDefault(); handleSubmitExpense(); }}>
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label htmlFor="title">Expense Title *</label>
+                    <input
+                      type="text"
+                      id="title"
+                      value={expenseFormData.title}
+                      onChange={(e) => handleExpenseFormChange('title', e.target.value)}
+                      placeholder="Enter expense title"
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="amount">Amount *</label>
+                    <input
+                      type="number"
+                      id="amount"
+                      step="0.01"
+                      value={expenseFormData.amount}
+                      onChange={(e) => handleExpenseFormChange('amount', e.target.value)}
+                      placeholder="0.00"
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="property_ref">Property *</label>
+                    <select
+                      id="property_ref"
+                      value={expenseFormData.property_ref || ''}
+                      onChange={(e) => handleExpenseFormChange('property_ref', parseInt(e.target.value))}
+                      required
+                    >
+                      <option value="">Select Property</option>
+                      {properties.map((property) => (
+                        <option key={property.id} value={property.id}>
+                          {property.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label>Vendor Selection</label>
+                    <div className="vendor-option-group">
+                      <div className="vendor-option">
+                        <label className="radio-label">
+                          <input
+                            type="radio"
+                            name="vendorOption"
+                            value="existing"
+                            checked={vendorInputType === 'existing'}
+                            onChange={() => {
+                              setVendorInputType('existing');
+                              handleExpenseFormChange('vendor_name_override', '');
+                            }}
+                          />
+                          <span>Select Existing Vendor</span>
+                        </label>
+                        {vendorInputType === 'existing' && (
+                          <div className="vendor-selection">
+                            <select
+                              value={expenseFormData.vendor || ''}
+                              onChange={(e) => {
+                                const vendorId = e.target.value ? parseInt(e.target.value) : undefined;
+                                handleExpenseFormChange('vendor', vendorId);
+                                if (vendorId) {
+                                  const selectedVendor = vendors.find(v => v.id === vendorId);
+                                  if (selectedVendor) {
+                                    handleExpenseFormChange('vendor_name_override', selectedVendor.name);
+                                  }
+                                } else {
+                                  handleExpenseFormChange('vendor_name_override', '');
+                                }
+                              }}
+                            >
+                              <option value="">Choose from saved vendors...</option>
+                              {vendors.map((vendor) => (
+                                <option key={vendor.id} value={vendor.id}>
+                                  {vendor.name} - {vendor.vendor_type}
+                                </option>
+                              ))}
+                            </select>
+                            <button
+                              type="button"
+                              onClick={handleCreateVendorFromExpense}
+                              className="create-vendor-btn"
+                            >
+                              + Add New Vendor
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="vendor-option">
+                        <label className="radio-label">
+                          <input
+                            type="radio"
+                            name="vendorOption"
+                            value="quick"
+                            checked={vendorInputType === 'quick'}
+                            onChange={() => {
+                              setVendorInputType('quick');
+                              handleExpenseFormChange('vendor', undefined);
+                            }}
+                          />
+                          <span>Quick Entry (No need to save vendor)</span>
+                        </label>
+                        {vendorInputType === 'quick' && (
+                          <input
+                            type="text"
+                            value={expenseFormData.vendor_name_override}
+                            onChange={(e) => handleExpenseFormChange('vendor_name_override', e.target.value)}
+                            placeholder="e.g., Home Depot, Local Plumber, Amazon..."
+                            className="quick-vendor-input"
+                          />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+
+
+                  <div className="form-group">
+                    <label htmlFor="expense_date">Expense Date *</label>
+                    <input
+                      type="date"
+                      id="expense_date"
+                      value={expenseFormData.expense_date}
+                      onChange={(e) => handleExpenseFormChange('expense_date', e.target.value)}
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="due_date">Due Date</label>
+                    <input
+                      type="date"
+                      id="due_date"
+                      value={expenseFormData.due_date}
+                      onChange={(e) => handleExpenseFormChange('due_date', e.target.value)}
+                    />
+                  </div>
+
+                  <div className="form-group full-width">
+                    <label htmlFor="description">Description</label>
+                    <textarea
+                      id="description"
+                      value={expenseFormData.description}
+                      onChange={(e) => handleExpenseFormChange('description', e.target.value)}
+                      placeholder="Enter expense description"
+                      rows={3}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="receipt_file">Receipt Upload</label>
+                    <div className="file-upload-container">
+                      <input
+                        type="file"
+                        id="receipt_file"
+                        accept="image/*,application/pdf"
+                        onChange={(e) => handleExpenseFormChange('receipt_file', e.target.files?.[0] || null)}
+                        className="file-input"
+                      />
+                      <label htmlFor="receipt_file" className="file-upload-label">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                          <polyline points="17,8 12,3 7,8"/>
+                          <line x1="12" y1="3" x2="12" y2="15"/>
+                        </svg>
+                        <span>{expenseFormData.receipt_file ? expenseFormData.receipt_file.name : 'Choose file or drag here'}</span>
+                      </label>
+                      <div className="file-info">
+                        Supports: Images (JPG, PNG) and PDF files
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="tags">Tags</label>
+                    <input
+                      type="text"
+                      id="tags"
+                      value={expenseFormData.tags}
+                      onChange={(e) => handleExpenseFormChange('tags', e.target.value)}
+                      placeholder="e.g., maintenance, utilities"
+                    />
+                  </div>
+
+                  <div className="form-group full-width">
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={expenseFormData.is_recurring}
+                        onChange={(e) => handleExpenseFormChange('is_recurring', e.target.checked)}
+                      />
+                      <span>Recurring Expense</span>
+                    </label>
+                  </div>
+
+                  {expenseFormData.is_recurring && (
+                    <>
+                      <div className="form-group">
+                        <label htmlFor="recurrence_type">Recurrence Type</label>
+                        <select
+                          id="recurrence_type"
+                          value={expenseFormData.recurrence_type}
+                          onChange={(e) => handleExpenseFormChange('recurrence_type', e.target.value as any)}
+                        >
+                          <option value="daily">Daily</option>
+                          <option value="weekly">Weekly</option>
+                          <option value="biweekly">Bi-weekly</option>
+                          <option value="monthly">Monthly</option>
+                          <option value="quarterly">Quarterly</option>
+                          <option value="semi_annual">Semi-Annual</option>
+                          <option value="annual">Annual</option>
+                        </select>
+                      </div>
+
+                      <div className="form-group">
+                        <label htmlFor="recurrence_end_date">End Date</label>
+                        <input
+                          type="date"
+                          id="recurrence_end_date"
+                          value={expenseFormData.recurrence_end_date}
+                          onChange={(e) => handleExpenseFormChange('recurrence_end_date', e.target.value)}
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  <div className="form-group full-width">
+                    <label htmlFor="notes">Notes</label>
+                    <textarea
+                      id="notes"
+                      value={expenseFormData.notes}
+                      onChange={(e) => handleExpenseFormChange('notes', e.target.value)}
+                      placeholder="Additional notes"
+                      rows={2}
+                    />
+                  </div>
+                </div>
+
+                <div className="modal-actions">
+                  <button type="button" onClick={cancelExpenseForm} className="btn-secondary">
+                    Cancel
+                  </button>
+                  <button type="submit" disabled={expenseLoading} className="btn-primary">
+                    {expenseLoading ? 'Saving...' : (editingExpense ? 'Update Expense' : 'Add Expense')}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Vendor Modal */}
+      {showCreateVendorModal && (
+        <div className="modal-overlay" onClick={cancelVendorForm}>
+          <div className="modal-container" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Create New Vendor</h2>
+              <button onClick={cancelVendorForm} className="modal-close">×</button>
+            </div>
+            <div className="modal-body">
+              <form onSubmit={(e) => { e.preventDefault(); handleSubmitVendor(); }}>
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label htmlFor="vendor_name">Vendor Name *</label>
+                    <input
+                      type="text"
+                      id="vendor_name"
+                      value={vendorFormData.name}
+                      onChange={(e) => handleVendorFormChange('name', e.target.value)}
+                      placeholder="Enter vendor name"
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="vendor_type">Vendor Type *</label>
+                    <select
+                      id="vendor_type"
+                      value={vendorFormData.vendor_type}
+                      onChange={(e) => handleVendorFormChange('vendor_type', e.target.value)}
+                      required
+                    >
+                      <option value="utility">Utility Company</option>
+                      <option value="maintenance">Maintenance</option>
+                      <option value="insurance">Insurance</option>
+                      <option value="professional">Professional Services</option>
+                      <option value="supplier">Supplier</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="contact_email">Contact Email</label>
+                    <input
+                      type="email"
+                      id="contact_email"
+                      value={vendorFormData.contact_email}
+                      onChange={(e) => handleVendorFormChange('contact_email', e.target.value)}
+                      placeholder="vendor@company.com"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="contact_phone">Contact Phone</label>
+                    <input
+                      type="tel"
+                      id="contact_phone"
+                      value={vendorFormData.contact_phone}
+                      onChange={(e) => handleVendorFormChange('contact_phone', e.target.value)}
+                      placeholder="(555) 123-4567"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="contact_person">Contact Person</label>
+                    <input
+                      type="text"
+                      id="contact_person"
+                      value={vendorFormData.contact_person}
+                      onChange={(e) => handleVendorFormChange('contact_person', e.target.value)}
+                      placeholder="Contact person name"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="website">Website</label>
+                    <input
+                      type="url"
+                      id="website"
+                      value={vendorFormData.website}
+                      onChange={(e) => handleVendorFormChange('website', e.target.value)}
+                      placeholder="https://vendor-website.com"
+                    />
+                  </div>
+
+                  <div className="form-group full-width">
+                    <label htmlFor="address">Address</label>
+                    <textarea
+                      id="address"
+                      value={vendorFormData.address}
+                      onChange={(e) => handleVendorFormChange('address', e.target.value)}
+                      placeholder="Enter vendor address"
+                      rows={2}
+                    />
+                  </div>
+
+                  <div className="form-group full-width">
+                    <label htmlFor="notes">Notes</label>
+                    <textarea
+                      id="notes"
+                      value={vendorFormData.notes}
+                      onChange={(e) => handleVendorFormChange('notes', e.target.value)}
+                      placeholder="Additional notes about this vendor"
+                      rows={2}
+                    />
+                  </div>
+                </div>
+
+                <div className="modal-actions">
+                  <button type="button" onClick={cancelVendorForm} className="btn-secondary">
+                    Cancel
+                  </button>
+                  <button type="submit" disabled={vendorLoading} className="btn-primary">
+                    {vendorLoading ? 'Creating...' : 'Create Vendor'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 }

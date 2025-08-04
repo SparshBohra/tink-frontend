@@ -180,7 +180,7 @@ export default function EditRoom() {
       
       // Redirect after short delay
       setTimeout(() => {
-        router.push(`/properties/${propertyId}/rooms`);
+        router.push(`/properties/${propertyId}`);
       }, 1500);
     } catch (err: any) {
       console.error('Failed to update room:', err);
@@ -296,7 +296,7 @@ export default function EditRoom() {
         <div className="dashboard-header">
           <div className="header-content">
             <div className="header-left">
-              <button onClick={() => router.push(`/properties/${id}/rooms`)} className="back-button">
+              <button onClick={() => router.push(`/properties/${id}`)} className="back-button">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <path d="M19 12H5m7-7l-7 7 7 7"/>
                 </svg>
@@ -564,7 +564,7 @@ export default function EditRoom() {
                     )}
                   </button>
 
-                  <Link href={`/properties/${propertyId}/rooms`} className="btn btn-secondary">
+                  <Link href={`/properties/${propertyId}`} className="btn btn-secondary">
                     Cancel
                   </Link>
               </div>

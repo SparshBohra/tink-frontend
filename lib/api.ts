@@ -50,7 +50,13 @@ import {
   TenantProfile,
   TenantLogoutResponse,
   TenantProfileSelectionResponse,
-  GlobalSearchResponse
+  GlobalSearchResponse,
+  Vendor,
+  VendorFormData,
+  Expense,
+  ExpenseFormData,
+  ExpenseSummary,
+  VendorSummary
 } from './types';
 
 // Smart environment-based API URL configuration
@@ -2302,6 +2308,157 @@ export async function publicApiRequest(endpoint: string, options: any = {}) {
     };
   }
 }
+
+// ============================================
+// EXPENSE MANAGEMENT
+// ============================================
+
+// Add expense management methods to the ApiClient class
+class ExpenseApiClient {
+  constructor(private apiClient: ApiClient) {}
+
+  // Vendor Management
+  async getVendors(): Promise<Vendor[]> {
+    const response = await this.apiClient['api'].get('/expenses/vendors/');
+    return response.data;
+  }
+
+  async getVendorsForDropdown(): Promise<Vendor[]> {
+    const response = await this.apiClient['api'].get('/expenses/vendors/?format=list');
+    return response.data;
+  }
+
+  async createVendor(data: VendorFormData): Promise<Vendor> {
+    const response = await this.apiClient['api'].post('/expenses/vendors/', data);
+    return response.data;
+  }
+
+  async getVendor(id: number): Promise<Vendor> {
+    const response = await this.apiClient['api'].get(`/expenses/vendors/${id}/`);
+    return response.data;
+  }
+
+  async updateVendor(id: number, data: Partial<VendorFormData>): Promise<Vendor> {
+    const response = await this.apiClient['api'].put(`/expenses/vendors/${id}/`, data);
+    return response.data;
+  }
+
+  async deleteVendor(id: number): Promise<void> {
+    await this.apiClient['api'].delete(`/expenses/vendors/${id}/`);
+  }
+
+  async getVendorSummary(): Promise<VendorSummary> {
+    const response = await this.apiClient['api'].get('/expenses/summary/vendors/');
+    return response.data;
+  }
+
+  // Expense Management
+  async getExpenses(): Promise<Expense[]> {
+    const response = await this.apiClient['api'].get('/expenses/expenses/');
+    return response.data;
+  }
+
+  async getExpensesSimple(): Promise<Expense[]> {
+    const response = await this.apiClient['api'].get('/expenses/expenses/?format=list');
+    return response.data;
+  }
+
+  async createExpense(data: FormData): Promise<Expense> {
+    const response = await this.apiClient['api'].post('/expenses/expenses/', data, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  }
+
+  async getExpense(id: number): Promise<Expense> {
+    const response = await this.apiClient['api'].get(`/expenses/expenses/${id}/`);
+    return response.data;
+  }
+
+  async updateExpense(id: number, data: FormData): Promise<Expense> {
+    const response = await this.apiClient['api'].put(`/expenses/expenses/${id}/`, data, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  }
+
+  async deleteExpense(id: number): Promise<void> {
+    await this.apiClient['api'].delete(`/expenses/expenses/${id}/`);
+  }
+
+  async approveExpense(id: number): Promise<Expense> {
+    const response = await this.apiClient['api'].post(`/expenses/expenses/${id}/approve/`, {});
+    return response.data;
+  }
+
+  async markExpensePaid(id: number): Promise<Expense> {
+    const response = await this.apiClient['api'].post(`/expenses/expenses/${id}/mark-paid/`, {});
+    return response.data;
+  }
+
+  async getExpenseSummary(fromDate?: string, toDate?: string): Promise<ExpenseSummary> {
+    const params = new URLSearchParams();
+    if (fromDate) params.append('from_date', fromDate);
+    if (toDate) params.append('to_date', toDate);
+    const queryString = params.toString();
+    const response = await this.apiClient['api'].get(`/expenses/summary/expenses/${queryString ? '?' + queryString : ''}`);
+    return response.data;
+  }
+}
+
+// Helper function to create FormData for expense creation/update
+export const createExpenseFormData = (data: ExpenseFormData): FormData => {
+  const formData = new FormData();
+  
+  // Add all form fields
+  formData.append('title', data.title);
+  formData.append('description', data.description);
+  formData.append('amount', data.amount);
+  formData.append('property_ref', data.property_ref.toString());
+  formData.append('expense_date', data.expense_date);
+  formData.append('status', data.status);
+  
+  if (data.vendor) {
+    formData.append('vendor', data.vendor.toString());
+  }
+  if (data.vendor_name_override) {
+    formData.append('vendor_name_override', data.vendor_name_override);
+  }
+  if (data.due_date) {
+    formData.append('due_date', data.due_date);
+  }
+  if (data.is_recurring) {
+    formData.append('is_recurring', 'true');
+    formData.append('recurrence_type', data.recurrence_type);
+    if (data.recurrence_end_date) {
+      formData.append('recurrence_end_date', data.recurrence_end_date);
+    }
+  } else {
+    formData.append('is_recurring', 'false');
+    formData.append('recurrence_type', 'none');
+  }
+  if (data.receipt_file) {
+    formData.append('receipt_file', data.receipt_file);
+  }
+  if (data.tags) {
+    formData.append('tags', data.tags);
+  }
+  if (data.notes) {
+    formData.append('notes', data.notes);
+  }
+  
+  return formData;
+};
+
+// Create expense API client instance using the existing apiClient
+const expenseApiClient = new ExpenseApiClient(apiClient);
+
+// Main expense API client
+export const expenseApi = expenseApiClient;
 
 // Backward compatibility - export the old function names
 export async function apiRequest(endpoint: string, options: any = {}) {

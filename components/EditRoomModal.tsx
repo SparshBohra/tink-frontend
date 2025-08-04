@@ -88,7 +88,7 @@ export default function EditRoom() {
       
       // Redirect after short delay
       setTimeout(() => {
-        router.push(`/properties/${propertyId}/rooms`);
+        router.push(`/properties/${propertyId}`);
       }, 1500);
     } catch (err: any) {
       console.error('Failed to update room:', err);
@@ -194,7 +194,7 @@ export default function EditRoom() {
                 </p>
               </div>
               <div className="header-right">
-                <Link href={`/properties/${propertyId}/rooms`} className="back-btn">
+                <Link href={`/properties/${propertyId}`} className="back-btn">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M19 12H5"/>
                     <path d="M12 19l-7-7 7-7"/>
@@ -422,7 +422,7 @@ export default function EditRoom() {
                   >
                     {loading ? 'Updating...' : 'Update Room'}
                   </button>
-                  <Link href={`/properties/${propertyId}/rooms`} className="btn btn-secondary">
+                  <Link href={`/properties/${propertyId}`} className="btn btn-secondary">
                     Cancel
                   </Link>
                 </div>
@@ -439,7 +439,7 @@ export default function EditRoom() {
               </div>
               
               <div className="actions-grid">
-                <div className="action-card blue" onClick={() => router.push(`/properties/${propertyId}/rooms`)}>
+                <div className="action-card blue" onClick={() => router.push(`/properties/${propertyId}`)}>
                   <div className="action-icon">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
                   </div>
@@ -470,7 +470,7 @@ export default function EditRoom() {
                 </div>
                 
                 {property && (
-                  <div className="action-card blue" onClick={() => router.push(`/properties/${propertyId}/rooms`)}>
+                  <div className="action-card blue" onClick={() => router.push(`/properties/${propertyId}`)}>
                     <div className="action-icon">
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
                     </div>

@@ -409,7 +409,7 @@ function Properties() {
   };
 
   const handleManageProperty = (propertyId: number) => {
-    router.push(`/properties/${propertyId}/rooms`);
+          router.push(`/properties/${propertyId}`);
     setActiveDropdown(null);
   };
 
@@ -756,7 +756,7 @@ function Properties() {
                             <td className="table-left">
                               <div 
                                 className="property-name clickable-property-name"
-                                onClick={() => router.push(`/properties/${property.id}/rooms`)}
+                                onClick={() => router.push(`/properties/${property.id}`)}
                                 style={{ cursor: 'pointer' }}
                               >
                                 {property.name}

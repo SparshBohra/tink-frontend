@@ -173,7 +173,7 @@ export default function Navigation() {
                 className={`nav-link ${isActive('/tenants') ? 'active' : ''}`}
               >
                 <span className="nav-icon tenant-icon"></span>
-                <span className="nav-text">Tenants</span>
+                <span className="nav-text">People</span>
               </Link>
               <Link 
                 href="/properties" 
@@ -244,7 +244,7 @@ export default function Navigation() {
                 className={`nav-link ${isActive('/tenants') ? 'active' : ''}`}
               >
                 <span className="nav-icon tenant-icon"></span>
-                <span className="nav-text">Tenants</span>
+                <span className="nav-text">People</span>
               </Link>
               <Link 
                 href="/communication" 

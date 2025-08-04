@@ -955,4 +955,136 @@ export interface GlobalSearchResponse {
   properties: SearchPropertyResult[];
   applications: SearchApplicationResult[];
   total_results: number;
+}
+
+// Vendor and Expense Types
+export type VendorType = 
+  | 'utility'
+  | 'maintenance' 
+  | 'grocery'
+  | 'insurance'
+  | 'cleaning'
+  | 'landscaping'
+  | 'legal'
+  | 'accounting'
+  | 'marketing'
+  | 'property_management'
+  | 'other';
+
+export interface Vendor {
+  id: number;
+  name: string;
+  vendor_type: VendorType;
+  vendor_type_display: string;
+  contact_email?: string;
+  contact_phone?: string;
+  contact_person?: string;
+  address?: string;
+  tax_id?: string;
+  website?: string;
+  notes?: string;
+  landlord: number;
+  landlord_name: string;
+  is_active: boolean;
+  created_by: number;
+  created_by_name: string;
+  created_at: string;
+  updated_at: string;
+  total_expense_amount: number;
+}
+
+export interface VendorFormData {
+  name: string;
+  vendor_type: VendorType;
+  contact_email: string;
+  contact_phone: string;
+  contact_person: string;
+  address: string;
+  tax_id: string;
+  website: string;
+  notes: string;
+  landlord: number;
+  is_active: boolean;
+}
+
+export type ExpenseStatus = 'draft' | 'pending' | 'approved' | 'paid' | 'cancelled';
+export type RecurrenceType = 'none' | 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'semi_annual' | 'annual';
+
+export interface Expense {
+  id: number;
+  title: string;
+  description?: string;
+  amount: string;
+  vendor?: number;
+  vendor_name?: string;
+  vendor_type?: string;
+  vendor_name_override?: string;
+  effective_vendor_name: string;
+  property_ref: number;
+  property_name: string;
+  landlord: number;
+  landlord_name: string;
+  expense_date: string;
+  due_date?: string;
+  is_recurring: boolean;
+  recurrence_type: RecurrenceType;
+  recurrence_type_display: string;
+  recurrence_end_date?: string;
+  next_occurrence_date?: string;
+  parent_expense?: number;
+  receipt_file?: File | null;
+  receipt_file_url?: string;
+  receipt_filename?: string;
+  status: ExpenseStatus;
+  status_display: string;
+  is_overdue: boolean;
+  created_by: number;
+  created_by_name: string;
+  approved_by?: number;
+  approved_at?: string;
+  paid_at?: string;
+  created_at: string;
+  updated_at: string;
+  tags?: string;
+  notes?: string;
+}
+
+export interface ExpenseFormData {
+  title: string;
+  description: string;
+  amount: string;
+  vendor?: number;
+  vendor_name_override: string;
+  property_ref: number;
+  expense_date: string;
+  due_date: string;
+  is_recurring: boolean;
+  recurrence_type: RecurrenceType;
+  recurrence_end_date: string;
+  receipt_file?: File | null;
+  status: ExpenseStatus;
+  tags: string;
+  notes: string;
+}
+
+export interface ExpenseSummary {
+  total_expenses: number;
+  monthly_expenses: number;
+  pending_expenses: number;
+  overdue_expenses: number;
+  expenses_by_category: Record<string, number>;
+  expenses_by_property: Record<string, number>;
+  recent_expenses: Expense[];
+}
+
+export interface VendorSummary {
+  total_vendors: number;
+  active_vendors: number;
+  vendors_by_type: Record<string, number>;
+  top_vendors_by_expense: Array<{
+    id: number;
+    name: string;
+    vendor_type: string;
+    total_expenses: number;
+  }>;
 } 

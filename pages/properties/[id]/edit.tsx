@@ -169,7 +169,7 @@ export default function EditProperty() {
       setSuccess(`Property "${updatedProperty.name}" updated successfully!`);
       
       setTimeout(() => {
-        router.push(`/properties/${updatedProperty.id}/rooms`);
+        router.push(`/properties/${updatedProperty.id}`);
       }, 1500);
     } catch (err: any) {
       console.error('Failed to update property:', err);
@@ -237,7 +237,7 @@ export default function EditProperty() {
         <div className="dashboard-header">
           <div className="header-content">
             <div className="header-left">
-              <button onClick={() => router.push(`/properties/${id}/rooms`)} className="back-button">
+              <button onClick={() => router.push(`/properties/${id}`)} className="back-button">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <path d="M19 12H5m7-7l-7 7 7 7"/>
                 </svg>

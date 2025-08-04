@@ -200,7 +200,7 @@ function LandlordDetailsPage() {
                   <td style={{ textAlign: 'center' }}>{property.full_address}</td>
                   <td style={{ textAlign: 'center' }}>{property.total_rooms || 'N/A'}</td>
                   <td style={{ textAlign: 'center' }}>
-                    <Link href={`/properties/${property.id}/rooms`} className="btn btn-primary btn-sm">
+                    <Link href={`/properties/${property.id}`} className="btn btn-primary btn-sm">
                       View Property
                     </Link>
                   </td>

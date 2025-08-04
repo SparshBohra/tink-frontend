@@ -211,7 +211,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         { path: '/applications', label: 'Applications', icon: <ApplicationsIcon />, badge: pendingApplicationsCount },
         { path: '/properties', label: 'Properties', icon: <PropertiesIcon />, hasDropdown: true },
         { path: '/leases', label: 'Leases', icon: <LeasesIcon /> },
-        { path: '/tenants', label: 'Tenants', icon: <TenantsIcon /> },
+        { path: '/tenants', label: 'People', icon: <TenantsIcon /> },
         { path: '/managers', label: 'Managers', icon: <ManagersIcon /> },
       ];
     }
@@ -222,7 +222,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         { path: '/applications', label: 'Applications', icon: <ApplicationsIcon />, badge: pendingApplicationsCount },
         { path: '/properties', label: 'Properties', icon: <PropertiesIcon />, hasDropdown: true },
         { path: '/leases', label: 'Leases', icon: <LeasesIcon /> },
-        { path: '/tenants', label: 'Tenants', icon: <TenantsIcon /> },
+        { path: '/tenants', label: 'People', icon: <TenantsIcon /> },
         { path: '/accounting', label: 'Accounting', icon: <AccountingIcon /> },
         { path: '/communication', label: 'Communication', icon: <CommunicationIcon /> },
       ];
@@ -234,7 +234,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         { path: '/applications', label: 'Applications', icon: <ApplicationsIcon />, badge: pendingApplicationsCount },
         { path: '/properties', label: 'Properties', icon: <PropertiesIcon />, hasDropdown: true },
         { path: '/leases', label: 'Leases', icon: <LeasesIcon /> },
-        { path: '/tenants', label: 'Tenants', icon: <TenantsIcon /> },
+        { path: '/tenants', label: 'People', icon: <TenantsIcon /> },
         { path: '/accounting', label: 'Accounting', icon: <AccountingIcon /> },
         { path: '/communication', label: 'Communication', icon: <CommunicationIcon /> },
       ];

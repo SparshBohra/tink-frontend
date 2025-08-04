@@ -327,7 +327,7 @@ export default function AddProperty() {
       setSuccess(`Property "${newProperty.name}" created successfully! ${formData.rent_type === 'per_room' ? `Created ${getTotalRooms()} rooms.` : ''}`);
 
       setTimeout(() => {
-        router.push(`/properties/${newProperty.id}/rooms?created=true`);
+        router.push(`/properties/${newProperty.id}?created=true`);
       }, 2000);
     } catch (err: any) {
       console.error('Failed to create property:', err);

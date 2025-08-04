@@ -472,7 +472,7 @@ function Leases() {
                             <td className="table-left">
                               <div 
                                 className="property-name clickable-property" 
-                                onClick={() => router.push(`/properties/${lease.property_ref}/rooms`)}
+                                onClick={() => router.push(`/properties/${lease.property_ref}`)}
                                 title={`View ${property} property details and room management`}
                               >
                                 {property}
@@ -693,7 +693,7 @@ function Leases() {
                           <td className="table-left">
                             <div 
                               className="property-name clickable-property" 
-                              onClick={() => router.push(`/properties/${lease.property_ref}/rooms`)}
+                              onClick={() => router.push(`/properties/${lease.property_ref}`)}
                               title={`View ${getPropertyNameFromLease(lease)} property details and room management`}
                             >
                               {getPropertyNameFromLease(lease)}
