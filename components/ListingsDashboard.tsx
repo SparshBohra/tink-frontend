@@ -70,6 +70,9 @@ export default function ListingsDashboard(props: ListingsDashboardProps) {
   const [error, setError] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [viewMode, setViewMode] = useState<'panel' | 'list'>('panel');
+  const [activeDropdown, setActiveDropdown] = useState<number | null>(null);
+  const [sortOption, setSortOption] = useState<'name' | 'latest'>('latest');
 
   useEffect(() => {
     if (user) {
@@ -103,30 +106,31 @@ export default function ListingsDashboard(props: ListingsDashboardProps) {
     }
   }, [router.isReady, router.query]);
 
-  // Filter listings when property filter changes
+  // Sort listings
+  const applySort = (list: PropertyListing[], option: 'name' | 'latest') => {
+    const cloned = [...list];
+    if (option === 'latest') {
+      return cloned.sort((a, b) => {
+        const ad = new Date(a.created_at || '').getTime() || 0;
+        const bd = new Date(b.created_at || '').getTime() || 0;
+        return bd - ad;
+      });
+    }
+    return cloned.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+  };
+
+  // Filter and sort listings when property filter or sort option changes
   useEffect(() => {
     console.log('Filtering effect triggered:', { selectedProperty, listingsCount: listings.length });
-    console.log('All listings:', listings.map(l => ({ id: l.id, title: l.title, property_ref: l.property_ref, property_name: l.property_name })));
     
+    let filtered = listings;
     if (selectedProperty) {
-      const filtered = listings.filter(listing => {
-        console.log('Checking listing:', { 
-          listingId: listing.id, 
-          title: listing.title,
-          property_ref: listing.property_ref, 
-          selectedProperty, 
-          match: listing.property_ref === selectedProperty 
-        });
-        // property_ref should already be a number from the backend
-        return listing.property_ref === selectedProperty;
-      });
-      console.log('Filtered results:', filtered.map(l => ({ id: l.id, title: l.title, property_name: l.property_name })));
-      setFilteredListings(filtered);
-    } else {
-      console.log('No property filter, showing all listings');
-      setFilteredListings(listings);
+      filtered = listings.filter(listing => listing.property_ref === selectedProperty);
     }
-  }, [listings, selectedProperty]);
+    
+    const sorted = applySort(filtered, sortOption);
+    setFilteredListings(sorted);
+  }, [listings, selectedProperty, sortOption]);
 
   const fetchListings = async () => {
     try {
@@ -272,6 +276,23 @@ export default function ListingsDashboard(props: ListingsDashboardProps) {
     }
   };
 
+  const handleManageClick = (e: React.MouseEvent, listingId: number) => {
+    e.stopPropagation();
+    setActiveDropdown(activeDropdown === listingId ? null : listingId);
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => {
+      setActiveDropdown(null);
+    };
+    
+    if (activeDropdown !== null) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [activeDropdown]);
+
   const metrics = getMetrics();
 
   if (loading) {
@@ -288,126 +309,126 @@ export default function ListingsDashboard(props: ListingsDashboardProps) {
 
   return (
     <div className="dashboard-container">
-      {/* No Listings Alert Banner */}
-      {listings.length === 0 && (
-        <div className="alert-banner">
-          <div className="alert-content">
-            <div className="alert-icon">
-              <AlertTriangleIcon />
-            </div>
-            <div className="alert-text">
-              <strong>Get Started:</strong> Create your first property listing to start accepting tenant applications and grow your rental business.
-            </div>
-            <div className="alert-actions">
-              <button 
-                onClick={() => setShowCreateModal(true)}
-                className="alert-btn primary"
-              >
-                <PlusIcon />
-                Create Listing
-              </button>
-              <button 
-                onClick={() => router.push('/properties')}
-                className="alert-btn secondary"
-              >
-                View Properties
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Error Alert */}
       {error && (
         <div className="error-banner">
-          <div className="error-content">
-            <XCircleIcon />
-            <span>{error}</span>
-            <button onClick={fetchListings} className="retry-btn">
-              Try Again
-            </button>
-          </div>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="15" y1="9" x2="9" y2="15"/>
+            <line x1="9" y1="9" x2="15" y2="15"/>
+          </svg>
+          {error}
         </div>
       )}
 
-      {/* Metrics Grid */}
+      {/* Header Section */}
+      <div className="dashboard-header">
+        <div className="header-left">
+          <div className="header-icon">
+            <HomeIcon />
+          </div>
+          <div className="header-content">
+            <h1 className="header-title">Property Listings</h1>
+            <p className="header-subtitle">Manage all property listings and tenant applications across your portfolio</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Top Metrics Row */}
       <div className="metrics-grid">
         <div className="metric-card">
           <div className="metric-header">
             <div className="metric-info">
               <h3 className="metric-title">Total Listings</h3>
               <div className="metric-icon">
-                <HomeIcon />
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                  <polyline points="9,22 9,12 15,12 15,22"/>
+                </svg>
               </div>
             </div>
           </div>
           <div className="metric-content">
             <div className="metric-value">{metrics.totalListings}</div>
-            <div className="metric-subtitle">property listings</div>
+            <div className="metric-subtitle">Active portfolio</div>
+            <div className="metric-progress">
+              <span className="metric-label">Listings managed</span>
+              <span className="metric-change positive">+{metrics.totalListings > 0 ? '1' : '0'}</span>
+            </div>
           </div>
         </div>
-
+        
         <div className="metric-card">
           <div className="metric-header">
             <div className="metric-info">
               <h3 className="metric-title">Active Listings</h3>
               <div className="metric-icon">
-                <CheckCircleIcon />
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                  <polyline points="22,4 12,14.01 9,11.01"/>
+                </svg>
               </div>
             </div>
           </div>
           <div className="metric-content">
             <div className="metric-value">{metrics.activeListings}</div>
-            <div className="metric-subtitle">accepting applications</div>
+            <div className="metric-subtitle">{metrics.inactiveListings} inactive</div>
             <div className="metric-progress">
-              {metrics.totalListings > 0 && (
-                <span className="metric-change positive">
-                  {Math.round((metrics.activeListings / metrics.totalListings) * 100)}% active
-                </span>
-              )}
+              <span className="metric-label">{metrics.totalListings > 0 ? Math.round((metrics.activeListings / metrics.totalListings) * 100) : 0}% active</span>
+              <span className="metric-change positive">+{metrics.activeListings > 0 ? '2' : '0'}</span>
             </div>
           </div>
         </div>
-
-        <div className="metric-card">
-          <div className="metric-header">
-            <div className="metric-info">
-              <h3 className="metric-title">Inactive Listings</h3>
-              <div className="metric-icon">
-                <XCircleIcon />
-              </div>
-            </div>
-          </div>
-          <div className="metric-content">
-            <div className="metric-value">{metrics.inactiveListings}</div>
-            <div className="metric-subtitle">not accepting applications</div>
-          </div>
-        </div>
-
+        
         <div className="metric-card">
           <div className="metric-header">
             <div className="metric-info">
               <h3 className="metric-title">Total Applications</h3>
               <div className="metric-icon">
-                <FileTextIcon />
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                  <polyline points="14,2 14,8 20,8"/>
+                </svg>
               </div>
             </div>
           </div>
           <div className="metric-content">
             <div className="metric-value">{metrics.totalApplications}</div>
-            <div className="metric-subtitle">applications received</div>
-            {metrics.totalListings > 0 && (
-              <div className="metric-progress">
-                <span className="metric-change neutral">
-                  {(metrics.totalApplications / metrics.totalListings).toFixed(1)} avg per listing
-                </span>
+            <div className="metric-subtitle">Applications received</div>
+            <div className="metric-progress">
+              <span className="metric-label">Ready to review</span>
+              <span className="metric-change positive">-1</span>
+            </div>
+          </div>
+        </div>
+        
+        <div className="metric-card">
+          <div className="metric-header">
+            <div className="metric-info">
+              <h3 className="metric-title">Application Rate</h3>
+              <div className="metric-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="20" x2="18" y2="10"/>
+                  <line x1="12" y1="20" x2="12" y2="4"/>
+                  <line x1="6" y1="20" x2="6" y2="14"/>
+                </svg>
               </div>
-            )}
+            </div>
+          </div>
+          <div className="metric-content">
+            <div className="metric-value">{metrics.totalListings > 0 ? (metrics.totalApplications / metrics.totalListings).toFixed(1) : '0'}</div>
+            <div className="metric-subtitle">Per listing average</div>
+            <div className="metric-progress">
+              <span className="metric-label">
+                {metrics.totalListings > 0 && metrics.totalApplications / metrics.totalListings >= 5 ? 'Excellent' : 
+                 metrics.totalListings > 0 && metrics.totalApplications / metrics.totalListings >= 2 ? 'Good' : 'Needs attention'}
+              </span>
+              <span className="metric-change positive">+1.2</span>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Main Content */}
+      {/* Listings Management Section */}
       <div className="listings-section">
         <div className="section-header">
           <div className="section-title-group">
@@ -422,40 +443,75 @@ export default function ListingsDashboard(props: ListingsDashboardProps) {
             </p>
           </div>
           <div className="section-actions">
-            <div className="filter-controls">
-              <select
-                value={selectedProperty || ''}
-                onChange={handlePropertyFilterChange}
-                className="property-filter-select"
+            <div className="view-toggle">
+              <button
+                className={`view-btn ${viewMode === 'panel' ? 'active' : ''}`}
+                onClick={() => setViewMode('panel')}
+                title="Panel view"
               >
-                <option value="">All Properties</option>
-                {properties.map(property => (
-                  <option key={property.id} value={property.id}>
-                    {property.name}
-                  </option>
-                ))}
-              </select>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="3" width="7" height="7"/>
+                  <rect x="14" y="3" width="7" height="7"/>
+                  <rect x="3" y="14" width="7" height="7"/>
+                  <rect x="14" y="14" width="7" height="7"/>
+                </svg>
+              </button>
+              <button
+                className={`view-btn ${viewMode === 'list' ? 'active' : ''}`}
+                onClick={() => setViewMode('list')}
+                title="List view"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="8" y1="6" x2="21" y2="6"/>
+                  <line x1="8" y1="12" x2="21" y2="12"/>
+                  <line x1="8" y1="18" x2="21" y2="18"/>
+                  <line x1="3" y1="6" x2="3.01" y2="6"/>
+                  <line x1="3" y1="12" x2="3.01" y2="12"/>
+                  <line x1="3" y1="18" x2="3.01" y2="18"/>
+                </svg>
+              </button>
             </div>
-            <button
-              onClick={fetchListings}
-              disabled={isRefreshing}
-              className="refresh-btn"
+            <select
+              value={selectedProperty || ''}
+              onChange={handlePropertyFilterChange}
+              className="property-filter-select"
             >
-              <RefreshIcon />
-              {isRefreshing ? 'Refreshing...' : 'Refresh'}
+              <option value="">All Properties</option>
+              {properties.map(property => (
+                <option key={property.id} value={property.id}>
+                  {property.name}
+                </option>
+              ))}
+            </select>
+            <select
+              value={sortOption}
+              onChange={e => setSortOption(e.target.value as 'name' | 'latest')}
+              className="sort-select"
+              title="Sort listings"
+            >
+              <option value="latest">Latest Added</option>
+              <option value="name">Name A–Z</option>
+            </select>
+            <button onClick={fetchListings} className="refresh-btn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="23 4 23 10 17 10"/>
+                <polyline points="1 20 1 14 7 14"/>
+                <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>
+              </svg>
+              Refresh
             </button>
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="btn btn-primary"
-            >
-              <PlusIcon />
+            <button onClick={() => setShowCreateModal(true)} className="create-property-btn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <line x1="12" y1="5" x2="12" y2="19"/>
+                <line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
               Create Listing
             </button>
           </div>
         </div>
 
         {filteredListings.length === 0 ? (
-          <div className="empty-listings-state">
+          <div className="empty-properties-state">
             <div className="empty-state-content">
               <div className="empty-state-icon">
                 <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -469,28 +525,44 @@ export default function ListingsDashboard(props: ListingsDashboardProps) {
               <p className="empty-state-description">
                 {selectedProperty 
                   ? `No listings found for ${properties.find(p => p.id === selectedProperty)?.name || 'this property'}. Create a listing to start accepting applications.`
-                  : 'Create your first property listing to start accepting applications from tenants. Listings help you reach more potential tenants and streamline your rental process.'
+                  : 'Start building your listing portfolio by creating your first property listing. Manage applications, visibility, and tenant interest all in one place.'
                 }
               </p>
               <div className="empty-state-actions">
-                <button
-                  onClick={() => setShowCreateModal(true)}
-                  className="btn btn-primary"
-                >
-                  <PlusIcon />
+                <button onClick={() => setShowCreateModal(true)} className="btn btn-primary">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 5v14M5 12h14"/>
+                  </svg>
                   {selectedProperty ? 'Create Listing for This Property' : 'Create Your First Listing'}
                 </button>
-                <button
-                  onClick={() => router.push('/properties')}
-                  className="btn btn-secondary"
-                >
-                  <HomeIcon />
+                <button onClick={() => router.push('/properties')} className="btn btn-secondary">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M3 21h18"/>
+                    <path d="M5 21V7l8-4v18"/>
+                    <path d="M19 21V11l-6-4"/>
+                  </svg>
                   View Properties
                 </button>
               </div>
+              <div className="empty-state-help">
+                <div className="help-cards">
+                  <div className="help-card">
+                    <h4>📝 Create Listings</h4>
+                    <p>Add listings for your properties to attract potential tenants and streamline applications.</p>
+                  </div>
+                  <div className="help-card">
+                    <h4>📊 Track Performance</h4>
+                    <p>Monitor views, applications, and listing performance across all platforms.</p>
+                  </div>
+                  <div className="help-card">
+                    <h4>⚡ Multi-Platform</h4>
+                    <p>Publish to Zillow, Apartments.com, and other platforms with one click.</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-        ) : (
+        ) : viewMode === 'panel' ? (
           <div className="listings-grid">
             {filteredListings.map((listing) => (
               <div key={listing.id} className="listing-card">
@@ -571,6 +643,124 @@ export default function ListingsDashboard(props: ListingsDashboardProps) {
                 </div>
               </div>
             ))}
+          </div>
+        ) : (
+          <div className="properties-scroll-container">
+            <div className="properties-table-container">
+              <table className="properties-table">
+                <thead>
+                  <tr>
+                    <th className="table-left">Listing</th>
+                    <th className="table-left">Property</th>
+                    <th className="table-center">Status</th>
+                    <th className="table-center">Applications</th>
+                    <th className="table-center">Views</th>
+                    <th className="table-center">Created</th>
+                    <th className="table-center">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredListings.map((listing) => (
+                    <tr key={listing.id}>
+                      <td className="table-left">
+                        <div className="property-name clickable-property-name">
+                          {listing.title}
+                        </div>
+                        <div className="property-type">
+                          {listing.description ? listing.description.substring(0, 60) + '...' : 'No description'}
+                        </div>
+                      </td>
+                      <td className="table-left">{listing.property_name}</td>
+                      <td className="table-center">
+                        <span className={`status-badge ${listing.is_active ? 'excellent' : 'low'}`}>
+                          {listing.is_active ? 'Active' : 'Inactive'}
+                        </span>
+                      </td>
+                      <td className="table-center">
+                        <div className="rooms-cell">
+                          <div className="rooms-total">{listing.application_count || 0} total</div>
+                        </div>
+                      </td>
+                      <td className="table-center">
+                        <div className="rooms-cell">
+                          <div className="rooms-total">{listing.view_count || 0} views</div>
+                        </div>
+                      </td>
+                      <td className="table-center">
+                        {new Date(listing.created_at).toLocaleDateString()}
+                      </td>
+                      <td className="table-center">
+                        <div className="action-buttons">
+                          <div className="dropdown-container">
+                            <button 
+                              onClick={(e) => handleManageClick(e, listing.id)} 
+                              className="manage-btn"
+                            >
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                                <polyline points="9,22 9,12 15,12 15,22"/>
+                              </svg>
+                              Manage
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <polyline points="6,9 12,15 18,9"/>
+                              </svg>
+                            </button>
+                            
+                            {activeDropdown === listing.id && (
+                              <div className="dropdown-menu">
+                                <button 
+                                  onClick={() => handleViewPublicListing(listing.public_slug)}
+                                  className="dropdown-item"
+                                >
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                    <circle cx="12" cy="12" r="3"/>
+                                  </svg>
+                                  View Public
+                                </button>
+                                
+                                <button 
+                                  onClick={() => handleEditListing(listing.id)}
+                                  className="dropdown-item"
+                                >
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                  </svg>
+                                  Edit Listing
+                                </button>
+                                
+                                <button 
+                                  onClick={() => handleToggleActive(listing.id, listing.is_active)}
+                                  className="dropdown-item"
+                                >
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <path d="M8 12l2 2 4-4"/>
+                                  </svg>
+                                  {listing.is_active ? 'Deactivate' : 'Activate'}
+                                </button>
+                                
+                                <button 
+                                  onClick={() => handleDeleteListing(listing.id)}
+                                  className="dropdown-item delete"
+                                >
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <polyline points="3,6 5,6 21,6"/>
+                                    <path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2V6"/>
+                                  </svg>
+                                  Delete
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>
@@ -863,6 +1053,70 @@ export default function ListingsDashboard(props: ListingsDashboardProps) {
           display: flex;
           gap: 12px;
           align-items: center;
+        }
+
+        .view-toggle {
+          display: flex;
+          align-items: center;
+          background: white;
+          border: 1px solid var(--gray-300);
+          border-radius: 6px;
+          padding: 2px;
+        }
+
+        .view-btn {
+          padding: 6px 8px;
+          background: none;
+          border: none;
+          cursor: pointer;
+          border-radius: 4px;
+          color: var(--gray-600);
+          transition: all 0.2s ease;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .view-btn:hover {
+          background: var(--gray-100);
+          color: var(--gray-800);
+        }
+
+        .view-btn.active {
+          background: var(--primary-blue);
+          color: white;
+        }
+
+        .property-filter-select,
+        .sort-select {
+          padding: 8px 12px;
+          border: 1px solid var(--gray-300);
+          border-radius: 6px;
+          background: white;
+          font-size: 14px;
+          color: var(--gray-700);
+          cursor: pointer;
+        }
+
+        .create-property-btn {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 8px 16px;
+          background: var(--primary-blue);
+          color: white;
+          border: 1px solid var(--primary-blue);
+          border-radius: 6px;
+          font-size: 14px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .create-property-btn:hover {
+          background: var(--primary-blue-dark);
+          transform: translateY(-1px);
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
 
         .refresh-btn {

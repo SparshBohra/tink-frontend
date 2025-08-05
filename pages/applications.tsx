@@ -39,6 +39,7 @@ function Applications() {
   const [selectedProperty, setSelectedProperty] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isRoomAssignmentModalOpen, setIsRoomAssignmentModalOpen] = useState(false);
   const [selectedApplicationForAssignment, setSelectedApplicationForAssignment] = useState<Application | null>(null);
@@ -1501,71 +1502,71 @@ function Applications() {
           </div>
         </div>
 
-        {/* Kanban Board View */}
+        {/* Application Kanban with built-in list view */}
         <ApplicationKanban
-          applications={filteredApplications}
-          onReview={openApplicationDetail}
-          onApprove={handleApprove}
-          onQualify={handleQualify}
-          onReject={handleReject}
-          onAssignRoom={openRoomAssignmentModal}
-          onGenerateLease={handleGenerateLease}
-          onMessage={handleMessage}
-          onSetupViewing={handleSetupViewing}
-          onRescheduleViewing={handleRescheduleViewing}
-          onActivateLease={handleActivateLease}
-          onSkipViewing={handleSkipViewing}
-          onDelete={handleDelete}
-          onSendToTenant={handleSendToTenant}
-          onEditLease={handleEditLease}
-          onDownloadLease={handleDownloadLease}
-          getPropertyName={getPropertyName}
-          formatDate={formatDate}
-          extraActions={(
-            <>
-                <button 
-                  onClick={fetchData} 
-                  className={`refresh-btn ${loading ? 'loading' : ''}`}
-                  disabled={loading}
-                  title="Refresh applications data to get the latest information (including newly created leases)"
-                  style={{
-                    backgroundColor: loading ? '#e5e5e5' : '#10b981',
-                    color: loading ? '#999' : 'white',
-                    cursor: loading ? 'not-allowed' : 'pointer'
-                  }}
-                >
-                  <svg 
-                    width="16" 
-                    height="16" 
-                    viewBox="0 0 24 24" 
-                    fill="none" 
-                    stroke="currentColor" 
-                    strokeWidth="2"
+            applications={filteredApplications}
+            onReview={openApplicationDetail}
+            onApprove={handleApprove}
+            onQualify={handleQualify}
+            onReject={handleReject}
+            onAssignRoom={openRoomAssignmentModal}
+            onGenerateLease={handleGenerateLease}
+            onMessage={handleMessage}
+            onSetupViewing={handleSetupViewing}
+            onRescheduleViewing={handleRescheduleViewing}
+            onActivateLease={handleActivateLease}
+            onSkipViewing={handleSkipViewing}
+            onDelete={handleDelete}
+            onSendToTenant={handleSendToTenant}
+            onEditLease={handleEditLease}
+            onDownloadLease={handleDownloadLease}
+            getPropertyName={getPropertyName}
+            formatDate={formatDate}
+            extraActions={(
+              <>
+                  <button 
+                    onClick={fetchData} 
+                    className={`refresh-btn ${loading ? 'loading' : ''}`}
+                    disabled={loading}
+                    title="Refresh applications data to get the latest information (including newly created leases)"
                     style={{
-                      animation: loading ? 'spin 1s linear infinite' : 'none'
+                      backgroundColor: loading ? '#e5e5e5' : '#10b981',
+                      color: loading ? '#999' : 'white',
+                      cursor: loading ? 'not-allowed' : 'pointer'
                     }}
                   >
-                  <polyline points="23 4 23 10 17 10" />
-                  <polyline points="1 20 1 14 7 14" />
-                  <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15" />
-                  </svg>
-                  {loading ? 'Refreshing...' : 'Refresh'}
-                </button>
-                <button 
-                  onClick={downloadApplicationsReport} 
-                  className="view-all-btn"
-                  title="Download a comprehensive report of all applications with analytics and insights"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                  <polyline points="7,10 12,15 17,10" />
-                  <path d="M12 15V3" />
-                  </svg>
-                  Download Report
-                </button>
-            </>
-          )}
-        />
+                    <svg 
+                      width="16" 
+                      height="16" 
+                      viewBox="0 0 24 24" 
+                      fill="none" 
+                      stroke="currentColor" 
+                      strokeWidth="2"
+                      style={{
+                        animation: loading ? 'spin 1s linear infinite' : 'none'
+                      }}
+                    >
+                    <polyline points="23 4 23 10 17 10" />
+                    <polyline points="1 20 1 14 7 14" />
+                    <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15" />
+                    </svg>
+                    {loading ? 'Refreshing...' : 'Refresh'}
+                  </button>
+                  <button 
+                    onClick={downloadApplicationsReport} 
+                    className="view-all-btn"
+                    title="Download a comprehensive report of all applications with analytics and insights"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="7,10 12,15 17,10" />
+                    <path d="M12 15V3" />
+                    </svg>
+                    Download Report
+                  </button>
+              </>
+            )}
+                      />
 
         {/* Legacy pending & processed application tables removed – all workflow management is now handled via the Kanban board */}
       </div>
@@ -2404,6 +2405,8 @@ function Applications() {
         .lease-btn:hover {
           background: #047857 !important;
         }
+
+
       `}</style>
     </DashboardLayout>
   );

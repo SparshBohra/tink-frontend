@@ -276,7 +276,7 @@ const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
             <div className="overview-tab">
               <div className="unified-overview">
                 <div className="overview-row">
-                  <div className="info-column">
+                  <div className="info-column full-width">
                     <h3 className="section-title">Application Information</h3>
                     <div className="info-grid">
                       <div className="info-item">
@@ -302,32 +302,6 @@ const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
                       <div className="info-item">
                         <label>Last Updated:</label>
                         <span>{formatDate(application.updated_at || null)}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="priority-column">
-                    <h3 className="section-title">Priority & Urgency</h3>
-                    <div className="priority-section">
-                      <div className="priority-breakdown">
-                        <div className="breakdown-item">
-                          <span className="breakdown-label">Priority Score:</span>
-                          <span className="breakdown-value priority-score-text" style={{ color: priorityLevel.color }}>
-                            {application.priority_score || 0}/100 ({priorityLevel.level})
-                          </span>
-                        </div>
-                        <div className="breakdown-item">
-                          <span className="breakdown-label">Urgency:</span>
-                          <span className="breakdown-value" style={{ color: urgencyIndicator.color }}>
-                            {urgencyIndicator.text}
-                          </span>
-                        </div>
-                        <div className="breakdown-item">
-                          <span className="breakdown-label">Budget Compatible:</span>
-                          <span className={`breakdown-value ${application.is_budget_compatible ? 'positive' : 'negative'}`}>
-                            {application.is_budget_compatible ? 'Yes' : 'No'}
-                          </span>
-                        </div>
                       </div>
                     </div>
                   </div>
@@ -718,6 +692,11 @@ const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
         .info-column {
           flex: 2;
           min-width: 0;
+        }
+
+        .info-column.full-width {
+          flex: 1;
+          width: 100%;
         }
 
         .priority-column {

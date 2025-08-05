@@ -1375,7 +1375,7 @@ function LandlordDashboard() {
 
         /* Ensure sidebar remains interactive during typing animation */
         :global(.sidebar) {
-          z-index: 100 !important;
+          z-index: 1000 !important;
           pointer-events: all !important;
         }
 

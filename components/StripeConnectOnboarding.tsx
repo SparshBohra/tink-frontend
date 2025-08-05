@@ -176,27 +176,31 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
   
   if (showEmbedded && stripeConnectInstance) {
     return (
-      <ConnectComponentsProvider connectInstance={stripeConnectInstance}>
-        <ConnectAccountOnboarding
-          onExit={() => {
-            setShowEmbedded(false);
-            setStripeConnectInstance(null);
-            const fetchStatus = async () => {
-              setLoading(true);
-              const status = await apiClient.getStripeAccountStatus();
-              setAccountStatus(status);
-              setLoading(false);
-            };
-            fetchStatus();
-          }}
-          onLoadError={(error) => {
-            console.error('Onboarding load error:', error);
-            setError('Failed to load onboarding form');
-            setShowEmbedded(false);
-            setStripeConnectInstance(null);
-          }}
-        />
-      </ConnectComponentsProvider>
+      <div className="connect-onboarding-wrapper">
+        <ConnectComponentsProvider connectInstance={stripeConnectInstance}>
+          <div className="connect-onboarding">
+            <ConnectAccountOnboarding
+              onExit={() => {
+                setShowEmbedded(false);
+                setStripeConnectInstance(null);
+                const fetchStatus = async () => {
+                  setLoading(true);
+                  const status = await apiClient.getStripeAccountStatus();
+                  setAccountStatus(status);
+                  setLoading(false);
+                };
+                fetchStatus();
+              }}
+              onLoadError={(error) => {
+                console.error('Onboarding load error:', error);
+                setError('Failed to load onboarding form');
+                setShowEmbedded(false);
+                setStripeConnectInstance(null);
+              }}
+            />
+          </div>
+        </ConnectComponentsProvider>
+      </div>
     );
   }
 

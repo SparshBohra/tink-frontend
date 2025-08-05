@@ -478,19 +478,22 @@ export default function ViewingManagementModal({
             bottom: 0;
             background: rgba(0, 0, 0, 0.5);
             display: flex;
-            align-items: center;
+            align-items: flex-start; /* Changed from center to flex-start */
             justify-content: center;
-            z-index: 1000;
+            z-index: 9999; /* Increased z-index */
+            padding-top: 80px; /* Add top padding to account for top bar */
           }
 
           .viewing-management-modal {
             width: 90%;
-            max-width: 1200px;
-            max-height: 90vh;
+            max-width: 1000px; /* Reduced from 1200px */
+            max-height: calc(85vh - 80px); /* Subtract top bar height */
             overflow-y: auto;
             background: white;
             border-radius: 12px;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+            position: relative; /* Added for z-index context */
+            margin-top: 20px; /* Additional margin for breathing room */
           }
 
           .modal-header {
@@ -529,7 +532,7 @@ export default function ViewingManagementModal({
           }
 
           .modal-body {
-            padding: 30px;
+            padding: 24px 30px; /* Reduced vertical padding */
           }
 
           .loading-state {
@@ -929,7 +932,7 @@ export default function ViewingManagementModal({
           @media (max-width: 768px) {
             .viewing-management-modal {
               width: 95%;
-              max-height: 95vh;
+              max-height: 90vh; /* Adjusted for smaller screens */
             }
 
             .viewing-item {
@@ -947,7 +950,7 @@ export default function ViewingManagementModal({
             }
 
             .modal-body {
-              padding: 20px;
+              padding: 16px; /* Reduced for smaller screens */
             }
           }
         `}</style>

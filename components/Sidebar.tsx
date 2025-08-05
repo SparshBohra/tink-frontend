@@ -25,12 +25,94 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
   const [showPeopleDropdown, setShowPeopleDropdown] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0 });
   const [peopleDropdownPosition, setPeopleDropdownPosition] = useState({ top: 0 });
+  const [isHoverExpanded, setIsHoverExpanded] = useState(false);
+  const [isClickControlled, setIsClickControlled] = useState(false);
+  const [isCollapsingFromSubmenu, setIsCollapsingFromSubmenu] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const peopleDropdownRef = useRef<HTMLDivElement>(null);
   const propertiesNavRef = useRef<HTMLButtonElement>(null);
   const peopleNavRef = useRef<HTMLButtonElement>(null);
   const propertiesTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const peopleTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Handle menu button click
+  const handleMenuToggle = () => {
+    setIsClickControlled(true);
+    
+    // If sidebar is hover-expanded, we want to collapse it
+    if (isHoverExpanded) {
+      setIsHoverExpanded(false);
+      // Don't call onToggle() since we're just collapsing the hover state
+      // The sidebar should return to its original collapsed state
+    } else {
+      // Normal toggle behavior
+      setIsHoverExpanded(false);
+      onToggle();
+    }
+  };
+
+  // Handle sidebar hover
+  const handleSidebarMouseEnter = () => {
+    if (!isClickControlled && isCollapsed) {
+      // Clear any pending timeouts
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+        hoverTimeoutRef.current = null;
+      }
+      
+      // Reset collapsing flag and expand
+      setIsCollapsingFromSubmenu(false);
+      setIsHoverExpanded(true);
+    }
+  };
+
+  const handleSidebarMouseLeave = (event: React.MouseEvent) => {
+    // Check if we're actually leaving the sidebar area
+    const sidebar = event.currentTarget as HTMLElement;
+    const relatedTarget = event.relatedTarget;
+    
+    // If the mouse is moving to a child element, don't collapse
+    if (relatedTarget && relatedTarget instanceof Node && sidebar.contains(relatedTarget)) {
+      return;
+    }
+    
+    if (!isClickControlled && isHoverExpanded) {
+      // Don't collapse if dropdowns are open
+      if (showPropertiesDropdown || showPeopleDropdown) {
+        return;
+      }
+      
+      hoverTimeoutRef.current = setTimeout(() => {
+        setIsHoverExpanded(false);
+        setIsCollapsingFromSubmenu(false); // Reset flag when collapsing from main sidebar
+      }, 200); // Reduced delay for more responsive feel
+    }
+  };
+
+  // Reset click control when sidebar becomes collapsed through other means
+  useEffect(() => {
+    if (isCollapsed && !isHoverExpanded) {
+      setIsClickControlled(false);
+      setIsCollapsingFromSubmenu(false); // Reset collapsing flag when fully collapsed
+    }
+  }, [isCollapsed, isHoverExpanded]);
+
+  // When dropdowns close, check if we should collapse the sidebar
+  useEffect(() => {
+    if (!showPropertiesDropdown && !showPeopleDropdown && isHoverExpanded && !isClickControlled) {
+      // Add a small delay to allow for mouse movement detection
+      const checkTimeout = setTimeout(() => {
+        // This is a simplified check - in a real scenario you might want to check mouse position
+        // For now, we'll let the normal mouse leave handler take care of it
+      }, 100);
+      
+      return () => clearTimeout(checkTimeout);
+    }
+  }, [showPropertiesDropdown, showPeopleDropdown, isHoverExpanded, isClickControlled]);
+
+  // Determine if sidebar should appear expanded
+  const shouldShowExpanded = !isCollapsed || isHoverExpanded;
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -66,6 +148,9 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
       }
       if (peopleTimeoutRef.current) {
         clearTimeout(peopleTimeoutRef.current);
+      }
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
       }
     };
   }, [showPropertiesDropdown, showPeopleDropdown]);
@@ -156,11 +241,28 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
       clearTimeout(propertiesTimeoutRef.current);
       propertiesTimeoutRef.current = null;
     }
+    
+    // Clear any pending sidebar collapse timeout and reset collapsing flag
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
+    }
+    setIsCollapsingFromSubmenu(false);
+    
     setShowPropertiesDropdown(true);
   };
 
   const handlePropertiesDropdownLeave = () => {
     setShowPropertiesDropdown(false);
+    
+    // If sidebar is hover-expanded and not click-controlled, collapse it
+    if (isHoverExpanded && !isClickControlled) {
+      setIsCollapsingFromSubmenu(true);
+      hoverTimeoutRef.current = setTimeout(() => {
+        setIsHoverExpanded(false);
+        setIsCollapsingFromSubmenu(false);
+      }, 200);
+    }
   };
 
   // Hover handlers for People dropdown
@@ -192,11 +294,28 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
       clearTimeout(peopleTimeoutRef.current);
       peopleTimeoutRef.current = null;
     }
+    
+    // Clear any pending sidebar collapse timeout and reset collapsing flag
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
+    }
+    setIsCollapsingFromSubmenu(false);
+    
     setShowPeopleDropdown(true);
   };
 
   const handlePeopleDropdownLeave = () => {
     setShowPeopleDropdown(false);
+    
+    // If sidebar is hover-expanded and not click-controlled, collapse it
+    if (isHoverExpanded && !isClickControlled) {
+      setIsCollapsingFromSubmenu(true);
+      hoverTimeoutRef.current = setTimeout(() => {
+        setIsHoverExpanded(false);
+        setIsCollapsingFromSubmenu(false);
+      }, 200);
+    }
   };
 
   // SVG Icons
@@ -343,14 +462,18 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
 
   return (
     <>
-      <div className={`sidebar ${isCollapsed ? 'collapsed' : ''}`}>
+      <div 
+        className={`sidebar ${isCollapsed ? 'collapsed' : ''} ${isHoverExpanded ? 'hover-expanded' : ''}`}
+        onMouseEnter={handleSidebarMouseEnter}
+        onMouseLeave={handleSidebarMouseLeave}
+      >
         {/* Menu Section */}
         <div className="sidebar-header">
           <div className="menu-container">
-            <button className="menu-toggle" onClick={onToggle}>
+            <button className="menu-toggle" onClick={handleMenuToggle}>
               <MenuIcon />
             </button>
-            {!isCollapsed && <span className="logo-text">Tink</span>}
+            {shouldShowExpanded && <span className="logo-text">Tink</span>}
           </div>
         </div>
 
@@ -368,9 +491,10 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                 ref={item.path === '/properties' ? propertiesNavRef : item.path === '/tenants' ? peopleNavRef : undefined}
                 onClick={() => handleNavigation(item.path)}
                 className={`nav-item ${router.pathname === item.path || (item.path === '/properties' && (router.pathname === '/properties' || router.pathname === '/listings')) || (item.path === '/tenants' && (router.pathname === '/tenants' || router.pathname === '/vendors' || router.pathname.includes('/vendor'))) ? 'active' : ''}`}
+                title={isCollapsed && !item.hasDropdown ? item.label : undefined}
               >
                 <span className="nav-icon">{item.icon}</span>
-                {!isCollapsed && (
+                {shouldShowExpanded && (
                   <>
                     <span className="nav-label">{item.label}</span>
                     {item.badge && item.badge > 0 && (
@@ -388,9 +512,9 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
               </button>
               
               {/* Properties Dropdown */}
-              {item.hasDropdown && item.path === '/properties' && showPropertiesDropdown && !isCollapsed && (
+              {item.hasDropdown && item.path === '/properties' && showPropertiesDropdown && (
                 <div 
-                  className="properties-dropdown"
+                  className={`properties-dropdown ${isCollapsed && !isHoverExpanded ? 'collapsed' : ''}`}
                   style={{ top: `${dropdownPosition.top}px` }}
                   onMouseEnter={handlePropertiesDropdownEnter}
                   onMouseLeave={handlePropertiesDropdownLeave}
@@ -438,9 +562,9 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
               )}
 
               {/* People Dropdown */}
-              {item.hasDropdown && item.path === '/tenants' && showPeopleDropdown && !isCollapsed && (
+              {item.hasDropdown && item.path === '/tenants' && showPeopleDropdown && (
                 <div 
-                  className="people-dropdown"
+                  className={`people-dropdown ${isCollapsed && !isHoverExpanded ? 'collapsed' : ''}`}
                   style={{ top: `${peopleDropdownPosition.top}px` }}
                   onMouseEnter={handlePeopleDropdownEnter}
                   onMouseLeave={handlePeopleDropdownLeave}
@@ -493,7 +617,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
             className="nav-item"
           >
             <span className="nav-icon"><SettingsIcon /></span>
-            {!isCollapsed && <span className="nav-label">Settings</span>}
+            {shouldShowExpanded && <span className="nav-label">Settings</span>}
           </button>
 
           <button
@@ -501,13 +625,13 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
             className="nav-item"
           >
             <span className="nav-icon"><SupportIcon /></span>
-            {!isCollapsed && <span className="nav-label">Support</span>}
+            {shouldShowExpanded && <span className="nav-label">Support</span>}
           </button>
         </div>
 
         {/* User Profile */}
         <div className="sidebar-user">
-          {!isCollapsed ? (
+          {shouldShowExpanded ? (
             <div className="user-info">
               <div className="user-avatar">
                 {user?.full_name?.charAt(0) || 'U'}
@@ -554,6 +678,51 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
 
         .sidebar.collapsed {
           width: 70px;
+        }
+
+        .sidebar.collapsed.hover-expanded {
+          width: 240px;
+          transition: width 0.2s ease;
+        }
+
+        .sidebar.collapsed.hover-expanded .sidebar-header {
+          padding: 16px 28px;
+        }
+
+        .sidebar.collapsed.hover-expanded .menu-container {
+          justify-content: flex-start;
+          width: auto;
+        }
+
+        .sidebar.collapsed.hover-expanded .nav-item {
+          justify-content: flex-start !important;
+          padding: 12px 16px !important;
+          width: 100% !important;
+          height: auto !important;
+          margin: 0 0 6px 0 !important;
+          gap: 12px !important;
+        }
+
+        .sidebar.collapsed.hover-expanded .nav-icon {
+          opacity: 0.85 !important;
+        }
+
+        .sidebar.collapsed.hover-expanded .nav-label {
+          display: block !important;
+          opacity: 1 !important;
+        }
+
+        .sidebar.collapsed.hover-expanded .sidebar-bottom .nav-item {
+          justify-content: flex-start !important;
+          padding: 12px 16px !important;
+          width: 100% !important;
+          height: auto !important;
+          margin: 0 0 6px 0 !important;
+          gap: 12px !important;
+        }
+
+        .sidebar.collapsed.hover-expanded .sidebar-user {
+          padding: 16px !important;
         }
 
         .sidebar-header {
@@ -737,7 +906,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         .people-dropdown {
           position: fixed;
           top: auto;
-          left: 250px; /* Reduce gap to 10px for smoother hover transition */
+          left: 250px; /* Aligns with expanded sidebar */
           width: 320px;
           background: #1e293b;
           border: 1px solid rgba(255, 255, 255, 0.1);
@@ -750,9 +919,9 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
           pointer-events: auto;
         }
 
-        .sidebar.collapsed .properties-dropdown,
-        .sidebar.collapsed .people-dropdown {
-          left: 80px; /* Reduce gap to 10px for smoother hover transition */
+        .properties-dropdown.collapsed,
+        .people-dropdown.collapsed {
+          left: 80px; /* Provides spacing from collapsed sidebar */
         }
 
         .dropdown-content {
@@ -975,12 +1144,6 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
           background: #ef4444 !important;
         }
 
-        /* Collapsed state - hide dropdown */
-        .sidebar.collapsed .properties-dropdown,
-        .sidebar.collapsed .people-dropdown {
-          display: none;
-        }
-
         /* Responsive adjustments */
         @media (max-width: 768px) {
           .properties-dropdown,
@@ -988,11 +1151,6 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
             width: 280px;
             left: 240px;
             transform: translateY(-50%);
-          }
-
-          .sidebar.collapsed .properties-dropdown,
-          .sidebar.collapsed .people-dropdown {
-            left: 70px;
           }
         }
       `}</style>

@@ -1742,17 +1742,69 @@ select {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 2rem;
+  position: relative;
+  isolation: isolate;
 }
 
 .stripe-left-column {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+  position: relative;
+  z-index: 1;
 }
 
 .stripe-right-column {
   display: flex;
   flex-direction: column;
+  position: relative;
+  z-index: 1;
+}
+
+/* Stripe Connect Embedded Component Container */
+.stripe-onboarding-section {
+  position: relative;
+  isolation: isolate;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.onboarding-container {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+}
+
+/* Stripe Connect Embedded Iframe Styles */
+[data-connect-js] {
+  max-width: 100% !important;
+  width: 100% !important;
+  position: relative !important;
+  z-index: auto !important;
+}
+
+/* Ensure Stripe embedded components don't overflow */
+[data-connect-js] iframe {
+  max-width: 100% !important;
+  width: 100% !important;
+  position: relative !important;
+}
+
+/* Override any Stripe Connect stacking context issues */
+.connect-onboarding-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.connect-onboarding {
+  position: relative;
+  isolation: isolate;
+  max-width: 100%;
+  overflow: hidden;
+  width: 100%;
 }
 
 /* Benefits Section */

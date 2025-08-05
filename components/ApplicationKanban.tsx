@@ -25,52 +25,6 @@ interface ApplicationKanbanProps {
   extraActions?: React.ReactNode;
 }
 
-interface ViewToggleProps {
-  currentView: 'kanban' | 'list';
-  onViewChange: (view: 'kanban' | 'list') => void;
-}
-
-function ViewToggle({ currentView, onViewChange }: ViewToggleProps) {
-  return (
-    <div className="view-toggle">
-      <button 
-        className={`view-btn ${currentView === 'kanban' ? 'active' : ''}`}
-        onClick={() => onViewChange('kanban')}
-      >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <rect x="3" y="3" width="7" height="7"/>
-          <rect x="14" y="3" width="7" height="7"/>
-          <rect x="3" y="14" width="7" height="7"/>
-          <rect x="14" y="14" width="7" height="7"/>
-        </svg>
-        Kanban
-      </button>
-      <button 
-        className={`view-btn ${currentView === 'list' ? 'active' : ''}`}
-        onClick={() => onViewChange('list')}
-      >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <line x1="8" y1="6" x2="21" y2="6"/>
-          <line x1="8" y1="12" x2="21" y2="12"/>
-          <line x1="8" y1="18" x2="21" y2="18"/>
-          <line x1="3" y1="6" x2="3.01" y2="6"/>
-          <line x1="3" y1="12" x2="3.01" y2="12"/>
-          <line x1="3" y1="18" x2="3.01" y2="18"/>
-        </svg>
-        List
-      </button>
-    </div>
-  );
-}
-
-interface ApplicationListViewProps extends ApplicationKanbanProps {
-  grouped: Record<string, Application[]>;
-  sortSettings: Record<string, 'default' | 'date' | 'name'>;
-  toggleSort: (columnTitle: string) => void;
-  getSortIcon: (sortType: 'default' | 'date' | 'name') => React.ReactNode;
-  getSortLabel: (sortType: 'default' | 'date' | 'name') => string;
-}
-
 type Column = { keys: string[]; title: string };
 
 const STATUS_COLUMNS: Column[] = [
@@ -139,288 +93,6 @@ const canDeleteApplication = (status: string) => {
   return !protectedStatuses.includes(status);
 };
 
-const ApplicationListView: React.FC<ApplicationListViewProps> = ({
-  grouped,
-  onReview,
-  onApprove,
-  onQualify,
-  onReject,
-  onAssignRoom,
-  onGenerateLease,
-  onMessage,
-  onSetupViewing,
-  onActivateLease,
-  onSkipViewing,
-  onDelete,
-  getPropertyName,
-  formatDate,
-  sortSettings,
-  toggleSort,
-  getSortIcon,
-  getSortLabel,
-}) => {
-  const getStageDescription = (title: string): string => {
-    switch (title) {
-      case 'Pending Review':
-        return 'New applications waiting for initial screening and approval decision';
-      case 'Shortlisted':
-        return 'Shortlisted applicants ready for property viewing scheduling and completion';
-      case 'Generate Lease':
-        return 'Viewing completed - ready for lease generation (room assignment can be edited during lease creation)';
-      case 'Lease Process':
-        return 'Room assigned and lease documents in preparation, generation, or signing process';
-      case 'Active Tenants':
-        return 'Completed applications - active tenants';
-      default:
-        return '';
-    }
-  };
-
-  return (
-    <div className="list-view-container">
-      {STATUS_COLUMNS.map((col) => (
-        <div key={col.title} className="list-section">
-          <div className="list-section-header">
-            <div className="list-header-content">
-              <div className="list-header-text">
-            <h3 className="list-section-title">
-              {col.title} ({grouped[col.title]?.length || 0})
-            </h3>
-            <p className="list-section-description">
-              {getStageDescription(col.title)}
-            </p>
-              </div>
-              <button
-                className="sort-toggle-btn"
-                onClick={() => toggleSort(col.title)}
-                title={getSortLabel(sortSettings[col.title] || 'default')}
-              >
-                {getSortIcon(sortSettings[col.title] || 'default')}
-              </button>
-            </div>
-          </div>
-          
-          {(grouped[col.title] || []).length === 0 ? (
-            <div className="list-empty">
-              <p>No applications in this stage</p>
-            </div>
-          ) : (
-            <div className="list-table-container">
-              <table className="list-table">
-                <thead>
-                  <tr>
-                    <th>Applicant</th>
-                    <th>Property</th>
-                    <th>Applied Date</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {grouped[col.title].map((app) => (
-                    <tr key={app.id} className="list-row">
-                      <td className="applicant-cell">
-                        <div className="applicant-info">
-                          <div className="applicant-name-list">
-                            {app.tenant_name || `Applicant #${app.id}`}
-                          </div>
-                          {app.tenant_email && (
-                            <div className="applicant-email">
-                              {app.tenant_email}
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      <td className="property-cell">
-                        {getPropertyName(app.property_ref)}
-                      </td>
-                      <td className="date-cell">
-                        {formatDate(app.created_at)}
-                      </td>
-                      <td className="status-cell">
-                        <StatusBadge status={app.status} small />
-                      </td>
-                      <td className="actions-cell">
-                        <div className="list-actions">
-                          {/* Pending actions */}
-                          {app.status === 'pending' && (
-                            <>
-                              <button className="btn-sm primary" onClick={() => onReview(app)}>
-                                Review
-                              </button>
-                              <button className="btn-sm success" onClick={() => onQualify && onQualify(app.id)}>
-                                Shortlist
-                              </button>
-                              <button className="btn-sm btn-error" onClick={() => onReject(app.id)}>
-                                Reject
-                              </button>
-                            </>
-                          )}
-
-                          {/* Rejected actions */}
-                          {app.status === 'rejected' && (
-                            <>
-                              <button 
-                                className="btn-sm success" 
-                                onClick={() => onQualify && onQualify(app.id)}
-                                title="Restore application to pending status for fresh review"
-                              >
-                                Undo
-                              </button>
-                              <button className="btn-sm primary" onClick={() => onReview(app)}>
-                                Review Details
-                              </button>
-                            </>
-                          )}
-
-                          {/* Qualified actions */}
-                          {app.status === 'approved' && (
-                            <>
-                            <button className="btn-sm primary" onClick={() => onSetupViewing && onSetupViewing(app)}>
-                              Schedule Viewing
-                            </button>
-                              <button 
-                                className="btn-sm secondary" 
-                                onClick={() => onSkipViewing && onSkipViewing(app.id)}
-                                title="Skip viewing and move directly to room assignment"
-                              >
-                                Skip Viewing
-                              </button>
-                            </>
-                          )}
-
-                          {/* Viewing Scheduled actions */}
-                          {app.status === 'viewing_scheduled' && (
-                            <>
-                              <button className="btn-sm success" onClick={() => onSetupViewing && onSetupViewing(app)}>
-                                Complete Viewing
-                              </button>
-                              <button className="btn-sm secondary" onClick={() => onRescheduleViewing && onRescheduleViewing(app)}>
-                                Reschedule
-                              </button>
-                            </>
-                          )}
-
-                          {/* Viewing Complete actions */}
-                          {(app.status === 'viewing_completed' || app.status === 'processing') && (
-                            <>
-                              <button 
-                                className="btn-sm success" 
-                                onClick={() => {
-                                  console.log('Generate Lease button clicked for app:', app);
-                                  onGenerateLease && onGenerateLease(app);
-                                }}
-                              >
-                                Generate Lease
-                              </button>
-                            </>
-                          )}
-
-                          {/* Room Assigned actions */}
-                          {app.status === 'room_assigned' && (
-                            <>
-                              <button className="btn-sm success" onClick={() => onGenerateLease && onGenerateLease(app)}>
-                                Generate Lease
-                              </button>
-                              <button className="btn-sm secondary" onClick={() => onAssignRoom(app)}>
-                                Change Room
-                              </button>
-                            </>
-                          )}
-
-                          {/* Lease Process actions */}
-                          {(app.status === 'lease_created' || app.status === 'lease_signed') && (
-                            <>
-                              <button className="btn-sm primary" onClick={() => onReview(app)}>
-                                View Lease
-                              </button>
-                              {/* Show different buttons based on lease status */}
-                              {app.lease?.status === 'draft' && (
-                                <>
-                                  <button className="btn-sm success" onClick={() => onSendToTenant && onSendToTenant(app)}>
-                                    Send to Tenant
-                                  </button>
-                                  <button className="btn-sm secondary" onClick={() => onEditLease && onEditLease(app)}>
-                                    Edit Lease
-                                  </button>
-                                  <button className="btn-sm outline" onClick={() => onDownloadLease && onDownloadLease(app)}>
-                                    Download Lease
-                                  </button>
-                                </>
-                              )}
-                              {app.lease?.status === 'sent_to_tenant' && (
-                                <div className="status-text">
-                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{display: 'inline', marginRight: '6px', color: '#10b981'}}>
-                                    <line x1="22" y1="2" x2="11" y2="13"/>
-                                    <polygon points="22,2 15,22 11,13 2,9 22,2"/>
-                                  </svg>
-                                  Sent to Tenant - Awaiting Signature
-                                </div>
-                              )}
-                              {app.lease?.status === 'signed' && (
-                                <button className="btn-sm success" onClick={() => onActivateLease && onActivateLease(app)}>
-                                  Activate Lease
-                                </button>
-                              )}
-                              {app.lease?.status === 'active' && (
-                                <button className="btn-sm success" onClick={() => onActivateLease && onActivateLease(app)}>
-                                  Schedule Move-in
-                                </button>
-                              )}
-                            </>
-                          )}
-
-                          {/* Active Tenants actions */}
-                          {(app.status === 'moved_in' || app.status === 'active') && (
-                            <button className="btn-sm primary" onClick={() => onReview(app)}>
-                              View Details
-                            </button>
-                          )}
-
-                          {/* Message button - available on all cards except rejected */}
-                          {app.status !== 'rejected' && (
-                            <button className="btn-sm message" onClick={() => onMessage && onMessage(app)}>
-                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                              </svg>
-                              Message
-                            </button>
-                          )}
-
-                          {/* Delete button - available if application can be deleted */}
-                          {canDeleteApplication(app.status) && onDelete && (
-                            <button 
-                              className="btn-sm btn-error" 
-                              onClick={() => {
-                                if (window.confirm(`Are you sure you want to delete the application from ${app.tenant_name || `Applicant #${app.id}`}? This action cannot be undone.`)) {
-                                  onDelete(app.id);
-                                }
-                              }}
-                              title="Delete application"
-                            >
-                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <polyline points="3,6 5,6 21,6"/>
-                                <path d="m19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"/>
-                                <line x1="10" y1="11" x2="10" y2="17"/>
-                                <line x1="14" y1="11" x2="14" y2="17"/>
-                              </svg>
-                              Delete
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      ))}
-    </div>
-  );
-};
-
 export default function ApplicationKanban({
   applications,
   onReview,
@@ -442,7 +114,6 @@ export default function ApplicationKanban({
   formatDate,
   extraActions,
 }: ApplicationKanbanProps) {
-  const [currentView, setCurrentView] = useState<'kanban' | 'list'>('kanban');
   const [sortSettings, setSortSettings] = useState<Record<string, 'default' | 'date' | 'name'>>({});
 
   // Sorting function
@@ -454,7 +125,7 @@ export default function ApplicationKanban({
     return [...apps].sort((a, b) => {
       if (sortType === 'date') {
         // Sort by applied date (newest first)
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        return new Date(b.application_date).getTime() - new Date(a.application_date).getTime();
       } else if (sortType === 'name') {
         // Sort by tenant name alphabetically
         const nameA = (a.tenant_name || `Applicant #${a.id}`).toLowerCase();
@@ -570,259 +241,235 @@ export default function ApplicationKanban({
             {extraActions}
           </div>
         )}
-        <ViewToggle currentView={currentView} onViewChange={setCurrentView} />
       </div>
       
       {/* Render Current View */}
-      {currentView === 'kanban' ? (
-        <div className="kanban-board">
-          {STATUS_COLUMNS.map((col) => (
-            <div key={col.title} className="kanban-column">
-              <div className="kanban-column-header">
-                <div className="column-header-content">
-                  <span className="column-title">
-                {col.title} ({grouped[col.title]?.length || 0})
-                  </span>
-                  <button
-                    className="sort-toggle-btn"
-                    onClick={() => toggleSort(col.title)}
-                    title={getSortLabel(sortSettings[col.title] || 'default')}
-                  >
-                    {getSortIcon(sortSettings[col.title] || 'default')}
-                  </button>
-                </div>
-                <div className="stage-description">
-                  {getStageDescription(col.title)}
-                </div>
+      <div className="kanban-board">
+        {STATUS_COLUMNS.map((col) => (
+          <div key={col.title} className="kanban-column">
+            <div className="kanban-column-header">
+              <div className="column-header-content">
+                <span className="column-title">
+                  {col.title} ({grouped[col.title]?.length || 0})
+                </span>
+                <button
+                  className="sort-toggle-btn"
+                  onClick={() => toggleSort(col.title)}
+                  title={getSortLabel(sortSettings[col.title] || 'default')}
+                >
+                  {getSortIcon(sortSettings[col.title] || 'default')}
+                </button>
               </div>
-              <div className="kanban-column-body">
-                {(grouped[col.title] || []).length === 0 ? (
-                  <div className="kanban-empty">No items</div>
-                ) : (
-                  grouped[col.title].map((app) => (
-                    <div key={app.id} className={`kanban-card ${getCardColorClass(app.status)}`}>
-                      <div className="card-top">
-                        <div className="applicant-name" onClick={() => onReview(app)}>
-                          {app.tenant_name || `Applicant #${app.id}`}
-                        </div>
-                        <StatusBadge status={app.status} small />
-                      </div>
-                      <div className="app-prop">{getPropertyName(app.property_ref)}</div>
-                      <div className="app-dates">Applied: {formatDate(app.created_at)}</div>
-                      <div className="app-status-text">
-                        {app.status === 'pending' && 'Awaiting Review'}
-                        {app.status === 'approved' && 'Shortlisted'}
-                        {app.status === 'rejected' && 'Application Rejected'}
-                        {app.status === 'viewing_scheduled' && 'Viewing Scheduled'}
-                        {app.status === 'viewing_completed' && 'Viewing Completed'}
-                        {app.status === 'processing' && 'Processing Application'}
-                        {app.status === 'room_assigned' && 'Room Assigned'}
-                        {app.status === 'lease_ready' && 'Lease Ready'}
-                        {app.status === 'lease_created' && (
-                              app.lease?.status === 'draft' ? 'Draft Lease Created' :
-                              app.lease?.status === 'sent_to_tenant' ? 'Sent to Tenant' :
-                              app.lease?.status === 'signed' ? 'Lease Signed' :
-                              app.lease?.status === 'active' ? 'Lease Active' :
-                              'Lease Generated'
-                            )}
-                            {app.status === 'lease_signed' && 'Lease Signed'}
-                        {app.status === 'moved_in' && 'Tenant Moved In'}
-                        {app.status === 'active' && 'Active Tenant'}
-                      </div>
-                      <div className="kanban-actions">
-                        {/* Pending actions */}
-                        {app.status === 'pending' && (
-                          <>
-                            <button className="btn-sm primary" onClick={() => onReview(app)}>
-                              Review
-                            </button>
-                            <button className="btn-sm success" onClick={() => onQualify && onQualify(app.id)}>
-                              Shortlist
-                            </button>
-                            <button className="btn-sm btn-error" onClick={() => onReject(app.id)}>
-                              Reject
-                            </button>
-                          </>
-                        )}
-
-                        {/* Rejected actions - can be accepted again */}
-                        {app.status === 'rejected' && (
-                          <>
-                            <button 
-                              className="btn-sm success" 
-                              onClick={() => onQualify && onQualify(app.id)}
-                              title="Restore application to pending status for fresh review"
-                            >
-                              Undo
-                            </button>
-                            <button className="btn-sm primary" onClick={() => onReview(app)}>
-                              Review Details
-                            </button>
-                          </>
-                        )}
-
-                        {/* Qualified actions */}
-                        {app.status === 'approved' && (
-                          <>
-                            <button className="btn-sm primary" onClick={() => onSetupViewing && onSetupViewing(app)}>
-                              Schedule Viewing
-                            </button>
-                            <button 
-                              className="btn-sm secondary" 
-                              onClick={() => onSkipViewing && onSkipViewing(app.id)}
-                              title="Skip viewing and move directly to room assignment"
-                            >
-                              Skip Viewing
-                            </button>
-                          </>
-                        )}
-
-                        {/* Viewing Scheduled actions */}
-                        {app.status === 'viewing_scheduled' && (
-                          <>
-                            <button className="btn-sm success" onClick={() => onSetupViewing && onSetupViewing(app)}>
-                              Complete Viewing
-                            </button>
-                            <button className="btn-sm secondary" onClick={() => onRescheduleViewing && onRescheduleViewing(app)}>
-                              Reschedule
-                            </button>
-                          </>
-                        )}
-
-                        {/* Viewing Complete actions */}
-                        {(app.status === 'viewing_completed' || app.status === 'processing') && (
-                          <>
-                            <button 
-                              className="btn-sm success" 
-                              onClick={() => onGenerateLease && onGenerateLease(app)}
-                              title="Generate lease for this applicant (room assignment can be edited during lease generation)"
-                            >
-                              Generate Lease
-                            </button>
-                          </>
-                        )}
-
-                        {/* Room Assigned actions */}
-                        {app.status === 'room_assigned' && (
-                          <>
-                            <button className="btn-sm success" onClick={() => onGenerateLease && onGenerateLease(app)}>
-                              Generate Lease
-                            </button>
-                            <button className="btn-sm secondary" onClick={() => onAssignRoom(app)}>
-                              Change Room
-                            </button>
-                          </>
-                        )}
-
-                        {/* Lease Process actions */}
-                        {(app.status === 'lease_created' || app.status === 'lease_signed') && (
-                          <>
-                            <button className="btn-sm primary" onClick={() => onReview(app)}>
-                              View Lease
-                            </button>
-                            {/* Show different buttons based on lease status */}
-                            {app.lease?.status === 'draft' && (
-                              <>
-                                <button className="btn-sm success" onClick={() => onSendToTenant && onSendToTenant(app)}>
-                                  Send to Tenant
-                                </button>
-                                <button className="btn-sm secondary" onClick={() => onEditLease && onEditLease(app)}>
-                                  Edit Lease
-                                </button>
-                                <button className="btn-sm outline" onClick={() => onDownloadLease && onDownloadLease(app)}>
-                                  Download Lease
-                                </button>
-                              </>
-                            )}
-                            {app.lease?.status === 'sent_to_tenant' && (
-                              <div className="status-text">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{display: 'inline', marginRight: '6px', color: '#10b981'}}>
-                                  <line x1="22" y1="2" x2="11" y2="13"/>
-                                  <polygon points="22,2 15,22 11,13 2,9 22,2"/>
-                                </svg>
-                                Sent to Tenant - Awaiting Signature
-                              </div>
-                            )}
-                            {app.lease?.status === 'signed' && (
-                              <button className="btn-sm success" onClick={() => onActivateLease && onActivateLease(app)}>
-                                Activate Lease
-                              </button>
-                            )}
-                            {app.lease?.status === 'active' && (
-                              <button className="btn-sm success" onClick={() => onActivateLease && onActivateLease(app)}>
-                                Schedule Move-in
-                              </button>
-                            )}
-                          </>
-                        )}
-
-                        {/* Active Tenants actions */}
-                        {(app.status === 'moved_in' || app.status === 'active') && (
-                          <button className="btn-sm primary" onClick={() => onReview(app)}>
-                            View Details
-                          </button>
-                        )}
-
-                        {/* Message button - available on all cards except rejected */}
-                        {app.status !== 'rejected' && (
-                          <button className="btn-sm message" onClick={() => onMessage && onMessage(app)}>
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                            </svg>
-                            Message
-                          </button>
-                        )}
-
-                        {/* Delete button - available if application can be deleted */}
-                        {canDeleteApplication(app.status) && onDelete && (
-                          <button 
-                            className="btn-sm btn-error" 
-                            onClick={() => {
-                              if (window.confirm(`Are you sure you want to delete the application from ${app.tenant_name || `Applicant #${app.id}`}? This action cannot be undone.`)) {
-                                onDelete(app.id);
-                              }
-                            }}
-                            title="Delete application"
-                          >
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <polyline points="3,6 5,6 21,6"/>
-                              <path d="m19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"/>
-                              <line x1="10" y1="11" x2="10" y2="17"/>
-                              <line x1="14" y1="11" x2="14" y2="17"/>
-                            </svg>
-                            Delete
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ))
-                )}
+              <div className="stage-description">
+                {getStageDescription(col.title)}
               </div>
             </div>
-          ))}
-        </div>
-      ) : (
-        <ApplicationListView
-          applications={applications}
-          grouped={grouped}
-          onReview={onReview}
-          onApprove={onApprove}
-          onReject={onReject}
-          onAssignRoom={onAssignRoom}
-          onGenerateLease={onGenerateLease}
-          onMessage={onMessage}
-          onSetupViewing={onSetupViewing}
-          onActivateLease={onActivateLease}
-          onSkipViewing={onSkipViewing}
-          onDelete={onDelete}
-          getPropertyName={getPropertyName}
-          formatDate={formatDate}
-          sortSettings={sortSettings}
-          toggleSort={toggleSort}
-          getSortIcon={getSortIcon}
-          getSortLabel={getSortLabel}
-        />
-      )}
+            <div className="kanban-column-body">
+              {(grouped[col.title] || []).length === 0 ? (
+                <div className="kanban-empty">No items</div>
+              ) : (
+                grouped[col.title].map((app) => (
+                  <div key={app.id} className={`kanban-card ${getCardColorClass(app.status)}`}>
+                    <div className="card-top">
+                      <div className="applicant-name" onClick={() => onReview(app)}>
+                        {app.tenant_name || `Applicant #${app.id}`}
+                      </div>
+                      <StatusBadge status={app.status} small />
+                    </div>
+                    <div className="app-prop">{getPropertyName(app.property_ref)}</div>
+                    <div className="app-dates">Applied: {formatDate(app.application_date)}</div>
+                    <div className="app-status-text">
+                      {app.status === 'pending' && 'Awaiting Review'}
+                      {app.status === 'approved' && 'Shortlisted'}
+                      {app.status === 'rejected' && 'Application Rejected'}
+                      {app.status === 'viewing_scheduled' && 'Viewing Scheduled'}
+                      {app.status === 'viewing_completed' && 'Viewing Completed'}
+                      {app.status === 'processing' && 'Processing Application'}
+                      {app.status === 'room_assigned' && 'Room Assigned'}
+                      {app.status === 'lease_ready' && 'Lease Ready'}
+                      {app.status === 'lease_created' && (
+                            app.lease?.status === 'draft' ? 'Draft Lease Created' :
+                            app.lease?.status === 'sent_to_tenant' ? 'Sent to Tenant' :
+                            app.lease?.status === 'signed' ? 'Lease Signed' :
+                            app.lease?.status === 'active' ? 'Lease Active' :
+                            'Lease Generated'
+                          )}
+                          {app.status === 'lease_signed' && 'Lease Signed'}
+                      {app.status === 'moved_in' && 'Tenant Moved In'}
+                      {app.status === 'active' && 'Active Tenant'}
+                    </div>
+                    <div className="kanban-actions">
+                      {/* Pending actions */}
+                      {app.status === 'pending' && (
+                        <>
+                          <button className="btn-sm primary" onClick={() => onReview(app)}>
+                            Review
+                          </button>
+                          <button className="btn-sm success" onClick={() => onQualify && onQualify(app.id)}>
+                            Shortlist
+                          </button>
+                          <button className="btn-sm btn-error" onClick={() => onReject(app.id)}>
+                            Reject
+                          </button>
+                        </>
+                      )}
+
+                      {/* Rejected actions - can be accepted again */}
+                      {app.status === 'rejected' && (
+                        <>
+                          <button 
+                            className="btn-sm success" 
+                            onClick={() => onQualify && onQualify(app.id)}
+                            title="Restore application to pending status for fresh review"
+                          >
+                            Undo
+                          </button>
+                          <button className="btn-sm primary" onClick={() => onReview(app)}>
+                            Review Details
+                          </button>
+                        </>
+                      )}
+
+                      {/* Qualified actions */}
+                      {app.status === 'approved' && (
+                        <>
+                          <button className="btn-sm primary" onClick={() => onSetupViewing && onSetupViewing(app)}>
+                            Schedule Viewing
+                          </button>
+                          <button 
+                            className="btn-sm secondary" 
+                            onClick={() => onSkipViewing && onSkipViewing(app.id)}
+                            title="Skip viewing and move directly to room assignment"
+                          >
+                            Skip Viewing
+                          </button>
+                        </>
+                      )}
+
+                      {/* Viewing Scheduled actions */}
+                      {app.status === 'viewing_scheduled' && (
+                        <>
+                          <button className="btn-sm success" onClick={() => onSetupViewing && onSetupViewing(app)}>
+                            Complete Viewing
+                          </button>
+                          <button className="btn-sm secondary" onClick={() => onRescheduleViewing && onRescheduleViewing(app)}>
+                            Reschedule
+                          </button>
+                        </>
+                      )}
+
+                      {/* Viewing Complete actions */}
+                      {(app.status === 'viewing_completed' || app.status === 'processing') && (
+                        <>
+                          <button 
+                            className="btn-sm success" 
+                            onClick={() => onGenerateLease && onGenerateLease(app)}
+                            title="Generate lease for this applicant (room assignment can be edited during lease generation)"
+                          >
+                            Generate Lease
+                          </button>
+                        </>
+                      )}
+
+                      {/* Room Assigned actions */}
+                      {app.status === 'room_assigned' && (
+                        <>
+                          <button className="btn-sm success" onClick={() => onGenerateLease && onGenerateLease(app)}>
+                            Generate Lease
+                          </button>
+                          <button className="btn-sm secondary" onClick={() => onAssignRoom(app)}>
+                            Change Room
+                          </button>
+                        </>
+                      )}
+
+                      {/* Lease Process actions */}
+                      {(app.status === 'lease_created' || app.status === 'lease_signed') && (
+                        <>
+                          <button className="btn-sm primary" onClick={() => onReview(app)}>
+                            View Lease
+                          </button>
+                          {/* Show different buttons based on lease status */}
+                          {app.lease?.status === 'draft' && (
+                            <>
+                              <button className="btn-sm success" onClick={() => onSendToTenant && onSendToTenant(app)}>
+                                Send to Tenant
+                              </button>
+                              <button className="btn-sm secondary" onClick={() => onEditLease && onEditLease(app)}>
+                                Edit Lease
+                              </button>
+                              <button className="btn-sm outline" onClick={() => onDownloadLease && onDownloadLease(app)}>
+                                Download Lease
+                              </button>
+                            </>
+                          )}
+                          {app.lease?.status === 'sent_to_tenant' && (
+                            <div className="status-text">
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{display: 'inline', marginRight: '6px', color: '#10b981'}}>
+                                <line x1="22" y1="2" x2="11" y2="13"/>
+                                <polygon points="22,2 15,22 11,13 2,9 22,2"/>
+                              </svg>
+                              Sent to Tenant - Awaiting Signature
+                            </div>
+                          )}
+                          {app.lease?.status === 'signed' && (
+                            <button className="btn-sm success" onClick={() => onActivateLease && onActivateLease(app)}>
+                              Activate Lease
+                            </button>
+                          )}
+                          {app.lease?.status === 'active' && (
+                            <button className="btn-sm success" onClick={() => onActivateLease && onActivateLease(app)}>
+                              Schedule Move-in
+                            </button>
+                          )}
+                        </>
+                      )}
+
+                      {/* Active Tenants actions */}
+                      {(app.status === 'moved_in' || app.status === 'active') && (
+                        <button className="btn-sm primary" onClick={() => onReview(app)}>
+                          View Details
+                        </button>
+                      )}
+
+                      {/* Message button - available on all cards except rejected */}
+                      {app.status !== 'rejected' && (
+                        <button className="btn-sm message" onClick={() => onMessage && onMessage(app)}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                          </svg>
+                          Message
+                        </button>
+                      )}
+
+                      {/* Delete button - available if application can be deleted */}
+                      {canDeleteApplication(app.status) && onDelete && (
+                        <button 
+                          className="btn-sm btn-error" 
+                          onClick={() => {
+                            if (window.confirm(`Are you sure you want to delete the application from ${app.tenant_name || `Applicant #${app.id}`}? This action cannot be undone.`)) {
+                              onDelete(app.id);
+                            }
+                          }}
+                          title="Delete application"
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <polyline points="3,6 5,6 21,6"/>
+                            <path d="m19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"/>
+                            <line x1="10" y1="11" x2="10" y2="17"/>
+                            <line x1="14" y1="11" x2="14" y2="17"/>
+                          </svg>
+                          Delete
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
 
       {/* Styles */}
       <style jsx>{`
@@ -870,41 +517,6 @@ export default function ApplicationKanban({
           gap: 14px;
           margin-right: 24px; /* space before the view toggle */
           margin-left: 20px;  /* space after title */
-        }
-
-        .view-toggle {
-          display: flex;
-          background: #f1f5f9;
-          border-radius: 8px;
-          padding: 2px;
-          gap: 2px;
-          border: 1px solid #e2e8f0;
-        }
-
-        .view-btn {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          padding: 8px 14px;
-          border: none;
-          background: transparent;
-          border-radius: 6px;
-          font-size: 13px;
-          font-weight: 600;
-          color: #64748b;
-          cursor: pointer;
-          transition: all 0.18s ease;
-        }
-
-        .view-btn:hover {
-          background: rgba(255, 255, 255, 0.9);
-          color: #374151;
-        }
-
-        .view-btn.active {
-          background: #4f46e5;
-          color: #ffffff;
-          box-shadow: 0 2px 6px rgba(79, 70, 229, 0.25);
         }
         
         .kanban-board {
@@ -974,10 +586,9 @@ export default function ApplicationKanban({
           justify-content: center;
         }
         .sort-toggle-btn:hover {
-          background: rgba(255, 255, 255, 0.9);
-          color: #374151;
-          border-color: #cbd5e1;
-          transform: translateY(-1px);
+          background: rgba(79, 70, 229, 0.1);
+          border-color: #4f46e5;
+          transform: scale(1.05);
         }
         .sort-toggle-btn:active {
           transform: translateY(0);
@@ -1161,123 +772,6 @@ export default function ApplicationKanban({
           margin-top: auto;
           padding-top: 12px;
           border-top: 1px solid #f1f5f9;
-        }
-
-        /* List View Styles */
-        .list-view-container {
-          display: flex;
-          flex-direction: column;
-          gap: 24px;
-        }
-
-        .list-section {
-          background: rgba(255, 255, 255, 0.8);
-          backdrop-filter: blur(10px);
-          border-radius: 12px;
-          border: 1px solid #e2e8f0;
-          overflow: hidden;
-        }
-
-        .list-section-header {
-          padding: 20px 24px;
-          background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.95));
-          border-bottom: 1px solid #e2e8f0;
-        }
-
-        .list-header-content {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-        }
-
-        .list-header-text {
-          flex: 1;
-        }
-
-        .list-section-title {
-          font-size: 18px;
-          font-weight: 700;
-          color: #1e293b;
-          margin: 0 0 6px 0;
-          letter-spacing: -0.025em;
-        }
-
-        .list-section-description {
-          font-size: 13px;
-          color: #64748b;
-          margin: 0;
-          line-height: 1.4;
-        }
-
-        .list-empty {
-          padding: 40px 24px;
-          text-align: center;
-          color: #94a3b8;
-          font-style: italic;
-        }
-
-        .list-table-container {
-          overflow-x: auto;
-        }
-
-        .list-table {
-          width: 100%;
-          border-collapse: collapse;
-        }
-
-        .list-table th {
-          background: #f8fafc;
-          padding: 12px 16px;
-          text-align: left;
-          font-size: 12px;
-          font-weight: 600;
-          color: #374151;
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
-          border-bottom: 1px solid #e5e7eb;
-        }
-
-        .list-table td {
-          padding: 16px;
-          border-bottom: 1px solid #f1f5f9;
-          vertical-align: top;
-        }
-
-        .list-row:hover {
-          background: #f8fafc;
-        }
-
-        .applicant-info {
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-        }
-
-        .applicant-name-list {
-          font-weight: 600;
-          color: #1e293b;
-          font-size: 14px;
-        }
-
-        .applicant-email {
-          font-size: 12px;
-          color: #64748b;
-        }
-
-        .property-cell {
-          font-weight: 500;
-          color: #374151;
-        }
-
-        .date-cell {
-          font-size: 13px;
-          color: #6b7280;
-        }
-
-        .list-actions {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 6px;
         }
 
         /* Button Styles */
