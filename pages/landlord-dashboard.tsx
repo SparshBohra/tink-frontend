@@ -354,7 +354,6 @@ function LandlordDashboard() {
   // Counter animations for metrics - use real data or fallback to 0
   const propertiesCount = useCounterAnimation(dashboardStats?.properties.total || 0, 1500);
   const occupancyRate = useCounterAnimation(dashboardStats?.rooms.occupancy_rate || 0, 2000);
-  const teamCount = useCounterAnimation(dashboardStats?.managers.total || 0, 1800);
   const vendorsCount = useCounterAnimation(vendors.length || 0, 1900);
   const revenueValue = useCounterAnimation(paymentSummary?.summary.current_month_total_dollars || 0, 2200, true);
   
@@ -364,7 +363,6 @@ function LandlordDashboard() {
       return {
         properties: { value: 0, subtitle: 'Loading...', change: '', changeType: 'neutral' },
         occupancy: { value: 0, subtitle: 'Loading...', change: '', changeType: 'neutral' },
-        team: { value: 0, subtitle: 'Loading...', change: '', changeType: 'neutral' },
         revenue: { value: '$0', subtitle: 'Loading...', change: '', changeType: 'neutral' }
       };
     }
@@ -381,12 +379,6 @@ function LandlordDashboard() {
         subtitle: 'Occupancy Rate', 
         change: `${dashboardStats.rooms.occupied}/${dashboardStats.rooms.total} rooms`, 
         changeType: dashboardStats.rooms.occupancy_rate > 80 ? 'positive' : 'warning' 
-      },
-      team: { 
-        value: dashboardStats.managers.total, 
-        subtitle: 'Active Team Members', 
-        change: `${dashboardStats.managers.active} active`, 
-        changeType: 'positive' 
       },
       revenue: { 
         value: paymentLoading ? '$0' : `$${paymentSummary?.summary.current_month_total_dollars?.toLocaleString() || '0'}`, 
@@ -854,39 +846,13 @@ function LandlordDashboard() {
                   {statsLoading ? 'Loading...' : 'service providers'}
                 </span>
                 <span className="metric-change positive">
-                  +{vendorsCount > 0 ? '1' : '0'}
+                  +{(typeof vendorsCount === 'number' ? vendorsCount : 0) > 0 ? '1' : '0'}
                 </span>
               </div>
             </div>
           </div>
           
-          <div className="metric-card">
-            <div className="metric-header">
-              <div className="metric-info">
-                <h3 className="metric-title">Vendors (Removed)</h3>
-                <div className="metric-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                    <circle cx="9" cy="7" r="4"></circle>
-                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                  </svg>
-                </div>
-              </div>
-            </div>
-            <div className="metric-content">
-              <div className="metric-value">{statsLoading ? '...' : teamCount}</div>
-              <div className="metric-subtitle">{metrics.team.subtitle}</div>
-              <div className="metric-progress">
-                <span className="metric-label">
-                  {statsLoading ? 'Loading...' : 'managers'}
-                </span>
-                <span className={`metric-change ${metrics.team.changeType}`}>
-                  {metrics.team.change}
-                </span>
-              </div>
-            </div>
-          </div>
+
           
           <div className="metric-card">
             <div className="metric-header">
@@ -919,190 +885,131 @@ function LandlordDashboard() {
 
         {/* Main Content */}
         <div className="main-content">
-          {/* Rent History Section */}
-          <div className="rent-history-section">
+          {/* My Properties Section */}
+          <div className="properties-section">
             <div className="section-header">
               <div>
-                <h2 className="section-title">Rent History</h2>
-                <p className="section-subtitle">Recent rent collection logs and payment history</p>
+                <h2 className="section-title">My Properties</h2>
+                <p className="section-subtitle">Manage and monitor your property portfolio</p>
               </div>
-              <Link href="/accounting">
+              <Link href="/properties">
                 <button className="view-all-btn">View All</button>
               </Link>
             </div>
-            
-            <div className="rent-history-content">
-              <div className="rent-summary-cards">
-                <div className="summary-card collected">
-                  <div className="summary-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                    </svg>
-                  </div>
-                  <div className="summary-content">
-                    <div className="summary-value">
-                      {paymentLoading ? '...' : `$${paymentSummary?.summary.current_month_total_dollars?.toLocaleString() || '0'}`}
-                    </div>
-                    <div className="summary-label">Collected This Month</div>
-                  </div>
+            <div className="properties-container">
+              {/* Enhanced Filter Controls */}
+              <div className="properties-filter-controls">
+                <div className="properties-filter-group">
+                  <label className="properties-filter-label">Status:</label>
+                  <select
+                    className="properties-filter-select"
+                    value={propertyFilter}
+                    onChange={e => setPropertyFilter(e.target.value)}
+                  >
+                    <option value="All">All Status</option>
+                    <option value="Active">Active</option>
+                    <option value="Maintenance">Maintenance</option>
+                  </select>
                 </div>
-
-                <div className="summary-card pending">
-                  <div className="summary-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <circle cx="12" cy="12" r="10"/>
-                      <polyline points="12,6 12,12 16,14"/>
-                    </svg>
-                  </div>
-                  <div className="summary-content">
-                    <div className="summary-value">
-                      {paymentLoading ? '...' : `${paymentSummary?.summary.pending_payments || 0} payments`}
-                    </div>
-                    <div className="summary-label">Pending Collection</div>
-                  </div>
+                
+                <div className="properties-filter-group">
+                  <label className="properties-filter-label">Occupancy:</label>
+                  <select className="properties-filter-select">
+                    <option value="all">All Occupancy</option>
+                    <option value="full">100% Occupied</option>
+                    <option value="high">90%+ Occupied</option>
+                    <option value="medium">70-89% Occupied</option>
+                    <option value="low">Below 70%</option>
+                  </select>
                 </div>
-
-                <div className="summary-card overdue">
-                  <div className="summary-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <circle cx="12" cy="12" r="10"/>
-                      <line x1="15" y1="9" x2="9" y2="15"/>
-                      <line x1="9" y1="9" x2="15" y2="15"/>
-                    </svg>
-                  </div>
-                  <div className="summary-content">
-                    <div className="summary-value">
-                      {paymentLoading ? '...' : `${paymentSummary?.summary.failed_payments || 0} failed`}
-                    </div>
-                    <div className="summary-label">Failed Payments</div>
-                  </div>
-                </div>
+                
+                <button className="properties-filter-reset-btn">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                    <path d="M3 3v5h5"/>
+                  </svg>
+                  Reset
+                </button>
               </div>
-
-              <div className="rent-logs-container">
-                <div className="rent-logs-header">
-                  <h3>Recent Rent Collections</h3>
-                  <div className="filter-controls">
-                    <div className="filter-group">
-                      <label className="filter-label">Property:</label>
-                      <select 
-                        className="filter-select"
-                        value={rentHistoryPropertyFilter}
-                        onChange={(e) => setRentHistoryPropertyFilter(e.target.value)}
-                      >
-                        <option value="all">All Properties</option>
-                        {properties?.map((property) => (
-                          <option key={property.id} value={property.id}>
-                            {property.address}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    
-                    <div className="filter-group">
-                      <label className="filter-label">Status:</label>
-                      <select 
-                        className="filter-select"
-                        value={rentHistoryStatusFilter}
-                        onChange={(e) => setRentHistoryStatusFilter(e.target.value)}
-                      >
-                        <option value="all">All Status</option>
-                        <option value="collected">Collected</option>
-                        <option value="pending">Pending</option>
-                        <option value="overdue">Overdue</option>
-                      </select>
-                    </div>
-                    
-                    <div className="filter-group">
-                      <label className="filter-label">Time Period:</label>
-                      <select 
-                        className="filter-select"
-                        value={rentHistoryTimeFilter}
-                        onChange={(e) => setRentHistoryTimeFilter(e.target.value)}
-                      >
-                        <option value="all">All Time</option>
-                        <option value="this-month">This Month</option>
-                        <option value="last-month">Last Month</option>
-                        <option value="last-3-months">Last 3 Months</option>
-                        <option value="this-year">This Year</option>
-                      </select>
-                    </div>
-                    
-                    <button 
-                      className="filter-reset-btn"
-                      onClick={() => {
-                        setRentHistoryPropertyFilter('all');
-                        setRentHistoryStatusFilter('all');
-                        setRentHistoryTimeFilter('all');
-                      }}
-                    >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-                        <path d="M3 3v5h5"/>
-                      </svg>
-                      Reset
-                    </button>
-                  </div>
-                </div>
-
-                <div className="rent-logs-table-container">
-                  <table className="rent-logs-table">
-                    <thead>
-                      <tr>
-                        <th>Date</th>
-                        <th>Tenant</th>
-                        <th>Property</th>
-                        <th>Amount</th>
-                        <th>Status</th>
-                        <th>Period</th>
-                        <th>Method</th>
+              {/* Remove tabs, keep table always visible */}
+              <div className="properties-scroll-container">
+                <div className="properties-table-container">
+                  <table className="properties-table">
+                  <thead>
+                    <tr>
+                      <th className="table-left">Property</th>
+                      <th className="table-left">Status</th>
+                      <th className="table-center">Occupancy</th>
+                      <th className="table-center">Monthly Revenue</th>
+                      <th className="table-center">Tasks</th>
+                      <th className="table-center">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                      {filteredProperties.map((property) => {
+                        const occupancyData = getPropertyOccupancy(property);
+                        const revenueData = getPropertyRevenue(property);
+                        const status = getPropertyStatus(property);
+                        const tasks = getPropertyTasks(property);
+                        
+                        return (
+                      <tr key={property.id}>
+                        <td className="table-left">
+                          <div 
+                            className="property-name-link"
+                            onClick={() => router.push(`/properties/${property.id}`)}
+                          >
+                            {property.name}
+                          </div>
+                        </td>
+                        <td className="table-left">
+                              <span className={`status-badge ${status.toLowerCase()}`}>
+                                {status}
+                          </span>
+                        </td>
+                        <td className="table-center">
+                          <div className="occupancy-cell">
+                            <div className="occupancy-info">
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                                <circle cx="12" cy="7" r="4"/>
+                              </svg>
+                                  <span className="occupancy-text">{occupancyData.occupancy}</span>
+                                  <span className="occupancy-percent">{occupancyData.occupancyPercent}%</span>
+                        </div>
+                          </div>
+                        </td>
+                        <td className="table-center">
+                          <div className="revenue-cell">
+                                <div className="revenue-amount">$ {revenueData.revenue.toLocaleString()}</div>
+                                <div className="revenue-change">{revenueData.revenueChange} vs last month</div>
+                          </div>
+                        </td>
+                        <td className="table-center">
+                          <div className="tasks-cell">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2">
+                              <path d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                                <span className="tasks-count">{tasks} pending</span>
+                          </div>
+                        </td>
+                        <td className="table-center">
+                          <button 
+                            className="manage-btn"
+                            onClick={() => router.push(`/properties/${property.id}`)}
+                          >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M12 20h9"/>
+                              <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                            </svg>
+                            Manage
+                          </button>
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {paymentLoading ? (
-                        <tr>
-                          <td colSpan={7} className="loading-cell">Loading payment history...</td>
-                        </tr>
-                      ) : paymentError ? (
-                        <tr>
-                          <td colSpan={7} className="error-cell">Failed to load payments</td>
-                        </tr>
-                      ) : filteredPaymentHistory?.length ? (
-                        filteredPaymentHistory.map((payment) => {
-                          const paymentDate = new Date(payment.payment_date);
-                          const tenantName = payment.tenant_name || 'Unknown Tenant';
-                          const initials = tenantName.split(' ').map(n => n[0]).join('').toUpperCase();
-                          const statusClass = payment.status === 'succeeded' ? 'collected' : 
-                                            payment.status === 'pending' ? 'pending' : 'overdue';
-                          const statusText = payment.status === 'succeeded' ? 'Collected' :
-                                           payment.status === 'pending' ? 'Pending' : 'Failed';
-                          
-                          return (
-                            <tr key={payment.id}>
-                              <td>{paymentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</td>
-                              <td>
-                                <div className="tenant-info">
-                                  <div className="tenant-avatar">{initials}</div>
-                                  <span>{tenantName}</span>
-                                </div>
-                              </td>
-                              <td>{payment.property_name || 'Property'}</td>
-                              <td className="amount-cell">${payment.amount_dollars}</td>
-                              <td><span className={`status-badge ${statusClass}`}>{statusText}</span></td>
-                              <td>{payment.rent_period_start ? 
-                                   `${new Date(payment.rent_period_start).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}` : 
-                                   'N/A'}</td>
-                              <td>Stripe</td>
-                            </tr>
-                          );
-                        })
-                      ) : (
-                        <tr>
-                          <td colSpan={7} className="empty-cell">No payments found</td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
+                        );
+                      })}
+                  </tbody>
+                </table>
                 </div>
               </div>
             </div>
@@ -1138,132 +1045,190 @@ function LandlordDashboard() {
           </div>
         </div>
 
-        {/* My Properties Section */}
-        <div className="properties-section">
+        {/* Rent History Section */}
+        <div className="rent-history-section full-width">
           <div className="section-header">
             <div>
-              <h2 className="section-title">My Properties</h2>
-              <p className="section-subtitle">Manage and monitor your property portfolio</p>
-              </div>
-            <Link href="/properties">
+              <h2 className="section-title">Rent History</h2>
+              <p className="section-subtitle">Recent rent collection logs and payment history</p>
+            </div>
+            <Link href="/accounting">
               <button className="view-all-btn">View All</button>
             </Link>
           </div>
+          
+          <div className="rent-history-content">
+            <div className="rent-summary-cards">
+              <div className="summary-card collected">
+                <div className="summary-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                  </svg>
+                </div>
+                <div className="summary-content">
+                  <div className="summary-value">
+                    {paymentLoading ? '...' : `$${paymentSummary?.summary.current_month_total_dollars?.toLocaleString() || '0'}`}
+                  </div>
+                  <div className="summary-label">Collected This Month</div>
+                </div>
+              </div>
 
-          <div className="properties-container">
-            {/* Enhanced Filter Controls */}
-            <div className="properties-filter-controls">
-              <div className="properties-filter-group">
-                <label className="properties-filter-label">Status:</label>
-                <select
-                  className="properties-filter-select"
-                  value={propertyFilter}
-                  onChange={e => setPropertyFilter(e.target.value)}
-                >
-                  <option value="All">All Status</option>
-                  <option value="Active">Active</option>
-                  <option value="Maintenance">Maintenance</option>
-                </select>
+              <div className="summary-card pending">
+                <div className="summary-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <polyline points="12,6 12,12 16,14"/>
+                  </svg>
+                </div>
+                <div className="summary-content">
+                  <div className="summary-value">
+                    {paymentLoading ? '...' : `${paymentSummary?.summary.pending_payments || 0} payments`}
+                  </div>
+                  <div className="summary-label">Pending Collection</div>
+                </div>
               </div>
-              
-              <div className="properties-filter-group">
-                <label className="properties-filter-label">Occupancy:</label>
-                <select className="properties-filter-select">
-                  <option value="all">All Occupancy</option>
-                  <option value="full">100% Occupied</option>
-                  <option value="high">90%+ Occupied</option>
-                  <option value="medium">70-89% Occupied</option>
-                  <option value="low">Below 70%</option>
-                </select>
+
+              <div className="summary-card overdue">
+                <div className="summary-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="15" y1="9" x2="9" y2="15"/>
+                    <line x1="9" y1="9" x2="15" y2="15"/>
+                  </svg>
+                </div>
+                <div className="summary-content">
+                  <div className="summary-value">
+                    {paymentLoading ? '...' : `${paymentSummary?.summary.failed_payments || 0} failed`}
+                  </div>
+                  <div className="summary-label">Failed Payments</div>
+                </div>
               </div>
-              
-              <button className="properties-filter-reset-btn">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-                  <path d="M3 3v5h5"/>
-                </svg>
-                Reset
-              </button>
             </div>
-            {/* Remove tabs, keep table always visible */}
-            <div className="properties-scroll-container">
-              <div className="properties-table-container">
-                <table className="properties-table">
-                <thead>
-                  <tr>
-                    <th className="table-left">Property</th>
-                    <th className="table-left">Status</th>
-                    <th className="table-center">Occupancy</th>
-                    <th className="table-center">Monthly Revenue</th>
-                    <th className="table-center">Tasks</th>
-                    <th className="table-center">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                    {filteredProperties.map((property) => {
-                      const occupancyData = getPropertyOccupancy(property);
-                      const revenueData = getPropertyRevenue(property);
-                      const status = getPropertyStatus(property);
-                      const tasks = getPropertyTasks(property);
-                      
-                      return (
-                    <tr key={property.id}>
-                      <td className="table-left">
-                        <div 
-                          className="property-name-link"
-                          onClick={() => router.push(`/properties/${property.id}`)}
-                        >
-                          {property.name}
-                        </div>
-                      </td>
-                      <td className="table-left">
-                            <span className={`status-badge ${status.toLowerCase()}`}>
-                              {status}
-                        </span>
-                      </td>
-                      <td className="table-center">
-                        <div className="occupancy-cell">
-                          <div className="occupancy-info">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                              <circle cx="12" cy="7" r="4"/>
-                            </svg>
-                                <span className="occupancy-text">{occupancyData.occupancy}</span>
-                                <span className="occupancy-percent">{occupancyData.occupancyPercent}%</span>
-                      </div>
-                        </div>
-                      </td>
-                      <td className="table-center">
-                        <div className="revenue-cell">
-                              <div className="revenue-amount">$ {revenueData.revenue.toLocaleString()}</div>
-                              <div className="revenue-change">{revenueData.revenueChange} vs last month</div>
-                        </div>
-                      </td>
-                      <td className="table-center">
-                        <div className="tasks-cell">
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2">
-                            <path d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                          </svg>
-                              <span className="tasks-count">{tasks} pending</span>
-                        </div>
-                      </td>
-                      <td className="table-center">
-                        <button 
-                          className="manage-btn"
-                          onClick={() => router.push(`/properties/${property.id}`)}
-                        >
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M12 20h9"/>
-                            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
-                          </svg>
-                          Manage
-                        </button>
-                      </td>
+
+            <div className="rent-logs-container">
+              <div className="rent-logs-header">
+                <h3>Recent Rent Collections</h3>
+                <div className="filter-controls">
+                  <div className="filter-group">
+                    <label className="filter-label">Property:</label>
+                    <select 
+                      className="filter-select"
+                      value={rentHistoryPropertyFilter}
+                      onChange={(e) => setRentHistoryPropertyFilter(e.target.value)}
+                    >
+                      <option value="all">All Properties</option>
+                      {properties?.map((property) => (
+                        <option key={property.id} value={property.id}>
+                          {property.address}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div className="filter-group">
+                    <label className="filter-label">Status:</label>
+                    <select 
+                      className="filter-select"
+                      value={rentHistoryStatusFilter}
+                      onChange={(e) => setRentHistoryStatusFilter(e.target.value)}
+                    >
+                      <option value="all">All Status</option>
+                      <option value="collected">Collected</option>
+                      <option value="pending">Pending</option>
+                      <option value="overdue">Overdue</option>
+                    </select>
+                  </div>
+                  
+                  <div className="filter-group">
+                    <label className="filter-label">Time Period:</label>
+                    <select 
+                      className="filter-select"
+                      value={rentHistoryTimeFilter}
+                      onChange={(e) => setRentHistoryTimeFilter(e.target.value)}
+                    >
+                      <option value="all">All Time</option>
+                      <option value="this-month">This Month</option>
+                      <option value="last-month">Last Month</option>
+                      <option value="last-3-months">Last 3 Months</option>
+                      <option value="this-year">This Year</option>
+                    </select>
+                  </div>
+                  
+                  <button 
+                    className="filter-reset-btn"
+                    onClick={() => {
+                      setRentHistoryPropertyFilter('all');
+                      setRentHistoryStatusFilter('all');
+                      setRentHistoryTimeFilter('all');
+                    }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                      <path d="M3 3v5h5"/>
+                    </svg>
+                    Reset
+                  </button>
+                </div>
+              </div>
+
+              <div className="rent-logs-table-container">
+                <table className="rent-logs-table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Tenant</th>
+                      <th>Property</th>
+                      <th>Amount</th>
+                      <th>Status</th>
+                      <th>Period</th>
+                      <th>Method</th>
                     </tr>
-                      );
-                    })}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {paymentLoading ? (
+                      <tr>
+                        <td colSpan={7} className="loading-cell">Loading payment history...</td>
+                      </tr>
+                    ) : paymentError ? (
+                      <tr>
+                        <td colSpan={7} className="error-cell">Failed to load payments</td>
+                      </tr>
+                    ) : filteredPaymentHistory?.length ? (
+                      filteredPaymentHistory.map((payment) => {
+                        const paymentDate = new Date(payment.payment_date);
+                        const tenantName = payment.tenant_name || 'Unknown Tenant';
+                        const initials = tenantName.split(' ').map(n => n[0]).join('').toUpperCase();
+                        const statusClass = payment.status === 'succeeded' ? 'collected' : 
+                                          payment.status === 'pending' ? 'pending' : 'overdue';
+                        const statusText = payment.status === 'succeeded' ? 'Collected' :
+                                         payment.status === 'pending' ? 'Pending' : 'Failed';
+                        
+                        return (
+                          <tr key={payment.id}>
+                            <td>{paymentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</td>
+                            <td>
+                              <div className="tenant-info">
+                                <div className="tenant-avatar">{initials}</div>
+                                <span>{tenantName}</span>
+                              </div>
+                            </td>
+                            <td>{payment.property_name || 'Property'}</td>
+                            <td className="amount-cell">${payment.amount_dollars}</td>
+                            <td><span className={`status-badge ${statusClass}`}>{statusText}</span></td>
+                            <td>{payment.rent_period_start ? 
+                                 `${new Date(payment.rent_period_start).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}` : 
+                                 'N/A'}</td>
+                            <td>Stripe</td>
+                          </tr>
+                        );
+                      })
+                    ) : (
+                      <tr>
+                        <td colSpan={7} className="empty-cell">No payments found</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
@@ -1852,7 +1817,7 @@ function LandlordDashboard() {
           padding: 18px; /* Reduced padding */
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
           border: 1px solid #e2e8f0;
-          height: fit-content; /* Remove fixed height to eliminate whitespace */
+          height: 500px; /* Match properties section height */
           display: flex;
           flex-direction: column;
         }
@@ -1863,6 +1828,7 @@ function LandlordDashboard() {
           gap: 12px; /* Reduced gap */
           flex: 1;
           justify-content: flex-start;
+          min-height: 0; /* Allow shrinking */
         }
 
         .action-card {
@@ -1977,15 +1943,24 @@ function LandlordDashboard() {
           padding: 18px; /* Reduced padding */
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
           border: 1px solid #e2e8f0;
+          height: 500px; /* Match quick actions height */
+          display: flex;
+          flex-direction: column;
+        }
+        
+        /* Full-width properties section (when used as standalone) */
+        .properties-section.full-width {
           margin-top: 32px; /* Reduced margin */
           margin-bottom: 20px; /* Reduced margin */
+          height: auto; /* Auto height for full-width version */
         }
 
         .properties-container {
           margin-top: 16px; /* Reduced margin */
-          height: 420px; /* Reduced height */
+          flex: 1; /* Take remaining space in flex container */
           display: flex;
           flex-direction: column;
+          min-height: 0; /* Allow shrinking */
         }
 
         /* Properties Filter Controls */
@@ -2893,6 +2868,13 @@ function LandlordDashboard() {
           display: flex;
           flex-direction: column;
           overflow: hidden;
+        }
+        
+        /* Full-width rent history section */
+        .rent-history-section.full-width {
+          margin-top: 32px;
+          margin-bottom: 20px;
+          height: auto; /* Auto height for full-width version */
         }
 
         .rent-history-content {

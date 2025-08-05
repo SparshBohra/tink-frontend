@@ -265,117 +265,115 @@ const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
         <div className="modal-content">
           {activeTab === 'overview' && (
             <div className="overview-tab">
-              <div className="overview-grid">
-                <div className="overview-section">
-                  <h3 className="section-title">Application Information</h3>
-                  <div className="info-grid">
-                    <div className="info-item">
-                      <label>Property:</label>
-                      <span>{property?.name || 'Unknown Property'}</span>
-                    </div>
-                    <div className="info-item">
-                      <label>Applied Date:</label>
-                      <span>{formatDate(application.created_at)}</span>
-                    </div>
-                    <div className="info-item">
-                      <label>Desired Move-in:</label>
-                      <span>{formatDate(application.desired_move_in_date || null)}</span>
-                    </div>
-                    <div className="info-item">
-                      <label>Budget:</label>
-                      <span>${application.rent_budget || 'N/A'}</span>
-                    </div>
-                    <div className="info-item">
-                      <label>Days Pending:</label>
-                      <span>{application.days_pending || 0} days</span>
-                    </div>
-                    <div className="info-item">
-                      <label>Last Updated:</label>
-                      <span>{formatDate(application.updated_at || null)}</span>
+              <div className="unified-overview">
+                <div className="overview-row">
+                  <div className="info-column">
+                    <h3 className="section-title">Application Information</h3>
+                    <div className="info-grid">
+                      <div className="info-item">
+                        <label>Property:</label>
+                        <span>{property?.name || 'Unknown Property'}</span>
+                      </div>
+                      <div className="info-item">
+                        <label>Applied Date:</label>
+                        <span>{formatDate(application.created_at)}</span>
+                      </div>
+                      <div className="info-item">
+                        <label>Desired Move-in:</label>
+                        <span>{formatDate(application.desired_move_in_date || null)}</span>
+                      </div>
+                      <div className="info-item">
+                        <label>Budget:</label>
+                        <span>${application.rent_budget || 'N/A'}</span>
+                      </div>
+                      <div className="info-item">
+                        <label>Days Pending:</label>
+                        <span>{application.days_pending || 0} days</span>
+                      </div>
+                      <div className="info-item">
+                        <label>Last Updated:</label>
+                        <span>{formatDate(application.updated_at || null)}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="overview-section">
-                  <h3 className="section-title">Priority & Urgency</h3>
-                  <div className="priority-section">
-                    <div className="priority-score">
-                      <div className="score-circle" style={{ borderColor: priorityLevel.color }}>
-                        <span className="score-value">{application.priority_score || 0}</span>
-                        <span className="score-label">Priority</span>
-                      </div>
-                      <div className="priority-info">
-                        <div className="priority-level" style={{ color: priorityLevel.color }}>
-                          {priorityLevel.level}
+                  <div className="priority-column">
+                    <h3 className="section-title">Priority & Urgency</h3>
+                    <div className="priority-section">
+                      <div className="priority-breakdown">
+                        <div className="breakdown-item">
+                          <span className="breakdown-label">Priority Score:</span>
+                          <span className="breakdown-value priority-score-text" style={{ color: priorityLevel.color }}>
+                            {application.priority_score || 0}/100 ({priorityLevel.level})
+                          </span>
                         </div>
-                        <div className="urgency-indicator" style={{ color: urgencyIndicator.color }}>
-                          {urgencyIndicator.text}
+                        <div className="breakdown-item">
+                          <span className="breakdown-label">Urgency:</span>
+                          <span className="breakdown-value" style={{ color: urgencyIndicator.color }}>
+                            {urgencyIndicator.text}
+                          </span>
                         </div>
-                      </div>
-                    </div>
-                    <div className="priority-breakdown">
-                      <div className="breakdown-item">
-                        <span className="breakdown-label">Budget Compatible:</span>
-                        <span className={`breakdown-value ${application.is_budget_compatible ? 'positive' : 'negative'}`}>
-                          {application.is_budget_compatible ? 'Yes' : 'No'}
-                        </span>
-                      </div>
-                      <div className="breakdown-item">
-                        <span className="breakdown-label">Match Score:</span>
-                        <span className="breakdown-value">{application.match_score || 0}%</span>
+                        <div className="breakdown-item">
+                          <span className="breakdown-label">Budget Compatible:</span>
+                          <span className={`breakdown-value ${application.is_budget_compatible ? 'positive' : 'negative'}`}>
+                            {application.is_budget_compatible ? 'Yes' : 'No'}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="overview-section">
-                  <h3 className="section-title">Room Recommendations</h3>
-                  <div className="recommendations-list">
-                    {recommendedRooms.length > 0 ? (
-                      recommendedRooms.map((room, index) => {
-                        if (!room) return null;
-                        return (
-                          <div key={room.id} className="recommendation-item">
-                            <div className="room-info">
-                              <div className="room-name">{room.name}</div>
-                              <div className="room-details">
-                                <span className="room-type">{room.room_type || 'Standard'}</span>
-                                <span className="room-rent">${typeof room.monthly_rent === 'string' ? parseFloat(room.monthly_rent) : (room.monthly_rent || 0)}/month</span>
+                <div className="overview-row">
+                  <div className="recommendations-column">
+                    <h3 className="section-title">Room Recommendations</h3>
+                    <div className="recommendations-list">
+                      {recommendedRooms.length > 0 ? (
+                        recommendedRooms.map((room, index) => {
+                          if (!room) return null;
+                          return (
+                            <div key={room.id} className="recommendation-item">
+                              <div className="room-info">
+                                <div className="room-name">{room.name}</div>
+                                <div className="room-details">
+                                  <span className="room-type">{room.room_type || 'Standard'}</span>
+                                  <span className="room-rent">${typeof room.monthly_rent === 'string' ? parseFloat(room.monthly_rent) : (room.monthly_rent || 0)}/month</span>
+                                </div>
+                              </div>
+                              <div className="compatibility-badge">
+                                {Math.round(85 + (index * 5))}% Match
                               </div>
                             </div>
-                            <div className="compatibility-badge">
-                              {Math.round(85 + (index * 5))}% Match
+                          );
+                        })
+                      ) : (
+                        <div className="no-recommendations">
+                          <p>No room recommendations available</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="conflicts-column">
+                    <h3 className="section-title">Conflicts & Issues</h3>
+                    <div className="conflicts-section">
+                      {application.has_conflicts ? (
+                        <div className="conflict-alert">
+                          <div className="conflict-icon">⚠️</div>
+                          <div className="conflict-info">
+                            <div className="conflict-title">Application Conflicts Detected</div>
+                            <div className="conflict-description">
+                              This application conflicts with {application.conflicting_applications?.length || 0} other applications
                             </div>
                           </div>
-                        );
-                      })
-                    ) : (
-                      <div className="no-recommendations">
-                        <p>No room recommendations available</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="overview-section">
-                  <h3 className="section-title">Conflicts & Issues</h3>
-                  <div className="conflicts-section">
-                    {application.has_conflicts ? (
-                      <div className="conflict-alert">
-                        <div className="conflict-icon">⚠️</div>
-                        <div className="conflict-info">
-                          <div className="conflict-title">Application Conflicts Detected</div>
-                          <div className="conflict-description">
-                            This application conflicts with {application.conflicting_applications?.length || 0} other applications
-                          </div>
                         </div>
-                      </div>
-                    ) : (
-                      <div className="no-conflicts">
-                        <div className="success-icon">✅</div>
-                        <span>No conflicts detected</span>
-                      </div>
-                    )}
+                      ) : (
+                        <div className="no-conflicts">
+                          <div className="success-icon">✅</div>
+                          <span>No conflicts detected</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -556,8 +554,9 @@ const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
         .application-detail-modal {
           background: white;
           border-radius: 8px;
-          width: 92%;
-          max-width: 900px;
+          width: fit-content;
+          min-width: 650px;
+          max-width: 720px;
           max-height: calc(100vh - 120px);
           overflow-y: auto;
           box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
@@ -668,17 +667,36 @@ const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
           min-height: 350px;
         }
 
-        .overview-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-          gap: 20px;
+        .unified-overview {
+          background: #f9fafb;
+          border-radius: 8px;
+          padding: 24px;
+          border: 1px solid #e5e7eb;
         }
 
-        .overview-section {
-          background: #f9fafb;
-          border-radius: 6px;
-          padding: 18px;
-          border: 1px solid #e5e7eb;
+        .overview-row {
+          display: flex;
+          gap: 24px;
+          margin-bottom: 24px;
+        }
+
+        .overview-row:last-child {
+          margin-bottom: 0;
+        }
+
+        .info-column {
+          flex: 2;
+          min-width: 0;
+        }
+
+        .priority-column {
+          flex: 1;
+          min-width: 180px;
+        }
+
+        .recommendations-column,
+        .conflicts-column {
+          flex: 1;
         }
 
         .section-title {
@@ -797,6 +815,10 @@ const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
 
         .breakdown-value.negative {
           color: #ef4444;
+        }
+
+        .priority-score-text {
+          font-weight: 600;
         }
 
         .recommendations-list {
@@ -1354,14 +1376,16 @@ const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
             padding: 16px;
           }
 
-          .overview-grid {
-            grid-template-columns: 1fr;
-            gap: 16px;
-          }
-
-          .overview-section {
+          .unified-overview {
             padding: 16px;
           }
+
+          .overview-row {
+            flex-direction: column;
+            gap: 16px;
+            margin-bottom: 16px;
+          }
+
 
           .modal-tabs {
             overflow-x: auto;

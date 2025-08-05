@@ -107,7 +107,6 @@ export default function DashboardLayout({
           }
 
           .content-wrapper {
-            padding: 16px 20px;
             width: 100%;
             position: relative;
             z-index: 1;
@@ -115,7 +114,11 @@ export default function DashboardLayout({
 
           .page-header {
             margin-bottom: 20px;
-            padding: 0;
+            padding: 16px 20px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 20px;
           }
 
           .page-header-content {
@@ -142,6 +145,7 @@ export default function DashboardLayout({
           .page-content {
             position: relative;
             z-index: 1;
+            padding: 0 20px 16px;
           }
 
           .page-header-icon {
@@ -163,12 +167,20 @@ export default function DashboardLayout({
             }
 
             .content-wrapper {
-              padding: 16px;
+              
             }
 
             .page-header {
-              padding: 24px;
-              margin-bottom: 24px;
+              flex-direction: column;
+              gap: 16px;
+              align-items: flex-start;
+              padding: 16px;
+              margin-bottom: 16px;
+            }
+
+            .page-header-actions {
+              width: 100%;
+              justify-content: flex-end;
             }
 
             .page-title {
@@ -266,7 +278,6 @@ export default function DashboardLayout({
         }
 
         .content-wrapper {
-          padding: 16px 20px;
           width: 100%;
           position: relative;
           z-index: 1;
@@ -274,7 +285,7 @@ export default function DashboardLayout({
 
         .page-header {
           margin-bottom: 20px;
-          padding: 0;
+          padding: 16px 20px 0;
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
@@ -320,6 +331,7 @@ export default function DashboardLayout({
         .page-content {
           position: relative;
           z-index: 1;
+          padding: 0 16px 16px;
         }
 
         .page-header-icon {
@@ -339,15 +351,15 @@ export default function DashboardLayout({
           }
 
           .content-wrapper {
-            padding: 16px;
+            
           }
 
           .page-header {
             flex-direction: column;
             gap: 16px;
             align-items: flex-start;
-            padding: 24px;
-            margin-bottom: 24px;
+            padding: 16px;
+            margin-bottom: 16px;
           }
 
           .page-header-actions {

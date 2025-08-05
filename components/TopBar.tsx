@@ -371,9 +371,6 @@ export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarPr
                     </div>
                   )}
                 </div>
-                <div className="search-results-footer">
-                  <button className="view-all-btn">View all results</button>
-                </div>
               </div>
             )}
           </div>
@@ -654,10 +651,7 @@ export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarPr
           flex-grow: 1;
         }
 
-        .search-results-footer {
-          padding: 16px 24px;
-          border-top: 1px solid #f3f4f6;
-        }
+
 
         .view-all-btn {
           width: 100%;

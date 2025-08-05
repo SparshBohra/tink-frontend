@@ -946,12 +946,10 @@ function Accounting() {
                   <thead>
                     <tr>
                       <th className="table-left">Property</th>
-                      <th className="table-center">Occupancy</th>
                       <th className="table-right">Gross Rent</th>
                       <th className="table-right">Actual Rent</th>
                       <th className="table-right">Expenses</th>
                       <th className="table-right">Net Income</th>
-                      <th className="table-center">Performance</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -961,12 +959,6 @@ function Accounting() {
                           <div className="property-info">
                             <div className="property-name">{property.name}</div>
                             <div className="property-address">{property.address}</div>
-                          </div>
-                        </td>
-                        <td className="table-center">
-                          <div className="occupancy-info">
-                            <div className="occupancy-rate">{property.occupancyRate}%</div>
-                            <div className="occupancy-units">{property.occupiedUnits}/{property.totalUnits} units</div>
                           </div>
                         </td>
                         <td className="table-right">
@@ -996,19 +988,6 @@ function Accounting() {
                             <div className="amount-primary income">{formatCurrency(property.netIncome)}</div>
                             <div className="amount-secondary">
                               {((property.netIncome / property.actualRent) * 100).toFixed(1)}% margin
-                            </div>
-                          </div>
-                        </td>
-                        <td className="table-center">
-                          <div className="performance-indicator">
-                            <div className={`performance-badge ${
-                              property.occupancyRate >= 95 && (property.netIncome / property.actualRent) >= 0.6 ? 'excellent' :
-                              property.occupancyRate >= 90 && (property.netIncome / property.actualRent) >= 0.5 ? 'good' :
-                              property.occupancyRate >= 85 ? 'average' : 'poor'
-                            }`}>
-                              {property.occupancyRate >= 95 && (property.netIncome / property.actualRent) >= 0.6 ? 'Excellent' :
-                               property.occupancyRate >= 90 && (property.netIncome / property.actualRent) >= 0.5 ? 'Good' :
-                               property.occupancyRate >= 85 ? 'Average' : 'Needs Attention'}
                             </div>
                           </div>
                         </td>

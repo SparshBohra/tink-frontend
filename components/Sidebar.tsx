@@ -22,9 +22,15 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
   const { user, logout, isAdmin, isLandlord, isManager } = useAuth();
   const [pendingApplicationsCount, setPendingApplicationsCount] = useState(0);
   const [showPropertiesDropdown, setShowPropertiesDropdown] = useState(false);
+  const [showPeopleDropdown, setShowPeopleDropdown] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0 });
+  const [peopleDropdownPosition, setPeopleDropdownPosition] = useState({ top: 0 });
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const peopleDropdownRef = useRef<HTMLDivElement>(null);
   const propertiesNavRef = useRef<HTMLButtonElement>(null);
+  const peopleNavRef = useRef<HTMLButtonElement>(null);
+  const propertiesTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const peopleTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -32,12 +38,19 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setShowPropertiesDropdown(false);
       }
+      if (peopleDropdownRef.current && !peopleDropdownRef.current.contains(event.target as Node)) {
+        setShowPeopleDropdown(false);
+      }
     };
 
     const handleResize = () => {
       if (showPropertiesDropdown && propertiesNavRef.current) {
         const rect = propertiesNavRef.current.getBoundingClientRect();
         setDropdownPosition({ top: rect.top + rect.height / 2 });
+      }
+      if (showPeopleDropdown && peopleNavRef.current) {
+        const rect = peopleNavRef.current.getBoundingClientRect();
+        setPeopleDropdownPosition({ top: rect.top + rect.height / 2 });
       }
     };
 
@@ -47,8 +60,15 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
       window.removeEventListener('resize', handleResize);
+      // Clean up any pending timeouts
+      if (propertiesTimeoutRef.current) {
+        clearTimeout(propertiesTimeoutRef.current);
+      }
+      if (peopleTimeoutRef.current) {
+        clearTimeout(peopleTimeoutRef.current);
+      }
     };
-  }, [showPropertiesDropdown]);
+  }, [showPropertiesDropdown, showPeopleDropdown]);
 
   // Fetch pending applications count
   useEffect(() => {
@@ -82,12 +102,14 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
   };
 
   const handleNavigation = (path: string) => {
-    if (path === '/properties') {
-      if (propertiesNavRef.current) {
-        const rect = propertiesNavRef.current.getBoundingClientRect();
-        setDropdownPosition({ top: rect.top + rect.height / 2 });
+    if (path === '/tenants') {
+      // Handle People submenu - show dropdown instead of direct navigation
+      if (peopleNavRef.current) {
+        const rect = peopleNavRef.current.getBoundingClientRect();
+        setPeopleDropdownPosition({ top: rect.top + rect.height / 2 });
       }
-      setShowPropertiesDropdown(!showPropertiesDropdown);
+      setShowPeopleDropdown(!showPeopleDropdown);
+      setShowPropertiesDropdown(false);
       return;
     }
     if (path === '/settings' || path === '/support') {
@@ -95,12 +117,86 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
       return;
     }
     setShowPropertiesDropdown(false);
+    setShowPeopleDropdown(false);
     router.push(path);
   };
 
   const handleDropdownNavigation = (path: string) => {
     setShowPropertiesDropdown(false);
+    setShowPeopleDropdown(false);
     router.push(path);
+  };
+
+  // Hover handlers for Properties dropdown
+  const handlePropertiesMouseEnter = () => {
+    // Clear any pending timeout
+    if (propertiesTimeoutRef.current) {
+      clearTimeout(propertiesTimeoutRef.current);
+      propertiesTimeoutRef.current = null;
+    }
+    
+    if (propertiesNavRef.current) {
+      const rect = propertiesNavRef.current.getBoundingClientRect();
+      setDropdownPosition({ top: rect.top + rect.height / 2 });
+    }
+    setShowPropertiesDropdown(true);
+    setShowPeopleDropdown(false);
+  };
+
+  const handlePropertiesMouseLeave = () => {
+    // Add a small delay to allow moving to submenu
+    propertiesTimeoutRef.current = setTimeout(() => {
+      setShowPropertiesDropdown(false);
+    }, 150);
+  };
+
+  const handlePropertiesDropdownEnter = () => {
+    // Clear any pending timeout
+    if (propertiesTimeoutRef.current) {
+      clearTimeout(propertiesTimeoutRef.current);
+      propertiesTimeoutRef.current = null;
+    }
+    setShowPropertiesDropdown(true);
+  };
+
+  const handlePropertiesDropdownLeave = () => {
+    setShowPropertiesDropdown(false);
+  };
+
+  // Hover handlers for People dropdown
+  const handlePeopleMouseEnter = () => {
+    // Clear any pending timeout
+    if (peopleTimeoutRef.current) {
+      clearTimeout(peopleTimeoutRef.current);
+      peopleTimeoutRef.current = null;
+    }
+    
+    if (peopleNavRef.current) {
+      const rect = peopleNavRef.current.getBoundingClientRect();
+      setPeopleDropdownPosition({ top: rect.top + rect.height / 2 });
+    }
+    setShowPeopleDropdown(true);
+    setShowPropertiesDropdown(false);
+  };
+
+  const handlePeopleMouseLeave = () => {
+    // Add a small delay to allow moving to submenu
+    peopleTimeoutRef.current = setTimeout(() => {
+      setShowPeopleDropdown(false);
+    }, 150);
+  };
+
+  const handlePeopleDropdownEnter = () => {
+    // Clear any pending timeout
+    if (peopleTimeoutRef.current) {
+      clearTimeout(peopleTimeoutRef.current);
+      peopleTimeoutRef.current = null;
+    }
+    setShowPeopleDropdown(true);
+  };
+
+  const handlePeopleDropdownLeave = () => {
+    setShowPeopleDropdown(false);
   };
 
   // SVG Icons
@@ -211,7 +307,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         { path: '/applications', label: 'Applications', icon: <ApplicationsIcon />, badge: pendingApplicationsCount },
         { path: '/properties', label: 'Properties', icon: <PropertiesIcon />, hasDropdown: true },
         { path: '/leases', label: 'Leases', icon: <LeasesIcon /> },
-        { path: '/tenants', label: 'People', icon: <TenantsIcon /> },
+        { path: '/tenants', label: 'People', icon: <TenantsIcon />, hasDropdown: true },
         { path: '/managers', label: 'Managers', icon: <ManagersIcon /> },
       ];
     }
@@ -222,7 +318,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         { path: '/applications', label: 'Applications', icon: <ApplicationsIcon />, badge: pendingApplicationsCount },
         { path: '/properties', label: 'Properties', icon: <PropertiesIcon />, hasDropdown: true },
         { path: '/leases', label: 'Leases', icon: <LeasesIcon /> },
-        { path: '/tenants', label: 'People', icon: <TenantsIcon /> },
+        { path: '/tenants', label: 'People', icon: <TenantsIcon />, hasDropdown: true },
         { path: '/accounting', label: 'Accounting', icon: <AccountingIcon /> },
         { path: '/communication', label: 'Communication', icon: <CommunicationIcon /> },
       ];
@@ -234,7 +330,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         { path: '/applications', label: 'Applications', icon: <ApplicationsIcon />, badge: pendingApplicationsCount },
         { path: '/properties', label: 'Properties', icon: <PropertiesIcon />, hasDropdown: true },
         { path: '/leases', label: 'Leases', icon: <LeasesIcon /> },
-        { path: '/tenants', label: 'People', icon: <TenantsIcon /> },
+        { path: '/tenants', label: 'People', icon: <TenantsIcon />, hasDropdown: true },
         { path: '/accounting', label: 'Accounting', icon: <AccountingIcon /> },
         { path: '/communication', label: 'Communication', icon: <CommunicationIcon /> },
       ];
@@ -261,11 +357,17 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         {/* Navigation */}
         <nav className="sidebar-nav">
           {navigationItems.map((item) => (
-            <div key={item.path} className="nav-item-container" ref={item.hasDropdown ? dropdownRef : undefined}>
+            <div 
+              key={item.path} 
+              className="nav-item-container" 
+              ref={item.path === '/properties' ? dropdownRef : item.path === '/tenants' ? peopleDropdownRef : undefined}
+              onMouseEnter={item.path === '/properties' ? handlePropertiesMouseEnter : item.path === '/tenants' ? handlePeopleMouseEnter : undefined}
+              onMouseLeave={item.path === '/properties' ? handlePropertiesMouseLeave : item.path === '/tenants' ? handlePeopleMouseLeave : undefined}
+            >
               <button
-                ref={item.path === '/properties' ? propertiesNavRef : undefined}
+                ref={item.path === '/properties' ? propertiesNavRef : item.path === '/tenants' ? peopleNavRef : undefined}
                 onClick={() => handleNavigation(item.path)}
-                className={`nav-item ${router.pathname === item.path || (item.path === '/properties' && (router.pathname === '/properties' || router.pathname === '/listings')) ? 'active' : ''}`}
+                className={`nav-item ${router.pathname === item.path || (item.path === '/properties' && (router.pathname === '/properties' || router.pathname === '/listings')) || (item.path === '/tenants' && (router.pathname === '/tenants' || router.pathname === '/vendors' || router.pathname.includes('/vendor'))) ? 'active' : ''}`}
               >
                 <span className="nav-icon">{item.icon}</span>
                 {!isCollapsed && (
@@ -275,7 +377,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                       <span className="nav-badge">{item.badge}</span>
                     )}
                     {item.hasDropdown && (
-                      <span className={`dropdown-arrow ${showPropertiesDropdown ? 'open' : ''}`}>
+                      <span className={`dropdown-arrow ${(item.path === '/properties' && showPropertiesDropdown) || (item.path === '/tenants' && showPeopleDropdown) ? 'open' : ''}`}>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <polyline points="9,18 15,12 9,6"/>
                         </svg>
@@ -286,10 +388,12 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
               </button>
               
               {/* Properties Dropdown */}
-              {item.hasDropdown && showPropertiesDropdown && !isCollapsed && (
+              {item.hasDropdown && item.path === '/properties' && showPropertiesDropdown && !isCollapsed && (
                 <div 
                   className="properties-dropdown"
                   style={{ top: `${dropdownPosition.top}px` }}
+                  onMouseEnter={handlePropertiesDropdownEnter}
+                  onMouseLeave={handlePropertiesDropdownLeave}
                 >
                   <div className="dropdown-content">
                     <div className="dropdown-options">
@@ -326,6 +430,52 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                         <div className="option-content">
                           <div className="option-title">View Listings</div>
                           <div className="option-subtitle">Browse available rentals</div>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* People Dropdown */}
+              {item.hasDropdown && item.path === '/tenants' && showPeopleDropdown && !isCollapsed && (
+                <div 
+                  className="people-dropdown"
+                  style={{ top: `${peopleDropdownPosition.top}px` }}
+                  onMouseEnter={handlePeopleDropdownEnter}
+                  onMouseLeave={handlePeopleDropdownLeave}
+                >
+                  <div className="dropdown-content">
+                    <div className="dropdown-options">
+                      <button
+                        onClick={() => handleDropdownNavigation('/tenants')}
+                        className={`dropdown-option ${router.pathname === '/tenants' ? 'active' : ''}`}
+                      >
+                        <div className="option-icon">
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <circle cx="12" cy="8" r="5"/>
+                            <path d="M3 21V19C3 16.79 4.79 15 7 15H17C19.21 15 21 16.79 21 19V21"/>
+                          </svg>
+                        </div>
+                        <div className="option-content">
+                          <div className="option-title">Tenants</div>
+                          <div className="option-subtitle">Manage tenant information</div>
+                        </div>
+                      </button>
+                      
+                      <button
+                        onClick={() => handleDropdownNavigation('/vendors')}
+                        className={`dropdown-option ${router.pathname === '/vendors' || router.pathname.includes('/vendor') ? 'active' : ''}`}
+                      >
+                        <div className="option-icon">
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <circle cx="12" cy="12" r="3"/>
+                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                          </svg>
+                        </div>
+                        <div className="option-content">
+                          <div className="option-title">Vendors</div>
+                          <div className="option-subtitle">Manage service providers</div>
                         </div>
                       </button>
                     </div>
@@ -583,10 +733,11 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
           transform: rotate(180deg); /* Points left when open */
         }
 
-        .properties-dropdown {
+        .properties-dropdown,
+        .people-dropdown {
           position: fixed;
           top: auto;
-          left: 252px; /* Add 12px space from sidebar (240px + 12px) */
+          left: 250px; /* Reduce gap to 10px for smoother hover transition */
           width: 320px;
           background: #1e293b;
           border: 1px solid rgba(255, 255, 255, 0.1);
@@ -599,8 +750,9 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
           pointer-events: auto;
         }
 
-        .sidebar.collapsed .properties-dropdown {
-          left: 82px; /* Add 12px space from collapsed sidebar (70px + 12px) */
+        .sidebar.collapsed .properties-dropdown,
+        .sidebar.collapsed .people-dropdown {
+          left: 80px; /* Reduce gap to 10px for smoother hover transition */
         }
 
         .dropdown-content {
@@ -801,7 +953,8 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         :global(.dark-mode) .nav-item:hover {
           background: #222222 !important;
         }
-        :global(.dark-mode) .properties-dropdown {
+        :global(.dark-mode) .properties-dropdown,
+        :global(.dark-mode) .people-dropdown {
           background: #111111 !important;
           border: 1px solid #333333 !important;
           box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
@@ -823,19 +976,22 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         }
 
         /* Collapsed state - hide dropdown */
-        .sidebar.collapsed .properties-dropdown {
+        .sidebar.collapsed .properties-dropdown,
+        .sidebar.collapsed .people-dropdown {
           display: none;
         }
 
         /* Responsive adjustments */
         @media (max-width: 768px) {
-          .properties-dropdown {
+          .properties-dropdown,
+          .people-dropdown {
             width: 280px;
             left: 240px;
             transform: translateY(-50%);
           }
 
-          .sidebar.collapsed .properties-dropdown {
+          .sidebar.collapsed .properties-dropdown,
+          .sidebar.collapsed .people-dropdown {
             left: 70px;
           }
         }
