@@ -863,34 +863,6 @@ function LandlordDashboard() {
           <div className="metric-card">
             <div className="metric-header">
               <div className="metric-info">
-                <h3 className="metric-title">Vendors (Removed)</h3>
-                <div className="metric-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                    <circle cx="9" cy="7" r="4"></circle>
-                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                  </svg>
-                </div>
-              </div>
-            </div>
-            <div className="metric-content">
-              <div className="metric-value">{statsLoading ? '...' : teamCount}</div>
-              <div className="metric-subtitle">{metrics.team.subtitle}</div>
-              <div className="metric-progress">
-                <span className="metric-label">
-                  {statsLoading ? 'Loading...' : 'managers'}
-                </span>
-                <span className={`metric-change ${metrics.team.changeType}`}>
-                  {metrics.team.change}
-                </span>
-              </div>
-            </div>
-          </div>
-          
-          <div className="metric-card">
-            <div className="metric-header">
-              <div className="metric-info">
                 <h3 className="metric-title">Monthly Revenue</h3>
                 <div className="metric-icon">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

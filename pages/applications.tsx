@@ -71,8 +71,46 @@ function Applications() {
 
   useEffect(() => {
     fetchData();
-    fetchViewingsCount();
   }, []);
+
+  // Add visibility change listener to refresh data when user returns to this page
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        console.log('🔄 Page became visible, refreshing applications data...');
+        fetchData();
+      }
+    };
+
+    const handleFocus = () => {
+      console.log('🔄 Window focused, refreshing applications data...');
+      fetchData();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, []);
+
+  // Add router events listener to refresh when navigating back to this page
+  useEffect(() => {
+    const handleRouteChange = (url: string) => {
+      if (url === '/applications') {
+        console.log('🔄 Navigated to applications page, refreshing data...');
+        setTimeout(fetchData, 100); // Small delay to ensure page is ready
+      }
+    };
+
+    router.events.on('routeChangeComplete', handleRouteChange);
+
+    return () => {
+      router.events.off('routeChangeComplete', handleRouteChange);
+    };
+  }, [router.events]);
   
   useEffect(() => {
     // Apply property filter from URL if present
@@ -116,24 +154,72 @@ function Applications() {
         apiClient.getLeases()
       ]);
 
-      const activeLeases = (leasesResponse.results || []).filter((l:any) => l.status === 'active' || l.is_active);
-      const draftedLeases = (leasesResponse.results || []).filter((l:any) => l.status === 'draft');
+      const allLeases = leasesResponse.results || [];
+      const activeLeases = allLeases.filter((l:any) => l.status === 'active' || l.is_active);
+      const draftedLeases = allLeases.filter((l:any) => l.status === 'draft');
+
+      console.log('📊 Lease Data Debug:', {
+        totalLeases: allLeases.length,
+        activeLeases: activeLeases.length,
+        draftedLeases: draftedLeases.length,
+        allLeaseIds: allLeases.map((l:any) => `${l.id}(${l.status})`),
+      });
 
       const apps = (applicationsResponse.results || []).map((app:any) => {
+        // Check for any lease associated with this application first
+        const associatedLease = allLeases.find((l:any) => l.application === app.id);
+        
+        if (associatedLease) {
+          console.log(`🔗 Found lease for app ${app.id}:`, {
+            leaseId: associatedLease.id,
+            leaseStatus: associatedLease.status,
+            appStatus: app.status
+          });
+          
+          // Map lease status to application status
+          let statusMapping: { [key: string]: string } = {
+            'draft': 'lease_created',
+            'sent_to_tenant': 'lease_created',
+            'signed': 'lease_signed',
+            'active': 'moved_in'
+          };
+          
+          const mappedStatus = statusMapping[associatedLease.status] || app.status;
+          return { 
+            ...app, 
+            status: mappedStatus, 
+            lease: associatedLease, 
+            lease_id: associatedLease.id 
+          };
+        }
+
+        // Legacy checks for backward compatibility
         // If an active lease exists, the applicant has moved in
           const hasActiveLease = activeLeases.some((l:any) => l.tenant === app.tenant && l.property_ref === app.property_ref);
           if (hasActiveLease) {
-            return { ...app, status: 'moved_in' };
+          const activeLease = activeLeases.find((l:any) => l.tenant === app.tenant && l.property_ref === app.property_ref);
+          return { ...app, status: 'moved_in', lease: activeLease, lease_id: activeLease?.id };
           }
 
-        // If a drafted lease exists for this application, it's in the lease created stage
-        const hasDraftedLease = draftedLeases.some((l:any) => l.application === app.id);
-        if (hasDraftedLease) {
-          return { ...app, status: 'lease_created' };
+        // If a drafted lease exists for this application (legacy)
+        const draftedLease = draftedLeases.find((l:any) => l.application === app.id);
+        if (draftedLease) {
+          return { ...app, status: 'lease_created', lease: draftedLease, lease_id: draftedLease.id };
         }
         
-        return app; // Default to backend status if no specific override
+        return app; // Default to backend status if no lease found
       });
+
+      // Debug final application statuses
+      const leaseCreatedApps = apps.filter(app => app.status === 'lease_created');
+      console.log('📋 Applications with lease_created status:', leaseCreatedApps.map(app => ({
+        id: app.id,
+        tenant_name: app.tenant_name,
+        status: app.status,
+        hasLease: !!app.lease,
+        leaseStatus: app.lease?.status
+      })));
+
       setApplications(apps);
       setFilteredApplications(apps);
       setProperties(propertiesResponse.results || []);
@@ -1285,6 +1371,7 @@ function Applications() {
                 {viewingsCount > 0 ? `View Viewings (${viewingsCount})` : 'No Viewings'}
               </button>
 
+              {/* 
               <button
                 onClick={() => {
                   const property = properties.find(p => p.id === selectedProperty);
@@ -1303,6 +1390,7 @@ function Applications() {
                 </svg>
                 Room Management
               </button>
+              */}
             </div>
           </div>
         </div>
@@ -1437,15 +1525,31 @@ function Applications() {
             <>
                 <button 
                   onClick={fetchData} 
-                  className="refresh-btn"
-                  title="Refresh applications data to get the latest information"
+                  className={`refresh-btn ${loading ? 'loading' : ''}`}
+                  disabled={loading}
+                  title="Refresh applications data to get the latest information (including newly created leases)"
+                  style={{
+                    backgroundColor: loading ? '#e5e5e5' : '#10b981',
+                    color: loading ? '#999' : 'white',
+                    cursor: loading ? 'not-allowed' : 'pointer'
+                  }}
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <svg 
+                    width="16" 
+                    height="16" 
+                    viewBox="0 0 24 24" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    strokeWidth="2"
+                    style={{
+                      animation: loading ? 'spin 1s linear infinite' : 'none'
+                    }}
+                  >
                   <polyline points="23 4 23 10 17 10" />
                   <polyline points="1 20 1 14 7 14" />
                   <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15" />
                   </svg>
-                  Refresh
+                  {loading ? 'Refreshing...' : 'Refresh'}
                 </button>
                 <button 
                   onClick={downloadApplicationsReport} 
@@ -1603,6 +1707,15 @@ function Applications() {
       )}
 
       <style jsx>{`
+        @keyframes spin {
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(360deg);
+          }
+        }
+
         .dashboard-container {
           width: 100%;
           padding: 16px 20px 20px 20px;

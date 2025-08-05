@@ -154,6 +154,15 @@ const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
     window.location.href = `/leases/${leaseId}`;
   };
 
+  const handleDownloadSignedLease = async (leaseId: number) => {
+    try {
+      const downloadData = await apiClient.downloadSignedLease(leaseId);
+      window.open(downloadData.download_url, '_blank');
+    } catch (error: any) {
+      alert(`Failed to download signed lease: ${error.message}`);
+    }
+  };
+
   const getProperty = () => {
     if (!application) return null;
     return properties.find(p => p.id === application.property_ref);
@@ -460,14 +469,36 @@ const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
                         {application.lease.status === 'signed' && (
                           <div className="lease-status-info">
                             <span className="status-badge signed">✍️ Signed by Tenant</span>
-                            <button 
-                              className="doc-action-btn activate"
-                              onClick={() => handleActivateLease(application.lease_id)}
-                            >
-                              ✅ Activate Lease
-                            </button>
-                      </div>
-                    )}
+                            {application.lease.signed_at && (
+                              <small className="signing-info">
+                                📅 Signed on {new Date(application.lease.signed_at).toLocaleDateString()} 
+                                at {new Date(application.lease.signed_at).toLocaleTimeString()}
+                              </small>
+                            )}
+                            <div className="signed-lease-actions">
+                              <button 
+                                className="doc-action-btn download-signed"
+                                onClick={() => handleDownloadSignedLease(application.lease_id)}
+                                title="Download signed lease document uploaded by tenant"
+                              >
+                                📋 Download Signed Lease
+                              </button>
+                              <button 
+                                className="doc-action-btn download-original"
+                                onClick={() => handleDownloadLease(application.lease_id)}
+                                title="Download original lease document"
+                              >
+                                📄 Download Original
+                              </button>
+                              <button 
+                                className="doc-action-btn activate"
+                                onClick={() => handleActivateLease(application.lease_id)}
+                              >
+                                ✅ Activate Lease
+                              </button>
+                            </div>
+                          </div>
+                        )}
                         {application.lease.status === 'active' && (
                           <div className="lease-status-info">
                             <span className="status-badge active">✅ Active Lease</span>
@@ -1197,6 +1228,24 @@ const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
           background: #4b5563;
         }
 
+        .doc-action-btn.download-signed {
+          background: #10b981;
+          color: white;
+        }
+
+        .doc-action-btn.download-signed:hover {
+          background: #059669;
+        }
+
+        .doc-action-btn.download-original {
+          background: #3b82f6;
+          color: white;
+        }
+
+        .doc-action-btn.download-original:hover {
+          background: #2563eb;
+        }
+
         .lease-status-info {
           display: flex;
           flex-direction: column;
@@ -1230,6 +1279,18 @@ const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
         .lease-status-info small {
           font-size: 12px;
           color: #6b7280;
+        }
+
+        .signing-info {
+          font-size: 12px;
+          color: #6b7280;
+          margin-top: 4px;
+        }
+
+        .signed-lease-actions {
+          display: flex;
+          gap: 8px;
+          margin-top: 12px;
         }
 
         .documents-placeholder {
