@@ -851,9 +851,6 @@ function LandlordDashboard() {
               </div>
             </div>
           </div>
-          
-
-          
           <div className="metric-card">
             <div className="metric-header">
               <div className="metric-info">

@@ -159,8 +159,21 @@ function Leases() {
   const handleDownloadLease = async (lease: Lease) => {
     try {
       setError(null);
+      
+      // Prioritize signed lease if available, otherwise download draft
+      if (lease.status === 'signed' || lease.status === 'active') {
+        try {
+          const signedDownloadData = await apiClient.downloadSignedLease(lease.id);
+          window.open(signedDownloadData.download_url, '_blank');
+          return;
+        } catch (signedError) {
+          console.warn('Signed lease not available, falling back to draft:', signedError);
+          // Fall through to draft download
+        }
+      }
+      
+      // Download draft lease as fallback
       const downloadData = await apiClient.downloadDraftLease(lease.id);
-      // Open download URL in new tab
       window.open(downloadData.download_url, '_blank');
     } catch (e: any) {
       setError(e.message || 'Failed to download lease PDF');
@@ -552,7 +565,7 @@ function Leases() {
                                   <button 
                                     className="download-lease-btn" 
                                     onClick={() => handleDownloadLease(lease)}
-                                    title={`Download ${getTenantNameFromLease(lease)}'s lease PDF`}
+                                    title={`Download ${getTenantNameFromLease(lease)}'s lease PDF ${lease.status === 'signed' || lease.status === 'active' ? '(signed version when available)' : '(draft version)'}`}
                                   >
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>

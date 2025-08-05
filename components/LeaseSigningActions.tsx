@@ -173,8 +173,11 @@ export default function LeaseSigningActions({ lease, onLeaseUpdated }: LeaseSign
         {lease.status === 'signed' && (
           <>
             <div className="info-box success">
-              <p>✍️ Tenant has signed and uploaded the lease!</p>
-              <p>Review the signed document and activate when ready</p>
+              <p>✍️ Lease has been signed by tenant!</p>
+              {lease.signed_at && (
+                <p>📅 Signed on {new Date(lease.signed_at).toLocaleDateString()} at {new Date(lease.signed_at).toLocaleTimeString()}</p>
+              )}
+              <p>Review the signed lease and activate it to make it official</p>
             </div>
             
             <div className="document-actions">
@@ -197,15 +200,15 @@ export default function LeaseSigningActions({ lease, onLeaseUpdated }: LeaseSign
                   {loading === 'downloading-signed' ? 'Downloading...' : '📋 Signed Lease'}
                 </button>
               )}
+              
+              <button
+                onClick={handleActivateLease}
+                disabled={loading === 'activating'}
+                className="btn btn-success"
+              >
+                {loading === 'activating' ? 'Activating...' : '✅ Activate Lease'}
+              </button>
             </div>
-            
-            <button
-              onClick={handleActivateLease}
-              disabled={loading === 'activating'}
-              className="btn btn-success btn-large"
-            >
-              {loading === 'activating' ? 'Activating...' : '🎉 Activate Lease'}
-            </button>
           </>
         )}
 
