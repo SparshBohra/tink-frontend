@@ -4,60 +4,24 @@ import { useAuth } from '../lib/auth-context';
 import { apiRequest } from '../lib/api';
 import { PropertyListing } from '../lib/types';
 import NewListingModal from './NewListingModal';
+import { 
+  Home, 
+  CheckCircle, 
+  XCircle, 
+  FileText, 
+  AlertTriangle, 
+  Plus, 
+  RefreshCw, 
+  MoreHorizontal,
+  Eye,
+  Edit,
+  Trash2,
+  Grid,
+  List,
+  Filter
+} from 'lucide-react';
 
 interface ListingsDashboardProps {}
-
-// SVG Icon Components
-const HomeIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-    <polyline points="9,22 9,12 15,12 15,22"/>
-  </svg>
-);
-
-const CheckCircleIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-    <polyline points="22,4 12,14.01 9,11.01"/>
-  </svg>
-);
-
-const XCircleIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <circle cx="12" cy="12" r="10"/>
-    <line x1="15" y1="9" x2="9" y2="15"/>
-    <line x1="9" y1="9" x2="15" y2="15"/>
-  </svg>
-);
-
-const FileTextIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-    <polyline points="14,2 14,8 20,8"/>
-  </svg>
-);
-
-const AlertTriangleIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-    <line x1="12" y1="9" x2="12" y2="13"/>
-    <line x1="12" y1="17" x2="12.01" y2="17"/>
-  </svg>
-);
-
-const PlusIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M12 5v14M5 12h14"/>
-  </svg>
-);
-
-const RefreshIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <polyline points="23,4 23,10 17,10"/>
-    <polyline points="1,20 1,14 7,14"/>
-    <path d="M20.49,9A9,9,0,0,0,5.64,5.64L1,10m22,4L18.36,18.36A9,9,0,0,1,3.51,15"/>
-  </svg>
-);
 
 export default function ListingsDashboard(props: ListingsDashboardProps) {
   const { user } = useAuth();
@@ -194,9 +158,6 @@ export default function ListingsDashboard(props: ListingsDashboardProps) {
         fetchListings();
       }, 500);
       
-      // Show success message
-      // You might want to add a toast notification here
-      
     } catch (err) {
       console.error('Error creating listing:', err);
       throw err; // Re-throw to let the modal handle the error
@@ -297,184 +258,331 @@ export default function ListingsDashboard(props: ListingsDashboardProps) {
 
   if (loading) {
     return (
-      <div className="dashboard-container">
-        <div className="loading-state">
-          <div className="loading-spinner"></div>
-          <h3>Loading Property Listings...</h3>
-          <p>Please wait while we fetch your listings</p>
+      <div style={{
+        width: '100%',
+        padding: '2rem',
+        backgroundColor: '#f8fafc',
+        minHeight: 'calc(100vh - 72px)',
+        boxSizing: 'border-box'
+      }}>
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '5rem 1.5rem',
+          textAlign: 'center'
+        }}>
+          <div style={{
+            width: '3rem',
+            height: '3rem',
+            border: '4px solid #e5e7eb',
+            borderTopColor: '#2563eb',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite',
+            marginBottom: '1.5rem'
+          }} />
+          <h3 style={{
+            fontSize: '1.25rem',
+            fontWeight: '600',
+            color: '#111827',
+            margin: '0 0 0.5rem 0'
+          }}>
+            Loading Property Listings...
+          </h3>
+          <p style={{
+            fontSize: '0.875rem',
+            color: '#6b7280',
+            margin: 0
+          }}>
+            Please wait while we fetch your listings
+          </p>
         </div>
+        <style jsx>{`
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
       </div>
     );
   }
 
   return (
-    <div className="dashboard-container">
+    <div style={{
+      width: '100%',
+      padding: '1.5rem',
+      backgroundColor: '#f8fafc',
+      minHeight: 'calc(100vh - 72px)',
+      boxSizing: 'border-box'
+    }}>
       {error && (
-        <div className="error-banner">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="12" cy="12" r="10"/>
-            <line x1="15" y1="9" x2="9" y2="15"/>
-            <line x1="9" y1="9" x2="15" y2="15"/>
-          </svg>
+        <div style={{
+          backgroundColor: '#fef2f2',
+          border: '1px solid #fecaca',
+          borderRadius: '8px',
+          padding: '1rem',
+          marginBottom: '1.5rem',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.75rem'
+        }}>
+          <XCircle style={{ width: '1.25rem', height: '1.25rem', color: '#dc2626' }} />
+          <span style={{ color: '#dc2626', fontSize: '0.875rem', fontWeight: '500' }}>
           {error}
+          </span>
         </div>
       )}
 
       {/* Header Section */}
-      <div className="dashboard-header">
-        <div className="header-left">
-          <div className="header-icon">
-            <HomeIcon />
+      <div style={{
+        backgroundColor: 'white',
+        borderRadius: '12px',
+        padding: '2rem',
+        marginBottom: '1.5rem',
+        border: '1px solid #e5e7eb',
+        boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
+      }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '1rem'
+        }}>
+          <div style={{
+            width: '3rem',
+            height: '3rem',
+            backgroundColor: '#dbeafe',
+            borderRadius: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            <Home style={{ width: '1.5rem', height: '1.5rem', color: '#2563eb' }} />
           </div>
-          <div className="header-content">
-            <h1 className="header-title">Property Listings</h1>
-            <p className="header-subtitle">Manage all property listings and tenant applications across your portfolio</p>
+          <div>
+            <h1 style={{
+              fontSize: '1.875rem',
+              fontWeight: '700',
+              color: '#111827',
+              margin: '0 0 0.25rem 0'
+            }}>
+              Property Listings
+            </h1>
+            <p style={{
+              fontSize: '1rem',
+              color: '#6b7280',
+              margin: 0
+            }}>
+              Manage all property listings and tenant applications across your portfolio
+            </p>
           </div>
         </div>
       </div>
 
-      {/* Top Metrics Row */}
-      <div className="metrics-grid">
-        <div className="metric-card">
-          <div className="metric-header">
-            <div className="metric-info">
-              <h3 className="metric-title">Total Listings</h3>
-              <div className="metric-icon">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-                  <polyline points="9,22 9,12 15,12 15,22"/>
-                </svg>
+      {/* Metrics Grid */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+        gap: '1.5rem',
+        marginBottom: '2rem'
+      }}>
+        {[
+          {
+            title: 'Total Listings',
+            value: metrics.totalListings,
+            subtitle: 'Active portfolio',
+            icon: <Home style={{ width: '1.25rem', height: '1.25rem' }} />,
+            color: '#2563eb',
+            bgColor: '#dbeafe'
+          },
+          {
+            title: 'Active Listings',
+            value: metrics.activeListings,
+            subtitle: `${metrics.inactiveListings} inactive`,
+            icon: <CheckCircle style={{ width: '1.25rem', height: '1.25rem' }} />,
+            color: '#059669',
+            bgColor: '#d1fae5'
+          },
+          {
+            title: 'Total Applications',
+            value: metrics.totalApplications,
+            subtitle: 'Applications received',
+            icon: <FileText style={{ width: '1.25rem', height: '1.25rem' }} />,
+            color: '#7c3aed',
+            bgColor: '#e9d5ff'
+          },
+          {
+            title: 'Application Rate',
+            value: metrics.totalListings > 0 ? (metrics.totalApplications / metrics.totalListings).toFixed(1) : '0',
+            subtitle: 'Per listing average',
+            icon: <AlertTriangle style={{ width: '1.25rem', height: '1.25rem' }} />,
+            color: '#ea580c',
+            bgColor: '#fed7aa'
+          }
+        ].map((metric, index) => (
+          <div key={index} style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            padding: '1.5rem',
+            border: '1px solid #e5e7eb',
+            boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+            transition: 'all 0.2s ease'
+          }}
+          onMouseOver={(e) => {
+            e.currentTarget.style.transform = 'translateY(-2px)';
+            e.currentTarget.style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.1)';
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = '0 1px 3px 0 rgba(0, 0, 0, 0.1)';
+          }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '1rem'
+            }}>
+              <h3 style={{
+                fontSize: '0.875rem',
+                fontWeight: '600',
+                color: '#6b7280',
+                margin: 0,
+                textTransform: 'uppercase',
+                letterSpacing: '0.025em'
+              }}>
+                {metric.title}
+              </h3>
+              <div style={{
+                backgroundColor: metric.bgColor,
+                borderRadius: '8px',
+                padding: '0.5rem',
+                color: metric.color
+              }}>
+                {metric.icon}
               </div>
             </div>
+            <div style={{
+              fontSize: '2rem',
+              fontWeight: '700',
+              color: '#111827',
+              marginBottom: '0.25rem',
+              lineHeight: 1
+            }}>
+              {metric.value}
           </div>
-          <div className="metric-content">
-            <div className="metric-value">{metrics.totalListings}</div>
-            <div className="metric-subtitle">Active portfolio</div>
-            <div className="metric-progress">
-              <span className="metric-label">Listings managed</span>
-              <span className="metric-change positive">+{metrics.totalListings > 0 ? '1' : '0'}</span>
+            <div style={{
+              fontSize: '0.875rem',
+              color: '#6b7280'
+            }}>
+              {metric.subtitle}
             </div>
           </div>
-        </div>
-        
-        <div className="metric-card">
-          <div className="metric-header">
-            <div className="metric-info">
-              <h3 className="metric-title">Active Listings</h3>
-              <div className="metric-icon">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                  <polyline points="22,4 12,14.01 9,11.01"/>
-                </svg>
-              </div>
-            </div>
-          </div>
-          <div className="metric-content">
-            <div className="metric-value">{metrics.activeListings}</div>
-            <div className="metric-subtitle">{metrics.inactiveListings} inactive</div>
-            <div className="metric-progress">
-              <span className="metric-label">{metrics.totalListings > 0 ? Math.round((metrics.activeListings / metrics.totalListings) * 100) : 0}% active</span>
-              <span className="metric-change positive">+{metrics.activeListings > 0 ? '2' : '0'}</span>
-            </div>
-          </div>
-        </div>
-        
-        <div className="metric-card">
-          <div className="metric-header">
-            <div className="metric-info">
-              <h3 className="metric-title">Total Applications</h3>
-              <div className="metric-icon">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                  <polyline points="14,2 14,8 20,8"/>
-                </svg>
-              </div>
-            </div>
-          </div>
-          <div className="metric-content">
-            <div className="metric-value">{metrics.totalApplications}</div>
-            <div className="metric-subtitle">Applications received</div>
-            <div className="metric-progress">
-              <span className="metric-label">Ready to review</span>
-              <span className="metric-change positive">-1</span>
-            </div>
-          </div>
-        </div>
-        
-        <div className="metric-card">
-          <div className="metric-header">
-            <div className="metric-info">
-              <h3 className="metric-title">Application Rate</h3>
-              <div className="metric-icon">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <line x1="18" y1="20" x2="18" y2="10"/>
-                  <line x1="12" y1="20" x2="12" y2="4"/>
-                  <line x1="6" y1="20" x2="6" y2="14"/>
-                </svg>
-              </div>
-            </div>
-          </div>
-          <div className="metric-content">
-            <div className="metric-value">{metrics.totalListings > 0 ? (metrics.totalApplications / metrics.totalListings).toFixed(1) : '0'}</div>
-            <div className="metric-subtitle">Per listing average</div>
-            <div className="metric-progress">
-              <span className="metric-label">
-                {metrics.totalListings > 0 && metrics.totalApplications / metrics.totalListings >= 5 ? 'Excellent' : 
-                 metrics.totalListings > 0 && metrics.totalApplications / metrics.totalListings >= 2 ? 'Good' : 'Needs attention'}
-              </span>
-              <span className="metric-change positive">+1.2</span>
-            </div>
-          </div>
-        </div>
+        ))}
       </div>
 
       {/* Listings Management Section */}
-      <div className="listings-section">
-        <div className="section-header">
-          <div className="section-title-group">
-            <h2 className="section-title">Manage Listings</h2>
-            <p className="section-subtitle">
+      <div style={{
+        backgroundColor: 'white',
+        borderRadius: '12px',
+        padding: '1.5rem',
+        border: '1px solid #e5e7eb',
+        boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
+      }}>
+        {/* Section Header */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          marginBottom: '1.5rem',
+          flexWrap: 'wrap',
+          gap: '1rem'
+        }}>
+          <div>
+            <h2 style={{
+              fontSize: '1.25rem',
+              fontWeight: '700',
+              color: '#111827',
+              margin: '0 0 0.25rem 0'
+            }}>
+              Manage Listings
+            </h2>
+            <p style={{
+              fontSize: '0.875rem',
+              color: '#6b7280',
+              margin: 0
+            }}>
               View and manage all your property listings
               {selectedProperty && (
-                <span className="filter-indicator">
+                <span style={{ color: '#2563eb', fontWeight: '500' }}>
                   {' '}• Filtered by {properties.find(p => p.id === selectedProperty)?.name || 'Selected Property'}
                 </span>
               )}
             </p>
           </div>
-          <div className="section-actions">
-            <div className="view-toggle">
+          <div style={{
+            display: 'flex',
+            gap: '0.75rem',
+            alignItems: 'center',
+            flexWrap: 'wrap'
+          }}>
+            {/* View Toggle */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              backgroundColor: '#f9fafb',
+              border: '1px solid #e5e7eb',
+              borderRadius: '6px',
+              padding: '2px'
+            }}>
               <button
-                className={`view-btn ${viewMode === 'panel' ? 'active' : ''}`}
                 onClick={() => setViewMode('panel')}
-                title="Panel view"
+                style={{
+                  padding: '0.5rem',
+                  backgroundColor: viewMode === 'panel' ? '#2563eb' : 'transparent',
+                  color: viewMode === 'panel' ? 'white' : '#6b7280',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <rect x="3" y="3" width="7" height="7"/>
-                  <rect x="14" y="3" width="7" height="7"/>
-                  <rect x="3" y="14" width="7" height="7"/>
-                  <rect x="14" y="14" width="7" height="7"/>
-                </svg>
+                <Grid style={{ width: '1rem', height: '1rem' }} />
               </button>
               <button
-                className={`view-btn ${viewMode === 'list' ? 'active' : ''}`}
                 onClick={() => setViewMode('list')}
-                title="List view"
+                style={{
+                  padding: '0.5rem',
+                  backgroundColor: viewMode === 'list' ? '#2563eb' : 'transparent',
+                  color: viewMode === 'list' ? 'white' : '#6b7280',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <line x1="8" y1="6" x2="21" y2="6"/>
-                  <line x1="8" y1="12" x2="21" y2="12"/>
-                  <line x1="8" y1="18" x2="21" y2="18"/>
-                  <line x1="3" y1="6" x2="3.01" y2="6"/>
-                  <line x1="3" y1="12" x2="3.01" y2="12"/>
-                  <line x1="3" y1="18" x2="3.01" y2="18"/>
-                </svg>
+                <List style={{ width: '1rem', height: '1rem' }} />
               </button>
             </div>
+
+            {/* Property Filter */}
             <select
               value={selectedProperty || ''}
               onChange={handlePropertyFilterChange}
-              className="property-filter-select"
+              style={{
+                padding: '0.5rem 0.75rem',
+                border: '1px solid #d1d5db',
+                borderRadius: '6px',
+                backgroundColor: 'white',
+                fontSize: '0.875rem',
+                color: '#374151',
+                cursor: 'pointer',
+                minWidth: '160px'
+              }}
             >
               <option value="">All Properties</option>
               {properties.map(property => (
@@ -483,161 +591,408 @@ export default function ListingsDashboard(props: ListingsDashboardProps) {
                 </option>
               ))}
             </select>
+
+            {/* Sort Select */}
             <select
               value={sortOption}
               onChange={e => setSortOption(e.target.value as 'name' | 'latest')}
-              className="sort-select"
-              title="Sort listings"
+              style={{
+                padding: '0.5rem 0.75rem',
+                border: '1px solid #d1d5db',
+                borderRadius: '6px',
+                backgroundColor: 'white',
+                fontSize: '0.875rem',
+                color: '#374151',
+                cursor: 'pointer'
+              }}
             >
               <option value="latest">Latest Added</option>
               <option value="name">Name A–Z</option>
             </select>
-            <button onClick={fetchListings} className="refresh-btn">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="23 4 23 10 17 10"/>
-                <polyline points="1 20 1 14 7 14"/>
-                <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>
-              </svg>
+
+            {/* Refresh Button */}
+            <button 
+              onClick={fetchListings}
+              disabled={isRefreshing}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.5rem 0.75rem',
+                backgroundColor: '#f3f4f6',
+                color: '#374151',
+                border: '1px solid #d1d5db',
+                borderRadius: '6px',
+                fontSize: '0.875rem',
+                fontWeight: '500',
+                cursor: isRefreshing ? 'not-allowed' : 'pointer',
+                transition: 'all 0.2s ease',
+                opacity: isRefreshing ? 0.6 : 1
+              }}
+              onMouseOver={(e) => !isRefreshing && (e.currentTarget.style.backgroundColor = '#e5e7eb')}
+              onMouseOut={(e) => !isRefreshing && (e.currentTarget.style.backgroundColor = '#f3f4f6')}
+            >
+              <RefreshCw style={{ 
+                width: '1rem', 
+                height: '1rem',
+                animation: isRefreshing ? 'spin 1s linear infinite' : 'none'
+              }} />
               Refresh
             </button>
-            <button onClick={() => setShowCreateModal(true)} className="create-property-btn">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <line x1="12" y1="5" x2="12" y2="19"/>
-                <line x1="5" y1="12" x2="19" y2="12"/>
-              </svg>
+
+            {/* Create Listing Button */}
+            <button 
+              onClick={() => setShowCreateModal(true)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.5rem 1rem',
+                backgroundColor: '#2563eb',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '0.875rem',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.backgroundColor = '#1d4ed8';
+                e.currentTarget.style.transform = 'translateY(-1px)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.backgroundColor = '#2563eb';
+                e.currentTarget.style.transform = 'translateY(0)';
+              }}
+            >
+              <Plus style={{ width: '1rem', height: '1rem' }} />
               Create Listing
             </button>
           </div>
         </div>
 
+        {/* Listings Content */}
         {filteredListings.length === 0 ? (
-          <div className="empty-properties-state">
-            <div className="empty-state-content">
-              <div className="empty-state-icon">
-                <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-                  <polyline points="9,22 9,12 15,12 15,22"/>
-                </svg>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '4rem 1.5rem',
+            textAlign: 'center'
+          }}>
+            <div style={{ maxWidth: '32rem' }}>
+              <div style={{
+                width: '5rem',
+                height: '5rem',
+                backgroundColor: '#f3f4f6',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 1.5rem auto'
+              }}>
+                <Home style={{ width: '2rem', height: '2rem', color: '#9ca3af' }} />
               </div>
-              <h3 className="empty-state-title">
+              <h3 style={{
+                fontSize: '1.5rem',
+                fontWeight: '700',
+                color: '#111827',
+                margin: '0 0 0.5rem 0'
+              }}>
                 {selectedProperty ? 'No Listings for This Property' : 'No Property Listings Yet'}
               </h3>
-              <p className="empty-state-description">
+              <p style={{
+                fontSize: '1rem',
+                color: '#6b7280',
+                lineHeight: 1.6,
+                margin: '0 0 2rem 0'
+              }}>
                 {selectedProperty 
                   ? `No listings found for ${properties.find(p => p.id === selectedProperty)?.name || 'this property'}. Create a listing to start accepting applications.`
                   : 'Start building your listing portfolio by creating your first property listing. Manage applications, visibility, and tenant interest all in one place.'
                 }
               </p>
-              <div className="empty-state-actions">
-                <button onClick={() => setShowCreateModal(true)} className="btn btn-primary">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M12 5v14M5 12h14"/>
-                  </svg>
+              <div style={{
+                display: 'flex',
+                gap: '0.75rem',
+                justifyContent: 'center',
+                flexWrap: 'wrap'
+              }}>
+                <button 
+                  onClick={() => setShowCreateModal(true)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    padding: '0.75rem 1.5rem',
+                    backgroundColor: '#2563eb',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '0.875rem',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
+                  onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+                >
+                  <Plus style={{ width: '1rem', height: '1rem' }} />
                   {selectedProperty ? 'Create Listing for This Property' : 'Create Your First Listing'}
                 </button>
-                <button onClick={() => router.push('/properties')} className="btn btn-secondary">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M3 21h18"/>
-                    <path d="M5 21V7l8-4v18"/>
-                    <path d="M19 21V11l-6-4"/>
-                  </svg>
+                <button 
+                  onClick={() => router.push('/properties')}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    padding: '0.75rem 1.5rem',
+                    backgroundColor: 'white',
+                    color: '#374151',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '8px',
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
+                  onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                >
+                  <Home style={{ width: '1rem', height: '1rem' }} />
                   View Properties
                 </button>
-              </div>
-              <div className="empty-state-help">
-                <div className="help-cards">
-                  <div className="help-card">
-                    <h4>📝 Create Listings</h4>
-                    <p>Add listings for your properties to attract potential tenants and streamline applications.</p>
-                  </div>
-                  <div className="help-card">
-                    <h4>📊 Track Performance</h4>
-                    <p>Monitor views, applications, and listing performance across all platforms.</p>
-                  </div>
-                  <div className="help-card">
-                    <h4>⚡ Multi-Platform</h4>
-                    <p>Publish to Zillow, Apartments.com, and other platforms with one click.</p>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
         ) : viewMode === 'panel' ? (
-          <div className="listings-grid">
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))',
+            gap: '1.5rem'
+          }}>
             {filteredListings.map((listing) => (
-              <div key={listing.id} className="listing-card">
-                <div className="listing-card-header">
-                  <div className="listing-info">
-                    <h3 className="listing-title">{listing.title}</h3>
-                    <p className="listing-property">{listing.property_name}</p>
+              <div key={listing.id} style={{
+                backgroundColor: '#f8fafc',
+                border: '1px solid #e5e7eb',
+                borderRadius: '12px',
+                padding: '1.5rem',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.transform = 'translateY(-4px)';
+                e.currentTarget.style.boxShadow = '0 12px 25px rgba(0, 0, 0, 0.1)';
+                e.currentTarget.style.borderColor = '#2563eb';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = 'none';
+                e.currentTarget.style.borderColor = '#e5e7eb';
+              }}>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'flex-start',
+                  marginBottom: '1rem'
+                }}>
+                  <div style={{ flex: 1 }}>
+                    <h3 style={{
+                      fontSize: '1.125rem',
+                      fontWeight: '600',
+                      color: '#111827',
+                      margin: '0 0 0.25rem 0',
+                      lineHeight: 1.3
+                    }}>
+                      {listing.title}
+                    </h3>
+                    <p style={{
+                      fontSize: '0.875rem',
+                      color: '#6b7280',
+                      margin: 0
+                    }}>
+                      {listing.property_name}
+                    </p>
                   </div>
-                  <div className="listing-status">
-                    <span className={`status-badge ${listing.is_active ? 'active' : 'inactive'}`}>
+                  <span style={{
+                    padding: '0.375rem 0.75rem',
+                    borderRadius: '6px',
+                    fontSize: '0.75rem',
+                    fontWeight: '600',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.025em',
+                    backgroundColor: listing.is_active ? '#d1fae5' : '#fef2f2',
+                    color: listing.is_active ? '#065f46' : '#dc2626'
+                  }}>
                       {listing.is_active ? 'Active' : 'Inactive'}
                     </span>
-                  </div>
                 </div>
 
-                <div className="listing-description">
-                  <p>{listing.description ? listing.description.substring(0, 120) + '...' : 'No description available'}</p>
+                <div style={{ marginBottom: '1rem' }}>
+                  <p style={{
+                    fontSize: '0.875rem',
+                    color: '#6b7280',
+                    margin: 0,
+                    lineHeight: 1.4
+                  }}>
+                    {listing.description ? listing.description.substring(0, 120) + '...' : 'No description available'}
+                  </p>
                 </div>
 
-                <div className="listing-metrics">
-                  <div className="listing-metric">
-                    <span className="metric-label">Applications</span>
-                    <span className="metric-value">{listing.application_count || 0}</span>
+                <div style={{
+                  display: 'flex',
+                  gap: '1.5rem',
+                  marginBottom: '1rem',
+                  paddingBottom: '1rem',
+                  borderBottom: '1px solid #e5e7eb'
+                }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                    <span style={{
+                      fontSize: '0.75rem',
+                      color: '#9ca3af',
+                      fontWeight: '500',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.025em'
+                    }}>
+                      Applications
+                    </span>
+                    <span style={{
+                      fontSize: '1rem',
+                      fontWeight: '600',
+                      color: '#111827'
+                    }}>
+                      {listing.application_count || 0}
+                    </span>
                   </div>
-                  <div className="listing-metric">
-                    <span className="metric-label">Views</span>
-                    <span className="metric-value">{listing.view_count || 0}</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                    <span style={{
+                      fontSize: '0.75rem',
+                      color: '#9ca3af',
+                      fontWeight: '500',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.025em'
+                    }}>
+                      Views
+                    </span>
+                    <span style={{
+                      fontSize: '1rem',
+                      fontWeight: '600',
+                      color: '#111827'
+                    }}>
+                      {listing.view_count || 0}
+                    </span>
                   </div>
-                  <div className="listing-metric">
-                    <span className="metric-label">Created</span>
-                    <span className="metric-value">
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                    <span style={{
+                      fontSize: '0.75rem',
+                      color: '#9ca3af',
+                      fontWeight: '500',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.025em'
+                    }}>
+                      Created
+                    </span>
+                    <span style={{
+                      fontSize: '1rem',
+                      fontWeight: '600',
+                      color: '#111827'
+                    }}>
                       {new Date(listing.created_at).toLocaleDateString()}
                     </span>
                   </div>
                 </div>
 
-                <div className="listing-actions">
+                <div style={{
+                  display: 'flex',
+                  gap: '0.5rem',
+                  flexWrap: 'wrap'
+                }}>
                   <button
                     onClick={() => handleViewPublicListing(listing.public_slug)}
-                    className="btn btn-sm btn-secondary"
-                    title="View public listing"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.375rem',
+                      padding: '0.5rem 0.75rem',
+                      backgroundColor: 'white',
+                      color: '#374151',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      fontSize: '0.75rem',
+                      fontWeight: '500',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
+                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'white'}
                   >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                      <circle cx="12" cy="12" r="3"/>
-                    </svg>
+                    <Eye style={{ width: '0.875rem', height: '0.875rem' }} />
                     View
                   </button>
                   <button
                     onClick={() => handleEditListing(listing.id)}
-                    className="btn btn-sm btn-secondary"
-                    title="Edit listing"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.375rem',
+                      padding: '0.5rem 0.75rem',
+                      backgroundColor: 'white',
+                      color: '#374151',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      fontSize: '0.75rem',
+                      fontWeight: '500',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
+                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'white'}
                   >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                    </svg>
+                    <Edit style={{ width: '0.875rem', height: '0.875rem' }} />
                     Edit
                   </button>
                   <button
                     onClick={() => handleToggleActive(listing.id, listing.is_active)}
-                    className={`btn btn-sm ${listing.is_active ? 'btn-warning' : 'btn-success'}`}
-                    title={listing.is_active ? 'Deactivate listing' : 'Activate listing'}
+                    style={{
+                      padding: '0.5rem 0.75rem',
+                      backgroundColor: listing.is_active ? '#f59e0b' : '#059669',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '0.75rem',
+                      fontWeight: '500',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = listing.is_active ? '#d97706' : '#047857';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = listing.is_active ? '#f59e0b' : '#059669';
+                    }}
                   >
                     {listing.is_active ? 'Deactivate' : 'Activate'}
                   </button>
                   <button
                     onClick={() => handleDeleteListing(listing.id)}
-                    className="btn btn-sm btn-danger"
-                    title="Delete listing"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.375rem',
+                      padding: '0.5rem 0.75rem',
+                      backgroundColor: '#dc2626',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '0.75rem',
+                      fontWeight: '500',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#b91c1c'}
+                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
                   >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <polyline points="3,6 5,6 21,6"/>
-                      <path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2V6"/>
-                    </svg>
+                    <Trash2 style={{ width: '0.875rem', height: '0.875rem' }} />
                     Delete
                   </button>
                 </div>
@@ -645,122 +1000,259 @@ export default function ListingsDashboard(props: ListingsDashboardProps) {
             ))}
           </div>
         ) : (
-          <div className="properties-scroll-container">
-            <div className="properties-table-container">
-              <table className="properties-table">
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{
+              width: '100%',
+              borderCollapse: 'collapse',
+              fontSize: '0.875rem'
+            }}>
                 <thead>
-                  <tr>
-                    <th className="table-left">Listing</th>
-                    <th className="table-left">Property</th>
-                    <th className="table-center">Status</th>
-                    <th className="table-center">Applications</th>
-                    <th className="table-center">Views</th>
-                    <th className="table-center">Created</th>
-                    <th className="table-center">Actions</th>
+                <tr style={{ backgroundColor: '#f9fafb' }}>
+                  <th style={{
+                    padding: '0.75rem',
+                    textAlign: 'left',
+                    fontWeight: '600',
+                    color: '#374151',
+                    borderBottom: '1px solid #e5e7eb'
+                  }}>
+                    Listing
+                  </th>
+                  <th style={{
+                    padding: '0.75rem',
+                    textAlign: 'left',
+                    fontWeight: '600',
+                    color: '#374151',
+                    borderBottom: '1px solid #e5e7eb'
+                  }}>
+                    Property
+                  </th>
+                  <th style={{
+                    padding: '0.75rem',
+                    textAlign: 'center',
+                    fontWeight: '600',
+                    color: '#374151',
+                    borderBottom: '1px solid #e5e7eb'
+                  }}>
+                    Status
+                  </th>
+                  <th style={{
+                    padding: '0.75rem',
+                    textAlign: 'center',
+                    fontWeight: '600',
+                    color: '#374151',
+                    borderBottom: '1px solid #e5e7eb'
+                  }}>
+                    Applications
+                  </th>
+                  <th style={{
+                    padding: '0.75rem',
+                    textAlign: 'center',
+                    fontWeight: '600',
+                    color: '#374151',
+                    borderBottom: '1px solid #e5e7eb'
+                  }}>
+                    Views
+                  </th>
+                  <th style={{
+                    padding: '0.75rem',
+                    textAlign: 'center',
+                    fontWeight: '600',
+                    color: '#374151',
+                    borderBottom: '1px solid #e5e7eb'
+                  }}>
+                    Created
+                  </th>
+                  <th style={{
+                    padding: '0.75rem',
+                    textAlign: 'center',
+                    fontWeight: '600',
+                    color: '#374151',
+                    borderBottom: '1px solid #e5e7eb'
+                  }}>
+                    Actions
+                  </th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredListings.map((listing) => (
-                    <tr key={listing.id}>
-                      <td className="table-left">
-                        <div className="property-name clickable-property-name">
+                  <tr key={listing.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                    <td style={{ padding: '1rem 0.75rem' }}>
+                      <div>
+                        <div style={{
+                          fontWeight: '600',
+                          color: '#111827',
+                          marginBottom: '0.25rem'
+                        }}>
                           {listing.title}
                         </div>
-                        <div className="property-type">
+                        <div style={{
+                          fontSize: '0.75rem',
+                          color: '#6b7280'
+                        }}>
                           {listing.description ? listing.description.substring(0, 60) + '...' : 'No description'}
                         </div>
+                        </div>
                       </td>
-                      <td className="table-left">{listing.property_name}</td>
-                      <td className="table-center">
-                        <span className={`status-badge ${listing.is_active ? 'excellent' : 'low'}`}>
+                    <td style={{ padding: '1rem 0.75rem', color: '#374151' }}>
+                      {listing.property_name}
+                    </td>
+                    <td style={{ padding: '1rem 0.75rem', textAlign: 'center' }}>
+                      <span style={{
+                        padding: '0.25rem 0.5rem',
+                        borderRadius: '4px',
+                        fontSize: '0.75rem',
+                        fontWeight: '600',
+                        backgroundColor: listing.is_active ? '#d1fae5' : '#fef2f2',
+                        color: listing.is_active ? '#065f46' : '#dc2626'
+                      }}>
                           {listing.is_active ? 'Active' : 'Inactive'}
                         </span>
                       </td>
-                      <td className="table-center">
-                        <div className="rooms-cell">
-                          <div className="rooms-total">{listing.application_count || 0} total</div>
-                        </div>
+                    <td style={{ padding: '1rem 0.75rem', textAlign: 'center', fontWeight: '600' }}>
+                      {listing.application_count || 0}
                       </td>
-                      <td className="table-center">
-                        <div className="rooms-cell">
-                          <div className="rooms-total">{listing.view_count || 0} views</div>
-                        </div>
+                    <td style={{ padding: '1rem 0.75rem', textAlign: 'center', fontWeight: '600' }}>
+                      {listing.view_count || 0}
                       </td>
-                      <td className="table-center">
+                    <td style={{ padding: '1rem 0.75rem', textAlign: 'center' }}>
                         {new Date(listing.created_at).toLocaleDateString()}
                       </td>
-                      <td className="table-center">
-                        <div className="action-buttons">
-                          <div className="dropdown-container">
+                    <td style={{ padding: '1rem 0.75rem', textAlign: 'center' }}>
+                      <div style={{ position: 'relative', display: 'inline-block' }}>
                             <button 
                               onClick={(e) => handleManageClick(e, listing.id)} 
-                              className="manage-btn"
-                            >
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-                                <polyline points="9,22 9,12 15,12 15,22"/>
-                              </svg>
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.375rem',
+                            padding: '0.5rem 0.75rem',
+                            backgroundColor: '#f3f4f6',
+                            color: '#374151',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '6px',
+                            fontSize: '0.75rem',
+                            fontWeight: '500',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease'
+                          }}
+                        >
+                          <MoreHorizontal style={{ width: '1rem', height: '1rem' }} />
                               Manage
-                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <polyline points="6,9 12,15 18,9"/>
-                              </svg>
                             </button>
                             
                             {activeDropdown === listing.id && (
-                              <div className="dropdown-menu">
+                          <div style={{
+                            position: 'absolute',
+                            top: '100%',
+                            right: 0,
+                            marginTop: '0.25rem',
+                            backgroundColor: 'white',
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '8px',
+                            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+                            zIndex: 10,
+                            minWidth: '160px'
+                          }}>
                                 <button 
                                   onClick={() => handleViewPublicListing(listing.public_slug)}
-                                  className="dropdown-item"
-                                >
-                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                                    <circle cx="12" cy="12" r="3"/>
-                                  </svg>
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                width: '100%',
+                                padding: '0.75rem 1rem',
+                                backgroundColor: 'transparent',
+                                color: '#374151',
+                                border: 'none',
+                                fontSize: '0.875rem',
+                                cursor: 'pointer',
+                                transition: 'background-color 0.2s ease',
+                                textAlign: 'left'
+                              }}
+                              onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
+                              onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                            >
+                              <Eye style={{ width: '1rem', height: '1rem' }} />
                                   View Public
                                 </button>
                                 
                                 <button 
                                   onClick={() => handleEditListing(listing.id)}
-                                  className="dropdown-item"
-                                >
-                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                                  </svg>
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                width: '100%',
+                                padding: '0.75rem 1rem',
+                                backgroundColor: 'transparent',
+                                color: '#374151',
+                                border: 'none',
+                                fontSize: '0.875rem',
+                                cursor: 'pointer',
+                                transition: 'background-color 0.2s ease',
+                                textAlign: 'left'
+                              }}
+                              onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
+                              onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                            >
+                              <Edit style={{ width: '1rem', height: '1rem' }} />
                                   Edit Listing
                                 </button>
                                 
                                 <button 
                                   onClick={() => handleToggleActive(listing.id, listing.is_active)}
-                                  className="dropdown-item"
-                                >
-                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <circle cx="12" cy="12" r="10"/>
-                                    <path d="M8 12l2 2 4-4"/>
-                                  </svg>
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                width: '100%',
+                                padding: '0.75rem 1rem',
+                                backgroundColor: 'transparent',
+                                color: '#374151',
+                                border: 'none',
+                                fontSize: '0.875rem',
+                                cursor: 'pointer',
+                                transition: 'background-color 0.2s ease',
+                                textAlign: 'left'
+                              }}
+                              onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
+                              onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                            >
+                              <CheckCircle style={{ width: '1rem', height: '1rem' }} />
                                   {listing.is_active ? 'Deactivate' : 'Activate'}
                                 </button>
                                 
                                 <button 
                                   onClick={() => handleDeleteListing(listing.id)}
-                                  className="dropdown-item delete"
-                                >
-                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <polyline points="3,6 5,6 21,6"/>
-                                    <path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2V6"/>
-                                  </svg>
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                width: '100%',
+                                padding: '0.75rem 1rem',
+                                backgroundColor: 'transparent',
+                                color: '#dc2626',
+                                border: 'none',
+                                fontSize: '0.875rem',
+                                cursor: 'pointer',
+                                transition: 'background-color 0.2s ease',
+                                textAlign: 'left',
+                                borderTop: '1px solid #f3f4f6'
+                              }}
+                              onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#fef2f2'}
+                              onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                            >
+                              <Trash2 style={{ width: '1rem', height: '1rem' }} />
                                   Delete
                                 </button>
                               </div>
                             )}
-                          </div>
                         </div>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-            </div>
           </div>
         )}
       </div>
@@ -775,732 +1267,8 @@ export default function ListingsDashboard(props: ListingsDashboardProps) {
       )}
 
       <style jsx>{`
-        .dashboard-container {
-          width: 100%;
-          padding: 20px;
-          background: var(--gray-50);
-          min-height: calc(100vh - 72px);
-          box-sizing: border-box;
-        }
-
-        /* Alert Banner */
-        .alert-banner {
-          background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-          border: 2px solid var(--primary-blue);
-          border-radius: 12px;
-          padding: 20px;
-          margin-bottom: 24px;
-          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
-        }
-
-        .alert-content {
-          display: flex;
-          align-items: center;
-          gap: 16px;
-          flex-wrap: wrap;
-        }
-
-        .alert-icon {
-          color: var(--primary-blue);
-          flex-shrink: 0;
-        }
-
-        .alert-text {
-          flex: 1;
-          min-width: 200px;
-          color: var(--primary-blue-dark);
-          font-size: 15px;
-          line-height: 1.4;
-        }
-
-        .alert-text strong {
-          font-weight: 600;
-        }
-
-        .alert-actions {
-          display: flex;
-          gap: 12px;
-          flex-shrink: 0;
-        }
-
-        .alert-btn {
-          padding: 10px 16px;
-          border-radius: 8px;
-          font-size: 14px;
-          font-weight: 500;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          border: none;
-          display: flex;
-          align-items: center;
-          gap: 6px;
-        }
-
-        .alert-btn.primary {
-          background: var(--primary-blue);
-          color: white;
-        }
-
-        .alert-btn.primary:hover {
-          background: var(--primary-blue-dark);
-          transform: translateY(-1px);
-        }
-
-        .alert-btn.secondary {
-          background: white;
-          color: var(--primary-blue);
-          border: 1px solid var(--primary-blue);
-        }
-
-        .alert-btn.secondary:hover {
-          background: var(--primary-blue-light);
-        }
-
-        /* Error Banner */
-        .error-banner {
-          background: var(--error-red-light);
-          border: 1px solid var(--error-red);
-          border-radius: 8px;
-          padding: 16px;
-          margin-bottom: 20px;
-          display: flex;
-          align-items: center;
-          gap: 12px;
-        }
-
-        .error-content {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          flex: 1;
-          color: var(--error-red-dark);
-          font-size: 14px;
-          font-weight: 500;
-        }
-
-        .retry-btn {
-          background: var(--error-red);
-          color: white;
-          border: none;
-          padding: 6px 12px;
-          border-radius: 6px;
-          font-size: 12px;
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-
-        .retry-btn:hover {
-          background: var(--error-red-dark);
-        }
-
-        /* Loading State */
-        .loading-state {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          padding: 80px 24px;
-          text-align: center;
-        }
-
-        .loading-spinner {
-          width: 48px;
-          height: 48px;
-          border: 4px solid var(--gray-200);
-          border-top-color: var(--primary-blue);
-          border-radius: 50%;
-          animation: spin 1s linear infinite;
-          margin-bottom: 24px;
-        }
-
-        .loading-state h3 {
-          font-size: 20px;
-          font-weight: 600;
-          color: var(--gray-900);
-          margin: 0 0 8px 0;
-        }
-
-        .loading-state p {
-          font-size: 14px;
-          color: var(--gray-600);
-          margin: 0;
-        }
-
         @keyframes spin {
           to { transform: rotate(360deg); }
-        }
-
-        /* Metrics Grid */
-        .metrics-grid {
-          display: grid;
-          grid-template-columns: repeat(4, 1fr);
-          gap: 20px;
-          margin-bottom: 32px;
-        }
-
-        .metric-card {
-          background: white;
-          border-radius: 12px;
-          padding: 24px;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-          border: 1px solid var(--gray-200);
-          transition: all 0.2s ease;
-        }
-
-        .metric-card:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-        }
-
-        .metric-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 16px;
-        }
-
-        .metric-info {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          width: 100%;
-        }
-
-        .metric-title {
-          font-size: 14px;
-          font-weight: 600;
-          color: var(--gray-700);
-          margin: 0;
-        }
-
-        .metric-icon {
-          color: var(--gray-500);
-        }
-
-        .metric-content {
-          margin-top: 8px;
-        }
-
-        .metric-value {
-          font-size: 32px;
-          font-weight: 700;
-          color: var(--gray-900);
-          margin-bottom: 4px;
-          line-height: 1;
-        }
-
-        .metric-subtitle {
-          font-size: 14px;
-          color: var(--gray-600);
-          margin-bottom: 8px;
-        }
-
-        .metric-progress {
-          margin-top: 8px;
-        }
-
-        .metric-change {
-          font-size: 12px;
-          font-weight: 500;
-          padding: 2px 8px;
-          border-radius: 4px;
-        }
-
-        .metric-change.positive {
-          background: var(--success-green-light);
-          color: var(--success-green-dark);
-        }
-
-        .metric-change.neutral {
-          background: var(--gray-100);
-          color: var(--gray-600);
-        }
-
-        /* Listings Section */
-        .listings-section {
-          background: white;
-          border-radius: 12px;
-          padding: 24px;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-          border: 1px solid var(--gray-200);
-        }
-
-        .section-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          margin-bottom: 24px;
-        }
-
-        .section-title-group {
-          flex: 1;
-        }
-
-        .section-title {
-          font-size: 20px;
-          font-weight: 700;
-          color: var(--gray-900);
-          margin: 0 0 4px 0;
-        }
-
-        .section-subtitle {
-          font-size: 14px;
-          color: var(--gray-600);
-          margin: 0;
-        }
-
-        .section-actions {
-          display: flex;
-          gap: 12px;
-          align-items: center;
-        }
-
-        .view-toggle {
-          display: flex;
-          align-items: center;
-          background: white;
-          border: 1px solid var(--gray-300);
-          border-radius: 6px;
-          padding: 2px;
-        }
-
-        .view-btn {
-          padding: 6px 8px;
-          background: none;
-          border: none;
-          cursor: pointer;
-          border-radius: 4px;
-          color: var(--gray-600);
-          transition: all 0.2s ease;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .view-btn:hover {
-          background: var(--gray-100);
-          color: var(--gray-800);
-        }
-
-        .view-btn.active {
-          background: var(--primary-blue);
-          color: white;
-        }
-
-        .property-filter-select,
-        .sort-select {
-          padding: 8px 12px;
-          border: 1px solid var(--gray-300);
-          border-radius: 6px;
-          background: white;
-          font-size: 14px;
-          color: var(--gray-700);
-          cursor: pointer;
-        }
-
-        .create-property-btn {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          padding: 8px 16px;
-          background: var(--primary-blue);
-          color: white;
-          border: 1px solid var(--primary-blue);
-          border-radius: 6px;
-          font-size: 14px;
-          font-weight: 500;
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-
-        .create-property-btn:hover {
-          background: var(--primary-blue-dark);
-          transform: translateY(-1px);
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        .refresh-btn {
-          background: var(--gray-100);
-          color: var(--gray-600);
-          border: 1px solid var(--gray-200);
-          padding: 10px 16px;
-          border-radius: 8px;
-          font-size: 14px;
-          font-weight: 500;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          transition: all 0.2s ease;
-        }
-
-        .refresh-btn:hover {
-          background: var(--gray-200);
-          transform: translateY(-1px);
-        }
-
-        .refresh-btn:disabled {
-          opacity: 0.6;
-          cursor: not-allowed;
-        }
-
-        /* Enhanced Empty State */
-        .empty-listings-state {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 60px 20px;
-          min-height: 500px;
-        }
-
-        .empty-state-content {
-          text-align: center;
-          max-width: 600px;
-        }
-
-        .empty-state-icon {
-          margin: 0 auto 32px auto;
-          width: 80px;
-          height: 80px;
-          color: var(--gray-300);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .empty-state-title {
-          font-size: 28px;
-          font-weight: 700;
-          color: var(--gray-900);
-          margin: 0 0 16px 0;
-        }
-
-        .empty-state-description {
-          font-size: 16px;
-          color: var(--gray-600);
-          line-height: 1.6;
-          margin: 0 0 32px 0;
-        }
-
-        .empty-state-actions {
-          display: flex;
-          gap: 12px;
-          justify-content: center;
-          flex-wrap: wrap;
-          margin-bottom: 40px;
-        }
-
-        .empty-state-help {
-          margin-top: 32px;
-        }
-
-        .help-cards {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-          gap: 16px;
-          margin-top: 24px;
-        }
-
-        .help-card {
-          background: var(--gray-50);
-          border: 1px solid var(--gray-200);
-          border-radius: 8px;
-          padding: 16px;
-          text-align: left;
-        }
-
-        .help-card h4 {
-          font-size: 14px;
-          font-weight: 600;
-          color: var(--gray-900);
-          margin: 0 0 8px 0;
-        }
-
-        .help-card p {
-          font-size: 13px;
-          color: var(--gray-600);
-          margin: 0;
-          line-height: 1.4;
-        }
-
-        /* Listings Grid */
-        .listings-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-          gap: 20px;
-        }
-
-        .listing-card {
-          background: var(--gray-50);
-          border: 2px solid var(--gray-200);
-          border-radius: 12px;
-          padding: 20px;
-          transition: all 0.2s ease;
-        }
-
-        .listing-card:hover {
-          transform: translateY(-4px);
-          box-shadow: 0 12px 25px rgba(0, 0, 0, 0.1);
-          border-color: var(--primary-blue);
-        }
-
-        .listing-card-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          margin-bottom: 12px;
-        }
-
-        .listing-info {
-          flex: 1;
-        }
-
-        .listing-title {
-          font-size: 16px;
-          font-weight: 600;
-          color: var(--gray-900);
-          margin: 0 0 4px 0;
-          line-height: 1.3;
-        }
-
-        .listing-property {
-          font-size: 14px;
-          color: var(--gray-600);
-          margin: 0;
-        }
-
-        .listing-status {
-          flex-shrink: 0;
-        }
-
-        .status-badge {
-          padding: 6px 12px;
-          border-radius: 6px;
-          font-size: 12px;
-          font-weight: 600;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-        }
-
-        .status-badge.active {
-          background: var(--success-green-light);
-          color: var(--success-green-dark);
-        }
-
-        .status-badge.inactive {
-          background: var(--error-red-light);
-          color: var(--error-red-dark);
-        }
-
-        .listing-description {
-          margin-bottom: 16px;
-        }
-
-        .listing-description p {
-          font-size: 14px;
-          color: var(--gray-600);
-          margin: 0;
-          line-height: 1.4;
-        }
-
-        .listing-metrics {
-          display: flex;
-          gap: 20px;
-          margin-bottom: 16px;
-          padding-bottom: 16px;
-          border-bottom: 1px solid var(--gray-200);
-        }
-
-        .listing-metric {
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-        }
-
-        .metric-label {
-          font-size: 12px;
-          color: var(--gray-500);
-          font-weight: 500;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-        }
-
-        .listing-metric .metric-value {
-          font-size: 16px;
-          font-weight: 600;
-          color: var(--gray-900);
-        }
-
-        .listing-actions {
-          display: flex;
-          gap: 8px;
-          flex-wrap: wrap;
-        }
-
-        /* Button Styles */
-        .btn {
-          padding: 12px 16px;
-          border-radius: 8px;
-          font-size: 14px;
-          font-weight: 500;
-          cursor: pointer;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          gap: 6px;
-          transition: all 0.2s ease;
-          text-decoration: none;
-          border: none;
-        }
-
-        .btn-primary {
-          background: var(--primary-blue);
-          color: white;
-        }
-
-        .btn-primary:hover {
-          background: var(--primary-blue-dark);
-          transform: translateY(-1px);
-        }
-
-        .btn-secondary {
-          background: white;
-          color: var(--gray-700);
-          border: 1px solid var(--gray-300);
-        }
-
-        .btn-secondary:hover {
-          background: var(--gray-50);
-          border-color: var(--gray-400);
-          transform: translateY(-1px);
-        }
-
-        .btn-sm {
-          padding: 8px 12px;
-          font-size: 12px;
-        }
-
-        .btn-success {
-          background: var(--success-green);
-          color: white;
-        }
-
-        .btn-success:hover {
-          background: var(--success-green-dark);
-          transform: translateY(-1px);
-        }
-
-        .btn-warning {
-          background: #f59e0b;
-          color: white;
-        }
-
-        .btn-warning:hover {
-          background: #d97706;
-          transform: translateY(-1px);
-        }
-
-        .btn-danger {
-          background: var(--error-red);
-          color: white;
-        }
-
-        .btn-danger:hover {
-          background: var(--error-red-dark);
-          transform: translateY(-1px);
-        }
-
-        /* Responsive Design */
-        @media (max-width: 1200px) {
-          .metrics-grid {
-            grid-template-columns: repeat(2, 1fr);
-          }
-        }
-
-        @media (max-width: 768px) {
-          .dashboard-container {
-            padding: 16px;
-          }
-
-          .alert-content {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 12px;
-          }
-
-          .alert-actions {
-            width: 100%;
-            justify-content: flex-end;
-          }
-
-          .section-header {
-            flex-direction: column;
-            gap: 16px;
-            align-items: flex-start;
-          }
-
-          .section-actions {
-            width: 100%;
-            justify-content: space-between;
-          }
-
-          .metrics-grid {
-            grid-template-columns: 1fr;
-            gap: 16px;
-          }
-
-          .listings-grid {
-            grid-template-columns: 1fr;
-          }
-
-          .help-cards {
-            grid-template-columns: 1fr;
-          }
-
-          .empty-state-actions {
-            flex-direction: column;
-            align-items: center;
-          }
-
-          .empty-state-actions .btn {
-            width: 100%;
-            max-width: 280px;
-          }
-        }
-
-        /* Filter Controls */
-        .filter-controls {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-        }
-
-        .property-filter-select {
-          padding: 8px 12px;
-          border: 1px solid var(--gray-300);
-          border-radius: 6px;
-          background: white;
-          color: var(--gray-700);
-          font-size: 14px;
-          font-weight: 500;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          min-width: 180px;
-        }
-
-        .property-filter-select:hover {
-          border-color: var(--gray-400);
-        }
-
-        .property-filter-select:focus {
-          outline: none;
-          border-color: var(--primary-blue);
-          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-        }
-
-        .filter-indicator {
-          color: var(--primary-blue);
-          font-weight: 500;
         }
       `}</style>
     </div>

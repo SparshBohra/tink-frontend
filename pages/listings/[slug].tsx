@@ -2,6 +2,28 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { GetServerSideProps } from 'next';
+import { 
+  MapPin, 
+  Home, 
+  Users, 
+  Calendar, 
+  DollarSign, 
+  Phone, 
+  Mail, 
+  ExternalLink,
+  ChevronLeft,
+  ChevronRight,
+  Bed,
+  Shield,
+  Wind,
+  CheckCircle,
+  X,
+  Clock,
+  Tag,
+  Zap,
+  Droplets,
+  Wifi
+} from 'lucide-react';
 import { publicApiRequest } from '../../lib/api';
 import { PropertyListing } from '../../lib/types';
 import PublicApplicationForm from '../../components/PublicApplicationForm';
@@ -34,14 +56,71 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
 
   if (error || !listing) {
     return (
-      <div className="error-page">
+      <div style={{
+        minHeight: '100vh',
+        backgroundColor: '#f8fafc',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '1rem'
+      }}>
         <Head>
           <title>Property Listing Not Found</title>
         </Head>
-        <div className="error-content">
-          <h1>Property Listing Not Found</h1>
-          <p>{error || 'The property listing you requested could not be found.'}</p>
-          <button onClick={() => router.push('/')} className="btn btn-primary">
+        <div style={{
+          textAlign: 'center',
+          padding: '2rem',
+          backgroundColor: 'white',
+          borderRadius: '8px',
+          boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+          maxWidth: '24rem',
+          border: '1px solid #e5e7eb'
+        }}>
+          <div style={{
+            width: '3rem',
+            height: '3rem',
+            backgroundColor: '#fef2f2',
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 1rem auto'
+          }}>
+            <X style={{ width: '1.25rem', height: '1.25rem', color: '#ef4444' }} />
+          </div>
+          <h1 style={{ 
+            fontSize: '1.25rem', 
+            fontWeight: '600', 
+            color: '#111827', 
+            marginBottom: '0.5rem',
+            margin: '0 0 0.5rem 0'
+          }}>
+            Property Not Found
+          </h1>
+          <p style={{ 
+            color: '#6b7280', 
+            marginBottom: '1.5rem',
+            fontSize: '0.875rem',
+            margin: '0 0 1.5rem 0'
+          }}>
+            {error || 'The property listing you requested could not be found.'}
+          </p>
+          <button 
+            onClick={() => router.push('/')}
+            style={{
+              backgroundColor: '#374151',
+              color: 'white',
+              padding: '0.5rem 1rem',
+              borderRadius: '6px',
+              border: 'none',
+              fontSize: '0.875rem',
+              fontWeight: '500',
+              cursor: 'pointer',
+              transition: 'background-color 0.2s'
+            }}
+            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1f2937'}
+            onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#374151'}
+          >
             Go Back
           </button>
         </div>
@@ -142,7 +221,7 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
   };
 
   return (
-    <div className="public-listing-page">
+    <>
       <Head>
         <title>{listing.title} - Property Listing</title>
         <meta name="description" content={listing.description} />
@@ -153,92 +232,307 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
         )}
       </Head>
 
-      {/* Hero Section */}
-      <div className="hero-section">
-        <div className="hero-content">
-          <div className="hero-text">
-            <h1 className="listing-title">{listing.title}</h1>
-            <p className="property-address">{listing.property_address}</p>
-            <div className="listing-badges">
-              {listing.furnished && <span className="badge">Furnished</span>}
-              {listing.utilities_included && listing.utilities_included.length > 0 && (
-                <span className="badge">Utilities Included</span>
-              )}
-              {listing.pet_policy !== 'not_allowed' && (
-                <span className="badge">Pet Friendly</span>
-              )}
+      <div style={{
+        minHeight: '100vh',
+        backgroundColor: '#ffffff'
+      }}>
+        {/* Header Section */}
+        <div style={{
+          backgroundColor: '#f8fafc',
+          borderBottom: '1px solid #e5e7eb',
+          padding: '2rem 0'
+        }}>
+          <div style={{
+            maxWidth: '1200px',
+            margin: '0 auto',
+            padding: '0 1rem'
+          }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              gap: '2rem',
+              marginBottom: '1rem'
+            }}>
+              <div style={{ flex: 1 }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  marginBottom: '0.75rem'
+                }}>
+                  <MapPin style={{ width: '1.25rem', height: '1.25rem', color: '#6b7280' }} />
+                  <h1 style={{
+                    fontSize: '2rem',
+                    fontWeight: '700',
+                    color: '#111827',
+                    margin: 0,
+                    lineHeight: 1.2
+                  }}>
+                    {listing.title}
+                  </h1>
+                </div>
+                <div style={{ 
+                  fontSize: '0.875rem',
+                  color: '#6b7280',
+                  marginLeft: '1.75rem'
+                }}>
+                  {listing.property_address}
+                </div>
+              </div>
+              
+              <button 
+                onClick={handleStartApplication}
+                disabled={!canApply}
+                style={{
+                  backgroundColor: canApply ? '#2563eb' : '#9ca3af',
+                  color: 'white',
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: '6px',
+                  border: 'none',
+                  fontSize: '0.875rem',
+                  fontWeight: '600',
+                  cursor: canApply ? 'pointer' : 'not-allowed',
+                  transition: 'background-color 0.2s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  height: 'fit-content'
+                }}
+                onMouseOver={(e) => canApply && (e.currentTarget.style.backgroundColor = '#1d4ed8')}
+                onMouseOut={(e) => canApply && (e.currentTarget.style.backgroundColor = '#2563eb')}
+              >
+                <Home style={{ width: '1rem', height: '1rem' }} />
+                {canApply ? 'Apply Now' : 'Applications Closed'}
+              </button>
             </div>
-          </div>
-          
-          <div className="hero-actions">
-            <button 
-              onClick={handleStartApplication}
-              className="btn btn-primary btn-large"
-              disabled={!canApply}
-            >
-              {canApply ? 'Apply Now' : 'Applications Closed'}
-            </button>
+            
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <div style={{
+                display: 'flex',
+                gap: '0.75rem',
+                flexWrap: 'wrap'
+              }}>
+                {listing.furnished && (
+                  <span style={{
+                    backgroundColor: '#f3f4f6',
+                    color: '#374151',
+                    padding: '0.25rem 0.75rem',
+                    borderRadius: '6px',
+                    fontSize: '0.75rem',
+                    fontWeight: '500',
+                    border: '1px solid #d1d5db'
+                  }}>
+                    Furnished
+                  </span>
+                )}
+                {listing.utilities_included && listing.utilities_included.length > 0 && (
+                  <span style={{
+                    backgroundColor: '#f3f4f6',
+                    color: '#374151',
+                    padding: '0.25rem 0.75rem',
+                    borderRadius: '6px',
+                    fontSize: '0.75rem',
+                    fontWeight: '500',
+                    border: '1px solid #d1d5db'
+                  }}>
+                    Utilities Included
+                  </span>
+                )}
+                {listing.pet_policy !== 'not_allowed' && (
+                  <span style={{
+                    backgroundColor: '#f3f4f6',
+                    color: '#374151',
+                    padding: '0.25rem 0.75rem',
+                    borderRadius: '6px',
+                    fontSize: '0.75rem',
+                    fontWeight: '500',
+                    border: '1px solid #d1d5db'
+                  }}>
+                    Pet Friendly
+                  </span>
+                )}
+              </div>
+              
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.5rem',
+                alignItems: 'flex-end'
+              }}>
             {listing.virtual_tour_url && (
               <a 
                 href={listing.virtual_tour_url} 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="btn btn-secondary btn-large"
-              >
+                    style={{
+                      backgroundColor: 'white',
+                      color: '#374151',
+                      padding: '0.5rem 1rem',
+                      borderRadius: '6px',
+                      textDecoration: 'none',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      border: '1px solid #d1d5db',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      transition: 'background-color 0.2s'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
+                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                  >
+                    <ExternalLink style={{ width: '0.875rem', height: '0.875rem' }} />
                 Virtual Tour
               </a>
             )}
             {listing.application_fee && (
-              <span className="application-fee">
+                  <div style={{
+                    fontSize: '0.75rem',
+                    color: '#6b7280',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.25rem'
+                  }}>
+                    <Tag style={{ width: '0.75rem', height: '0.75rem' }} />
                 Application Fee: {formatPrice(listing.application_fee)}
-              </span>
+                  </div>
             )}
+              </div>
           </div>
         </div>
       </div>
 
       {/* Image Gallery */}
       {listing.media && listing.media.length > 0 && (
-        <div className="image-gallery">
-          <div className="main-image">
+          <div style={{
+            maxWidth: '1200px',
+            margin: '0 auto',
+            padding: '2rem 1rem'
+          }}>
+            <div style={{
+              position: 'relative',
+              borderRadius: '8px',
+              overflow: 'hidden',
+              marginBottom: '1rem',
+              border: '1px solid #e5e7eb'
+            }}>
             <img 
               src={getMediaUrl(listing.media[currentImageIndex].file_url || '')} 
               alt={listing.title}
-              className="gallery-image"
+                style={{
+                  width: '100%',
+                  height: '24rem',
+                  objectFit: 'cover',
+                  display: 'block'
+                }}
             />
             {listing.media.length > 1 && (
               <>
                 <button 
                   onClick={prevImage}
-                  className="image-nav prev-btn"
-                  aria-label="Previous image"
-                >
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <polyline points="15,18 9,12 15,6"/>
-                  </svg>
+                    style={{
+                      position: 'absolute',
+                      top: '50%',
+                      left: '1rem',
+                      transform: 'translateY(-50%)',
+                      backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '50%',
+                      width: '2.5rem',
+                      height: '2.5rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      transition: 'background-color 0.2s'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.8)'}
+                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.6)'}
+                  >
+                    <ChevronLeft style={{ width: '1.25rem', height: '1.25rem' }} />
                 </button>
                 <button 
                   onClick={nextImage}
-                  className="image-nav next-btn"
-                  aria-label="Next image"
-                >
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <polyline points="9,18 15,12 9,6"/>
-                  </svg>
+                    style={{
+                      position: 'absolute',
+                      top: '50%',
+                      right: '1rem',
+                      transform: 'translateY(-50%)',
+                      backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '50%',
+                      width: '2.5rem',
+                      height: '2.5rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      transition: 'background-color 0.2s'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.8)'}
+                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.6)'}
+                  >
+                    <ChevronRight style={{ width: '1.25rem', height: '1.25rem' }} />
                 </button>
               </>
             )}
+              
+              {listing.media.length > 1 && (
+                <div style={{
+                  position: 'absolute',
+                  bottom: '1rem',
+                  right: '1rem',
+                  backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                  color: 'white',
+                  padding: '0.25rem 0.75rem',
+                  borderRadius: '4px',
+                  fontSize: '0.75rem'
+                }}>
+                  {currentImageIndex + 1} / {listing.media.length}
+                </div>
+              )}
           </div>
           
           {listing.media.length > 1 && (
-            <div className="image-thumbnails">
+              <div style={{
+                display: 'flex',
+                gap: '0.5rem',
+                overflowX: 'auto',
+                padding: '0.5rem 0'
+              }}>
               {listing.media.map((media, index) => (
                 <button
                   key={index}
                   onClick={() => setCurrentImageIndex(index)}
-                  className={`thumbnail ${index === currentImageIndex ? 'active' : ''}`}
-                >
-                  <img src={getMediaUrl(media.file_url || '')} alt={`${listing.title} - Image ${index + 1}`} />
+                    style={{
+                      flexShrink: 0,
+                      width: '4rem',
+                      height: '3rem',
+                      borderRadius: '4px',
+                      overflow: 'hidden',
+                      border: `2px solid ${index === currentImageIndex ? '#2563eb' : '#e5e7eb'}`,
+                      cursor: 'pointer',
+                      transition: 'border-color 0.2s',
+                      background: 'none',
+                      padding: 0
+                    }}
+                  >
+                    <img 
+                      src={getMediaUrl(media.file_url || '')} 
+                      alt={`${listing.title} - Image ${index + 1}`}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover'
+                      }}
+                    />
                 </button>
               ))}
             </div>
@@ -247,219 +541,445 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
       )}
 
       {/* Main Content */}
-      <div className="main-content">
-        <div className="content-grid">
+        <div style={{
+          maxWidth: '1200px',
+          margin: '0 auto',
+          padding: '0 1rem 3rem 1rem'
+        }}>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '2fr 1fr',
+            gap: '2rem'
+          }}>
           {/* Left Column - Property Details */}
-          <div className="property-details">
-            <section className="details-section">
-              <h2>Property Details</h2>
-              <div className="details-grid">
-                <div className="detail-item">
-                  <div className="detail-label">Property Type</div>
-                  <div className="detail-value">{listing.property_type}</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              {/* Property Details */}
+              <div style={{
+                backgroundColor: 'white',
+                borderRadius: '8px',
+                padding: '1.5rem',
+                border: '1px solid #e5e7eb'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  marginBottom: '1rem'
+                }}>
+                  <Home style={{ width: '1.25rem', height: '1.25rem', color: '#6b7280' }} />
+                  <h2 style={{
+                    fontSize: '1.25rem',
+                    fontWeight: '600',
+                    color: '#111827',
+                    margin: 0
+                  }}>
+                    Property Details
+                  </h2>
                 </div>
-                <div className="detail-item">
-                  <div className="detail-label">Max Occupancy</div>
-                  <div className="detail-value">{listing.max_occupancy} people</div>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                  gap: '1rem'
+                }}>
+                  {[
+                    { label: 'Property Type', value: listing.property_type || 'N/A', icon: <Home style={{ width: '1rem', height: '1rem' }} /> },
+                    { label: 'Max Occupancy', value: `${listing.max_occupancy || 'N/A'} ${listing.max_occupancy === 1 ? 'person' : 'people'}`, icon: <Users style={{ width: '1rem', height: '1rem' }} /> },
+                    { label: 'Available From', value: listing.available_from ? formatUTCDate(listing.available_from) : 'TBD', icon: <Calendar style={{ width: '1rem', height: '1rem' }} /> },
+                    { label: 'Lease Term', value: `${listing.min_lease_term || 'N/A'} - ${listing.max_lease_term || '∞'} months`, icon: <Clock style={{ width: '1rem', height: '1rem' }} /> },
+                    { label: 'Pet Policy', value: listing.pet_policy ? formatPetPolicy(listing.pet_policy) : 'N/A', icon: <Shield style={{ width: '1rem', height: '1rem' }} /> },
+                    { label: 'Smoking', value: listing.smoking_allowed ? 'Allowed' : 'Not Allowed', icon: <Wind style={{ width: '1rem', height: '1rem' }} /> }
+                  ].map((item, index) => (
+                    <div key={index} style={{
+                      padding: '0.75rem',
+                      backgroundColor: '#f9fafb',
+                      borderRadius: '6px',
+                      border: '1px solid #f3f4f6'
+                    }}>
+                      <div style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '0.5rem', 
+                        marginBottom: '0.25rem' 
+                      }}>
+                        <div style={{ color: '#9ca3af' }}>{item.icon}</div>
+                        <span style={{ 
+                          fontSize: '0.75rem', 
+                          fontWeight: '500', 
+                          color: '#6b7280',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.025em'
+                        }}>
+                          {item.label}
+                        </span>
                 </div>
-                <div className="detail-item">
-                  <div className="detail-label">Available From</div>
-                  <div className="detail-value">{listing.available_from ? formatUTCDate(listing.available_from) : 'TBD'}</div>
+                      <div style={{ 
+                        fontSize: '0.875rem', 
+                        fontWeight: '600', 
+                        color: '#111827',
+                        marginLeft: '1.5rem'
+                      }}>
+                        {item.value}
                 </div>
-                {listing.available_until && (
-                  <div className="detail-item">
-                    <div className="detail-label">Available Until</div>
-                    <div className="detail-value">{listing.available_until ? formatUTCDate(listing.available_until) : 'TBD'}</div>
                   </div>
-                )}
-                {listing.application_deadline && (
-                  <div className="detail-item">
-                    <div className="detail-label">Application Deadline</div>
-                    <div className="detail-value">{listing.application_deadline ? formatUTCDate(listing.application_deadline) : 'TBD'}</div>
+                  ))}
                   </div>
-                )}
-                <div className="detail-item">
-                  <div className="detail-label">Lease Term</div>
-                  <div className="detail-value">
-                    {listing.min_lease_term} - {listing.max_lease_term || '∞'} months
                   </div>
-                </div>
-                <div className="detail-item">
-                  <div className="detail-label">Pet Policy</div>
-                  <div className="detail-value">{listing.pet_policy ? formatPetPolicy(listing.pet_policy) : 'N/A'}</div>
-                </div>
-                <div className="detail-item">
-                  <div className="detail-label">Smoking</div>
-                  <div className="detail-value">{listing.smoking_allowed ? 'Allowed' : 'Not Allowed'}</div>
-                </div>
-                <div className="detail-item">
-                  <div className="detail-label">Furnished</div>
-                  <div className="detail-value">{listing.furnished ? 'Yes' : 'No'}</div>
-                </div>
-              </div>
-            </section>
 
-            <section className="details-section">
-              <h2>Description</h2>
-              <div className="description-content">
-                <p>{listing.description}</p>
+              {/* Description */}
+              <div style={{
+                backgroundColor: 'white',
+                borderRadius: '8px',
+                padding: '1.5rem',
+                border: '1px solid #e5e7eb'
+              }}>
+                <h2 style={{
+                  fontSize: '1.25rem',
+                  fontWeight: '600',
+                  color: '#111827',
+                  margin: '0 0 1rem 0'
+                }}>
+                  Description
+                </h2>
+                <p style={{
+                  lineHeight: 1.6,
+                  color: '#4b5563',
+                  fontSize: '0.875rem',
+                  margin: 0
+                }}>
+                  {listing.description}
+                </p>
               </div>
-            </section>
 
+              {/* Utilities & Amenities */}
+              {((listing.utilities_included && listing.utilities_included.length > 0) || 
+                (listing.amenities && listing.amenities.length > 0)) && (
+                <div style={{
+                  backgroundColor: 'white',
+                  borderRadius: '8px',
+                  padding: '1.5rem',
+                  border: '1px solid #e5e7eb'
+                }}>
             {listing.utilities_included && listing.utilities_included.length > 0 && (
-              <section className="details-section">
-                <h2>Utilities Included</h2>
-                <div className="utilities-list">
+                    <div style={{ marginBottom: listing.amenities && listing.amenities.length > 0 ? '1.5rem' : 0 }}>
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        marginBottom: '0.75rem'
+                      }}>
+                        <Zap style={{ width: '1.25rem', height: '1.25rem', color: '#6b7280' }} />
+                        <h3 style={{
+                          fontSize: '1.125rem',
+                          fontWeight: '600',
+                          color: '#111827',
+                          margin: 0
+                        }}>
+                          Utilities Included
+                        </h3>
+                      </div>
+                      <div style={{
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: '0.5rem'
+                      }}>
                   {listing.utilities_included.map((utility, index) => (
-                    <span key={index} className="utility-item">
-                      {utility.replace('_', ' ').toUpperCase()}
+                          <span key={index} style={{
+                            backgroundColor: '#fef3c7',
+                            color: '#92400e',
+                            padding: '0.25rem 0.75rem',
+                            borderRadius: '6px',
+                            fontSize: '0.75rem',
+                            fontWeight: '500',
+                            border: '1px solid #fcd34d'
+                          }}>
+                            {utility.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
                     </span>
                   ))}
                 </div>
-              </section>
+                    </div>
             )}
 
             {listing.amenities && listing.amenities.length > 0 && (
-              <section className="details-section">
-                <h2>Amenities</h2>
-                <div className="amenities-list">
+                    <div>
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        marginBottom: '0.75rem'
+                      }}>
+                        <CheckCircle style={{ width: '1.25rem', height: '1.25rem', color: '#6b7280' }} />
+                        <h3 style={{
+                          fontSize: '1.125rem',
+                          fontWeight: '600',
+                          color: '#111827',
+                          margin: 0
+                        }}>
+                          Amenities
+                        </h3>
+                      </div>
+                      <div style={{
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: '0.5rem'
+                      }}>
                   {listing.amenities.map((amenity, index) => (
-                    <span key={index} className="amenity-item">
-                      {amenity.replace('_', ' ').toUpperCase()}
+                          <span key={index} style={{
+                            backgroundColor: '#dcfce7',
+                            color: '#166534',
+                            padding: '0.25rem 0.75rem',
+                            borderRadius: '6px',
+                            fontSize: '0.75rem',
+                            fontWeight: '500',
+                            border: '1px solid #bbf7d0'
+                          }}>
+                            {amenity.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
                     </span>
                   ))}
                 </div>
-              </section>
+                    </div>
+                  )}
+                </div>
             )}
 
-            {/* Room Availability Section for Individual Room Listings */}
+              {/* Room Details */}
             {listing.listing_type === 'rooms' && listing.available_room_details && listing.available_room_details.length > 0 && (
-              <section className="details-section">
-                <h2>Available Rooms</h2>
-                <div className="rooms-availability">
+                <div style={{
+                  backgroundColor: 'white',
+                  borderRadius: '8px',
+                  padding: '1.5rem',
+                  border: '1px solid #e5e7eb'
+                }}>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    marginBottom: '1rem'
+                  }}>
+                    <Bed style={{ width: '1.25rem', height: '1.25rem', color: '#6b7280' }} />
+                    <h2 style={{
+                      fontSize: '1.25rem',
+                      fontWeight: '600',
+                      color: '#111827',
+                      margin: 0
+                    }}>
+                      Available Rooms
+                    </h2>
+                  </div>
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+                    gap: '1rem'
+                  }}>
                   {listing.available_room_details.map((room, index) => (
-                    <div key={room.id || index} className="room-card">
-                      <div className="room-header">
-                        <h3 className="room-name">{room.name}</h3>
-                        <div className="room-rent">{formatPrice(room.monthly_rent)}/month</div>
+                      <div key={room.id || index} style={{
+                        backgroundColor: '#f9fafb',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '8px',
+                        padding: '1rem'
+                      }}>
+                        <div style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          marginBottom: '0.75rem',
+                          paddingBottom: '0.75rem',
+                          borderBottom: '1px solid #e5e7eb'
+                        }}>
+                          <h3 style={{
+                            fontSize: '1rem',
+                            fontWeight: '600',
+                            color: '#111827',
+                            margin: 0
+                          }}>
+                            {room.name}
+                          </h3>
+                          <span style={{
+                            backgroundColor: '#16a34a',
+                            color: 'white',
+                            padding: '0.25rem 0.75rem',
+                            borderRadius: '4px',
+                            fontSize: '0.875rem',
+                            fontWeight: '600'
+                          }}>
+                            {formatPrice(room.monthly_rent)}/month
+                          </span>
                       </div>
-                      <div className="room-details">
-                        <div className="room-detail-item">
-                          <span className="room-detail-label">Type:</span>
-                          <span className="room-detail-value">{room.room_type?.replace('_', ' ')}</span>
+                        <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: '1fr 1fr',
+                          gap: '0.5rem',
+                          fontSize: '0.75rem'
+                        }}>
+                          <div>
+                            <span style={{ color: '#6b7280', fontWeight: '500' }}>Type:</span>
+                            <div style={{ color: '#111827', fontWeight: '600' }}>
+                              {room.room_type?.replace('_', ' ') || 'N/A'}
                         </div>
-                        {room.square_footage && (
-                          <div className="room-detail-item">
-                            <span className="room-detail-label">Size:</span>
-                            <span className="room-detail-value">{room.square_footage} sq ft</span>
                           </div>
-                        )}
-                        {room.floor_number && (
-                          <div className="room-detail-item">
-                            <span className="room-detail-label">Floor:</span>
-                            <span className="room-detail-value">{room.floor_number}</span>
+                          <div>
+                            <span style={{ color: '#6b7280', fontWeight: '500' }}>Size:</span>
+                            <div style={{ color: '#111827', fontWeight: '600' }}>
+                              {room.square_footage ? `${room.square_footage} sq ft` : 'N/A'}
                           </div>
-                        )}
-                        {room.available_from && (
-                          <div className="room-detail-item">
-                            <span className="room-detail-label">Available From:</span>
-                            <span className="room-detail-value">{new Date(room.available_from).toLocaleDateString()}</span>
                           </div>
-                        )}
-                        {room.available_until && (
-                          <div className="room-detail-item">
-                            <span className="room-detail-label">Available Until:</span>
-                            <span className="room-detail-value">{new Date(room.available_until).toLocaleDateString()}</span>
+                          <div>
+                            <span style={{ color: '#6b7280', fontWeight: '500' }}>Floor:</span>
+                            <div style={{ color: '#111827', fontWeight: '600' }}>
+                              {room.floor_number || 'N/A'}
                           </div>
-                        )}
+                          </div>
+                          <div>
+                            <span style={{ color: '#6b7280', fontWeight: '500' }}>Available:</span>
+                            <div style={{ color: '#111827', fontWeight: '600' }}>
+                              {room.available_from ? new Date(room.available_from).toLocaleDateString() : 'Now'}
+                            </div>
+                          </div>
+                        </div>
                         {room.room_features && room.room_features.length > 0 && (
-                          <div className="room-features">
-                            <span className="room-detail-label">Features:</span>
-                            <div className="features-list">
+                          <div style={{ marginTop: '0.75rem' }}>
+                            <span style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: '500' }}>Features:</span>
+                            <div style={{
+                              display: 'flex',
+                              flexWrap: 'wrap',
+                              gap: '0.25rem',
+                              marginTop: '0.25rem'
+                            }}>
                               {room.room_features.map((feature, featureIndex) => (
-                                <span key={featureIndex} className="feature-tag">
+                                <span key={featureIndex} style={{
+                                  backgroundColor: '#dbeafe',
+                                  color: '#1e40af',
+                                  padding: '0.125rem 0.5rem',
+                                  borderRadius: '4px',
+                                  fontSize: '0.625rem',
+                                  fontWeight: '500'
+                                }}>
                                   {feature.replace('_', ' ')}
                                 </span>
                               ))}
                             </div>
                           </div>
                         )}
-                      </div>
                     </div>
                   ))}
                 </div>
-              </section>
-            )}
-
-            {/* Whole Property Rent Information */}
-            {listing.listing_type === 'whole_property' && listing.available_room_details && !Array.isArray(listing.available_room_details) && (
-              <section className="details-section">
-                <h2>Rental Information</h2>
-                <div className="property-rent-info">
-                  <div className="detail-item">
-                    <div className="detail-label">Monthly Rent</div>
-                    <div className="detail-value">{formatPrice((listing.available_room_details as any).monthly_rent)}</div>
                   </div>
-                  <div className="detail-item">
-                    <div className="detail-label">Total Rooms</div>
-                    <div className="detail-value">{(listing.available_room_details as any).total_rooms}</div>
-                  </div>
-                  <div className="detail-item">
-                    <div className="detail-label">Rent Type</div>
-                    <div className="detail-value">{(listing.available_room_details as any).rent_type?.replace('_', ' ')}</div>
-                  </div>
-                </div>
-              </section>
             )}
           </div>
 
           {/* Right Column - Application Summary */}
-          <div className="application-summary">
-            <div className="summary-card">
-              <h3>Application Information</h3>
-              
-              <div className="pricing-info">
+            <div style={{ position: 'sticky', top: '2rem', height: 'fit-content' }}>
+              <div style={{
+                backgroundColor: 'white',
+                borderRadius: '8px',
+                padding: '1.5rem',
+                border: '1px solid #e5e7eb'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  marginBottom: '1rem'
+                }}>
+                  <DollarSign style={{ width: '1.25rem', height: '1.25rem', color: '#6b7280' }} />
+                  <h3 style={{
+                    fontSize: '1.25rem',
+                    fontWeight: '600',
+                    color: '#111827',
+                    margin: 0
+                  }}>
+                    Application Info
+                  </h3>
+                </div>
+                
+                {(listing.application_fee || listing.security_deposit) && (
+                  <div style={{ marginBottom: '1.5rem' }}>
                 {listing.application_fee && (
-                  <div className="price-item">
-                    <span className="price-label">Application Fee</span>
-                    <span className="price-value">{formatPrice(listing.application_fee)}</span>
+                      <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '0.75rem 0',
+                        borderBottom: '1px solid #f3f4f6'
+                      }}>
+                        <span style={{ color: '#6b7280', fontSize: '0.875rem' }}>Application Fee</span>
+                        <span style={{ fontWeight: '600', color: '#111827', fontSize: '0.875rem' }}>
+                          {formatPrice(listing.application_fee)}
+                        </span>
                   </div>
                 )}
                 {listing.security_deposit && (
-                  <div className="price-item">
-                    <span className="price-label">Security Deposit</span>
-                    <span className="price-value">{formatPrice(listing.security_deposit)}</span>
+                      <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '0.75rem 0'
+                      }}>
+                        <span style={{ color: '#6b7280', fontSize: '0.875rem' }}>Security Deposit</span>
+                        <span style={{ fontWeight: '600', color: '#111827', fontSize: '0.875rem' }}>
+                          {formatPrice(listing.security_deposit)}
+                        </span>
                   </div>
                 )}
               </div>
+                )}
 
-              <div className="contact-info">
-                <h4>Contact Information</h4>
-                <div className="contact-details">
-                  <div className="contact-item">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-                      <polyline points="22,6 12,13 2,6"/>
-                    </svg>
-                    <span>{listing.contact_info?.contact_email}</span>
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <h4 style={{
+                    fontSize: '1rem',
+                    fontWeight: '600',
+                    color: '#111827',
+                    margin: '0 0 0.75rem 0'
+                  }}>
+                    Contact Information
+                  </h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      color: '#6b7280'
+                    }}>
+                      <Mail style={{ width: '1rem', height: '1rem' }} />
+                      <span style={{ fontSize: '0.75rem' }}>{listing.contact_info?.contact_email}</span>
                   </div>
                   {listing.contact_info?.contact_phone && (
-                    <div className="contact-item">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
-                      </svg>
-                      <span>{listing.contact_info?.contact_phone}</span>
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        color: '#6b7280'
+                      }}>
+                        <Phone style={{ width: '1rem', height: '1rem' }} />
+                        <span style={{ fontSize: '0.75rem' }}>{listing.contact_info?.contact_phone}</span>
                     </div>
                   )}
                 </div>
               </div>
 
-              <div className="summary-actions">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 <button 
                   onClick={handleStartApplication}
-                  className="btn btn-primary btn-block"
                   disabled={!canApply}
-                >
+                    style={{
+                      width: '100%',
+                      backgroundColor: canApply ? '#2563eb' : '#9ca3af',
+                      color: 'white',
+                      padding: '0.75rem 1rem',
+                      borderRadius: '6px',
+                      border: 'none',
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      cursor: canApply ? 'pointer' : 'not-allowed',
+                      transition: 'background-color 0.2s',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem'
+                    }}
+                    onMouseOver={(e) => canApply && (e.currentTarget.style.backgroundColor = '#1d4ed8')}
+                    onMouseOut={(e) => canApply && (e.currentTarget.style.backgroundColor = '#2563eb')}
+                  >
+                    <Home style={{ width: '1rem', height: '1rem' }} />
                   {canApply ? 'Start Application' : 'Applications Closed'}
                 </button>
                 {listing.virtual_tour_url && (
@@ -467,11 +987,31 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
                     href={listing.virtual_tour_url} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="btn btn-secondary btn-block"
-                  >
+                      style={{
+                        width: '100%',
+                        backgroundColor: 'white',
+                        color: '#374151',
+                        padding: '0.5rem 1rem',
+                        borderRadius: '6px',
+                        textDecoration: 'none',
+                        fontSize: '0.875rem',
+                        fontWeight: '500',
+                        border: '1px solid #d1d5db',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.5rem',
+                        transition: 'background-color 0.2s',
+                        boxSizing: 'border-box'
+                      }}
+                      onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
+                      onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                    >
+                      <ExternalLink style={{ width: '0.875rem', height: '0.875rem' }} />
                     Take Virtual Tour
                   </a>
                 )}
+                </div>
               </div>
             </div>
           </div>
@@ -486,654 +1026,7 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
           onSubmit={handleApplicationSubmit}
         />
       )}
-
-      <style jsx>{`
-        .public-listing-page {
-          min-height: 100vh;
-          background: #ffffff;
-        }
-
-        .error-page {
-          min-height: 100vh;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: #f8fafc;
-        }
-
-        .error-content {
-          text-align: center;
-          padding: 40px;
-          background: white;
-          border-radius: 8px;
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        }
-
-        .error-content h1 {
-          font-size: 24px;
-          color: #1f2937;
-          margin-bottom: 16px;
-        }
-
-        .error-content p {
-          color: #6b7280;
-          margin-bottom: 24px;
-        }
-
-        .hero-section {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          color: white;
-          padding: 80px 0;
-        }
-
-        .hero-content {
-          max-width: 1200px;
-          margin: 0 auto;
-          padding: 0 20px;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          gap: 40px;
-        }
-
-        .hero-text {
-          flex: 1;
-        }
-
-        .listing-title {
-          font-size: 42px;
-          font-weight: 700;
-          margin: 0 0 16px 0;
-          line-height: 1.1;
-        }
-
-        .property-address {
-          font-size: 18px;
-          margin: 0 0 24px 0;
-          opacity: 0.9;
-        }
-
-        .listing-badges {
-          display: flex;
-          gap: 12px;
-          flex-wrap: wrap;
-        }
-
-        .badge {
-          background: rgba(255, 255, 255, 0.2);
-          padding: 8px 16px;
-          border-radius: 20px;
-          font-size: 14px;
-          font-weight: 500;
-          border: 1px solid rgba(255, 255, 255, 0.3);
-        }
-
-        .hero-actions {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-        }
-
-        .application-fee {
-          font-size: 14px;
-          color: rgba(255, 255, 255, 0.9);
-          margin-top: 4px;
-        }
-
-        .image-gallery {
-          max-width: 1200px;
-          margin: 0 auto;
-          padding: 40px 20px;
-        }
-
-        .main-image {
-          position: relative;
-          border-radius: 12px;
-          overflow: hidden;
-          margin-bottom: 20px;
-        }
-
-        .gallery-image {
-          width: 100%;
-          height: 500px;
-          object-fit: cover;
-          display: block;
-        }
-
-        .image-nav {
-          position: absolute;
-          top: 50%;
-          transform: translateY(-50%);
-          background: rgba(0, 0, 0, 0.7);
-          color: white;
-          border: none;
-          border-radius: 50%;
-          width: 48px;
-          height: 48px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          transition: all 0.2s;
-        }
-
-        .image-nav:hover {
-          background: rgba(0, 0, 0, 0.9);
-        }
-
-        .prev-btn {
-          left: 20px;
-        }
-
-        .next-btn {
-          right: 20px;
-        }
-
-        .image-thumbnails {
-          display: flex;
-          gap: 12px;
-          overflow-x: auto;
-          padding: 10px 0;
-        }
-
-        .thumbnail {
-          flex-shrink: 0;
-          width: 100px;
-          height: 70px;
-          border-radius: 6px;
-          overflow: hidden;
-          border: 2px solid transparent;
-          cursor: pointer;
-          transition: all 0.2s;
-          background: none;
-          padding: 0;
-        }
-
-        .thumbnail:hover {
-          border-color: #3b82f6;
-        }
-
-        .thumbnail.active {
-          border-color: #3b82f6;
-        }
-
-        .thumbnail img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-        }
-
-        .main-content {
-          max-width: 1200px;
-          margin: 0 auto;
-          padding: 40px 20px;
-        }
-
-        .content-grid {
-          display: grid;
-          grid-template-columns: 2fr 1fr;
-          gap: 40px;
-        }
-
-        .property-details {
-          display: flex;
-          flex-direction: column;
-          gap: 32px;
-        }
-
-        .details-section {
-          background: white;
-          border-radius: 8px;
-          padding: 24px;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-          border: 1px solid #e5e7eb;
-        }
-
-        .details-section h2 {
-          font-size: 20px;
-          font-weight: 600;
-          color: #1f2937;
-          margin: 0 0 20px 0;
-        }
-
-        .details-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-          gap: 16px;
-        }
-
-        .detail-item {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 12px 0;
-          border-bottom: 1px solid #f3f4f6;
-        }
-
-        .detail-item:last-child {
-          border-bottom: none;
-        }
-
-        .detail-label {
-          font-weight: 500;
-          color: #6b7280;
-        }
-
-        .detail-value {
-          font-weight: 600;
-          color: #1f2937;
-        }
-
-        .description-content {
-          line-height: 1.6;
-          color: #374151;
-        }
-
-        .utilities-list, .amenities-list {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
-        }
-
-        .utility-item, .amenity-item {
-          background: #f3f4f6;
-          color: #374151;
-          padding: 6px 12px;
-          border-radius: 16px;
-          font-size: 14px;
-          font-weight: 500;
-        }
-
-        .application-summary {
-          position: sticky;
-          top: 20px;
-          height: fit-content;
-        }
-
-        .summary-card {
-          background: white;
-          border-radius: 8px;
-          padding: 24px;
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-          border: 1px solid #e5e7eb;
-        }
-
-        .summary-card h3 {
-          font-size: 18px;
-          font-weight: 600;
-          color: #1f2937;
-          margin: 0 0 20px 0;
-        }
-
-        .pricing-info {
-          margin-bottom: 24px;
-        }
-
-        .price-item {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 12px 0;
-          border-bottom: 1px solid #f3f4f6;
-        }
-
-        .price-item:last-child {
-          border-bottom: none;
-        }
-
-        .price-label {
-          color: #6b7280;
-          font-weight: 500;
-        }
-
-        .price-value {
-          font-weight: 600;
-          color: #1f2937;
-          font-size: 18px;
-        }
-
-        .contact-info {
-          margin-bottom: 24px;
-        }
-
-        .contact-info h4 {
-          font-size: 16px;
-          font-weight: 600;
-          color: #1f2937;
-          margin: 0 0 16px 0;
-        }
-
-        .contact-details {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-        }
-
-        .contact-item {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          color: #6b7280;
-        }
-
-        .contact-item svg {
-          flex-shrink: 0;
-        }
-
-        .summary-actions {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-        }
-
-        .btn {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-          padding: 12px 24px;
-          border-radius: 6px;
-          font-size: 16px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.2s;
-          text-decoration: none;
-          border: none;
-          text-align: center;
-        }
-
-        .btn-primary {
-          background: #3b82f6;
-          color: white;
-        }
-
-        .btn-primary:hover:not(:disabled) {
-          background: #2563eb;
-          transform: translateY(-1px);
-        }
-
-        .btn-primary:disabled {
-          background: #9ca3af;
-          cursor: not-allowed;
-        }
-
-        .btn-secondary {
-          background: #f3f4f6;
-          color: #374151;
-          border: 1px solid #d1d5db;
-        }
-
-        .btn-secondary:hover {
-          background: #e5e7eb;
-        }
-
-        .btn-large {
-          padding: 16px 32px;
-          font-size: 18px;
-        }
-
-        .btn-block {
-          width: 100%;
-        }
-
-        .rooms-availability {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-          gap: 20px;
-          margin-top: 20px;
-        }
-
-        .room-card {
-          background: #f9fafb;
-          border: 1px solid #e5e7eb;
-          border-radius: 8px;
-          padding: 16px;
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-          transition: all 0.2s ease-in-out;
-        }
-
-        .room-card:hover {
-          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-          transform: translateY(-2px);
-        }
-
-        .room-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 8px;
-        }
-
-        .room-name {
-          font-size: 18px;
-          font-weight: 600;
-          color: #1f2937;
-          margin: 0;
-        }
-
-        .room-rent {
-          font-size: 16px;
-          font-weight: 500;
-          color: #3b82f6;
-          background: rgba(59, 130, 246, 0.1);
-          padding: 4px 10px;
-          border-radius: 6px;
-        }
-
-        .room-details {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-
-        .room-detail-item {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          font-size: 14px;
-          color: #4b5563;
-        }
-
-        .room-detail-label {
-          font-weight: 500;
-          color: #6b7280;
-        }
-
-        .room-detail-value {
-          font-weight: 600;
-          color: #1f2937;
-        }
-
-        .room-features {
-          margin-top: 8px;
-        }
-
-        .features-list {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
-        }
-
-        .feature-tag {
-          background: #e0f2fe;
-          color: #1f2937;
-          padding: 4px 10px;
-          border-radius: 12px;
-          font-size: 12px;
-          font-weight: 500;
-        }
-
-        .property-rent-info {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-          gap: 16px;
-          margin-top: 20px;
-        }
-
-        @media (max-width: 1024px) {
-          .content-grid {
-            grid-template-columns: 1fr;
-          }
-
-          .application-summary {
-            position: static;
-          }
-        }
-
-        @media (max-width: 768px) {
-          .hero-content {
-            flex-direction: column;
-            text-align: center;
-          }
-
-          .listing-title {
-            font-size: 32px;
-          }
-
-          .hero-actions {
-            flex-direction: row;
-            justify-content: center;
-          }
-
-          .details-grid {
-            grid-template-columns: 1fr;
-          }
-
-          .gallery-image {
-            height: 300px;
-          }
-
-          .image-nav {
-            width: 40px;
-            height: 40px;
-          }
-
-          .prev-btn {
-            left: 10px;
-          }
-
-          .next-btn {
-            right: 10px;
-          }
-        }
-
-        /* Room Availability Styles */
-        .rooms-availability {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-          gap: 20px;
-          margin-top: 16px;
-        }
-
-        .room-card {
-          background: #f8fafc;
-          border: 1px solid #e2e8f0;
-          border-radius: 8px;
-          padding: 20px;
-          transition: all 0.2s;
-        }
-
-        .room-card:hover {
-          border-color: #3b82f6;
-          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
-        }
-
-        .room-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 16px;
-          padding-bottom: 12px;
-          border-bottom: 1px solid #e2e8f0;
-        }
-
-        .room-name {
-          font-size: 18px;
-          font-weight: 600;
-          color: #1f2937;
-          margin: 0;
-        }
-
-        .room-rent {
-          font-size: 16px;
-          font-weight: 700;
-          color: #059669;
-          background: #ecfdf5;
-          padding: 4px 8px;
-          border-radius: 4px;
-        }
-
-        .room-details {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-
-        .room-detail-item {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-        }
-
-        .room-detail-label {
-          font-weight: 500;
-          color: #6b7280;
-        }
-
-        .room-detail-value {
-          color: #1f2937;
-          text-transform: capitalize;
-        }
-
-        .room-detail-value .availability-date {
-          color: #059669;
-          font-weight: 500;
-        }
-
-        .room-features {
-          margin-top: 12px;
-        }
-
-        .features-list {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 6px;
-          margin-top: 8px;
-        }
-
-        .feature-tag {
-          background: #e0f2fe;
-          color: #0369a1;
-          padding: 2px 8px;
-          border-radius: 12px;
-          font-size: 12px;
-          font-weight: 500;
-          text-transform: capitalize;
-        }
-
-        .property-rent-info {
-          background: #f8fafc;
-          border: 1px solid #e2e8f0;
-          border-radius: 8px;
-          padding: 20px;
-          margin-top: 16px;
-        }
-
-        @media (max-width: 768px) {
-          .rooms-availability {
-            grid-template-columns: 1fr;
-          }
-          
-          .room-header {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 8px;
-          }
-        }
-      `}</style>
-    </div>
+    </>
   );
 }
 

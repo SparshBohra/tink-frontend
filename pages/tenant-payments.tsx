@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
+import { useRouter } from 'next/router';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements } from '@stripe/react-stripe-js';
-import { useAuth, withAuth } from '../lib/auth-context';
 import { apiClient } from '../lib/api';
 import { PaymentHistoryResponse, PaymentRecord, Lease } from '../lib/types';
 import PaymentForm from '../components/PaymentForm';
@@ -13,50 +13,75 @@ import { CheckCircle, Clock, AlertCircle, CreditCard, Calendar, ArrowLeft } from
 // Initialize Stripe
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
+interface TenantUser {
+  id: number;
+  full_name: string;
+  email: string;
+  phone: string;
+  is_verified: boolean;
+}
+
 function TenantPayments() {
-  const { user } = useAuth();
+  const router = useRouter();
   
   // Data state
   const [lease, setLease] = useState<Lease | null>(null);
   const [paymentHistory, setPaymentHistory] = useState<PaymentRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<TenantUser | null>(null);
   
   // UI state
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
 
-  // Load tenant's active lease and payment history
+  // Check authentication on component mount
   useEffect(() => {
-    const loadTenantData = async () => {
-      try {
-        setLoading(true);
-        
-        // Get tenant's active lease
-        const leasesResponse = await apiClient.getLeases();
-        const activeLease = leasesResponse.results.find(l => l.status === 'active');
-        
-        if (activeLease) {
-          setLease(activeLease);
-        }
-        
-        // Load payment history
-        const paymentData: PaymentHistoryResponse = await apiClient.getPaymentHistory({ page: 1, page_size: 20 });
-        setPaymentHistory(paymentData.payments);
-        
-      } catch (err: any) {
-        console.error('Failed to load tenant data:', err);
-        setError(err.message || 'Failed to load payment information');
-      } finally {
-        setLoading(false);
-      }
-    };
+    const accessToken = localStorage.getItem('tenant_access_token');
+    const userStr = localStorage.getItem('tenant_user');
 
-    if (user) {
-      loadTenantData();
+    if (!accessToken || !userStr) {
+      router.push('/tenant-login');
+      return;
     }
-  }, [user]);
+
+    try {
+      const user = JSON.parse(userStr);
+      setCurrentUser(user);
+      
+      // Load tenant data after authentication check
+      loadTenantData();
+    } catch (error) {
+      console.error('Error parsing user data:', error);
+      router.push('/tenant-login');
+    }
+  }, [router]);
+
+  // Load tenant's active lease and payment history
+  const loadTenantData = async () => {
+    try {
+      setLoading(true);
+      
+      // Get tenant's active lease
+      const leasesResponse = await apiClient.getTenantLeases();
+      const activeLease = leasesResponse.find(l => l.status === 'active');
+      
+      if (activeLease) {
+        setLease(activeLease);
+      }
+      
+      // Load payment history
+      const paymentData: PaymentHistoryResponse = await apiClient.getPaymentHistory({ page: 1, page_size: 20 });
+      setPaymentHistory(paymentData.payments);
+      
+    } catch (err: any) {
+      console.error('Failed to load tenant data:', err);
+      setError(err.message || 'Failed to load payment information');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handlePaymentSuccess = async (paymentIntentId: string) => {
     setPaymentSuccess(true);
@@ -169,6 +194,13 @@ function TenantPayments() {
       <div className="max-w-4xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
+          <Button 
+            onClick={() => router.push('/tenant-dashboard')}
+            className="mb-4 bg-gray-100 text-gray-700 hover:bg-gray-200"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Dashboard
+          </Button>
           <h1 className="text-3xl font-bold text-gray-900">Rent Payments</h1>
           <p className="text-gray-600 mt-2">Manage your rent payments and view payment history</p>
         </div>
@@ -303,4 +335,4 @@ function TenantPayments() {
   );
 }
 
-export default withAuth(TenantPayments); 
+export default TenantPayments; 

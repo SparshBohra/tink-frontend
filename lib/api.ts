@@ -2125,9 +2125,18 @@ class ApiClient {
 
   async getPaymentHistory(params?: { page?: number; page_size?: number }): Promise<PaymentHistoryResponse> {
     const queryString = params ? new URLSearchParams(params as any).toString() : '';
-    const url = `/auth/payments/history/${queryString ? `?${queryString}` : ''}`;
-    const response = await this.api.get(url);
-    return response.data;
+    
+    // Use tenant-specific endpoint if tenant is authenticated
+    if (this.isTenantAuthenticated()) {
+      const url = `/auth/tenant-auth/payment-history/${queryString ? `?${queryString}` : ''}`;
+      const response = await this.api.get(url);
+      return response.data;
+    } else {
+      // Use regular endpoint for landlords/managers
+      const url = `/auth/payments/history/${queryString ? `?${queryString}` : ''}`;
+      const response = await this.api.get(url);
+      return response.data;
+    }
   }
 
   async getLandlordPaymentSummary(): Promise<PaymentSummaryResponse> {

@@ -1,7 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { loadStripe, Stripe, Appearance } from '@stripe/stripe-js';
 import { Elements } from '@stripe/react-stripe-js';
-import StripePaymentForm from './StripePaymentForm'; // We will create this next
+import { 
+  X, 
+  CreditCard, 
+  AlertCircle, 
+  CheckCircle, 
+  Loader2,
+  DollarSign,
+  Shield,
+  Clock
+} from 'lucide-react';
+import StripePaymentForm from './StripePaymentForm';
 import { TenantProfile } from '../lib/types';
 import { apiClient } from '../lib/api';
 
@@ -11,13 +21,13 @@ const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY 
 interface PaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  lease: any | null; // Accept lease directly instead of tenantProfile
-  onPaymentSuccess?: () => void; // New callback for payment success
+  lease: any | null;
+  onPaymentSuccess?: () => void;
 }
 
 const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, lease, onPaymentSuccess }) => {
   const [clientSecret, setClientSecret] = useState<string | null>(null);
-  const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null); // Store payment intent ID
+  const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
 
@@ -94,89 +104,231 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, lease, onP
   const appearance: Appearance = {
     theme: 'stripe',
     variables: {
-      colorPrimary: '#4f46e5',
+      colorPrimary: '#2563eb',
       colorBackground: '#ffffff',
       colorText: '#374151',
       colorDanger: '#ef4444',
-      fontFamily: 'Inter, sans-serif',
+      fontFamily: 'Inter, system-ui, sans-serif',
       spacingUnit: '4px',
-      borderRadius: '6px',
+      borderRadius: '8px',
     },
   };
 
-  // The options object should not be created if clientSecret is null
   const options = clientSecret ? {
     clientSecret,
     appearance,
   } : undefined;
 
   return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
-      <div className="relative mx-auto p-8 border w-full max-w-md shadow-lg rounded-md bg-white">
-        
-        {/* Modal Header */}
-        <div className="flex justify-between items-center mb-6">
-          <h3 className="text-xl font-bold text-gray-900">Pay Your Rent</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+    <>
+      {/* Backdrop */}
+      <div 
+        style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.6)',
+          backdropFilter: 'blur(4px)',
+          zIndex: 50,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '1rem'
+        }}
+        onClick={onClose}
+      >
+        {/* Modal */}
+        <div 
+          style={{
+            backgroundColor: 'white',
+            borderRadius: '1rem',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            width: '100%',
+            maxWidth: '28rem',
+            maxHeight: '90vh',
+            overflow: 'hidden',
+            position: 'relative'
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div style={{
+            background: 'linear-gradient(135deg, #2563eb, #1e40af)',
+            padding: '2rem 2rem 1rem 2rem',
+            color: 'white'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+                  <div style={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                    borderRadius: '0.5rem',
+                    padding: '0.5rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    <CreditCard style={{ width: '1.5rem', height: '1.5rem' }} />
+                  </div>
+                  <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: 0 }}>Pay Your Rent</h3>
+                </div>
+                <p style={{ fontSize: '0.875rem', opacity: 0.9, margin: 0 }}>
+                  Secure payment powered by Stripe
+                </p>
+              </div>
+              <button 
+                onClick={onClose}
+                style={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                  border: 'none',
+                  borderRadius: '0.5rem',
+                  padding: '0.5rem',
+                  color: 'white',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'background-color 0.2s'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'}
+                onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'}
+              >
+                <X style={{ width: '1.25rem', height: '1.25rem' }} />
           </button>
         </div>
 
-        {/* Modal Body */}
+            {/* Amount Display */}
+            {lease && (
+              <div style={{
+                backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                borderRadius: '0.75rem',
+                padding: '1rem',
+                marginTop: '1rem',
+                border: '1px solid rgba(255, 255, 255, 0.2)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
+                    <p style={{ fontSize: '0.875rem', opacity: 0.9, margin: '0 0 0.25rem 0' }}>Amount Due</p>
+                    <p style={{ fontSize: '2rem', fontWeight: 'bold', margin: 0 }}>
+                      ${lease.monthly_rent || '0'}.00
+                    </p>
+                  </div>
+                  <div style={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                    borderRadius: '50%',
+                    padding: '0.75rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    <DollarSign style={{ width: '1.5rem', height: '1.5rem' }} />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Body */}
+          <div style={{ padding: '2rem', maxHeight: '60vh', overflowY: 'auto' }}>
+            {/* No Lease Warning */}
           {!lease && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
-              <div className="flex">
-                <svg className="h-5 w-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <div className="ml-3 text-center w-full">
-                  <p className="text-sm text-yellow-800 font-medium">No Lease Found</p>
-                  <p className="text-sm text-yellow-700 mt-1">You don't have an active lease to make payments against.</p>
+              <div style={{
+                backgroundColor: '#fef3c7',
+                border: '1px solid #f59e0b',
+                borderRadius: '0.75rem',
+                padding: '1rem'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+                  <AlertCircle style={{ width: '1.25rem', height: '1.25rem', color: '#f59e0b', flexShrink: 0, marginTop: '0.125rem' }} />
+                  <div>
+                    <p style={{ fontWeight: '600', color: '#92400e', margin: '0 0 0.25rem 0' }}>No Lease Found</p>
+                    <p style={{ fontSize: '0.875rem', color: '#92400e', margin: 0 }}>
+                      You don't have an active lease to make payments against.
+                    </p>
                 </div>
               </div>
             </div>
           )}
 
+            {/* Inactive Lease Warning */}
           {lease && lease.status !== 'active' && (
-            <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
-              <div className="flex">
-                <svg className="h-5 w-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <div className="ml-3 text-center w-full">
-                  <p className="text-sm text-blue-800 font-medium">Lease Not Active</p>
-                  <p className="text-sm text-blue-700 mt-1">Your lease must be active before you can make payments. Current status: <span className="font-medium">{lease.status}</span></p>
+              <div style={{
+                backgroundColor: '#dbeafe',
+                border: '1px solid #3b82f6',
+                borderRadius: '0.75rem',
+                padding: '1rem'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+                  <Clock style={{ width: '1.25rem', height: '1.25rem', color: '#3b82f6', flexShrink: 0, marginTop: '0.125rem' }} />
+                  <div>
+                    <p style={{ fontWeight: '600', color: '#1e40af', margin: '0 0 0.25rem 0' }}>Lease Not Active</p>
+                    <p style={{ fontSize: '0.875rem', color: '#1e40af', margin: 0 }}>
+                      Your lease must be active before you can make payments. Current status: <span style={{ fontWeight: '600' }}>{lease.status}</span>
+                    </p>
                 </div>
               </div>
             </div>
           )}
 
+            {/* Loading State */}
           {loading && (
-            <div className="text-center py-8">
-              <svg className="animate-spin h-8 w-8 text-indigo-600 mx-auto" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-              </svg>
-              <p className="mt-2 text-gray-600">Initializing secure payment...</p>
-              <p className="text-xs text-gray-500 mt-1">Setting up payment intent with Stripe</p>
+              <div style={{ textAlign: 'center', padding: '3rem 1rem' }}>
+                <div style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '4rem',
+                  height: '4rem',
+                  backgroundColor: '#f3f4f6',
+                  borderRadius: '50%',
+                  marginBottom: '1rem'
+                }}>
+                  <Loader2 style={{ 
+                    width: '2rem', 
+                    height: '2rem', 
+                    color: '#2563eb',
+                    animation: 'spin 1s linear infinite'
+                  }} />
+                </div>
+                <p style={{ fontSize: '1.125rem', fontWeight: '600', color: '#111827', margin: '0 0 0.5rem 0' }}>
+                  Initializing Payment
+                </p>
+                <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>
+                  Setting up secure payment with Stripe...
+                </p>
             </div>
           )}
 
+            {/* Error State */}
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-md p-4">
-              <div className="flex">
-                <svg className="h-5 w-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <div className="ml-3 text-center w-full">
-                  <p className="text-sm text-red-800 font-medium">Payment Setup Error</p>
-                  <p className="text-sm text-red-700 mt-1">{error}</p>
+              <div style={{
+                backgroundColor: '#fef2f2',
+                border: '1px solid #fca5a5',
+                borderRadius: '0.75rem',
+                padding: '1rem'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+                  <AlertCircle style={{ width: '1.25rem', height: '1.25rem', color: '#ef4444', flexShrink: 0, marginTop: '0.125rem' }} />
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontWeight: '600', color: '#dc2626', margin: '0 0 0.5rem 0' }}>Payment Setup Error</p>
+                    <p style={{ fontSize: '0.875rem', color: '#dc2626', margin: '0 0 1rem 0' }}>{error}</p>
                   <button
                     onClick={createPaymentIntent}
-                    className="mt-4 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                      style={{
+                        backgroundColor: '#2563eb',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '0.5rem',
+                        padding: '0.5rem 1rem',
+                        fontSize: '0.875rem',
+                        fontWeight: '500',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        transition: 'background-color 0.2s'
+                      }}
+                      onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
+                      onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
                   >
                     Try Again
                   </button>
@@ -185,7 +337,27 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, lease, onP
             </div>
           )}
 
+            {/* Payment Form */}
           {clientSecret && options && lease && lease.status === 'active' && (
+              <div>
+                {/* Security Notice */}
+                <div style={{
+                  backgroundColor: '#f0fdf4',
+                  border: '1px solid #22c55e',
+                  borderRadius: '0.75rem',
+                  padding: '1rem',
+                  marginBottom: '1.5rem'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <Shield style={{ width: '1.25rem', height: '1.25rem', color: '#22c55e' }} />
+                    <div>
+                      <p style={{ fontSize: '0.875rem', fontWeight: '500', color: '#166534', margin: 0 }}>
+                        🔒 Your payment is secured by Stripe's industry-leading encryption
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
             <Elements options={options} stripe={stripePromise}>
               <StripePaymentForm 
                 onSuccess={handlePaymentSuccess} 
@@ -193,10 +365,20 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, lease, onP
                 rentAmount={lease?.monthly_rent || 0}
               />
             </Elements>
+              </div>
           )}
         </div>
       </div>
     </div>
+
+      {/* Add CSS animations */}
+      <style jsx>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
+    </>
   );
 };
 

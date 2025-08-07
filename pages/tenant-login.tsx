@@ -1,14 +1,27 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
+import { 
+  Home, 
+  ArrowLeft, 
+  Phone, 
+  MessageSquare, 
+  CheckCircle,
+  MapPin,
+  Building,
+  Users,
+  ArrowRight,
+  Shield,
+  Clock,
+  AlertCircle,
+  Loader2
+} from 'lucide-react';
 import { apiClient } from '../lib/api';
 import { TenantOtpResponse, TenantAuthResponse, TenantProfileData } from '../lib/types';
-import TenantProfileSelector from '../components/TenantProfileSelector';
-import USPhoneInput, { validateUSPhone, getUSPhoneError, toE164Format } from '../components/USPhoneInput';
 
 interface FormData {
   phoneNumber: string;
-  otpCode: string;
+  otpCode: string[];
 }
 
 interface FormErrors {
@@ -17,18 +30,17 @@ interface FormErrors {
   general?: string;
 }
 
-type Step = 'phone' | 'otp' | 'profile_selection';
+type Step = 'phone' | 'otp' | 'properties';
 
 const TenantLogin: React.FC = () => {
   const router = useRouter();
   const [step, setStep] = useState<Step>('phone');
   const [formData, setFormData] = useState<FormData>({
     phoneNumber: '',
-    otpCode: ''
+    otpCode: ['', '', '', '', '', '']
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [loading, setLoading] = useState(false);
-  const [otpSent, setOtpSent] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
   const [remainingAttempts, setRemainingAttempts] = useState<number | null>(null);
   
@@ -36,36 +48,63 @@ const TenantLogin: React.FC = () => {
   const [tenantProfiles, setTenantProfiles] = useState<TenantProfileData[]>([]);
   const [verifiedPhone, setVerifiedPhone] = useState<string>('');
 
-  // State for phone error
-  const [phoneError, setPhoneError] = useState<string | null>(null);
+  // Format phone number for display
+  const formatPhoneNumber = (phone: string) => {
+    const cleaned = phone.replace(/\D/g, '');
+    if (cleaned.length === 10) {
+      return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
+    }
+    return phone;
+  };
 
-  // Validate OTP code
-  const validateOtpCode = (otp: string): boolean => {
-    return /^\d{6}$/.test(otp);
+  // Validate phone number
+  const validatePhone = (phone: string): boolean => {
+    const cleaned = phone.replace(/\D/g, '');
+    return cleaned.length === 10;
+  };
+
+  // Format phone to E164
+  const toE164Format = (phone: string): string => {
+    const cleaned = phone.replace(/\D/g, '');
+    return `+1${cleaned}`;
   };
 
   // Handle phone number input
-  const handlePhoneChange = (value: string) => {
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, '');
+    if (value.length <= 10) {
     setFormData(prev => ({ ...prev, phoneNumber: value }));
-    
-    // Validate phone number and set error
-    const phoneErrorMsg = getUSPhoneError(value);
-    setPhoneError(phoneErrorMsg);
-    
-    // Clear phone number error when user starts typing
     if (errors.phoneNumber) {
       setErrors(prev => ({ ...prev, phoneNumber: undefined }));
+      }
     }
   };
 
   // Handle OTP input
-  const handleOtpChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/\D/g, '').slice(0, 6);
-    setFormData(prev => ({ ...prev, otpCode: value }));
+  const handleOtpChange = (index: number, value: string) => {
+    if (value.length > 1) return;
     
-    // Clear OTP error when user starts typing
+    const newOtp = [...formData.otpCode];
+    newOtp[index] = value;
+    setFormData(prev => ({ ...prev, otpCode: newOtp }));
+    
+    // Clear errors
     if (errors.otpCode) {
       setErrors(prev => ({ ...prev, otpCode: undefined }));
+    }
+
+    // Auto-focus next input
+    if (value && index < 5) {
+      const nextInput = document.getElementById(`otp-${index + 1}`);
+      nextInput?.focus();
+    }
+  };
+
+  // Handle backspace in OTP
+  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent) => {
+    if (e.key === 'Backspace' && !formData.otpCode[index] && index > 0) {
+      const prevInput = document.getElementById(`otp-${index - 1}`);
+      prevInput?.focus();
     }
   };
 
@@ -83,63 +122,42 @@ const TenantLogin: React.FC = () => {
     }, 1000);
   };
 
-  // Handle phone submission (request OTP)
-  const handlePhoneSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Clear previous errors
-    setErrors({});
-    
-    // Validate phone number
-    if (!validateUSPhone(formData.phoneNumber)) {
+  // Handle phone submission
+  const handlePhoneSubmit = async () => {
+    if (!validatePhone(formData.phoneNumber)) {
       setErrors({ phoneNumber: 'Please enter a valid 10-digit phone number' });
       return;
     }
 
     setLoading(true);
+    setErrors({});
 
     try {
       const phoneE164 = toE164Format(formData.phoneNumber);
       const response: TenantOtpResponse = await apiClient.requestTenantOtp(phoneE164);
 
       if (response.success) {
-        setOtpSent(true);
         setStep('otp');
         startResendTimer();
-        
-        // Clear general errors
-        setErrors({});
       } else {
-        // Handle different error types
         if (response.error_type === 'phone_not_found') {
           setErrors({
-            phoneNumber: "Phone number not found in our system. Please contact your landlord to set up your tenant account."
-          });
-        } else if (response.error_type === 'rate_limited') {
-          setErrors({
-            general: response.error || 'Too many requests. Please wait before trying again.'
+            phoneNumber: "Phone number not found. Please contact your landlord to set up your account."
           });
         } else {
           setErrors({
-            general: response.error || 'Failed to send OTP. Please try again or contact support.'
+            general: response.error || 'Failed to send code. Please try again.'
           });
         }
       }
     } catch (error: any) {
-      console.error('OTP request error:', error);
-      
-      // Handle specific error cases
       if (error.response?.data?.error_type === 'phone_not_found') {
         setErrors({
-          phoneNumber: "Phone number not found in our system. Please contact your landlord to set up your tenant account."
-        });
-      } else if (error.response?.data?.error) {
-        setErrors({
-          general: error.response.data.error
+          phoneNumber: "Phone number not found. Please contact your landlord to set up your account."
         });
       } else {
         setErrors({
-          general: 'An unexpected error occurred. Please try again or contact support.'
+          general: 'An unexpected error occurred. Please try again.'
         });
       }
     } finally {
@@ -147,107 +165,68 @@ const TenantLogin: React.FC = () => {
     }
   };
 
-  // Handle OTP submission (verify OTP)
-  const handleOtpSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Clear previous errors
-    setErrors({});
-    
-    // Validate OTP
-    if (!validateOtpCode(formData.otpCode)) {
-      setErrors({ otpCode: 'Please enter a valid 6-digit code' });
+  // Handle OTP submission
+  const handleOtpSubmit = async () => {
+    const otpValue = formData.otpCode.join('');
+    if (otpValue.length !== 6) {
+      setErrors({ otpCode: 'Please enter all 6 digits' });
       return;
     }
 
     setLoading(true);
+    setErrors({});
 
     try {
       const phoneE164 = toE164Format(formData.phoneNumber);
-      const response: TenantAuthResponse = await apiClient.verifyTenantOtp(phoneE164, formData.otpCode);
+      const response: TenantAuthResponse = await apiClient.verifyTenantOtp(phoneE164, otpValue);
 
       if (response.success) {
         if (response.requires_selection && response.tenant_profiles) {
-          // Multiple profiles - show selection screen
           setTenantProfiles(response.tenant_profiles);
           setVerifiedPhone(response.phone_number || phoneE164);
-          setStep('profile_selection');
+          setStep('properties');
         } else if (response.tokens && response.tenant) {
-          // Single profile - proceed with login
           completeLogin(response.tokens, response.tenant);
-        } else {
-          setErrors({
-            general: 'Unexpected response format. Please try again.'
-          });
         }
       } else {
-        // Handle OTP verification errors with better messages
         setRemainingAttempts(response.remaining_attempts || null);
         
-        if (response.error_type === 'phone_not_found') {
-          setErrors({
-            general: "Phone number not found in our system. Please contact your landlord to set up your tenant account."
-          });
-        } else if (response.error_type === 'blocked') {
-          setErrors({
-            general: response.error || 'Too many failed attempts. Please try again later.'
-          });
-        } else if (response.error_type === 'expired') {
-          setErrors({
-            otpCode: 'Your OTP code has expired. Please request a new one below.'
-          });
-        } else if (response.error_type === 'no_otp') {
-          setErrors({
-            otpCode: 'No OTP found. Please request a new one below.'
-          });
-        } else if (response.error_type === 'invalid_otp') {
+        if (response.error_type === 'invalid_otp') {
           const remainingText = response.remaining_attempts 
             ? ` ${response.remaining_attempts} attempts remaining.`
             : '';
           setErrors({
-            otpCode: `Invalid OTP code.${remainingText} Please check your code and try again.`
+            otpCode: `Invalid code.${remainingText}`
+          });
+        } else if (response.error_type === 'expired') {
+          setErrors({
+            otpCode: 'Code expired. Please request a new one.'
           });
         } else {
           setErrors({
-            general: response.error || 'Failed to verify OTP. Please try again.'
+            general: response.error || 'Verification failed. Please try again.'
           });
         }
       }
     } catch (error: any) {
-      console.error('OTP verification error:', error);
-      
-      // Handle specific error cases
-      if (error.response?.data?.error_type === 'phone_not_found') {
         setErrors({
-          general: "Phone number not found in our system. Please contact your landlord to set up your tenant account."
+        general: 'An unexpected error occurred. Please try again.'
         });
-      } else if (error.response?.data?.error) {
-        setErrors({
-          general: error.response.data.error
-        });
-      } else {
-        setErrors({
-          general: 'An unexpected error occurred. Please try again or contact support.'
-        });
-      }
     } finally {
       setLoading(false);
     }
   };
 
-  // Complete login process
+  // Complete login
   const completeLogin = (tokens: any, tenant: TenantProfileData) => {
-    // Store tokens in localStorage
     localStorage.setItem('tenant_access_token', tokens.access);
     localStorage.setItem('tenant_refresh_token', tokens.refresh);
     localStorage.setItem('tenant_user', JSON.stringify(tenant));
-
-    // Redirect to tenant dashboard
     router.push('/tenant-dashboard');
   };
 
-  // Handle tenant profile selection
-  const handleProfileSelect = async (tenantUserId: number) => {
+  // Handle property selection
+  const handlePropertySelect = async (tenantUserId: number) => {
     setLoading(true);
     
     try {
@@ -257,12 +236,11 @@ const TenantLogin: React.FC = () => {
         completeLogin(response.tokens, response.tenant);
       } else {
         setErrors({
-          general: response.error || 'Failed to select profile. Please try again.'
+          general: response.error || 'Failed to select property. Please try again.'
         });
         setLoading(false);
       }
     } catch (error: any) {
-      console.error('Profile selection error:', error);
       setErrors({
         general: 'An unexpected error occurred. Please try again.'
       });
@@ -282,51 +260,30 @@ const TenantLogin: React.FC = () => {
       if (response.success) {
         startResendTimer();
         setErrors({});
-        setFormData(prev => ({ ...prev, otpCode: '' })); // Clear OTP field
-        setRemainingAttempts(null); // Reset attempts counter
+        setFormData(prev => ({ ...prev, otpCode: ['', '', '', '', '', ''] }));
+        setRemainingAttempts(null);
       } else {
-        // Handle different error types for resend
-        if (response.error_type === 'phone_not_found') {
-          setErrors({
-            general: "Phone number not found in our system. Please contact your landlord to set up your tenant account."
-          });
-        } else if (response.error_type === 'rate_limited') {
-          setErrors({
-            general: response.error || 'Too many requests. Please wait before requesting another OTP.'
-          });
-        } else {
-          setErrors({
-            general: response.error || 'Failed to resend OTP. Please try again.'
-          });
-        }
+        setErrors({
+          general: response.error || 'Failed to resend code. Please try again.'
+        });
       }
     } catch (error: any) {
-      console.error('Resend OTP error:', error);
-      
-      // Handle specific error cases for resend
-      if (error.response?.data?.error_type === 'phone_not_found') {
-        setErrors({
-          general: "Phone number not found in our system. Please contact your landlord to set up your tenant account."
-        });
-      } else if (error.response?.data?.error) {
-        setErrors({
-          general: error.response.data.error
-        });
-      } else {
-        setErrors({
-          general: 'Failed to resend OTP. Please try again or contact support.'
-        });
-      }
+      setErrors({
+        general: 'Failed to resend code. Please try again.'
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  // Go back to phone step
+  // Handle back navigation
   const handleBack = () => {
+    if (step === 'otp') {
     setStep('phone');
-    setOtpSent(false);
-    setFormData(prev => ({ ...prev, otpCode: '' }));
+      setFormData(prev => ({ ...prev, otpCode: ['', '', '', '', '', ''] }));
+    } else if (step === 'properties') {
+      setStep('otp');
+    }
     setErrors({});
     setRemainingAttempts(null);
   };
@@ -334,179 +291,464 @@ const TenantLogin: React.FC = () => {
   return (
     <>
       <Head>
-        <title>Tenant Login - Tink Property Management</title>
+        <title>Tenant Login - Tink</title>
         <meta name="description" content="Login to your tenant portal" />
+        <style>{`
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
       </Head>
 
-      {step === 'profile_selection' ? (
-        <TenantProfileSelector
-          tenantProfiles={tenantProfiles}
-          phoneNumber={verifiedPhone}
-          onProfileSelect={handleProfileSelect}
-          loading={loading}
-        />
-      ) : (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center px-4 sm:px-6 lg:px-8">
-          <div className="max-w-md w-full space-y-8">
+      <div style={{ 
+        minHeight: '100vh', 
+        background: 'linear-gradient(135deg, #dbeafe 0%, #ffffff 50%, #faf5ff 100%)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '1rem'
+      }}>
+        <div style={{ width: '100%', maxWidth: '28rem' }}>
             {/* Header */}
-            <div className="text-center">
-              <div className="mx-auto h-16 w-16 bg-indigo-600 rounded-full flex items-center justify-center">
-                <svg className="h-8 w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2V7z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 21l4-4 4 4" />
-                </svg>
+          <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '4rem',
+              height: '4rem',
+              background: 'linear-gradient(135deg, #2563eb, #1e40af)',
+              borderRadius: '1rem',
+              marginBottom: '1rem',
+              boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
+            }}>
+              <Home style={{ width: '2rem', height: '2rem', color: 'white' }} />
               </div>
-              <h1 className="mt-6 text-3xl font-extrabold text-gray-900">
+            <h1 style={{ fontSize: '1.875rem', fontWeight: 'bold', color: '#111827', marginBottom: '0.5rem' }}>
                 Tink Tenant Portal
               </h1>
-              <p className="mt-2 text-sm text-gray-600">
-                {step === 'phone' 
-                  ? 'Enter your phone number to get started'
-                  : `Enter the 6-digit code sent to ${formData.phoneNumber}`
-                }
-              </p>
-            {/* tenantName && (
-              <p className="mt-1 text-sm font-medium text-indigo-600">
-                Welcome, {tenantName}!
-              </p>
-            ) */}
+            <p style={{ color: '#6b7280', margin: 0 }}>
+              {step === 'phone' && 'Enter your phone number to get started'}
+              {step === 'otp' && 'Enter the verification code sent to your phone'}
+              {step === 'properties' && 'Select the property you want to access'}
+            </p>
           </div>
 
-          {/* Form */}
-          <div className="bg-white py-8 px-6 shadow-xl rounded-lg">
-            {step === 'phone' ? (
-              <form onSubmit={handlePhoneSubmit} className="space-y-6">
+          {/* Phone Number Step */}
+          {step === 'phone' && (
+            <div style={{
+              backgroundColor: 'white',
+              borderRadius: '1rem',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              padding: '2rem',
+              border: '1px solid #e5e7eb'
+            }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                 <div>
-                  <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700">
+                  <label style={{ 
+                    display: 'block', 
+                    fontSize: '0.875rem', 
+                    fontWeight: '500', 
+                    color: '#374151', 
+                    marginBottom: '0.5rem' 
+                  }}>
                     Phone Number
                   </label>
-                  <div className="mt-1">
-                    <USPhoneInput
-                      id="phoneNumber"
-                      name="phoneNumber"
-                      value={formData.phoneNumber}
+                  <input
+                    type="tel"
+                    value={formatPhoneNumber(formData.phoneNumber)}
                       onChange={handlePhoneChange}
                       placeholder="(555) 123-4567"
-                      disabled={loading}
-                      error={errors.phoneNumber || phoneError}
-                      required
-                    />
-                  </div>
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem 1rem',
+                      border: `2px solid ${errors.phoneNumber ? '#ef4444' : '#e5e7eb'}`,
+                      borderRadius: '0.5rem',
+                      fontSize: '1rem',
+                      outline: 'none',
+                      transition: 'border-color 0.2s'
+                    }}
+                    onFocus={(e) => e.target.style.borderColor = '#2563eb'}
+                    onBlur={(e) => e.target.style.borderColor = errors.phoneNumber ? '#ef4444' : '#e5e7eb'}
+                  />
+                  {errors.phoneNumber && (
+                    <p style={{ fontSize: '0.875rem', color: '#ef4444', marginTop: '0.5rem' }}>
+                      {errors.phoneNumber}
+                    </p>
+                  )}
                 </div>
 
                 {errors.general && (
-                  <div className="bg-red-50 border border-red-200 rounded-md p-4">
-                    <p className="text-sm text-red-800">{errors.general}</p>
+                  <div style={{
+                    backgroundColor: '#fef2f2',
+                    border: '1px solid #fca5a5',
+                    borderRadius: '0.5rem',
+                    padding: '1rem'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <AlertCircle style={{ width: '1.25rem', height: '1.25rem', color: '#ef4444' }} />
+                      <p style={{ fontSize: '0.875rem', color: '#dc2626', margin: 0 }}>{errors.general}</p>
+                    </div>
                   </div>
                 )}
 
                 <button
-                  type="submit"
-                  disabled={loading || !formData.phoneNumber}
-                  className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={handlePhoneSubmit}
+                  disabled={!validatePhone(formData.phoneNumber) || loading}
+                  style={{
+                    width: '100%',
+                    background: loading ? '#9ca3af' : 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+                    color: 'white',
+                    padding: '0.75rem 1rem',
+                    borderRadius: '0.5rem',
+                    border: 'none',
+                    fontWeight: '500',
+                    cursor: (!validatePhone(formData.phoneNumber) || loading) ? 'not-allowed' : 'pointer',
+                    opacity: (!validatePhone(formData.phoneNumber) || loading) ? 0.6 : 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem',
+                    transition: 'all 0.2s'
+                  }}
                 >
                   {loading ? (
-                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                  ) : null}
-                  {loading ? 'Sending...' : 'Send Code'}
+                    <>
+                      <Loader2 style={{ width: '1.25rem', height: '1.25rem', animation: 'spin 1s linear infinite' }} />
+                      <span>Sending...</span>
+                    </>
+                  ) : (
+                    <>
+                      <MessageSquare style={{ width: '1.25rem', height: '1.25rem' }} />
+                      <span>Send Code</span>
+                    </>
+                  )}
                 </button>
-              </form>
-            ) : (
-              <form onSubmit={handleOtpSubmit} className="space-y-6">
+
+                <p style={{ fontSize: '0.75rem', color: '#6b7280', textAlign: 'center', margin: 0 }}>
+                  Having trouble? Contact your landlord or property manager for assistance.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* OTP Verification Step */}
+          {step === 'otp' && (
+            <div style={{
+              backgroundColor: 'white',
+              borderRadius: '1rem',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              padding: '2rem',
+              border: '1px solid #e5e7eb'
+            }}>
+              <button
+                onClick={handleBack}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  color: '#6b7280',
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  marginBottom: '1.5rem',
+                  fontSize: '0.875rem'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.color = '#374151'}
+                onMouseOut={(e) => e.currentTarget.style.color = '#6b7280'}
+              >
+                <ArrowLeft style={{ width: '1rem', height: '1rem' }} />
+                <span>Back</span>
+              </button>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '3rem',
+                    height: '3rem',
+                    backgroundColor: '#dcfce7',
+                    borderRadius: '50%',
+                    marginBottom: '1rem'
+                  }}>
+                    <Phone style={{ width: '1.5rem', height: '1.5rem', color: '#16a34a' }} />
+                  </div>
+                  <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>
+                    We sent a 6-digit code to<br />
+                    <span style={{ fontWeight: '500', color: '#111827' }}>{formatPhoneNumber(formData.phoneNumber)}</span>
+                  </p>
+                </div>
+
                 <div>
-                  <label htmlFor="otpCode" className="block text-sm font-medium text-gray-700">
-                    Verification Code
+                  <label style={{ 
+                    display: 'block', 
+                    fontSize: '0.875rem', 
+                    fontWeight: '500', 
+                    color: '#374151', 
+                    marginBottom: '0.75rem',
+                    textAlign: 'center'
+                  }}>
+                    Enter Verification Code
                   </label>
-                  <div className="mt-1">
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem' }}>
+                    {formData.otpCode.map((digit, index) => (
                     <input
-                      id="otpCode"
+                        key={index}
+                        id={`otp-${index}`}
                       type="text"
-                      value={formData.otpCode}
-                      onChange={handleOtpChange}
-                      placeholder="123456"
-                      className={`appearance-none block w-full px-3 py-2 border rounded-md placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-center text-2xl tracking-widest ${
-                        errors.otpCode ? 'border-red-300' : 'border-gray-300'
-                      }`}
-                      disabled={loading}
-                      maxLength={6}
-                      autoComplete="one-time-code"
+                        value={digit}
+                        onChange={(e) => handleOtpChange(index, e.target.value)}
+                        onKeyDown={(e) => handleOtpKeyDown(index, e)}
+                        style={{
+                          width: '3rem',
+                          height: '3rem',
+                          textAlign: 'center',
+                          fontSize: '1.125rem',
+                          fontWeight: 'bold',
+                          border: `2px solid ${errors.otpCode ? '#ef4444' : '#e5e7eb'}`,
+                          borderRadius: '0.5rem',
+                          outline: 'none',
+                          transition: 'border-color 0.2s'
+                        }}
+                        onFocus={(e) => e.target.style.borderColor = '#2563eb'}
+                        onBlur={(e) => e.target.style.borderColor = errors.otpCode ? '#ef4444' : '#e5e7eb'}
+                        maxLength={1}
                     />
+                    ))}
                   </div>
                   {errors.otpCode && (
-                    <p className="mt-2 text-sm text-red-600">{errors.otpCode}</p>
+                    <p style={{ fontSize: '0.875rem', color: '#ef4444', marginTop: '0.5rem', textAlign: 'center' }}>
+                      {errors.otpCode}
+                    </p>
                   )}
                   {remainingAttempts !== null && (
-                    <p className="mt-2 text-sm text-orange-600">
+                    <p style={{ fontSize: '0.875rem', color: '#f59e0b', marginTop: '0.5rem', textAlign: 'center' }}>
                       {remainingAttempts} attempts remaining
                     </p>
                   )}
                 </div>
 
                 {errors.general && (
-                  <div className="bg-red-50 border border-red-200 rounded-md p-4">
-                    <p className="text-sm text-red-800">{errors.general}</p>
+                  <div style={{
+                    backgroundColor: '#fef2f2',
+                    border: '1px solid #fca5a5',
+                    borderRadius: '0.5rem',
+                    padding: '1rem'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <AlertCircle style={{ width: '1.25rem', height: '1.25rem', color: '#ef4444' }} />
+                      <p style={{ fontSize: '0.875rem', color: '#dc2626', margin: 0 }}>{errors.general}</p>
+                    </div>
                   </div>
                 )}
 
                 <button
-                  type="submit"
-                  disabled={loading || formData.otpCode.length !== 6}
-                  className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={handleOtpSubmit}
+                  disabled={formData.otpCode.join('').length !== 6 || loading}
+                  style={{
+                    width: '100%',
+                    background: loading ? '#9ca3af' : 'linear-gradient(135deg, #16a34a, #15803d)',
+                    color: 'white',
+                    padding: '0.75rem 1rem',
+                    borderRadius: '0.5rem',
+                    border: 'none',
+                    fontWeight: '500',
+                    cursor: (formData.otpCode.join('').length !== 6 || loading) ? 'not-allowed' : 'pointer',
+                    opacity: (formData.otpCode.join('').length !== 6 || loading) ? 0.6 : 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem',
+                    transition: 'all 0.2s'
+                  }}
                 >
                   {loading ? (
-                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                  ) : null}
-                  {loading ? 'Verifying...' : 'Verify & Login'}
+                    <>
+                      <Loader2 style={{ width: '1.25rem', height: '1.25rem', animation: 'spin 1s linear infinite' }} />
+                      <span>Verifying...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle style={{ width: '1.25rem', height: '1.25rem' }} />
+                      <span>Verify Code</span>
+                    </>
+                  )}
                 </button>
 
-                {/* Resend OTP */}
-                <div className="text-center">
+                <div style={{ textAlign: 'center' }}>
                   {resendTimer > 0 ? (
-                    <p className="text-sm text-gray-500">
+                    <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>
                       Resend code in {resendTimer} seconds
                     </p>
                   ) : (
                     <button
-                      type="button"
                       onClick={handleResendOtp}
                       disabled={loading}
-                      className="text-sm text-indigo-600 hover:text-indigo-500 disabled:opacity-50"
+                      style={{
+                        fontSize: '0.875rem',
+                        color: '#2563eb',
+                        backgroundColor: 'transparent',
+                        border: 'none',
+                        cursor: loading ? 'not-allowed' : 'pointer',
+                        opacity: loading ? 0.5 : 1
+                      }}
+                      onMouseOver={(e) => !loading && (e.currentTarget.style.color = '#1d4ed8')}
+                      onMouseOut={(e) => !loading && (e.currentTarget.style.color = '#2563eb')}
                     >
-                      Resend verification code
+                      Didn't receive the code? Resend
                     </button>
                   )}
                 </div>
+              </div>
+            </div>
+          )}
 
-                {/* Back button */}
-                <div className="text-center">
+          {/* Property Selection Step */}
+          {step === 'properties' && (
+            <div style={{
+              backgroundColor: 'white',
+              borderRadius: '1rem',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              padding: '2rem',
+              border: '1px solid #e5e7eb'
+            }}>
                   <button
-                    type="button"
                     onClick={handleBack}
-                    disabled={loading}
-                    className="text-sm text-gray-500 hover:text-gray-700 disabled:opacity-50"
-                  >
-                    ← Change phone number
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  color: '#6b7280',
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  marginBottom: '1.5rem',
+                  fontSize: '0.875rem'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.color = '#374151'}
+                onMouseOut={(e) => e.currentTarget.style.color = '#6b7280'}
+              >
+                <ArrowLeft style={{ width: '1rem', height: '1rem' }} />
+                <span>Back</span>
                   </button>
-                </div>
-              </form>
-            )}
-          </div>
 
-          {/* Help text */}
-          <div className="text-center">
-            <p className="text-xs text-gray-500">
-              Having trouble? Contact your landlord or property manager for assistance.
-            </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '3rem',
+                    height: '3rem',
+                    backgroundColor: '#dbeafe',
+                    borderRadius: '50%',
+                    marginBottom: '1rem'
+                  }}>
+                    <Building style={{ width: '1.5rem', height: '1.5rem', color: '#2563eb' }} />
+                  </div>
+                  <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#111827', marginBottom: '0.5rem' }}>
+                    Select Property
+                  </h3>
+                  <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>
+                    Choose which property you'd like to access
+                  </p>
+                </div>
+
+                {errors.general && (
+                  <div style={{
+                    backgroundColor: '#fef2f2',
+                    border: '1px solid #fca5a5',
+                    borderRadius: '0.5rem',
+                    padding: '1rem'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <AlertCircle style={{ width: '1.25rem', height: '1.25rem', color: '#ef4444' }} />
+                      <p style={{ fontSize: '0.875rem', color: '#dc2626', margin: 0 }}>{errors.general}</p>
+                    </div>
+                  </div>
+            )}
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {tenantProfiles.map((property) => (
+                    <button
+                      key={property.tenant_user_id}
+                      onClick={() => handlePropertySelect(property.tenant_user_id)}
+                      disabled={loading}
+                      style={{
+                        width: '100%',
+                        padding: '1rem',
+                        border: '2px solid #e5e7eb',
+                        borderRadius: '0.75rem',
+                        backgroundColor: 'white',
+                        cursor: loading ? 'not-allowed' : 'pointer',
+                        textAlign: 'left',
+                        transition: 'all 0.2s',
+                        opacity: loading ? 0.6 : 1
+                      }}
+                      onMouseOver={(e) => {
+                        if (!loading) {
+                          e.currentTarget.style.borderColor = '#93c5fd';
+                          e.currentTarget.style.backgroundColor = '#eff6ff';
+                        }
+                      }}
+                      onMouseOut={(e) => {
+                        if (!loading) {
+                          e.currentTarget.style.borderColor = '#e5e7eb';
+                          e.currentTarget.style.backgroundColor = 'white';
+                        }
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <div style={{
+                          width: '4rem',
+                          height: '4rem',
+                          borderRadius: '0.5rem',
+                          backgroundColor: '#f3f4f6',
+                          backgroundImage: `url(https://images.pexels.com/photos/323780/pexels-photo-323780.jpeg?auto=compress&cs=tinysrgb&w=400)`,
+                          backgroundSize: 'cover',
+                          backgroundPosition: 'center',
+                          flexShrink: 0
+                        }} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <h4 style={{ fontWeight: '600', color: '#111827', margin: '0 0 0.25rem 0', fontSize: '1rem' }}>
+                            {property.property_name || 'Property'}
+                          </h4>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '0.5rem' }}>
+                            <MapPin style={{ width: '0.875rem', height: '0.875rem', color: '#6b7280' }} />
+                            <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                              {property.property_address || 'Address not available'}
+                            </span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <span style={{ fontSize: '0.875rem', fontWeight: '500', color: '#2563eb' }}>
+                              ${property.monthly_rent || 0}/month
+                            </span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                              <Users style={{ width: '0.875rem', height: '0.875rem', color: '#6b7280' }} />
+                              <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                                {property.landlord_name || 'Landlord'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <ArrowRight style={{ 
+                          width: '1.25rem', 
+                          height: '1.25rem', 
+                          color: loading ? '#9ca3af' : '#6b7280',
+                          flexShrink: 0
+                        }} />
+          </div>
+                    </button>
+                  ))}
           </div>
         </div>
       </div>
       )}
+        </div>
+      </div>
     </>
   );
 };

@@ -1,4 +1,13 @@
 import React, { useState } from 'react';
+import {
+  Building,
+  MapPin,
+  Users,
+  ArrowRight,
+  CheckCircle,
+  Loader2,
+  Home
+} from 'lucide-react';
 import { TenantProfileData } from '../lib/types';
 
 interface TenantProfileSelectorProps {
@@ -29,103 +38,215 @@ const TenantProfileSelector: React.FC<TenantProfileSelectorProps> = ({
     }).format(amount);
   };
 
+  const formatPhoneNumber = (phone: string) => {
+    const cleaned = phone.replace(/\D/g, '');
+    if (cleaned.length === 11 && cleaned.startsWith('1')) {
+      const number = cleaned.slice(1);
+      return `(${number.slice(0, 3)}) ${number.slice(3, 6)}-${number.slice(6)}`;
+    }
+    return phone;
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-indigo-100">
-          <svg className="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
-          </svg>
+    <>
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
+
+      <div style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #dbeafe 0%, #ffffff 50%, #faf5ff 100%)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '1rem'
+      }}>
+        <div style={{ width: '100%', maxWidth: '32rem' }}>
+          {/* Header */}
+          <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '4rem',
+              height: '4rem',
+              background: 'linear-gradient(135deg, #2563eb, #1e40af)',
+              borderRadius: '1rem',
+              marginBottom: '1rem',
+              boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
+            }}>
+              <Home style={{ width: '2rem', height: '2rem', color: 'white' }} />
         </div>
-        <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-gray-900">
+            <h1 style={{ fontSize: '1.875rem', fontWeight: 'bold', color: '#111827', marginBottom: '0.5rem' }}>
           Select Your Property
-        </h2>
-        <p className="mt-2 text-center text-sm text-gray-600">
+            </h1>
+            <p style={{ color: '#6b7280', marginBottom: '0.25rem' }}>
           You have multiple rental properties. Please select which one you want to access.
         </p>
-        <p className="mt-1 text-center text-xs text-gray-500">
-          Phone: {phoneNumber}
+            <p style={{ fontSize: '0.875rem', color: '#9ca3af', margin: 0 }}>
+              Phone: {formatPhoneNumber(phoneNumber)}
         </p>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
-          <div className="space-y-4">
+          {/* Property Selection */}
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '1rem',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            padding: '2rem',
+            border: '1px solid #e5e7eb'
+          }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             {tenantProfiles.map((profile) => (
               <button
                 key={profile.tenant_user_id}
                 onClick={() => handleProfileSelect(profile.tenant_user_id)}
                 disabled={loading}
-                className={`w-full text-left p-4 border rounded-lg transition-all duration-200 ${
-                  selectedProfileId === profile.tenant_user_id
-                    ? 'border-indigo-500 bg-indigo-50 ring-2 ring-indigo-500'
-                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                } ${loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0">
-                        <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center">
-                          <svg className="h-4 w-4 text-indigo-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 21v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21m0 0h4.5V9.75a.75.75 0 00-.75-.75h-10.5a.75.75 0 00-.75.75v11.25m19.5 0A2.25 2.25 0 0019.5 21h-15A2.25 2.25 0 002.25 21V9.75m19.5 0v-9A2.25 2.25 0 0019.5 2.25h-15A2.25 2.25 0 002.25 2.25v9m19.5 0a2.25 2.25 0 00-2.25-2.25h-15A2.25 2.25 0 002.25 9.75v9z" />
-                          </svg>
-                        </div>
-                      </div>
-                      <div className="ml-3 flex-1">
-                        <h3 className="text-sm font-medium text-gray-900">
+                  style={{
+                    width: '100%',
+                    padding: '1.5rem',
+                    border: `2px solid ${selectedProfileId === profile.tenant_user_id ? '#2563eb' : '#e5e7eb'}`,
+                    borderRadius: '0.75rem',
+                    backgroundColor: selectedProfileId === profile.tenant_user_id ? '#eff6ff' : 'white',
+                    cursor: loading ? 'not-allowed' : 'pointer',
+                    textAlign: 'left',
+                    transition: 'all 0.2s',
+                    opacity: loading ? 0.6 : 1
+                  }}
+                  onMouseOver={(e) => {
+                    if (!loading && selectedProfileId !== profile.tenant_user_id) {
+                      e.currentTarget.style.borderColor = '#93c5fd';
+                      e.currentTarget.style.backgroundColor = '#f8fafc';
+                    }
+                  }}
+                  onMouseOut={(e) => {
+                    if (!loading && selectedProfileId !== profile.tenant_user_id) {
+                      e.currentTarget.style.borderColor = '#e5e7eb';
+                      e.currentTarget.style.backgroundColor = 'white';
+                    }
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    {/* Property Image */}
+                    <div style={{
+                      width: '4rem',
+                      height: '4rem',
+                      borderRadius: '0.75rem',
+                      backgroundColor: '#f3f4f6',
+                      backgroundImage: `url(https://images.pexels.com/photos/323780/pexels-photo-323780.jpeg?auto=compress&cs=tinysrgb&w=400)`,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                      flexShrink: 0,
+                      border: '1px solid #e5e7eb'
+                    }} />
+
+                    {/* Property Details */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <h3 style={{
+                        fontSize: '1.125rem',
+                        fontWeight: '600',
+                        color: '#111827',
+                        margin: '0 0 0.5rem 0'
+                      }}>
                           {profile.property_name || 'Property Name Not Available'}
                         </h3>
-                        <p className="text-xs text-gray-500 mt-1">
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '0.5rem' }}>
+                        <MapPin style={{ width: '1rem', height: '1rem', color: '#6b7280' }} />
+                        <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>
                           {profile.property_address || 'Address not available'}
-                        </p>
-                        <div className="flex items-center mt-2">
-                          <span className="text-xs text-gray-500">Landlord:</span>
-                          <span className="ml-1 text-xs font-medium text-gray-700">
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                          <Users style={{ width: '1rem', height: '1rem', color: '#6b7280' }} />
+                          <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>
                             {profile.landlord_name || 'N/A'}
                           </span>
                         </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <p style={{ fontSize: '1.125rem', fontWeight: '600', color: '#111827', margin: 0 }}>
+                            {formatCurrency(profile.monthly_rent)}
+                          </p>
+                          <p style={{ fontSize: '0.75rem', color: '#6b7280', margin: 0 }}>per month</p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="ml-4 text-right">
-                    <p className="text-sm font-medium text-gray-900">
-                      {formatCurrency(profile.monthly_rent)}
-                    </p>
-                    <p className="text-xs text-gray-500">per month</p>
+
+                    {/* Selection Indicator */}
+                    <div style={{ flexShrink: 0 }}>
+                      {selectedProfileId === profile.tenant_user_id ? (
+                        loading ? (
+                          <Loader2 style={{
+                            width: '1.5rem',
+                            height: '1.5rem',
+                            color: '#2563eb',
+                            animation: 'spin 1s linear infinite'
+                          }} />
+                        ) : (
+                          <CheckCircle style={{ width: '1.5rem', height: '1.5rem', color: '#2563eb' }} />
+                        )
+                      ) : (
+                        <ArrowRight style={{ width: '1.5rem', height: '1.5rem', color: '#9ca3af' }} />
+                      )}
                   </div>
                 </div>
 
+                  {/* Loading/Selected Status */}
                 {selectedProfileId === profile.tenant_user_id && (
-                  <div className="mt-3 flex items-center">
-                    <div className="flex-shrink-0">
+                    <div style={{
+                      marginTop: '1rem',
+                      paddingTop: '1rem',
+                      borderTop: '1px solid #e5e7eb',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem'
+                    }}>
                       {loading ? (
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-600"></div>
+                        <>
+                          <Loader2 style={{
+                            width: '1rem',
+                            height: '1rem',
+                            color: '#2563eb',
+                            animation: 'spin 1s linear infinite'
+                          }} />
+                          <span style={{ fontSize: '0.875rem', color: '#2563eb', fontWeight: '500' }}>
+                            Logging you in...
+                          </span>
+                        </>
                       ) : (
-                        <svg className="h-4 w-4 text-indigo-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                        </svg>
+                        <>
+                          <CheckCircle style={{ width: '1rem', height: '1rem', color: '#16a34a' }} />
+                          <span style={{ fontSize: '0.875rem', color: '#16a34a', fontWeight: '500' }}>
+                            Selected
+                          </span>
+                        </>
                       )}
-                    </div>
-                    <span className="ml-2 text-xs text-indigo-600 font-medium">
-                      {loading ? 'Logging in...' : 'Selected'}
-                    </span>
                   </div>
                 )}
               </button>
             ))}
           </div>
 
-          <div className="mt-6">
-            <div className="text-center">
-              <p className="text-xs text-gray-500">
-                Need help? Contact your landlord or property manager.
+            {/* Help Text */}
+            <div style={{
+              marginTop: '1.5rem',
+              paddingTop: '1.5rem',
+              borderTop: '1px solid #e5e7eb',
+              textAlign: 'center'
+            }}>
+              <p style={{ fontSize: '0.75rem', color: '#6b7280', margin: 0 }}>
+                Need help? Contact your landlord or property manager for assistance.
               </p>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 

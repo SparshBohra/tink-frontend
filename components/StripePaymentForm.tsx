@@ -1,5 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useStripe, useElements, PaymentElement, AddressElement } from '@stripe/react-stripe-js';
+import { 
+  CreditCard, 
+  MapPin, 
+  Loader2, 
+  CheckCircle,
+  AlertCircle 
+} from 'lucide-react';
 
 interface StripePaymentFormProps {
   onSuccess: () => void;
@@ -75,35 +82,58 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({ onSuccess, onClos
   // Show loading state while Stripe Elements are initializing
   if (!stripe || !elements || !isElementsReady) {
     return (
-      <div className="space-y-6">
-        <div className="bg-gray-50 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-900">Amount Due Today</p>
-              <p className="text-2xl font-bold text-indigo-600">{formatCurrency(rentAmount)}</p>
-            </div>
-            <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 003 3z" />
-            </svg>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        {/* Loading Payment Form */}
+        <div style={{ textAlign: 'center', padding: '2rem 0' }}>
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '3rem',
+            height: '3rem',
+            backgroundColor: '#f3f4f6',
+            borderRadius: '50%',
+            marginBottom: '1rem'
+          }}>
+            <Loader2 style={{ 
+              width: '1.5rem', 
+              height: '1.5rem', 
+              color: '#2563eb',
+              animation: 'spin 1s linear infinite'
+            }} />
           </div>
-        </div>
-
-        <div className="text-center py-8">
-          <svg className="animate-spin h-8 w-8 text-indigo-600 mx-auto" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-          </svg>
-          <p className="mt-2 text-gray-600">Loading secure payment form...</p>
-          <p className="text-xs text-gray-500 mt-1">
+          <p style={{ fontSize: '1rem', fontWeight: '600', color: '#111827', margin: '0 0 0.5rem 0' }}>
+            Loading Payment Form
+          </p>
+          <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>
             Stripe: {stripe ? '✓' : '✗'} | Elements: {elements ? '✓' : '✗'} | Ready: {isElementsReady ? '✓' : '✗'}
           </p>
         </div>
 
-        <div className="flex items-center justify-end space-x-4 pt-2">
+        {/* Action Buttons */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', paddingTop: '0.5rem' }}>
           <button
             type="button"
             onClick={onClose}
-            className="px-6 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200"
+            style={{
+              padding: '0.75rem 1.5rem',
+              fontSize: '0.875rem',
+              fontWeight: '500',
+              color: '#374151',
+              backgroundColor: '#f9fafb',
+              border: '1px solid #d1d5db',
+              borderRadius: '0.5rem',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.backgroundColor = '#f3f4f6';
+              e.currentTarget.style.borderColor = '#9ca3af';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.backgroundColor = '#f9fafb';
+              e.currentTarget.style.borderColor = '#d1d5db';
+            }}
           >
             Cancel
           </button>
@@ -113,26 +143,23 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({ onSuccess, onClos
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="bg-gray-50 rounded-lg p-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium text-gray-900">Amount Due Today</p>
-            <p className="text-2xl font-bold text-indigo-600">{formatCurrency(rentAmount)}</p>
-          </div>
-          <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 003 3z" />
-          </svg>
-        </div>
-      </div>
-
-      {/* Payment and Address Elements */}
-      <div className="space-y-4">
+    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      {/* Payment Information Section */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+            <CreditCard style={{ width: '1.25rem', height: '1.25rem', color: '#6b7280' }} />
+            <label style={{ fontSize: '0.875rem', fontWeight: '600', color: '#374151' }}>
             Payment Information
           </label>
-          <div className="border border-gray-300 rounded-md p-3 bg-white">
+          </div>
+          <div style={{
+            border: '2px solid #e5e7eb',
+            borderRadius: '0.75rem',
+            padding: '1rem',
+            backgroundColor: '#ffffff',
+            transition: 'border-color 0.2s'
+          }}>
             <PaymentElement 
               id="payment-element"
               options={{
@@ -143,10 +170,19 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({ onSuccess, onClos
         </div>
         
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+            <MapPin style={{ width: '1.25rem', height: '1.25rem', color: '#6b7280' }} />
+            <label style={{ fontSize: '0.875rem', fontWeight: '600', color: '#374151' }}>
             Billing Address
           </label>
-          <div className="border border-gray-300 rounded-md p-3 bg-white">
+          </div>
+          <div style={{
+            border: '2px solid #e5e7eb',
+            borderRadius: '0.75rem',
+            padding: '1rem',
+            backgroundColor: '#ffffff',
+            transition: 'border-color 0.2s'
+          }}>
             <AddressElement 
               id="address-element" 
               options={{mode: 'billing'}} 
@@ -155,50 +191,110 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({ onSuccess, onClos
         </div>
       </div>
 
+      {/* Error Message */}
       {errorMessage && (
-        <div id="payment-message" className="text-sm text-red-600 bg-red-50 p-3 rounded-md border border-red-200">
-          <div className="flex">
-            <svg className="h-5 w-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <div className="ml-3">
-              <p className="font-medium">Payment Error</p>
-              <p className="mt-1">{errorMessage}</p>
+        <div style={{
+          backgroundColor: '#fef2f2',
+          border: '1px solid #fca5a5',
+          borderRadius: '0.75rem',
+          padding: '1rem'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+            <AlertCircle style={{ width: '1.25rem', height: '1.25rem', color: '#ef4444', flexShrink: 0, marginTop: '0.125rem' }} />
+            <div>
+              <p style={{ fontWeight: '600', color: '#dc2626', margin: '0 0 0.25rem 0' }}>Payment Error</p>
+              <p style={{ fontSize: '0.875rem', color: '#dc2626', margin: 0 }}>{errorMessage}</p>
             </div>
           </div>
         </div>
       )}
 
       {/* Action Buttons */}
-      <div className="flex items-center justify-end space-x-4 pt-2">
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', paddingTop: '0.5rem' }}>
         <button
           type="button"
           onClick={onClose}
           disabled={isLoading}
-          className="px-6 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          style={{
+            padding: '0.75rem 1.5rem',
+            fontSize: '0.875rem',
+            fontWeight: '500',
+            color: '#374151',
+            backgroundColor: '#f9fafb',
+            border: '1px solid #d1d5db',
+            borderRadius: '0.5rem',
+            cursor: isLoading ? 'not-allowed' : 'pointer',
+            opacity: isLoading ? 0.5 : 1,
+            transition: 'all 0.2s'
+          }}
+          onMouseOver={(e) => {
+            if (!isLoading) {
+              e.currentTarget.style.backgroundColor = '#f3f4f6';
+              e.currentTarget.style.borderColor = '#9ca3af';
+            }
+          }}
+          onMouseOut={(e) => {
+            if (!isLoading) {
+              e.currentTarget.style.backgroundColor = '#f9fafb';
+              e.currentTarget.style.borderColor = '#d1d5db';
+            }
+          }}
         >
           Cancel
         </button>
         <button
           disabled={isLoading || !stripe || !elements}
           id="submit"
-          className="px-6 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          type="submit"
+          style={{
+            padding: '0.75rem 1.5rem',
+            fontSize: '0.875rem',
+            fontWeight: '600',
+            color: 'white',
+            background: isLoading ? '#9ca3af' : 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+            border: 'none',
+            borderRadius: '0.5rem',
+            cursor: (isLoading || !stripe || !elements) ? 'not-allowed' : 'pointer',
+            opacity: (isLoading || !stripe || !elements) ? 0.6 : 1,
+            transition: 'all 0.2s',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.5rem',
+            minWidth: '140px'
+          }}
+          onMouseOver={(e) => {
+            if (!isLoading && stripe && elements) {
+              e.currentTarget.style.background = 'linear-gradient(135deg, #1d4ed8, #1e40af)';
+            }
+          }}
+          onMouseOut={(e) => {
+            if (!isLoading && stripe && elements) {
+              e.currentTarget.style.background = 'linear-gradient(135deg, #2563eb, #1d4ed8)';
+            }
+          }}
         >
-          <span id="button-text">
             {isLoading ? (
-              <div className="flex items-center">
-                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
+            <>
+              <Loader2 style={{ width: '1rem', height: '1rem', animation: 'spin 1s linear infinite' }} />
                 Processing...
-              </div>
+            </>
             ) : (
-              `Pay ${formatCurrency(rentAmount)}`
+            <>
+              <CreditCard style={{ width: '1rem', height: '1rem' }} />
+              Pay {formatCurrency(rentAmount)}
+            </>
             )}
-          </span>
         </button>
       </div>
+
+      {/* Add CSS animations */}
+      <style jsx>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </form>
   );
 };
