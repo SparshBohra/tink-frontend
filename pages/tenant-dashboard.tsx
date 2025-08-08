@@ -5,7 +5,6 @@ import { apiClient } from '../lib/api';
 import { Lease } from '../lib/types';
 import PaymentModal from '../components/PaymentModal';
 import PaymentHistoryModal from '../components/PaymentHistoryModal';
-import ContactLandlordModal from '../components/ContactLandlordModal';
 
 interface TenantUser {
   id: number;
@@ -25,7 +24,6 @@ const TenantDashboard: React.FC = () => {
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isPaymentHistoryModalOpen, setIsPaymentHistoryModalOpen] = useState(false);
   const [uploadingLease, setUploadingLease] = useState<number | null>(null);
-  const [isContactLandlordModalOpen, setIsContactLandlordModalOpen] = useState(false);
 
   useEffect(() => {
     const accessToken = localStorage.getItem('tenant_access_token');
@@ -200,701 +198,142 @@ const TenantDashboard: React.FC = () => {
         <meta name="description" content="Manage your rental, payments, and communicate with your landlord" />
       </Head>
 
-      <div style={{
-        minHeight: '100vh',
-        backgroundColor: '#f8fafc',
-        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-      }}>
-        {/* Header */}
-        <header style={{
-          backgroundColor: 'white',
-          borderBottom: '1px solid #e2e8f0',
-          padding: '1rem 2rem'
-        }}>
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            maxWidth: '1400px',
-            margin: '0 auto'
-          }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '1rem'
-            }}>
-              <div style={{
-                width: '2.5rem',
-                height: '2.5rem',
-                backgroundColor: '#3b82f6',
-                borderRadius: '8px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'white',
-                fontWeight: 'bold',
-                fontSize: '1.25rem'
-              }}>
-                T
-              </div>
+      <div>
+        <header>
+          <div>
+            <div>
               <div>
-                <h1 style={{
-                  fontSize: '1.5rem',
-                  fontWeight: '700',
-                  color: '#1e293b',
-                  margin: 0
-                }}>Tink</h1>
-                <p style={{
-                  fontSize: '0.875rem',
-                  color: '#64748b',
-                  margin: 0
-                }}>Tenant Portal</p>
+                <h1>Tink Tenant Portal</h1>
+                <p>Property Management Dashboard</p>
               </div>
             </div>
-
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '1rem'
-            }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem'
-              }}>
-                <div style={{
-                  width: '2.5rem',
-                  height: '2.5rem',
-                  backgroundColor: '#3b82f6',
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'white',
-                  fontWeight: 'bold'
-                }}>
-                  {currentUser?.full_name?.charAt(0) || 'R'}
-                </div>
-                <div>
-                  <p style={{
-                    fontSize: '0.875rem',
-                    fontWeight: '600',
-                    color: '#1e293b',
-                    margin: 0
-                  }}>{currentUser?.full_name || 'Rohan Dave'}</p>
-                  <p style={{
-                    fontSize: '0.75rem',
-                    color: '#64748b',
-                    margin: 0
-                  }}>Tenant</p>
-                </div>
+            
+            <div>
+              <div>
+                <p>Welcome back,</p>
+                <p>{currentUser?.full_name || 'Tenant'}</p>
               </div>
-              <button
-                onClick={handleLogout}
-                style={{
-                  padding: '0.5rem 1rem',
-                  backgroundColor: '#f1f5f9',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '6px',
-                  fontSize: '0.875rem',
-                  color: '#475569',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.backgroundColor = '#e2e8f0';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.backgroundColor = '#f1f5f9';
-                }}
-              >
-                Logout
-              </button>
+              <div>{currentUser?.full_name?.charAt(0) || 'T'}</div>
+              <button onClick={handleLogout}>Logout</button>
             </div>
           </div>
         </header>
 
-        {/* Main Content */}
-        <main style={{
-          maxWidth: '1400px',
-          margin: '0 auto',
-          padding: '2rem',
-          display: 'grid',
-          gridTemplateColumns: '2fr 1fr',
-          gap: '2rem',
-          alignItems: 'start'
-        }}>
-          {/* Left Column */}
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '2rem'
-          }}>
-            {/* Welcome Section */}
-            <div style={{
-              backgroundColor: 'white',
-              borderRadius: '12px',
-              padding: '2rem',
-              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-              border: '1px solid #e2e8f0'
-            }}>
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'flex-start',
-                marginBottom: '1rem'
-              }}>
-                <div>
-                  <h1 style={{
-                    fontSize: '1.875rem',
-                    fontWeight: '700',
-                    color: '#1e293b',
-                    margin: '0 0 0.5rem 0'
-                  }}>
-                    Welcome back, <span style={{ color: '#3b82f6' }}>{currentUser?.full_name || 'Rohan Dave'}</span>
-                  </h1>
-                  <p style={{
-                    fontSize: '1rem',
-                    color: '#64748b',
-                    margin: 0
-                  }}>Manage your rental and stay connected with your property</p>
-                </div>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  fontSize: '0.875rem',
-                  color: '#64748b'
-                }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="12" cy="12" r="10"/>
-                    <polyline points="12,6 12,12 16,14"/>
-                  </svg>
-                  Last login: {new Date().toLocaleDateString('en-US', { 
-                    month: 'numeric', 
-                    day: 'numeric', 
-                    year: 'numeric' 
-                  })}
-                </div>
-              </div>
+        <main>
+          <div>
+            <h2>Dashboard Overview</h2>
+            <p>Manage your rental and stay connected with your property</p>
+          </div>
+          
+          <div>
+            <div>
+              <p>Last login</p>
+              <p>{new Date().toLocaleDateString()}</p>
             </div>
+          </div>
 
-            {/* Current Lease Card */}
-            <div style={{
-              backgroundColor: 'white',
-              borderRadius: '12px',
-              padding: '1.5rem',
-              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-              border: '1px solid #e2e8f0'
-            }}>
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: '1.5rem'
-              }}>
-                <h2 style={{
-                  fontSize: '1.25rem',
-                  fontWeight: '600',
-                  color: '#1e293b',
-                  margin: 0
-                }}>Current Lease</h2>
-                {primaryLease && (
-                  <span style={{
-                    padding: '0.25rem 0.75rem',
-                    borderRadius: '9999px',
-                    fontSize: '0.875rem',
-                    fontWeight: '600',
-                    backgroundColor: primaryLease.status === 'active' ? '#dcfce7' : '#dbeafe',
-                    color: primaryLease.status === 'active' ? '#166534' : '#1d4ed8'
-                  }}>
-                    {primaryLease.status === 'active' ? 'Active' : renderLeaseStatus(primaryLease.status)}
-                  </span>
+          <div>
+            <section>
+              <header>
+                <h2>Current Lease</h2>
+              </header>
+              <div>
+                {leaseLoading ? (
+                  <p>Loading lease information...</p>
+                ) : primaryLease ? (
+                  <>
+                    <dl>
+                      <div>
+                        <dt>Property</dt>
+                        <dd>{(primaryLease.property_ref as any)?.name || 'Property'}</dd>
+                      </div>
+                      <div>
+                        <dt>Lease Period</dt>
+                        <dd>
+                          {new Date(primaryLease.start_date).toLocaleDateString()} - {new Date(primaryLease.end_date).toLocaleDateString()}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Address</dt>
+                        <dd>{(primaryLease.property_ref as any)?.address || 'Property Address'}</dd>
+                      </div>
+                      <div>
+                        <dt>Status</dt>
+                        <dd>{renderLeaseStatus(primaryLease.status)}</dd>
+                      </div>
+                      {primaryLease.room && (
+                        <div>
+                          <dt>Unit/Room</dt>
+                          <dd>{(primaryLease.room as any)?.name || `Room ${primaryLease.room}`}</dd>
+                        </div>
+                      )}
+                    </dl>
+                    <div>
+                      {renderLeaseActions(primaryLease)}
+                    </div>
+                  </>
+                ) : (
+                  <p>No lease information available</p>
                 )}
               </div>
+            </section>
 
-              {leaseLoading ? (
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: '2rem',
-                  color: '#64748b'
-                }}>
-                  Loading lease information...
-                </div>
-              ) : primaryLease ? (
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
-                  gap: '1.5rem'
-                }}>
-                  <div>
-                    <div style={{ marginBottom: '1rem' }}>
-                      <dt style={{
-                        fontSize: '0.875rem',
-                        color: '#64748b',
-                        marginBottom: '0.25rem'
-                      }}>Property</dt>
-                      <dd style={{
-                        fontSize: '1rem',
-                        fontWeight: '600',
-                        color: '#1e293b',
-                        margin: 0
-                      }}>{(primaryLease.property_ref as any)?.name || 'Property Address'}</dd>
-                    </div>
-                    <div style={{ marginBottom: '1rem' }}>
-                      <dt style={{
-                        fontSize: '0.875rem',
-                        color: '#64748b',
-                        marginBottom: '0.25rem'
-                      }}>Unit/Room</dt>
-                      <dd style={{
-                        fontSize: '1rem',
-                        fontWeight: '600',
-                        color: '#1e293b',
-                        margin: 0
-                      }}>{primaryLease.room ? `Room ${(primaryLease.room as any)?.name || primaryLease.room}` : 'Room 129'}</dd>
-                    </div>
-                  </div>
-                  <div>
-                    <div style={{ marginBottom: '1rem' }}>
-                      <dt style={{
-                        fontSize: '0.875rem',
-                        color: '#64748b',
-                        marginBottom: '0.25rem'
-                      }}>Lease Period</dt>
-                      <dd style={{
-                        fontSize: '1rem',
-                        fontWeight: '600',
-                        color: '#1e293b',
-                        margin: 0
-                      }}>
-                        {new Date(primaryLease.start_date).toLocaleDateString('en-US', { 
-                          month: 'numeric', 
-                          day: 'numeric', 
-                          year: 'numeric' 
-                        })} - {new Date(primaryLease.end_date).toLocaleDateString('en-US', { 
-                          month: 'numeric', 
-                          day: 'numeric', 
-                          year: 'numeric' 
-                        })}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt style={{
-                        fontSize: '0.875rem',
-                        color: '#64748b',
-                        marginBottom: '0.25rem'
-                      }}>Status</dt>
-                      <dd style={{
-                        fontSize: '1rem',
-                        color: '#1e293b',
-                        margin: 0,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem'
-                      }}>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2">
-                          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                          <polyline points="22,4 12,14.01 9,11.01"/>
-                        </svg>
-                        Lease Active
-                      </dd>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <p style={{ color: '#64748b', textAlign: 'center', padding: '2rem' }}>
-                  No lease information available
-                </p>
-              )}
-
-              {primaryLease?.status === 'active' && (
-                <div style={{
-                  marginTop: '1.5rem',
-                  padding: '1rem',
-                  backgroundColor: '#f0fdf4',
-                  borderRadius: '8px',
-                  border: '1px solid #bbf7d0'
-                }}>
-                  <p style={{
-                    fontSize: '0.875rem',
-                    color: '#166534',
-                    margin: 0,
-                    fontWeight: '500'
-                  }}>Your lease is now active. Welcome to your new home!</p>
-                  <button
-                    onClick={() => primaryLease && handleDownloadLease(primaryLease.id)}
-                    style={{
-                      marginTop: '0.75rem',
-                      padding: '0.5rem 1rem',
-                      backgroundColor: '#3b82f6',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '6px',
-                      fontSize: '0.875rem',
-                      fontWeight: '500',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      transition: 'all 0.2s ease'
-                    }}
-                    onMouseOver={(e) => {
-                      e.currentTarget.style.backgroundColor = '#2563eb';
-                    }}
-                    onMouseOut={(e) => {
-                      e.currentTarget.style.backgroundColor = '#3b82f6';
-                    }}
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                      <polyline points="7,10 12,15 17,10"/>
-                      <line x1="12" y1="15" x2="12" y2="3"/>
-                    </svg>
-                    Download Lease Copy
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Quick Actions */}
-            <div style={{
-              backgroundColor: 'white',
-              borderRadius: '12px',
-              padding: '1.5rem',
-              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-              border: '1px solid #e2e8f0'
-            }}>
-              <h2 style={{
-                fontSize: '1.25rem',
-                fontWeight: '600',
-                color: '#1e293b',
-                margin: '0 0 1.5rem 0'
-              }}>Quick Actions</h2>
-              
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: '1rem'
-              }}>
-                <button
-                  onClick={() => setIsPaymentHistoryModalOpen(true)}
-                  style={{
-                    padding: '1.5rem',
-                    backgroundColor: '#f8fafc',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '8px',
-                    textAlign: 'left',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '1rem'
-                  }}
-                  onMouseOver={(e) => {
-                    e.currentTarget.style.backgroundColor = '#f1f5f9';
-                    e.currentTarget.style.transform = 'translateY(-1px)';
-                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.1)';
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.backgroundColor = '#f8fafc';
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = 'none';
-                  }}
-                >
-                  <div style={{
-                    width: '2.5rem',
-                    height: '2.5rem',
-                    backgroundColor: '#10b981',
-                    borderRadius: '8px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0
-                  }}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
-                      <circle cx="12" cy="12" r="10"/>
-                      <polyline points="12,6 12,12 16,14"/>
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 style={{
-                      fontSize: '1rem',
-                      fontWeight: '600',
-                      color: '#1e293b',
-                      margin: '0 0 0.25rem 0'
-                    }}>Payment History</h3>
-                    <p style={{
-                      fontSize: '0.875rem',
-                      color: '#64748b',
-                      margin: 0
-                    }}>View all your past rent payments</p>
-                  </div>
+            <section>
+              <header>
+                <h2>Quick Actions</h2>
+              </header>
+              <div>
+                <button onClick={() => setIsPaymentHistoryModalOpen(true)}>
+                  <h3>Payment History</h3>
+                  <p>View all your past rent payments</p>
                 </button>
-
-                <button
-                  onClick={() => setIsContactLandlordModalOpen(true)}
-                  style={{
-                    padding: '1.5rem',
-                    backgroundColor: '#f8fafc',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '8px',
-                    textAlign: 'left',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '1rem'
-                  }}
-                  onMouseOver={(e) => {
-                    e.currentTarget.style.backgroundColor = '#f1f5f9';
-                    e.currentTarget.style.transform = 'translateY(-1px)';
-                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.1)';
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.backgroundColor = '#f8fafc';
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = 'none';
-                  }}
-                >
-                  <div style={{
-                    width: '2.5rem',
-                    height: '2.5rem',
-                    backgroundColor: '#3b82f6',
-                    borderRadius: '8px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0
-                  }}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
-                      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-                      <polyline points="22,6 12,13 2,6"/>
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 style={{
-                      fontSize: '1rem',
-                      fontWeight: '600',
-                      color: '#1e293b',
-                      margin: '0 0 0.25rem 0'
-                    }}>Contact Landlord</h3>
-                    <p style={{
-                      fontSize: '0.875rem',
-                      color: '#64748b',
-                      margin: 0
-                    }}>Send a message to your property manager</p>
-                  </div>
+                <button onClick={() => alert('Contact landlord feature will be available soon!')}>
+                  <h3>Contact Landlord</h3>
+                  <p>Send a message to your property manager</p>
                 </button>
               </div>
-            </div>
+            </section>
           </div>
 
-          {/* Right Column */}
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '1.5rem'
-          }}>
-            {/* Profile Information */}
-            <div style={{
-              backgroundColor: 'white',
-              borderRadius: '12px',
-              padding: '1.5rem',
-              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-              border: '1px solid #e2e8f0'
-            }}>
-              <h2 style={{
-                fontSize: '1.25rem',
-                fontWeight: '600',
-                color: '#1e293b',
-                margin: '0 0 1.5rem 0'
-              }}>Profile Information</h2>
-              
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '1rem',
-                marginBottom: '1.5rem'
-              }}>
-                <div style={{
-                  width: '3rem',
-                  height: '3rem',
-                  backgroundColor: '#3b82f6',
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'white',
-                  fontWeight: 'bold',
-                  fontSize: '1.25rem'
-                }}>
-                  {currentUser?.full_name?.charAt(0) || 'R'}
+          <aside>
+            <section>
+              <header>
+                <h2>Profile Information</h2>
+              </header>
+              <div>
+                <div>
+                  <div>{currentUser?.full_name?.charAt(0) || 'T'}</div>
+                  <div>
+                    <p>{currentUser?.full_name || 'Not provided'}</p>
+                    <p>Tenant</p>
+                  </div>
                 </div>
                 <div>
-                  <h3 style={{
-                    fontSize: '1.125rem',
-                    fontWeight: '600',
-                    color: '#1e293b',
-                    margin: '0 0 0.25rem 0'
-                  }}>{currentUser?.full_name || 'Rohan Dave'}</h3>
-                  <p style={{
-                    fontSize: '0.875rem',
-                    color: '#64748b',
-                    margin: 0
-                  }}>Tenant</p>
+                  <p>{currentUser?.email}</p>
+                  <p>{currentUser?.phone}</p>
+                  <p>Verified Account</p>
                 </div>
               </div>
+            </section>
 
-              <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.75rem'
-              }}>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem'
-                }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2">
-                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-                    <polyline points="22,6 12,13 2,6"/>
-                  </svg>
-                  <span style={{
-                    fontSize: '0.875rem',
-                    color: '#1e293b'
-                  }}>{currentUser?.email || 'rohannn@gseg.com'}</span>
+            <section>
+              <header>
+                <h2>Rent Payment</h2>
+              </header>
+              <div>
+                <div>
+                  <dt>Next Payment Due</dt>
+                  <dd>${primaryLease?.monthly_rent || '0.00'}</dd>
+                  <p>Due on the 1st of each month</p>
                 </div>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem'
-                }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2">
-                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
-                  </svg>
-                  <span style={{
-                    fontSize: '0.875rem',
-                    color: '#1e293b'
-                  }}>{currentUser?.phone || '+18572000666'}</span>
-                </div>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem'
-                }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2">
-                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                    <polyline points="22,4 12,14.01 9,11.01"/>
-                  </svg>
-                  <span style={{
-                    fontSize: '0.875rem',
-                    color: '#10b981',
-                    fontWeight: '500'
-                  }}>Verified Account</span>
-                </div>
+                {primaryLease?.status === 'active' ? (
+                  <button onClick={() => setIsPaymentModalOpen(true)}>Pay Rent Now</button>
+                ) : (
+                  <p>Payments will be available once your lease is activated</p>
+                )}
               </div>
-            </div>
-
-            {/* Rent Payment */}
-            <div style={{
-              backgroundColor: 'white',
-              borderRadius: '12px',
-              padding: '1.5rem',
-              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-              border: '1px solid #e2e8f0'
-            }}>
-              <h2 style={{
-                fontSize: '1.25rem',
-                fontWeight: '600',
-                color: '#1e293b',
-                margin: '0 0 1.5rem 0'
-              }}>Rent Payment</h2>
-              
-              <div style={{ marginBottom: '1.5rem' }}>
-                <p style={{
-                  fontSize: '0.875rem',
-                  color: '#64748b',
-                  margin: '0 0 0.5rem 0'
-                }}>Next Payment Due</p>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'baseline',
-                  gap: '0.25rem',
-                  marginBottom: '0.5rem'
-                }}>
-                  <span style={{
-                    fontSize: '2rem',
-                    fontWeight: '700',
-                    color: '#1e293b'
-                  }}>${primaryLease?.monthly_rent || '1,350'}</span>
-                  <span style={{
-                    fontSize: '1rem',
-                    color: '#64748b'
-                  }}>.00</span>
-                </div>
-                <p style={{
-                  fontSize: '0.875rem',
-                  color: '#64748b',
-                  margin: 0
-                }}>Due on the 1st of each month</p>
-              </div>
-
-              {primaryLease?.status === 'active' ? (
-                <button
-                  onClick={() => setIsPaymentModalOpen(true)}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem 1.5rem',
-                    backgroundColor: '#10b981',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    fontSize: '1rem',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.5rem'
-                  }}
-                  onMouseOver={(e) => {
-                    e.currentTarget.style.backgroundColor = '#059669';
-                    e.currentTarget.style.transform = 'translateY(-1px)';
-                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.4)';
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.backgroundColor = '#10b981';
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = 'none';
-                  }}
-                >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
-                    <line x1="1" y1="10" x2="23" y2="10"/>
-                  </svg>
-                  Pay Rent Now
-                </button>
-              ) : (
-                <div style={{
-                  padding: '1rem',
-                  backgroundColor: '#f8fafc',
-                  borderRadius: '8px',
-                  border: '1px solid #e2e8f0',
-                  textAlign: 'center'
-                }}>
-                  <p style={{
-                    fontSize: '0.875rem',
-                    color: '#64748b',
-                    margin: 0
-                  }}>Payments will be available once your lease is activated</p>
-                </div>
-              )}
-            </div>
-          </div>
+            </section>
+          </aside>
         </main>
 
         <PaymentModal
@@ -907,11 +346,6 @@ const TenantDashboard: React.FC = () => {
         <PaymentHistoryModal
           isOpen={isPaymentHistoryModalOpen}
           onClose={() => setIsPaymentHistoryModalOpen(false)}
-        />
-
-        <ContactLandlordModal
-          isOpen={isContactLandlordModalOpen}
-          onClose={() => setIsContactLandlordModalOpen(false)}
         />
       </div>
     </>

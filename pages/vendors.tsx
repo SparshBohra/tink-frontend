@@ -182,7 +182,7 @@ function Vendors() {
         onMouseOut={(e) => {
           e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
           e.currentTarget.style.transform = 'translateY(0)';
-        }}>make the delete icon iinside deelete button bigger. 
+        }}>
           <div style={{
             padding: '1.5rem',
             display: 'flex',

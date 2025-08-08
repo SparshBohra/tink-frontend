@@ -18,7 +18,7 @@ export default function LeaseSigningActions({ lease, onLeaseUpdated }: LeaseSign
       
       await apiClient.sendLeaseToTenant(lease.id);
       
-      alert('✅ Lease sent to tenant! They will receive an SMS with instructions.');
+      alert('Lease sent to tenant! They will receive an SMS with instructions.');
       onLeaseUpdated();
     } catch (err: any) {
       setError(err.message || 'Failed to send lease to tenant');
@@ -40,7 +40,7 @@ export default function LeaseSigningActions({ lease, onLeaseUpdated }: LeaseSign
       
       await apiClient.activateLease(lease.id);
       
-      alert('🎉 Lease activated successfully! Tenant has been notified.');
+      alert('Lease activated successfully! Tenant has been notified.');
       onLeaseUpdated();
     } catch (err: any) {
       setError(err.message || 'Failed to activate lease');
@@ -80,15 +80,15 @@ export default function LeaseSigningActions({ lease, onLeaseUpdated }: LeaseSign
   const getStatusDisplay = (status: string) => {
     switch (status) {
       case 'draft':
-        return { text: 'Draft', color: 'gray', icon: '📝' };
+        return { text: 'Draft', color: 'gray' };
       case 'sent_to_tenant':
-        return { text: 'Sent to Tenant', color: 'blue', icon: '📧' };
+        return { text: 'Sent to Tenant', color: 'blue' };
       case 'signed':
-        return { text: 'Signed by Tenant', color: 'yellow', icon: '✍️' };
+        return { text: 'Signed by Tenant', color: 'yellow' };
       case 'active':
-        return { text: 'Active', color: 'green', icon: '✅' };
+        return { text: 'Active', color: 'green' };
       default:
-        return { text: status, color: 'gray', icon: '❓' };
+        return { text: status, color: 'gray' };
     }
   };
 
@@ -98,7 +98,7 @@ export default function LeaseSigningActions({ lease, onLeaseUpdated }: LeaseSign
     <div className="lease-signing-actions">
       <div className="status-section">
         <div className={`status-badge ${statusDisplay.color}`}>
-          {statusDisplay.icon} {statusDisplay.text}
+          {statusDisplay.text}
         </div>
         
         {lease.sent_to_tenant_at && (
@@ -134,7 +134,7 @@ export default function LeaseSigningActions({ lease, onLeaseUpdated }: LeaseSign
               disabled={loading === 'sending'}
               className="btn btn-primary"
             >
-              {loading === 'sending' ? 'Sending...' : '📧 Send to Tenant'}
+              {loading === 'sending' ? 'Sending...' : 'Send to Tenant'}
             </button>
             
             {lease.draft_lease_s3_url && (
@@ -143,7 +143,7 @@ export default function LeaseSigningActions({ lease, onLeaseUpdated }: LeaseSign
                 disabled={loading === 'downloading-draft'}
                 className="btn btn-secondary"
               >
-                {loading === 'downloading-draft' ? 'Downloading...' : '📄 Preview Draft'}
+                {loading === 'downloading-draft' ? 'Downloading...' : 'Preview Draft'}
               </button>
             )}
           </>
@@ -153,7 +153,7 @@ export default function LeaseSigningActions({ lease, onLeaseUpdated }: LeaseSign
         {lease.status === 'sent_to_tenant' && (
           <>
             <div className="info-box">
-              <p>📧 Lease has been sent to tenant for signing</p>
+              <p>Lease has been sent to tenant for signing</p>
               <p>They will receive an SMS with download and upload instructions</p>
             </div>
             
@@ -163,7 +163,7 @@ export default function LeaseSigningActions({ lease, onLeaseUpdated }: LeaseSign
                 disabled={loading === 'downloading-draft'}
                 className="btn btn-secondary"
               >
-                {loading === 'downloading-draft' ? 'Downloading...' : '📄 View Sent Lease'}
+                {loading === 'downloading-draft' ? 'Downloading...' : 'View Sent Lease'}
               </button>
             )}
           </>
@@ -173,9 +173,9 @@ export default function LeaseSigningActions({ lease, onLeaseUpdated }: LeaseSign
         {lease.status === 'signed' && (
           <>
             <div className="info-box success">
-              <p>✍️ Lease has been signed by tenant!</p>
+              <p>Lease has been signed by tenant!</p>
               {lease.signed_at && (
-                <p>📅 Signed on {new Date(lease.signed_at).toLocaleDateString()} at {new Date(lease.signed_at).toLocaleTimeString()}</p>
+                <p>Signed on {new Date(lease.signed_at).toLocaleDateString()} at {new Date(lease.signed_at).toLocaleTimeString()}</p>
               )}
               <p>Review the signed lease and activate it to make it official</p>
             </div>
@@ -187,7 +187,7 @@ export default function LeaseSigningActions({ lease, onLeaseUpdated }: LeaseSign
                   disabled={loading === 'downloading-draft'}
                   className="btn btn-secondary"
                 >
-                  {loading === 'downloading-draft' ? 'Downloading...' : '📄 Original Draft'}
+                  {loading === 'downloading-draft' ? 'Downloading...' : 'Original Draft'}
                 </button>
               )}
               
@@ -197,7 +197,7 @@ export default function LeaseSigningActions({ lease, onLeaseUpdated }: LeaseSign
                   disabled={loading === 'downloading-signed'}
                   className="btn btn-primary"
                 >
-                  {loading === 'downloading-signed' ? 'Downloading...' : '📋 Signed Lease'}
+                  {loading === 'downloading-signed' ? 'Downloading...' : 'Signed Lease'}
                 </button>
               )}
               
@@ -206,7 +206,7 @@ export default function LeaseSigningActions({ lease, onLeaseUpdated }: LeaseSign
                 disabled={loading === 'activating'}
                 className="btn btn-success"
               >
-                {loading === 'activating' ? 'Activating...' : '✅ Activate Lease'}
+                {loading === 'activating' ? 'Activating...' : 'Activate Lease'}
               </button>
             </div>
           </>
@@ -216,7 +216,7 @@ export default function LeaseSigningActions({ lease, onLeaseUpdated }: LeaseSign
         {lease.status === 'active' && (
           <>
             <div className="info-box success">
-              <p>🎉 Lease is now active!</p>
+              <p>Lease is now active!</p>
               <p>Tenant has been notified and can now access their portal</p>
             </div>
             
@@ -227,7 +227,7 @@ export default function LeaseSigningActions({ lease, onLeaseUpdated }: LeaseSign
                   disabled={loading === 'downloading-draft'}
                   className="btn btn-secondary"
                 >
-                  {loading === 'downloading-draft' ? 'Downloading...' : '📄 Original Draft'}
+                  {loading === 'downloading-draft' ? 'Downloading...' : 'Original Draft'}
                 </button>
               )}
               
@@ -237,7 +237,7 @@ export default function LeaseSigningActions({ lease, onLeaseUpdated }: LeaseSign
                   disabled={loading === 'downloading-signed'}
                   className="btn btn-primary"
                 >
-                  {loading === 'downloading-signed' ? 'Downloading...' : '📋 Signed Lease'}
+                  {loading === 'downloading-signed' ? 'Downloading...' : 'Signed Lease'}
                 </button>
               )}
             </div>

@@ -586,7 +586,7 @@ function Leases() {
               borderRadius: '12px',
               border: '1px solid #e5e7eb',
               boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-              overflow: 'hidden',
+              overflow: 'visible',
               transition: 'all 0.2s ease'
             }}
             onMouseOver={(e) => {
@@ -1108,7 +1108,7 @@ function Leases() {
               borderRadius: '12px',
               border: '1px solid #e5e7eb',
               boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-              height: 'fit-content',
+              overflow: 'visible',
               transition: 'all 0.2s ease'
             }}
             onMouseOver={(e) => {
@@ -1144,13 +1144,6 @@ function Leases() {
                 gap: '1rem'
               }}>
                 {[
-                  {
-                    title: 'Create New Lease',
-                    subtitle: 'Draft a new lease agreement',
-                    icon: <FileText style={{ width: '1.25rem', height: '1.25rem', color: '#2563eb' }} />,
-                    bgColor: '#eff6ff',
-                    onClick: () => router.push('/leases/new')
-                  },
                   {
                     title: 'Export All Data',
                     subtitle: 'Download comprehensive report',
@@ -1236,7 +1229,7 @@ function Leases() {
             borderRadius: '12px',
             border: '1px solid #e5e7eb',
             boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-            overflow: 'hidden',
+            overflow: 'visible',
             marginTop: '2rem',
             transition: 'all 0.2s ease'
           }}
@@ -1888,35 +1881,59 @@ function Leases() {
         }
 
         .lease-details {
-          font-size: 13px;
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
         }
 
-        .lease-term, .lease-rent, .lease-deposit {
-          margin-bottom: 4px;
-          color: #1e293b;
+        /* Dropdown Menu Styles */
+        .dropdown-menu {
+          position: absolute;
+          top: 100%;
+          right: 0;
+          background: white;
+          border: 1px solid #e5e7eb;
+          border-radius: 8px;
+          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+          z-index: 1000;
+          min-width: 160px;
+          overflow: visible;
         }
 
-        .lease-rent, .lease-deposit {
-          font-size: 12px;
-          color: #64748b;
-        }
-
-        .expiry-date {
-          color: #1e293b;
-          margin-bottom: 4px;
-        }
-
-        .expiry-days {
-          font-size: 12px;
-          color: #64748b;
-        }
-
-        .date-highlight {
-          font-weight: 600;
+        .dropdown-menu button {
+          width: 100%;
+          padding: 8px 12px;
+          border: none;
+          background: none;
+          text-align: left;
+          font-size: 14px;
           color: #374151;
+          cursor: pointer;
+          transition: background-color 0.2s ease;
+        }
+
+        .dropdown-menu button:hover {
           background-color: #f3f4f6;
-          padding: 2px 6px;
-          border-radius: 4px;
+        }
+
+        .dropdown-menu button:first-child {
+          border-radius: 8px 8px 0 0;
+        }
+
+        .dropdown-menu button:last-child {
+          border-radius: 0 0 8px 8px;
+        }
+
+        /* Table container positioning for dropdowns */
+        .table-container {
+          position: relative;
+          overflow: visible;
+        }
+
+        /* Action button container */
+        .action-buttons {
+          position: relative;
+          display: inline-block;
         }
 
         .status-badge {
@@ -2367,6 +2384,48 @@ function Leases() {
           display: flex;
           flex-direction: column;
           gap: 4px;
+        }
+
+        /* Dropdown Menu Styles */
+        .dropdown-menu {
+          position: absolute;
+          top: 100%;
+          right: 0;
+          background: white;
+          border: 1px solid #e5e7eb;
+          border-radius: 8px;
+          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+          z-index: 1000;
+          min-width: 160px;
+          overflow: visible;
+        }
+
+        .dropdown-menu button {
+          width: 100%;
+          padding: 8px 12px;
+          border: none;
+          background: none;
+          text-align: left;
+          font-size: 14px;
+          color: #374151;
+          cursor: pointer;
+          transition: background-color 0.2s ease;
+        }
+
+        .dropdown-menu button:hover {
+          background-color: #f3f4f6;
+        }
+
+        /* Table container positioning for dropdowns */
+        .table-container {
+          position: relative;
+          overflow: visible;
+        }
+
+        /* Action button container */
+        .action-buttons {
+          position: relative;
+          display: inline-block;
         }
       `}</style>
     </DashboardLayout>

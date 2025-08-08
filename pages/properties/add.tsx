@@ -470,7 +470,7 @@ export default function AddProperty() {
                   flexShrink: 0
                 }}>
                   <Building style={{ width: '1.5rem', height: '1.5rem', color: 'white' }} />
-                </div>
+              </div>
                 <div>
                   <h1 style={{
                     fontSize: '1.875rem',
@@ -590,15 +590,15 @@ export default function AddProperty() {
                 }}>
                   Property Name <span style={{ color: '#dc2626' }}>*</span>
                 </label>
-                <input
-                  type="text"
-                  id="name"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  placeholder="e.g., Main Street Apartments"
-                  maxLength={200}
-                  required
+                  <input
+                    type="text"
+                    id="name"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleChange}
+                    placeholder="e.g., Main Street Apartments"
+                    maxLength={200}
+                    required
                   style={{
                     width: '100%',
                     padding: '0.75rem',
@@ -622,9 +622,9 @@ export default function AddProperty() {
                   color: '#6b7280',
                   marginTop: '0.25rem'
                 }}>Maximum 200 characters</div>
-              </div>
+                  </div>
 
-              {/* Property Type */}
+                {/* Property Type */}
               <div style={{ marginBottom: '1.5rem' }}>
                 <label style={{
                   display: 'block',
@@ -635,12 +635,12 @@ export default function AddProperty() {
                 }}>
                   Property Type <span style={{ color: '#dc2626' }}>*</span>
                 </label>
-                <select
-                  id="property_type"
-                  name="property_type"
-                  value={formData.property_type}
-                  onChange={handleChange}
-                  required
+                  <select
+                    id="property_type"
+                    name="property_type"
+                    value={formData.property_type}
+                    onChange={handleChange}
+                    required
                   style={{
                     width: '100%',
                     padding: '0.75rem',
@@ -659,23 +659,23 @@ export default function AddProperty() {
                     e.target.style.borderColor = '#d1d5db';
                     e.target.style.boxShadow = 'none';
                   }}
-                >
-                  {PROPERTY_TYPES.map(type => (
-                    <option key={type.value} value={type.value}>
-                      {type.label}
-                    </option>
-                  ))}
-                </select>
+                  >
+                    {PROPERTY_TYPES.map(type => (
+                      <option key={type.value} value={type.value}>
+                        {type.label}
+                      </option>
+                    ))}
+                  </select>
                 <div style={{
                   fontSize: '0.75rem',
                   color: '#6b7280',
                   marginTop: '0.25rem'
                 }}>
-                  {PROPERTY_TYPES.find(t => t.value === formData.property_type)?.description}
-                </div>
-              </div>
+                    {PROPERTY_TYPES.find(t => t.value === formData.property_type)?.description}
+                  </div>
+                  </div>
 
-              {/* Rent Structure */}
+                {/* Rent Structure */}
               <div style={{ marginBottom: '1.5rem' }}>
                 <label style={{
                   display: 'block',
@@ -686,12 +686,12 @@ export default function AddProperty() {
                 }}>
                   Rent Structure <span style={{ color: '#dc2626' }}>*</span>
                 </label>
-                <select
-                  id="rent_type"
-                  name="rent_type"
-                  value={formData.rent_type}
-                  onChange={handleChange}
-                  required
+                  <select
+                    id="rent_type"
+                    name="rent_type"
+                    value={formData.rent_type}
+                    onChange={handleChange}
+                    required
                   style={{
                     width: '100%',
                     padding: '0.75rem',
@@ -710,25 +710,25 @@ export default function AddProperty() {
                     e.target.style.borderColor = '#d1d5db';
                     e.target.style.boxShadow = 'none';
                   }}
-                >
-                  {RENT_TYPES.map(type => (
-                    <option key={type.value} value={type.value}>
-                      {type.label}
-                    </option>
-                  ))}
-                </select>
+                  >
+                    {RENT_TYPES.map(type => (
+                      <option key={type.value} value={type.value}>
+                        {type.label}
+                      </option>
+                      ))}
+                    </select>
                 <div style={{
                   fontSize: '0.75rem',
                   color: '#6b7280',
                   marginTop: '0.25rem'
                 }}>
-                  {RENT_TYPES.find(t => t.value === formData.rent_type)?.description}
+                    {RENT_TYPES.find(t => t.value === formData.rent_type)?.description}
+                  </div>
                 </div>
-              </div>
 
-              {/* Conditional Fields based on Rent Type */}
-              {formData.rent_type === 'per_property' && (
-                <>
+                {/* Conditional Fields based on Rent Type */}
+                {formData.rent_type === 'per_property' && (
+                  <>
                   <div style={{ marginBottom: '1.5rem' }}>
                     <label style={{
                       display: 'block',
@@ -739,15 +739,15 @@ export default function AddProperty() {
                     }}>
                       Total Rooms <span style={{ color: '#dc2626' }}>*</span>
                     </label>
-                    <input
-                      type="number"
-                      id="total_rooms"
-                      name="total_rooms"
-                      value={formData.total_rooms}
-                      onChange={(e) => setFormData(prev => ({ ...prev, total_rooms: parseInt(e.target.value) || 1 }))}
-                      min="1"
-                      max="50"
-                      required
+                      <input
+                        type="number"
+                        id="total_rooms"
+                        name="total_rooms"
+                        value={formData.total_rooms}
+                        onChange={(e) => setFormData(prev => ({ ...prev, total_rooms: parseInt(e.target.value) || 1 }))}
+                        min="1"
+                        max="50"
+                        required
                       style={{
                         width: '100%',
                         padding: '0.75rem',
@@ -793,16 +793,16 @@ export default function AddProperty() {
                         fontSize: '0.875rem',
                         fontWeight: '500'
                       }}>$</span>
-                      <input
-                        type="number"
-                        id="monthly_rent"
-                        name="monthly_rent"
-                        value={formData.monthly_rent}
-                        onChange={handleChange}
-                        placeholder="3500.00"
-                        min="0"
-                        step="0.01"
-                        required
+                        <input
+                          type="number"
+                          id="monthly_rent"
+                          name="monthly_rent"
+                          value={formData.monthly_rent}
+                          onChange={handleChange}
+                          placeholder="3500.00"
+                          min="0"
+                          step="0.01"
+                          required
                         style={{
                           width: '100%',
                           padding: '0.75rem 0.75rem 0.75rem 2rem',
@@ -820,14 +820,14 @@ export default function AddProperty() {
                           e.target.style.borderColor = '#d1d5db';
                           e.target.style.boxShadow = 'none';
                         }}
-                      />
-                    </div>
+                        />
+                  </div>
                     <div style={{
                       fontSize: '0.75rem',
                       color: '#6b7280',
                       marginTop: '0.25rem'
                     }}>Total monthly rent for the entire property</div>
-                  </div>
+                    </div>
 
                   <div style={{ marginBottom: '1.5rem' }}>
                     <label style={{
@@ -849,15 +849,15 @@ export default function AddProperty() {
                         fontSize: '0.875rem',
                         fontWeight: '500'
                       }}>$</span>
-                      <input 
-                        type="number"
-                        id="security_deposit"
-                        name="security_deposit"
-                        value={formData.security_deposit}
-                        onChange={handleChange}
-                        placeholder="1750.00"
-                        min="0"
-                        step="0.01"
+                          <input 
+                          type="number"
+                          id="security_deposit"
+                          name="security_deposit"
+                          value={formData.security_deposit}
+                            onChange={handleChange}
+                          placeholder="1750.00"
+                          min="0"
+                          step="0.01"
                         style={{
                           width: '100%',
                           padding: '0.75rem 0.75rem 0.75rem 2rem',
@@ -875,18 +875,18 @@ export default function AddProperty() {
                           e.target.style.borderColor = '#d1d5db';
                           e.target.style.boxShadow = 'none';
                         }}
-                      />
-                    </div>
+                        />
+                            </div>
                     <div style={{
                       fontSize: '0.75rem',
                       color: '#6b7280',
                       marginTop: '0.25rem'
                     }}>Optional security deposit amount</div>
-                  </div>
-                </>
-              )}
+                          </div>
+                  </>
+                )}
 
-              {/* Address Information */}
+                {/* Address Information */}
               <div style={{
                 borderTop: '1px solid #e5e7eb',
                 paddingTop: '1.5rem',
@@ -956,7 +956,7 @@ export default function AddProperty() {
                       e.target.style.boxShadow = 'none';
                     }}
                   />
-                </div>
+                          </div>
 
                 <div style={{
                   display: 'grid',
@@ -1000,7 +1000,7 @@ export default function AddProperty() {
                         e.target.style.boxShadow = 'none';
                       }}
                     />
-                  </div>
+                      </div>
 
                   <div>
                     <label style={{
@@ -1044,7 +1044,7 @@ export default function AddProperty() {
                         </option>
                       ))}
                     </select>
-                  </div>
+                    </div>
 
                   <div>
                     <label style={{
@@ -1095,13 +1095,13 @@ export default function AddProperty() {
                   }}>
                     Country <span style={{ color: '#dc2626' }}>*</span>
                   </label>
-                  <input 
+                        <input 
                     type="text"
                     id="country"
                     name="country"
                     value={formData.country}
-                    onChange={handleChange} 
-                    required
+                          onChange={handleChange} 
+                          required 
                     style={{
                       width: '100%',
                       padding: '0.75rem',
@@ -1119,8 +1119,8 @@ export default function AddProperty() {
                       e.target.style.borderColor = '#d1d5db';
                       e.target.style.boxShadow = 'none';
                     }}
-                  />
-                </div>
+                        />
+                      </div>
 
                 <div style={{ marginBottom: '1.5rem' }}>
                   <label style={{
@@ -1170,11 +1170,11 @@ export default function AddProperty() {
                   }}>
                     {TIMEZONE_OPTIONS.find(t => t.value === formData.timezone)?.description}
                   </div>
+                    </div>
                 </div>
-              </div>
 
-              {/* Room Configuration for per_room rent type */}
-              {formData.rent_type === 'per_room' && (
+                {/* Room Configuration for per_room rent type */}
+                  {formData.rent_type === 'per_room' && (
                 <div style={{
                   borderTop: '1px solid #e5e7eb',
                   paddingTop: '1.5rem',
@@ -1193,11 +1193,11 @@ export default function AddProperty() {
                       color: '#6b7280',
                       margin: 0
                     }}>Configure the types and quantities of rooms for this property</p>
-                  </div>
+                        </div>
 
-                  {roomTypeConfigs.length > 0 && (
+                    {roomTypeConfigs.length > 0 && (
                     <div style={{ marginBottom: '1.5rem' }}>
-                      {roomTypeConfigs.map((config) => (
+                        {roomTypeConfigs.map((config) => (
                         <div key={config.id} style={{
                           backgroundColor: '#f9fafb',
                           border: '1px solid #e5e7eb',
@@ -1217,12 +1217,12 @@ export default function AddProperty() {
                               color: '#111827',
                               margin: 0
                             }}>
-                              {ROOM_TYPES.find(rt => rt.value === config.roomType)?.label || 'Room Type'}
-                            </h4>
-                            <button
-                              type="button"
-                              onClick={() => removeRoomTypeConfig(config.id)}
-                              title="Remove room configuration"
+                                  {ROOM_TYPES.find(rt => rt.value === config.roomType)?.label || 'Room Type'}
+                                </h4>
+                              <button
+                                type="button"
+                                onClick={() => removeRoomTypeConfig(config.id)}
+                                title="Remove room configuration"
                               style={{
                                 width: '2.5rem',
                                 height: '2.5rem',
@@ -1242,15 +1242,15 @@ export default function AddProperty() {
                               onMouseOut={(e) => {
                                 e.currentTarget.style.backgroundColor = '#fef2f2';
                               }}
-                            >
+                              >
                               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                                 <polyline points="3,6 5,6 21,6"/>
                                 <path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2V6"/>
                                 <line x1="10" y1="11" x2="10" y2="17"/>
                                 <line x1="14" y1="11" x2="14" y2="17"/>
-                              </svg>
-                            </button>
-                          </div>
+                                </svg>
+                              </button>
+                      </div>
 
                           <div style={{
                             display: 'grid',
@@ -1265,9 +1265,9 @@ export default function AddProperty() {
                                 color: '#374151',
                                 marginBottom: '0.5rem'
                               }}>Room Type</label>
-                              <select
-                                value={config.roomType}
-                                onChange={(e) => updateRoomTypeConfig(config.id, 'roomType', e.target.value)}
+                                <select
+                                  value={config.roomType}
+                                  onChange={(e) => updateRoomTypeConfig(config.id, 'roomType', e.target.value)}
                                 style={{
                                   width: '100%',
                                   padding: '0.75rem',
@@ -1278,14 +1278,14 @@ export default function AddProperty() {
                                   transition: 'all 0.2s ease',
                                   outline: 'none'
                                 }}
-                              >
-                                {ROOM_TYPES.map(type => (
-                                  <option key={type.value} value={type.value}>
-                                    {type.label}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
+                                >
+                                  {ROOM_TYPES.map(type => (
+                                    <option key={type.value} value={type.value}>
+                                      {type.label}
+                                    </option>
+                                  ))}
+                                </select>
+                    </div>
 
                             <div>
                               <label style={{
@@ -1295,12 +1295,12 @@ export default function AddProperty() {
                                 color: '#374151',
                                 marginBottom: '0.5rem'
                               }}>Quantity</label>
-                              <input
-                                type="number"
-                                value={config.quantity}
-                                onChange={(e) => updateRoomTypeConfig(config.id, 'quantity', parseInt(e.target.value) || 1)}
-                                min="1"
-                                max="20"
+                                <input
+                                  type="number"
+                                  value={config.quantity}
+                                  onChange={(e) => updateRoomTypeConfig(config.id, 'quantity', parseInt(e.target.value) || 1)}
+                                  min="1"
+                                  max="20"
                                 style={{
                                   width: '100%',
                                   padding: '0.75rem',
@@ -1320,8 +1320,8 @@ export default function AddProperty() {
                                   e.target.style.boxShadow = 'none';
                                 }}
                                 onWheel={(e) => e.currentTarget.blur()}
-                              />
-                            </div>
+                                />
+                </div>
 
                             <div>
                               <label style={{
@@ -1341,12 +1341,12 @@ export default function AddProperty() {
                                   fontSize: '0.875rem',
                                   fontWeight: '500'
                                 }}>$</span>
-                                <input
-                                  type="number"
+                                  <input
+                                    type="number"
                                   value={config.monthlyRent}
-                                  onChange={(e) => updateRoomTypeConfig(config.id, 'monthlyRent', parseFloat(e.target.value) || 0)}
-                                  min="0"
-                                  step="0.01"
+                                    onChange={(e) => updateRoomTypeConfig(config.id, 'monthlyRent', parseFloat(e.target.value) || 0)}
+                                    min="0"
+                                    step="0.01"
                                   style={{
                                     width: '100%',
                                     padding: '0.75rem 0.75rem 0.75rem 2rem',
@@ -1366,9 +1366,9 @@ export default function AddProperty() {
                                     e.target.style.boxShadow = 'none';
                                   }}
                                   onWheel={(e) => e.currentTarget.blur()}
-                                />
-                              </div>
-                            </div>
+                                  />
+                </div>
+            </div>
 
                             <div>
                               <label style={{
@@ -1378,12 +1378,12 @@ export default function AddProperty() {
                                 color: '#374151',
                                 marginBottom: '0.5rem'
                               }}>Max Capacity</label>
-                              <input
-                                type="number"
-                                value={config.maxCapacity}
-                                onChange={(e) => updateRoomTypeConfig(config.id, 'maxCapacity', parseInt(e.target.value) || 1)}
-                                min="1"
-                                max="10"
+                                <input
+                                  type="number"
+                                  value={config.maxCapacity}
+                                  onChange={(e) => updateRoomTypeConfig(config.id, 'maxCapacity', parseInt(e.target.value) || 1)}
+                                  min="1"
+                                  max="10"
                                 style={{
                                   width: '100%',
                                   padding: '0.75rem',
@@ -1403,8 +1403,8 @@ export default function AddProperty() {
                                   e.target.style.boxShadow = 'none';
                                 }}
                                 onWheel={(e) => e.currentTarget.blur()}
-                              />
-                            </div>
+                                />
+                              </div>
 
                             <div>
                               <label style={{
@@ -1414,10 +1414,10 @@ export default function AddProperty() {
                                 color: '#374151',
                                 marginBottom: '0.5rem'
                               }}>Floor</label>
-                              <input
-                                type="text"
-                                value={config.floor}
-                                onChange={(e) => updateRoomTypeConfig(config.id, 'floor', e.target.value)}
+                                <input
+                                  type="text"
+                                  value={config.floor}
+                                  onChange={(e) => updateRoomTypeConfig(config.id, 'floor', e.target.value)}
                                 placeholder="e.g., 1st, Ground"
                                 style={{
                                   width: '100%',
@@ -1428,17 +1428,17 @@ export default function AddProperty() {
                                   transition: 'all 0.2s ease',
                                   outline: 'none'
                                 }}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                                />
+                </div>
+                  </div>
+                </div>
+                        ))}
+                  </div>
+                    )}
 
-                  <button
-                    type="button"
-                    onClick={addRoomTypeConfig}
+                      <button
+                        type="button"
+                        onClick={addRoomTypeConfig}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
@@ -1460,16 +1460,16 @@ export default function AddProperty() {
                     onMouseOut={(e) => {
                       e.currentTarget.style.backgroundColor = '#f0fdf4';
                     }}
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <line x1="12" y1="5" x2="12" y2="19"/>
                       <line x1="5" y1="12" x2="19" y2="12"/>
-                    </svg>
+                        </svg>
                     Add Room Configuration
-                  </button>
+                      </button>
 
                   {/* Revenue Projection */}
-                  {roomTypeConfigs.length > 0 && (
+                    {roomTypeConfigs.length > 0 && (
                     <div style={{
                       backgroundColor: '#f8fafc',
                       border: '1px solid #e2e8f0',
@@ -1499,18 +1499,18 @@ export default function AddProperty() {
                             color: '#059669'
                           }}>
                             ${calculateTotalRevenue().toLocaleString()}
-                          </div>
+                  </div>
                           <div style={{
                             fontSize: '0.75rem',
                             color: '#6b7280',
                             marginTop: '0.25rem'
                           }}>Monthly Revenue</div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                  </div>
                 </div>
-              )}
+              </div>
+                    )}
+            </div>
+                )}
 
               {/* Form Actions */}
               <div style={{
@@ -1520,9 +1520,9 @@ export default function AddProperty() {
                 display: 'flex',
                 justifyContent: 'flex-end'
               }}>
-                <button
-                  type="submit"
-                  disabled={loading}
+                  <button
+                    type="submit"
+                    disabled={loading}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -1551,9 +1551,9 @@ export default function AddProperty() {
                       e.currentTarget.style.boxShadow = 'none';
                     }
                   }}
-                >
-                  {loading ? (
-                    <>
+                  >
+                    {loading ? (
+                      <>
                       <div style={{
                         width: '1rem',
                         height: '1rem',
@@ -1562,9 +1562,9 @@ export default function AddProperty() {
                         borderRadius: '50%',
                         animation: 'spin 1s linear infinite'
                       }}></div>
-                      Creating Property...
-                    </>
-                  ) : (
+                        Creating Property...
+                      </>
+                    ) : (
                     <>
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
@@ -1572,10 +1572,10 @@ export default function AddProperty() {
                       </svg>
                       Create Property
                     </>
-                  )}
-                </button>
-              </div>
-            </form>
+                    )}
+                  </button>
+                </div>
+              </form>
           </div>
         </div>
       </DashboardLayout>
