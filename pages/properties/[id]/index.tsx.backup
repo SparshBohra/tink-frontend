@@ -34,7 +34,10 @@ import {
   AlertTriangle,
   Settings,
   RefreshCw,
-  MoreHorizontal
+  MoreHorizontal,
+  Grid,
+  History,
+  UserPlus
 } from 'lucide-react';
 
 export default function PropertyDetails() {
@@ -382,9 +385,79 @@ export default function PropertyDetails() {
     { id: 'zumper', name: 'Zumper' },
   ];
 
-  if (loading) return <DashboardLayout title="Loading"><div className="loading-state">Loading property details...</div></DashboardLayout>;
-  if (error) return <DashboardLayout title="Error"><div className="error-state">{error}</div></DashboardLayout>;
-  if (!property) return <DashboardLayout title="Not Found"><EmptyState title="Property Not Found" description="The property you are looking for does not exist." /></DashboardLayout>;
+  if (loading) {
+    return (
+      <DashboardLayout title="Loading...">
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '50vh'
+        }}>
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '1rem'
+          }}>
+            <div style={{
+              width: '2rem',
+              height: '2rem',
+              border: '2px solid #e5e7eb',
+              borderTop: '2px solid #3b82f6',
+              borderRadius: '50%',
+              animation: 'spin 1s linear infinite'
+            }}></div>
+            <p style={{ color: '#6b7280' }}>Loading property details...</p>
+          </div>
+          <style jsx>{`
+            @keyframes spin {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+          `}</style>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <DashboardLayout title="Error">
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '50vh',
+          textAlign: 'center'
+        }}>
+          <div>
+            <h2 style={{ color: '#dc2626', marginBottom: '1rem' }}>Error Loading Property</h2>
+            <p style={{ color: '#6b7280' }}>{error}</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (!property) {
+    return (
+      <DashboardLayout title="Property Not Found">
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '50vh',
+          textAlign: 'center'
+        }}>
+          <div>
+            <h2 style={{ color: '#dc2626', marginBottom: '1rem' }}>Property Not Found</h2>
+            <p style={{ color: '#6b7280' }}>The property you're looking for doesn't exist.</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   const { totalRooms, occupiedRooms, vacantRooms, occupancyRate } = getPropertyOccupancyStats();
   const totalRevenue = getTotalRevenue();
@@ -403,13 +476,13 @@ export default function PropertyDetails() {
 
     return (
         <tr key={room.id} className="room-row">
-            <td style={{ textAlign: 'left' }}>
+            <td>
                 <Link href={`/properties/${id}/edit-room/${room.id}`} className="room-link">
                     <div className="room-name">{room.name}</div>
                     <div className="room-type">{room.room_type}</div>
                 </Link>
       </td>
-            <td style={{ textAlign: 'center' }}>
+            <td>
                 {isActuallyOccupied ? (
                   <StatusBadge
                     status="occupied"
@@ -424,9 +497,9 @@ export default function PropertyDetails() {
                   <StatusBadge status="vacant" text="Vacant" />
                 )}
       </td>
-            <td style={{ textAlign: 'center' }}>
+            <td>
                 {isActuallyOccupied && lease ? (
-                    <div className="tenant-info" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                    <div className="tenant-info">
                         <span className="tenant-avatar" style={{ backgroundColor: '#E0E7FF' }}>
                             {getTenantName(lease.tenant).charAt(0)}
               </span>
@@ -435,7 +508,7 @@ export default function PropertyDetails() {
                         </Link>
             </div>
                 ) : lease?.status === 'draft' ? (
-                    <div className="tenant-info draft" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                    <div className="tenant-info draft">
                         <span className="tenant-avatar" style={{ backgroundColor: '#FEF3C7' }}>
                             {getTenantName(lease.tenant).charAt(0)}
                         </span>
@@ -447,8 +520,8 @@ export default function PropertyDetails() {
                     <span className="unassigned">-</span>
         )}
       </td>
-            <td style={{ textAlign: 'center' }}>{lease ? formatCurrency(lease.monthly_rent) : '-'}</td>
-            <td style={{ textAlign: 'center' }}>
+            <td>{lease ? formatCurrency(lease.monthly_rent) : '-'}</td>
+            <td>
                 <div className="action-buttons">
                     <button 
                         onClick={() => handleAssignTenant(room)} 
@@ -477,7 +550,7 @@ export default function PropertyDetails() {
                     >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <polyline points="3,6 5,6 21,6"/>
-                            <path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1-2,2h4a2,2,0,0,1,2,2V6"/>
+                            <path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2V6"/>
                             <line x1="10" y1="11" x2="10" y2="17"/>
                             <line x1="14" y1="11" x2="14" y2="17"/>
                         </svg>
@@ -720,8 +793,77 @@ export default function PropertyDetails() {
     return actions;
   };
 
+  if (loading) {
   return (
-    <DashboardLayout title="">
+      <DashboardLayout title="Loading...">
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '50vh'
+        }}>
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '1rem'
+          }}>
+            <div style={{
+              width: '2rem',
+              height: '2rem',
+              border: '2px solid #e5e7eb',
+              borderTop: '2px solid #3b82f6',
+              borderRadius: '50%',
+              animation: 'spin 1s linear infinite'
+            }}></div>
+            <p style={{ color: '#6b7280' }}>Loading property details...</p>
+          </div>
+
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <DashboardLayout title="Error">
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '50vh',
+          textAlign: 'center'
+        }}>
+          <div>
+            <h2 style={{ color: '#dc2626', marginBottom: '1rem' }}>Error Loading Property</h2>
+            <p style={{ color: '#6b7280' }}>{error}</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (!property) {
+    return (
+      <DashboardLayout title="Property Not Found">
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '50vh',
+          textAlign: 'center'
+        }}>
+          <div>
+            <h2 style={{ color: '#dc2626', marginBottom: '1rem' }}>Property Not Found</h2>
+            <p style={{ color: '#6b7280' }}>The property you're looking for doesn't exist.</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  return (
+    <DashboardLayout title={(property && property.name) ? property.name : 'Property Details'}>
       <Head>
         <title>{property?.name || 'Property Details'} - Property Details | Tink</title>
       </Head>
@@ -993,8 +1135,8 @@ export default function PropertyDetails() {
           alignItems: 'start',
           marginBottom: '2rem'
         }}>
-          {/* Left Column (3 parts): Metrics + Room Management */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          {/* Metrics Cards - 3/4 width */}
+          <div>
             {/* Modern Metrics Grid */}
             <div style={{
               display: 'grid',
@@ -1081,79 +1223,214 @@ export default function PropertyDetails() {
                   }}>{metric.subtitle}</div>
               </div>
               ))}
+            </div>
+          </div>
+
+          {/* Quick Actions Section - 1/4 width */}
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            border: '1px solid #e5e7eb',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+            height: 'fit-content',
+            transition: 'all 0.2s ease'
+          }}
+          onMouseOver={(e) => {
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+            e.currentTarget.style.transform = 'translateY(-1px)';
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+            e.currentTarget.style.transform = 'translateY(0)';
+          }}>
+            <div style={{
+              padding: '1.5rem',
+              borderBottom: '1px solid #e5e7eb'
+            }}>
+              <h2 style={{
+                fontSize: '1.25rem',
+                fontWeight: '700',
+                color: '#111827',
+                margin: 0,
+                marginBottom: '0.25rem'
+              }}>Quick Actions</h2>
+              <p style={{
+                fontSize: '0.875rem',
+                color: '#6b7280',
+                margin: 0
+              }}>
+                {(() => {
+                  const { occupiedRooms, totalRooms } = getPropertyOccupancyStats();
+                  const hasActiveTenants = occupiedRooms > 0;
+                  const hasVacantRooms = occupiedRooms < totalRooms;
+                  const isPerProperty = property.rent_type === 'per_property';
+                  
+                  if (isPerProperty) {
+                    if (hasActiveTenants) {
+                      return `Property occupied - manage tenant`;
+                    } else {
+                      return `Property vacant - find tenant`;
+                    }
+                  } else {
+                    if (hasActiveTenants && hasVacantRooms) {
+                      return `${occupiedRooms}/${totalRooms} rooms occupied`;
+                    } else if (hasActiveTenants) {
+                      return `All rooms occupied`;
+                    } else {
+                      return `${totalRooms} vacant rooms available`;
+                    }
+                  }
+                })()}
+              </p>
         </div>
         
-            {/* Room Management */}
             <div style={{
-              backgroundColor: 'white',
-              borderRadius: '12px',
-              border: '1px solid #e5e7eb',
-              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-              transition: 'all 0.2s ease',
-              overflow: 'hidden'
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-              e.currentTarget.style.transform = 'translateY(-1px)';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
-              e.currentTarget.style.transform = 'translateY(0)';
+              padding: '1.5rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1rem'
             }}>
-              <div style={{
-                padding: '1.5rem',
-                borderBottom: '1px solid #e5e7eb',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between'
-              }}>
-                <div>
-                  <h2 style={{
-                    fontSize: '1.25rem',
-                    fontWeight: '700',
-                    color: '#111827',
-                    margin: 0,
-                    marginBottom: '0.25rem'
-                  }}>Room Management</h2>
-                  <p style={{
-                    fontSize: '0.875rem',
-                    color: '#6b7280',
-                    margin: 0
-                  }}>{rooms.length} rooms in this property</p>
-                </div>
-                <Link href={`/properties/${id}/add-room`} 
+              {getQuickActions().slice(0, 4).map((action, index) => (
+                <div key={index}
+                  onClick={action.onClick}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '0.5rem',
-                    padding: '0.5rem 0.75rem',
-                    backgroundColor: '#2563eb',
-                    color: 'white',
-                    textDecoration: 'none',
-                    borderRadius: '6px',
-                    fontSize: '0.875rem',
-                    fontWeight: '500',
+                    gap: '1rem',
+                    padding: '1rem',
+                    backgroundColor: index === 0 ? '#eff6ff' : '#f8fafc',
+                    borderRadius: '8px',
+                    border: `1px solid ${index === 0 ? '#bfdbfe' : '#e2e8f0'}`,
+                    cursor: 'pointer',
                     transition: 'all 0.2s ease'
                   }}
-                  onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
-                  onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-1px)';
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <line x1="12" y1="5" x2="12" y2="19"/>
-                    <line x1="5" y1="12" x2="19" y2="12"/>
-                  </svg>
-                  Add New Room
-                </Link>
+                  <div style={{
+                    width: '2.5rem',
+                    height: '2.5rem',
+                    backgroundColor: 'white',
+                    borderRadius: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
+                  }}>
+                    {action.icon}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <h3 style={{
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: '#111827',
+                      margin: 0,
+                      marginBottom: '0.125rem'
+                    }}>{action.title}</h3>
+                    <p style={{
+                      fontSize: '0.75rem',
+                      color: '#6b7280',
+                      margin: 0
+                    }}>{action.subtitle}</p>
+                  </div>
+                </div>
+              ))}
               </div>
-              {rooms.length > 0 ? (
-                  <div className="rooms-table-container">
+            </div>
+          </div>
+
+        {/* Room Management Section - 3/4 Width */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '3fr 1fr',
+          gap: '1.5rem',
+          alignItems: 'start',
+          marginBottom: '2rem'
+        }}>
+          {/* Room Management Section - Takes 3 cards worth of space */}
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            border: '1px solid #e5e7eb',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+            transition: 'all 0.2s ease'
+          }}
+          onMouseOver={(e) => {
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+            e.currentTarget.style.transform = 'translateY(-1px)';
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+            e.currentTarget.style.transform = 'translateY(0)';
+          }}>
+            <div style={{
+              padding: '1.5rem',
+              borderBottom: '1px solid #e5e7eb',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <div>
+                <h2 style={{
+                  fontSize: '1.25rem',
+                  fontWeight: '700',
+                  color: '#111827',
+                  margin: 0,
+                  marginBottom: '0.25rem'
+                }}>Room Management</h2>
+                <p style={{
+                  fontSize: '0.875rem',
+                  color: '#6b7280',
+                  margin: 0
+                }}>{rooms.length} rooms in this property</p>
+                    </div>
+              <Link href={`/properties/${id}/add-room`} style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                backgroundColor: '#3b82f6',
+                color: 'white',
+                padding: '0.75rem 1rem',
+                borderRadius: '8px',
+                textDecoration: 'none',
+                fontSize: '0.875rem',
+                fontWeight: '600',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.backgroundColor = '#2563eb';
+                e.currentTarget.style.transform = 'translateY(-1px)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.backgroundColor = '#3b82f6';
+                e.currentTarget.style.transform = 'translateY(0)';
+              }}>
+                <Plus style={{ width: '1rem', height: '1rem' }} />
+                    Add New Room
+          </Link>
+                  </div>
+            
+            <div style={{ padding: '1.5rem' }}>
+                  {rooms.length > 0 ? (
+                <div style={{
+                  backgroundColor: '#f8fafc',
+                  borderRadius: '8px',
+                  overflow: 'hidden',
+                  border: '1px solid #e2e8f0'
+                }}>
                             <DataTable
                                 columns={[
-                      { header: 'Room Name', key: 'name', align: 'left' },
-                      { header: 'Status', key: 'status', align: 'center' },
-                      { header: 'Tenant', key: 'tenant', align: 'center' },
-                      { header: 'Rent', key: 'rent', align: 'center' },
-                      { header: 'Actions', key: 'actions', align: 'center' },
+                                    { header: 'Room Name', key: 'name' },
+                                    { header: 'Status', key: 'status' },
+                                    { header: 'Tenant', key: 'tenant' },
+                                    { header: 'Rent', key: 'rent' },
+                                    { header: 'Actions', key: 'actions' },
                                 ]}
                                 data={rooms}
                                 renderRow={renderRoomRow}
@@ -1183,188 +1460,269 @@ export default function PropertyDetails() {
                               <path d="M12 5v14m-7-7h14"/>
             </svg>
                             Add Single Room
-                        </button>
-                          <button 
-                            onClick={() => setRoomCountEditorOpen(true)} 
-                            className="btn btn-secondary"
-                          >
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
-                            </svg>
-                            Add Multiple Rooms
                           </button>
-                        </div>
-                        <div className="empty-state-help">
-                          <p className="help-text">
-                            💡 <strong>Tip:</strong> Use "Add Multiple Rooms" to quickly create several rooms at once with different types and rent amounts.
-                          </p>
-                        </div>
-                      </div>
                     </div>
                   )}
                 </div>
-
-            {/* Property History */}
-            <div style={{
-              backgroundColor: 'white',
-              borderRadius: '12px',
-              border: '1px solid #e5e7eb',
-              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-              transition: 'all 0.2s ease',
-              overflow: 'hidden'
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-              e.currentTarget.style.transform = 'translateY(-1px)';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
-              e.currentTarget.style.transform = 'translateY(0)';
-            }}>
-              <div style={{
-                padding: '1.5rem',
-                borderBottom: '1px solid #e5e7eb',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between'
-              }}>
-                <div>
-                  <h2 style={{
-                    fontSize: '1.25rem',
-                    fontWeight: '700',
-                    color: '#111827',
-                    margin: 0,
-                    marginBottom: '0.25rem'
-                  }}>Property History</h2>
-                  <p style={{
-                    fontSize: '0.875rem',
-                    color: '#6b7280',
-                    margin: 0
-                  }}>Tenant and rent collection history</p>
-                </div>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '1rem'
-                }}>
-                  <div style={{
-                    display: 'flex',
-                    backgroundColor: '#f8fafc',
-                    borderRadius: '6px',
-                    padding: '0.25rem'
-                  }}>
-                    <button 
-                      onClick={() => setActiveHistoryTab('tenant')}
-                      style={{
-                        padding: '0.5rem 0.75rem',
-                        fontSize: '0.875rem',
-                        fontWeight: '500',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        backgroundColor: activeHistoryTab === 'tenant' ? '#2563eb' : 'transparent',
-                        color: activeHistoryTab === 'tenant' ? 'white' : '#6b7280'
-                      }}
-                    >
-                      Tenant History
-                    </button>
-                    <button 
-                      onClick={() => setActiveHistoryTab('rent')}
-                      style={{
-                        padding: '0.5rem 0.75rem',
-                        fontSize: '0.875rem',
-                        fontWeight: '500',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        backgroundColor: activeHistoryTab === 'rent' ? '#2563eb' : 'transparent',
-                        color: activeHistoryTab === 'rent' ? 'white' : '#6b7280'
-                      }}
-                    >
-                      Rent Collection
-                    </button>
-                  </div>
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem'
-                  }}>
-                    <input 
-                      id="history-toggle"
-                      type="checkbox" 
-                      checked={showAllHistory} 
-                      onChange={(e) => setShowAllHistory(e.target.checked)}
-                      style={{
-                        width: '1rem',
-                        height: '1rem',
-                        accentColor: '#2563eb'
-                      }}
-                    />
-                    <label htmlFor="history-toggle" style={{
-                      fontSize: '0.875rem',
-                      color: '#6b7280',
-                      cursor: 'pointer'
-                    }}>Show all properties</label>
-                  </div>
-                </div>
-              </div>
-              {activeHistoryTab === 'tenant' && (
-                  <div className="history-table-container">
-                  <DataTable
-                    columns={[
-                                    { header: 'Tenant', key: 'tenant' },
-                                    { header: 'Unit', key: 'unit' },
-                                    { header: 'Move In', key: 'move_in' },
-                                    { header: 'Move Out', key: 'move_out' },
-                                    { header: 'Status', key: 'status' },
-                                ]}
-                                data={propertyHistoryLeases}
-                                renderRow={renderTenantHistoryRow}
-                            />
-                  </div>
-              )}
-              {activeHistoryTab === 'rent' && (
-                  <div className="history-table-container">
-                    {paymentLoading ? (
-                        <div className="loading-container">
-                            <div className="loading-spinner"></div>
-                            <p>Loading payment history...</p>
-                        </div>
-                    ) : paymentHistory.length > 0 ? (
-                        <DataTable
-                            columns={[
-                                { header: 'Tenant', key: 'tenant' },
-                                { header: 'Amount', key: 'amount' },
-                                { header: 'Payment Date', key: 'payment_date' },
-                                { header: 'Rent Period', key: 'rent_period' },
-                                { header: 'Status', key: 'status' },
-                                { header: 'Description', key: 'description' },
-                            ]}
-                            data={paymentHistory}
-                            renderRow={renderPaymentHistoryRow}
-                        />
-                    ) : (
-                        <EmptyState
-                            title="No Payment History"
-                            description="No rent payments have been recorded for this property yet."
-                        />
-                    )}
-                  </div>
-              )}
-            </div>
           </div>
 
-          {/* Right Column (1 part): Quick Actions + Lease Details */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            {/* Quick Actions Section */}
+          {/* Empty space for 1/4 width */}
+          <div></div>
+                      </div>
+
+          {/* Property History Section - Full Width */}
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            border: '1px solid #e5e7eb',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+            marginBottom: '2rem',
+            transition: 'all 0.2s ease'
+          }}
+          onMouseOver={(e) => {
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+            e.currentTarget.style.transform = 'translateY(-1px)';
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+            e.currentTarget.style.transform = 'translateY(0)';
+          }}>
+            <div style={{
+              padding: '1.5rem',
+              borderBottom: '1px solid #e5e7eb',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <div>
+                <h2 style={{
+                  fontSize: '1.25rem',
+                  fontWeight: '700',
+                  color: '#111827',
+                  margin: 0,
+                  marginBottom: '0.25rem'
+                }}>Property History</h2>
+                <p style={{
+                  fontSize: '0.875rem',
+                  color: '#6b7280',
+                  margin: 0
+                }}>Tenant and rent collection history</p>
+                  </div>
+              <div style={{
+                display: 'flex',
+                gap: '0.5rem'
+              }}>
+                <button style={{
+                  padding: '0.5rem 1rem',
+                  backgroundColor: '#3b82f6',
+                  color: 'white',
+                  border: '1px solid #3b82f6',
+                  borderRadius: '6px',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = '#2563eb';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = '#3b82f6';
+                }}>
+                                  Tenant History
+                              </button>
+                <button style={{
+                  padding: '0.5rem 1rem',
+                  backgroundColor: '#f3f4f6',
+                  color: '#374151',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = '#e5e7eb';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f3f4f6';
+                }}>
+                                  Rent Collection
+                              </button>
+                          </div>
+                          </div>
+            
+            <div style={{ padding: '1.5rem' }}>
+              {/* Property history content */}
+              <div style={{
+                backgroundColor: '#f8fafc',
+                borderRadius: '8px',
+                overflow: 'hidden',
+                border: '1px solid #e2e8f0'
+              }}>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(5, 1fr)',
+                  gap: '1px',
+                  backgroundColor: '#e2e8f0'
+                }}>
+                  <div style={{
+                    padding: '0.75rem 1rem',
+                    backgroundColor: 'white',
+                    fontSize: '0.875rem',
+                    fontWeight: '600',
+                    color: '#374151',
+                    textAlign: 'center'
+                  }}>Tenant</div>
+                  <div style={{
+                    padding: '0.75rem 1rem',
+                    backgroundColor: 'white',
+                    fontSize: '0.875rem',
+                    fontWeight: '600',
+                    color: '#374151',
+                    textAlign: 'center'
+                  }}>Unit</div>
+                  <div style={{
+                    padding: '0.75rem 1rem',
+                    backgroundColor: 'white',
+                    fontSize: '0.875rem',
+                    fontWeight: '600',
+                    color: '#374151',
+                    textAlign: 'center'
+                  }}>Move In</div>
+                  <div style={{
+                    padding: '0.75rem 1rem',
+                    backgroundColor: 'white',
+                    fontSize: '0.875rem',
+                    fontWeight: '600',
+                    color: '#374151',
+                    textAlign: 'center'
+                  }}>Move Out</div>
+                  <div style={{
+                    padding: '0.75rem 1rem',
+                    backgroundColor: 'white',
+                    fontSize: '0.875rem',
+                    fontWeight: '600',
+                    color: '#374151',
+                    textAlign: 'center'
+                  }}>Status</div>
+              </div>
+
+                {/* Sample history data - replace with actual data */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(5, 1fr)',
+                  gap: '1px',
+                  backgroundColor: '#e2e8f0'
+                }}>
+                  <div style={{
+                    padding: '1rem',
+                    backgroundColor: 'white',
+                    fontSize: '0.875rem',
+                    color: '#111827',
+                    textAlign: 'center'
+                  }}>wefwef</div>
+                  <div style={{
+                    padding: '1rem',
+                    backgroundColor: 'white',
+                    fontSize: '0.875rem',
+                    color: '#111827',
+                    textAlign: 'center'
+                  }}>Standard Room 2</div>
+                  <div style={{
+                    padding: '1rem',
+                    backgroundColor: 'white',
+                    fontSize: '0.875rem',
+                    color: '#111827',
+                    textAlign: 'center'
+                  }}>Aug 4, 2025</div>
+                  <div style={{
+                    padding: '1rem',
+                    backgroundColor: 'white',
+                    fontSize: '0.875rem',
+                    color: '#111827',
+                    textAlign: 'center'
+                  }}>Nov 4, 2025</div>
+                  <div style={{
+                    padding: '1rem',
+                    backgroundColor: 'white',
+                    fontSize: '0.875rem',
+                    textAlign: 'center'
+                  }}>
+                    <span style={{
+                      padding: '0.25rem 0.75rem',
+                      backgroundColor: '#dcfce7',
+                      color: '#166534',
+                      borderRadius: '9999px',
+                      fontSize: '0.75rem',
+                      fontWeight: '500'
+                    }}>Draft</span>
+                      </div>
+                  </div>
+              
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(5, 1fr)',
+                  gap: '1px',
+                  backgroundColor: '#e2e8f0'
+                }}>
+                  <div style={{
+                    padding: '1rem',
+                    backgroundColor: 'white',
+                    fontSize: '0.875rem',
+                    color: '#111827',
+                    textAlign: 'center'
+                  }}>Rohan Dave</div>
+                  <div style={{
+                    padding: '1rem',
+                    backgroundColor: 'white',
+                    fontSize: '0.875rem',
+                    color: '#111827',
+                    textAlign: 'center'
+                  }}>Standard Room 1</div>
+                  <div style={{
+                    padding: '1rem',
+                    backgroundColor: 'white',
+                    fontSize: '0.875rem',
+                    color: '#111827',
+                    textAlign: 'center'
+                  }}>Jul 31, 2025</div>
+                  <div style={{
+                    padding: '1rem',
+                    backgroundColor: 'white',
+                    fontSize: '0.875rem',
+                    color: '#111827',
+                    textAlign: 'center'
+                  }}>Oct 31, 2025</div>
+                  <div style={{
+                    padding: '1rem',
+                    backgroundColor: 'white',
+                    fontSize: '0.875rem',
+                    textAlign: 'center'
+                  }}>
+                    <span style={{
+                      padding: '0.25rem 0.75rem',
+                      backgroundColor: '#dcfce7',
+                      color: '#166534',
+                      borderRadius: '9999px',
+                      fontSize: '0.75rem',
+                      fontWeight: '500'
+                    }}>Active</span>
+                    </div>
+                        </div>
+                      </div>
+                    </div>
+            </div>
+
+          {/* Conditional Lease Activation - Only show if no active leases */}
+          {!propertyLevelLease && rooms.every(room => !room.tenant) && (
             <div style={{
               backgroundColor: 'white',
               borderRadius: '12px',
               border: '1px solid #e5e7eb',
               boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-              height: 'fit-content',
+              marginBottom: '2rem',
               transition: 'all 0.2s ease'
             }}
             onMouseOver={(e) => {
@@ -1376,179 +1734,65 @@ export default function PropertyDetails() {
               e.currentTarget.style.transform = 'translateY(0)';
             }}>
               <div style={{
-                padding: '1.5rem',
-                borderBottom: '1px solid #e5e7eb'
+                padding: '2rem',
+                textAlign: 'center'
               }}>
-                <h2 style={{
-                  fontSize: '1.25rem',
-                  fontWeight: '700',
+                <div style={{
+                  width: '4rem',
+                  height: '4rem',
+                  backgroundColor: '#fef3c7',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 1rem'
+                }}>
+                  <AlertTriangle style={{ width: '2rem', height: '2rem', color: '#d97706' }} />
+          </div>
+                <h3 style={{
+                  fontSize: '1.125rem',
+                  fontWeight: '600',
                   color: '#111827',
                   margin: 0,
-                  marginBottom: '0.25rem'
-                }}>Quick Actions</h2>
+                  marginBottom: '0.5rem'
+                }}>No Active Lease</h3>
                 <p style={{
                   fontSize: '0.875rem',
                   color: '#6b7280',
-                  margin: 0
-                }}>
-                    {(() => {
-                      const { occupiedRooms, totalRooms } = getPropertyOccupancyStats();
-                      const hasActiveTenants = occupiedRooms > 0;
-                      const hasVacantRooms = occupiedRooms < totalRooms;
-                      const isPerProperty = property.rent_type === 'per_property';
-                      
-                      if (isPerProperty) {
-                        if (hasActiveTenants) {
-                        return `Property occupied - manage tenant`;
-                        } else {
-                        return `Property vacant - find tenant`;
-                        }
-                      } else {
-                        if (hasActiveTenants && hasVacantRooms) {
-                        return `${occupiedRooms}/${totalRooms} rooms occupied`;
-                        } else if (hasActiveTenants) {
-                        return `All rooms occupied`;
-                        } else {
-                        return `${totalRooms} vacant rooms available`;
-                        }
-                      }
-                    })()}
-                  </p>
-                  </div>
-              
-              <div style={{
-                padding: '1.5rem',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '1rem'
-              }}>
-                {getQuickActions().slice(0, 4).map((action, index) => {
-                  // Define colors for each quick action button
-                  const colors = [
-                    { bg: '#eff6ff', border: '#bfdbfe', iconBg: '#dbeafe' }, // Blue
-                    { bg: '#f0fdf4', border: '#bbf7d0', iconBg: '#dcfce7' }, // Green
-                    { bg: '#fff7ed', border: '#fed7aa', iconBg: '#ffedd5' }, // Orange
-                    { bg: '#fdf4ff', border: '#f3e8ff', iconBg: '#fae8ff' }  // Purple
-                  ];
-                  const colorScheme = colors[index] || colors[0];
-                  
-                  return (
-                    <div key={index}
-                      onClick={action.onClick}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '1rem',
-                        padding: '1rem',
-                        backgroundColor: colorScheme.bg,
-                        borderRadius: '8px',
-                        border: `1px solid ${colorScheme.border}`,
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease'
-                      }}
-                      onMouseOver={(e) => {
-                        e.currentTarget.style.transform = 'translateY(-1px)';
-                        e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
-                      }}
-                      onMouseOut={(e) => {
-                        e.currentTarget.style.transform = 'translateY(0)';
-                        e.currentTarget.style.boxShadow = 'none';
-                      }}
-                    >
-                      <div style={{
-                        width: '2.5rem',
-                        height: '2.5rem',
-                        backgroundColor: colorScheme.iconBg,
-                        borderRadius: '8px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flexShrink: 0
-                      }}>
-                        {action.icon}
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <h3 style={{
-                          fontSize: '0.875rem',
-                          fontWeight: '600',
-                          color: '#111827',
-                          margin: 0,
-                          marginBottom: '0.125rem'
-                        }}>{action.title}</h3>
-                        <p style={{
-                          fontSize: '0.75rem',
-                          color: '#6b7280',
-                          margin: 0
-                        }}>{action.subtitle}</p>
-                      </div>
-                    </div>
-                  );
-                })}
-                    </div>
-            </div>
-
-            {/* Lease Details - Only for per_property rent type */}
-            {property?.rent_type === 'per_property' && (
-              <div className="section-card">
-                <div className="section-header">
-                  <div className="section-title-group">
-                    <h2 className="section-title">Lease Details</h2>
-                    <p className="section-subtitle">This property is leased as a whole unit</p>
-          </div>
-                  {!propertyLevelLease && (
-                    <button onClick={openPropertyAssignment} className="btn btn-primary">
-                      Assign Tenant
-                    </button>
-                  )}
-                </div>
-                {propertyLevelLease ? (
-                  <div className="lease-details">
-                    <div className="lease-detail-item">
-                      <span className="item-label">Tenant</span>
-                      <span className="item-value tenant-name">
-                        <Link href={`/tenants/${propertyLevelLease.tenant}`} className="tenant-link">
-                          {getTenantName(propertyLevelLease.tenant)}
-                        </Link>
-                      </span>
-                    </div>
-                    <div className="lease-detail-item">
-                      <span className="item-label">Rent</span>
-                      <span className="item-value">{formatCurrency(propertyLevelLease.monthly_rent)}/mo</span>
-                    </div>
-                    <div className="lease-detail-item">
-                      <span className="item-label">Lease Dates</span>
-                      <span className="item-value">{formatDate(propertyLevelLease.start_date)} - {formatDate(propertyLevelLease.end_date)}</span>
-                    </div>
-                    <div className="lease-detail-item">
-                      <span className="item-label">Status</span>
-                      <span className="item-value">
-                        <StatusBadge
-                          status={propertyLevelLease.status as any}
-                          text={
-                            propertyLevelLease.status === 'draft' ? 'Draft Lease' :
-                            propertyLevelLease.status === 'active' ? 'Occupied' :
-                            (propertyLevelLease.status.charAt(0).toUpperCase() + propertyLevelLease.status.slice(1))
-                          }
-                        />
-                      </span>
-                    </div>
-                  </div>
-                ) : (
-                  <EmptyState
-                    title="No Active Lease"
-                    description="This property is currently vacant."
-                    action={
-                      <button onClick={openPropertyAssignment} className="btn btn-primary">
-                        Assign Tenant
-                      </button>
-                    }
-                  />
-                )}
-              </div>
-            )}
-          </div>
+                  margin: 0,
+                  marginBottom: '1.5rem'
+                }}>This property is currently vacant. Assign a tenant to activate the lease.</p>
+                <button 
+                  onClick={openPropertyAssignment}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    backgroundColor: '#3b82f6',
+                    color: 'white',
+                    padding: '0.75rem 1.5rem',
+                    borderRadius: '8px',
+                    border: 'none',
+                    fontSize: '0.875rem',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.backgroundColor = '#2563eb';
+                    e.currentTarget.style.transform = 'translateY(-1px)';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.backgroundColor = '#3b82f6';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                  }}
+                >
+                  <UserPlus style={{ width: '1rem', height: '1rem' }} />
+                  Assign Tenant
+                </button>
         </div>
       </div>
+          )}
 
       {assignmentModalOpen && selectedRoomForAssignment && (
         <PropertyTenantAssignmentModal
@@ -2406,6 +2650,7 @@ export default function PropertyDetails() {
           }
         }
       `}</style>
-    </DashboardLayout>
-  );
-} 
+            </DashboardLayout>
+      );
+    }
+ 

@@ -4,6 +4,7 @@ interface Column {
   key: string;
   header: ReactNode;
   width?: string;
+  align?: 'left' | 'center' | 'right';
 }
 
 interface DataTableProps {
@@ -38,7 +39,10 @@ export default function DataTable({
               <th 
                 key={column.key}
                 className="table-header"
-                style={{ width: column.width }}
+                style={{ 
+                  width: column.width,
+                  textAlign: column.align || 'left'
+                }}
               >
                 {column.header}
               </th>

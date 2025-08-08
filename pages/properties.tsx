@@ -9,6 +9,7 @@ import { useRouter } from 'next/router';
 import { withAuth } from '../lib/auth-context';
 import { apiClient } from '../lib/api';
 import { Property, Room, Lease } from '../lib/types';
+import { Building, Users, Home, BarChart3, Calendar, Plus, FileText, RefreshCw, MoreHorizontal, Eye, Edit, Trash2, Download, Zap } from 'lucide-react';
 
 function Properties() {
   const router = useRouter();
@@ -113,6 +114,10 @@ function Properties() {
       
       setTotalCount(sorted.length);
       setHasNextPage(endIndex < sorted.length);
+      
+      // Load detailed data for all properties immediately
+      const propertyIds = pageProperties.map(p => p.id);
+      await Promise.all(propertyIds.map(id => loadPropertyDetails(id)));
       
       console.log(`Loaded ${pageProperties.length} properties for page ${page}, total: ${sorted.length}, hasNext: ${endIndex < sorted.length}`);
       
@@ -515,14 +520,57 @@ function Properties() {
       
       <div className="dashboard-container">
         {/* Custom Header */}
-        <div className="dashboard-header">
-          <div className="header-content">
-            <div className="header-left">
-              <h1 className="dashboard-title">Property Management</h1>
-              <div className="subtitle-container">
-                <p className="welcome-message">
+        <div style={{
+          backgroundColor: 'white',
+          borderRadius: '12px',
+          border: '1px solid #e5e7eb',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+          marginBottom: '1.5rem',
+          transition: 'all 0.2s ease'
+        }}
+        onMouseOver={(e) => {
+          e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+          e.currentTarget.style.transform = 'translateY(-1px)';
+        }}
+        onMouseOut={(e) => {
+          e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+          e.currentTarget.style.transform = 'translateY(0)';
+        }}>
+          <div style={{
+            padding: '1.5rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1rem'
+          }}>
+            <div style={{
+              width: '3rem',
+              height: '3rem',
+              backgroundColor: '#2563eb',
+              borderRadius: '12px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0
+            }}>
+              <Building style={{ width: '1.5rem', height: '1.5rem', color: 'white' }} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <h1 style={{
+                fontSize: '1.875rem',
+                fontWeight: '700',
+                color: '#111827',
+                margin: 0,
+                marginBottom: '0.25rem'
+              }}>Property Management</h1>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                fontSize: '0.875rem',
+                color: '#6b7280'
+              }}>
+                <Calendar style={{ width: '1rem', height: '1rem' }} />
                   Manage all properties, rooms, and occupancy across your portfolio
-                </p>
               </div>
             </div>
           </div>
@@ -540,135 +588,215 @@ function Properties() {
         )}
         
         {/* Top Metrics Row */}
-        <div className="metrics-grid">
-          <div className="metric-card">
-            <div className="metric-header">
-              <div className="metric-info">
-                <h3 className="metric-title">Total Properties</h3>
-                <div className="metric-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M3 21h18"/>
-                    <path d="M5 21V7l8-4v18"/>
-                    <path d="M19 21V11l-6-4"/>
-                  </svg>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+          gap: '1.5rem',
+          marginBottom: '2rem'
+        }}>
+          {[
+            {
+              title: 'Total Properties',
+              value: totalCount,
+              subtitle: 'Active portfolio',
+              icon: Building,
+              bgColor: '#eff6ff',
+              iconColor: '#2563eb'
+            },
+            {
+              title: 'Total Rooms',
+              value: totalRooms,
+              subtitle: `${occupiedRooms} occupied`,
+              icon: Home,
+              bgColor: '#f0fdf4',
+              iconColor: '#16a34a'
+            },
+            {
+              title: 'Vacant Rooms',
+              value: totalVacantRooms,
+              subtitle: 'Available for rent',
+              icon: Users,
+              bgColor: '#fff7ed',
+              iconColor: '#ea580c'
+            },
+            {
+              title: 'Occupancy Rate',
+              value: `${overallOccupancyRate}%`,
+              subtitle: 'Portfolio performance',
+              icon: BarChart3,
+              bgColor: '#faf5ff',
+              iconColor: '#9333ea'
+            }
+          ].map((metric, index) => (
+            <div key={index} style={{
+              backgroundColor: 'white',
+              borderRadius: '12px',
+              border: '1px solid #e5e7eb',
+              padding: '1.5rem',
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+              transition: 'all 0.2s ease',
+              cursor: 'pointer'
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+              e.currentTarget.style.transform = 'translateY(-2px)';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+              e.currentTarget.style.transform = 'translateY(0)';
+            }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: '1rem'
+              }}>
+                <h3 style={{
+                  fontSize: '0.875rem',
+                  fontWeight: '600',
+                  color: '#374151',
+                  margin: 0
+                }}>{metric.title}</h3>
+                <div style={{
+                  width: '2.5rem',
+                  height: '2.5rem',
+                  backgroundColor: metric.bgColor,
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <metric.icon style={{ width: '1.25rem', height: '1.25rem', color: metric.iconColor }} />
                 </div>
               </div>
+              <div style={{
+                fontSize: '2rem',
+                fontWeight: '700',
+                color: '#111827',
+                lineHeight: 1,
+                marginBottom: '0.5rem'
+              }}>{metric.value}</div>
+              <div style={{
+                fontSize: '0.875rem',
+                color: '#6b7280'
+              }}>{metric.subtitle}</div>
             </div>
-            <div className="metric-content">
-              <div className="metric-value">{totalCount}</div>
-              <div className="metric-subtitle">Active portfolio</div>
-              <div className="metric-progress">
-                <span className="metric-label">Properties managed</span>
-                <span className="metric-change positive">+{totalCount > 0 ? '1' : '0'}</span>
-              </div>
-            </div>
-          </div>
-          
-          <div className="metric-card">
-            <div className="metric-header">
-              <div className="metric-info">
-                <h3 className="metric-title">Total Rooms</h3>
-                <div className="metric-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M3 21h18"/>
-                    <path d="M5 21V7l8-4v18"/>
-                    <path d="M19 21V11l-6-4"/>
-                  </svg>
-                </div>
-              </div>
-            </div>
-            <div className="metric-content">
-              <div className="metric-value">{totalRooms}</div>
-              <div className="metric-subtitle">{occupiedRooms} occupied</div>
-              <div className="metric-progress">
-                <span className="metric-label">{overallOccupancyRate}% occupied</span>
-                <span className="metric-change positive">+{totalRooms > 0 ? '2' : '0'}</span>
-              </div>
-            </div>
-          </div>
-          
-          <div className="metric-card">
-            <div className="metric-header">
-              <div className="metric-info">
-                <h3 className="metric-title">Vacant Rooms</h3>
-                <div className="metric-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                    <circle cx="12" cy="7" r="4"/>
-                  </svg>
-                </div>
-              </div>
-            </div>
-            <div className="metric-content">
-              <div className="metric-value">{totalVacantRooms}</div>
-              <div className="metric-subtitle">Available for rent</div>
-              <div className="metric-progress">
-                <span className="metric-label">Ready to lease</span>
-                <span className="metric-change positive">-1</span>
-              </div>
-            </div>
-          </div>
-          
-          <div className="metric-card">
-            <div className="metric-header">
-              <div className="metric-info">
-                <h3 className="metric-title">Occupancy Rate</h3>
-                <div className="metric-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <line x1="18" y1="20" x2="18" y2="10"/>
-                    <line x1="12" y1="20" x2="12" y2="4"/>
-                    <line x1="6" y1="20" x2="6" y2="14"/>
-                  </svg>
-                </div>
-              </div>
-            </div>
-            <div className="metric-content">
-              <div className="metric-value">{overallOccupancyRate}%</div>
-              <div className="metric-subtitle">Portfolio performance</div>
-              <div className="metric-progress">
-                <span className="metric-label">
-                  {overallOccupancyRate >= 90 ? 'Excellent' : overallOccupancyRate >= 75 ? 'Good' : 'Needs attention'}
-                </span>
-                <span className="metric-change positive">+3%</span>
-              </div>
-            </div>
-          </div>
+          ))}
         </div>
 
         {/* Main Content */}
-        <div className="main-content">
-          {/* Properties Section */}
-          <div className="properties-section">
-            <div className="section-header">
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+          gap: '1.5rem',
+          alignItems: 'start'
+        }}>
+          {/* Properties Section - 3/4 width */}
+          <div style={{
+            gridColumn: 'span 3',
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            border: '1px solid #e5e7eb',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+            transition: 'all 0.2s ease'
+          }}
+          onMouseOver={(e) => {
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+            e.currentTarget.style.transform = 'translateY(-1px)';
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+            e.currentTarget.style.transform = 'translateY(0)';
+          }}>
+            <div style={{
+              padding: '1.5rem',
+              borderBottom: '1px solid #e5e7eb'
+            }}>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
               <div>
-                <h2 className="section-title">Properties ({totalCount})</h2>
-                <p className="section-subtitle">Manage property details, rooms, and occupancy status</p>
+                  <h2 style={{
+                    fontSize: '1.25rem',
+                    fontWeight: '700',
+                    color: '#111827',
+                    margin: 0,
+                    marginBottom: '0.25rem'
+                  }}>Properties ({totalCount})</h2>
+                  <p style={{
+                    fontSize: '0.875rem',
+                    color: '#6b7280',
+                    margin: 0
+                  }}>Manage property details, rooms, and occupancy status</p>
               </div>
-              <div className="section-actions">
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem'
+                }}>
                 <select
                   value={sortOption}
                   onChange={e => setSortOption(e.target.value as 'name' | 'latest')}
-                  className="sort-select"
+                    style={{
+                      padding: '0.5rem 0.75rem',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      fontSize: '0.875rem',
+                      backgroundColor: 'white',
+                      cursor: 'pointer'
+                    }}
                   title="Sort properties"
                 >
                   <option value="latest">Latest Added</option>
                   <option value="name">Name A–Z</option>
                 </select>
-                <button onClick={() => fetchProperties()} className="refresh-btn">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <polyline points="23 4 23 10 17 10"/>
-                    <polyline points="1 20 1 14 7 14"/>
-                    <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>
-                  </svg>
+                  <button 
+                    onClick={() => fetchProperties()} 
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      padding: '0.5rem 0.75rem',
+                      backgroundColor: '#2563eb',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
+                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+                  >
+                    <RefreshCw style={{ width: '1rem', height: '1rem' }} />
                   Refresh
                 </button>
-                <button onClick={() => router.push('/properties/add')} className="create-property-btn">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <line x1="12" y1="5" x2="12" y2="19"/>
-                    <line x1="5" y1="12" x2="19" y2="12"/>
-                  </svg>
+                  <button 
+                    onClick={() => router.push('/properties/add')} 
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      padding: '0.5rem 0.75rem',
+                      backgroundColor: '#16a34a',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#15803d'}
+                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#16a34a'}
+                  >
+                    <Plus style={{ width: '1rem', height: '1rem' }} />
                   Add Property
                 </button>
+                </div>
               </div>
             </div>
 
@@ -722,65 +850,154 @@ function Properties() {
                 </div>
               </div>
             ) : (
-              <div className="properties-scroll-container">
-                <div className="properties-table-container">
-                  <table className="properties-table">
+              <div style={{
+                padding: '1.5rem',
+                overflowX: 'auto'
+              }}>
+                <table style={{
+                  width: '100%',
+                  borderCollapse: 'collapse'
+                }}>
                     <thead>
                       <tr>
-                        <th className="table-left">Property</th>
-                        <th className="table-left">Address</th>
-                        <th className="table-center">Rooms</th>
-                        <th className="table-center">Occupancy</th>
-                        <th className="table-center">Effective Rent</th>
-                        <th className="table-center">Security Deposit</th>
-                        <th className="table-center">Actions</th>
+                      <th style={{
+                        textAlign: 'left',
+                        padding: '0.75rem',
+                        fontSize: '0.875rem',
+                        fontWeight: '600',
+                        color: '#374151',
+                        borderBottom: '1px solid #e5e7eb'
+                      }}>Property</th>
+                      <th style={{
+                        textAlign: 'left',
+                        padding: '0.75rem',
+                        fontSize: '0.875rem',
+                        fontWeight: '600',
+                        color: '#374151',
+                        borderBottom: '1px solid #e5e7eb'
+                      }}>Address</th>
+                      <th style={{
+                        textAlign: 'left',
+                        padding: '0.75rem',
+                        fontSize: '0.875rem',
+                        fontWeight: '600',
+                        color: '#374151',
+                        borderBottom: '1px solid #e5e7eb'
+                      }}>Rooms</th>
+                      <th style={{
+                        textAlign: 'center',
+                        padding: '0.75rem',
+                        fontSize: '0.875rem',
+                        fontWeight: '600',
+                        color: '#374151',
+                        borderBottom: '1px solid #e5e7eb'
+                      }}>Occupancy</th>
+                      <th style={{
+                        textAlign: 'center',
+                        padding: '0.75rem',
+                        fontSize: '0.875rem',
+                        fontWeight: '600',
+                        color: '#374151',
+                        borderBottom: '1px solid #e5e7eb'
+                      }}>Effective Rent</th>
+                      <th style={{
+                        textAlign: 'center',
+                        padding: '0.75rem',
+                        fontSize: '0.875rem',
+                        fontWeight: '600',
+                        color: '#374151',
+                        borderBottom: '1px solid #e5e7eb'
+                      }}>Security Deposit</th>
+                      <th style={{
+                        textAlign: 'center',
+                        padding: '0.75rem',
+                        fontSize: '0.875rem',
+                        fontWeight: '600',
+                        color: '#374151',
+                        borderBottom: '1px solid #e5e7eb'
+                      }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {properties.map((property) => {
                         const stats = getPropertyStats(property);
                         
-                        // Trigger lazy loading when property becomes visible
-                        const handleRowVisible = () => {
-                          if (!loadedPropertyDetails.has(property.id)) {
-                            loadPropertyDetails(property.id);
-                          }
-                        };
-                        
                         return (
                           <tr 
                             key={property.id}
-                            onMouseEnter={handleRowVisible}
-                            onClick={handleRowVisible}
-                          >
-                            <td className="table-left">
-                              <div 
-                                className="property-name clickable-property-name"
+                          style={{
+                            borderBottom: '1px solid #f3f4f6'
+                          }}
+                        >
+                          <td style={{
+                            textAlign: 'left',
+                            padding: '0.75rem',
+                            borderBottom: '1px solid #f3f4f6'
+                          }}>
+                            <div 
                                 onClick={() => router.push(`/properties/${property.id}`)}
-                                style={{ cursor: 'pointer' }}
+                              style={{ 
+                                cursor: 'pointer',
+                                fontWeight: '600',
+                                color: '#111827',
+                                marginBottom: '0.25rem'
+                              }}
                               >
                                 {property.name}
                               </div>
-                              <div className="property-type">{property.property_type}</div>
+                            <div style={{
+                              fontSize: '0.75rem',
+                              color: '#6b7280'
+                            }}>{property.property_type}</div>
                             </td>
-                            <td className="table-left">{property.full_address}</td>
-                            <td className="table-center">
-                              <div className="rooms-cell">
+                          <td style={{
+                            textAlign: 'left',
+                            padding: '0.75rem',
+                            borderBottom: '1px solid #f3f4f6',
+                            color: '#374151'
+                          }}>{property.full_address}</td>
+                          <td style={{
+                            textAlign: 'left',
+                            padding: '0.75rem',
+                            borderBottom: '1px solid #f3f4f6'
+                          }}>
+                            <div>
                                 {stats.isDetailLoaded ? (
                                   <>
-                                <div className="rooms-total">{stats.totalRooms} total</div>
-                                <div className="rooms-vacant">{stats.vacantRooms} vacant</div>
+                                  <div style={{
+                                    fontSize: '0.875rem',
+                                    fontWeight: '600',
+                                    color: '#111827',
+                                    marginBottom: '0.125rem'
+                                  }}>{stats.totalRooms} total</div>
+                                  <div style={{
+                                    fontSize: '0.75rem',
+                                    color: '#6b7280'
+                                  }}>{stats.vacantRooms} vacant</div>
                                   </>
                                 ) : (
-                                  <div className="loading-details">
-                                    <div className="rooms-total">{stats.totalRooms} total</div>
-                                    <div className="rooms-loading">Loading...</div>
+                                <div>
+                                  <div style={{
+                                    fontSize: '0.875rem',
+                                    fontWeight: '600',
+                                    color: '#111827',
+                                    marginBottom: '0.125rem'
+                                  }}>{stats.totalRooms} total</div>
+                                  <div style={{
+                                    fontSize: '0.75rem',
+                                    color: '#9ca3af'
+                                  }}>Loading...</div>
                                   </div>
                                 )}
                               </div>
                             </td>
-                            <td className="table-center">
+                          <td style={{
+                            textAlign: 'center',
+                            padding: '0.75rem',
+                            borderBottom: '1px solid #f3f4f6'
+                          }}>
                               {stats.isDetailLoaded ? (
+                            <div style={{ display: 'flex', justifyContent: 'center' }}>
                               <span className={`status-badge ${
                                 stats.occupancyRate < 50 ? 'low' : 
                                 stats.occupancyRate < 80 ? 'good' : 'excellent'
@@ -788,32 +1005,58 @@ function Properties() {
                                 {stats.occupancyRate < 50 ? 'Low' : 
                                  stats.occupancyRate < 80 ? 'Good' : 'Excellent'} ({stats.occupancyRate}%)
                               </span>
+                            </div>
                               ) : (
                                 <span className="status-badge loading">Loading...</span>
                               )}
                             </td>
-                            <td className="table-center">
+                          <td style={{
+                            textAlign: 'center',
+                            padding: '0.75rem',
+                            borderBottom: '1px solid #f3f4f6'
+                          }}>
                               {property.effective_rent !== undefined && property.effective_rent !== null ? `$${property.effective_rent}` : '-'}
                             </td>
-                            <td className="table-center">
+                          <td style={{
+                            textAlign: 'center',
+                            padding: '0.75rem',
+                            borderBottom: '1px solid #f3f4f6'
+                          }}>
                               {property.effective_security_deposit !== undefined && property.effective_security_deposit !== null ? `$${property.effective_security_deposit}` : '-'}
                             </td>
-                            <td className="table-center">
-                              <div className="action-buttons">
+                          <td style={{
+                            textAlign: 'center',
+                            padding: '0.75rem',
+                            borderBottom: '1px solid #f3f4f6'
+                          }}>
+                            <div style={{
+                              display: 'flex',
+                              justifyContent: 'center',
+                              alignItems: 'center',
+                              gap: '0.5rem'
+                            }}>
                                 <div className="dropdown-container">
                                   <button 
                                     onClick={(e) => handleManageClick(e, property.id)} 
-                                    className="manage-btn"
-                                  >
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                      <path d="M3 21h18"/>
-                                      <path d="M5 21V7l8-4v18"/>
-                                      <path d="M19 21V11l-6-4"/>
-                                    </svg>
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.5rem',
+                                    padding: '0.5rem 0.75rem',
+                                    backgroundColor: '#2563eb',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                    fontSize: '0.875rem',
+                                    fontWeight: '500',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease'
+                                  }}
+                                  onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
+                                  onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+                                >
+                                  <MoreHorizontal style={{ width: '1rem', height: '1rem' }} />
                                     Manage
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                      <polyline points="6,9 12,15 18,9"/>
-                                    </svg>
                                   </button>
                                   
                                   {activeDropdown === property.id && (
@@ -876,109 +1119,137 @@ function Properties() {
                       })}
                     </tbody>
                   </table>
-                </div>
-                
-                {/* Infinite scroll sentinel and loading indicator */}
-                {properties.length > 0 && (
-                  <div id="properties-sentinel" className="scroll-sentinel">
-                    {loadingMore && (
-                      <div className="loading-more">
-                        <div className="loading-spinner-small"></div>
-                        <span>Loading more properties...</span>
-                      </div>
-                    )}
-                    {!hasNextPage && properties.length > ITEMS_PER_PAGE && (
-                      <div className="end-of-list">
-                        <span>You've reached the end of your properties list</span>
-                      </div>
-                    )}
-                  </div>
-                )}
               </div>
             )}
           </div>
 
-          {/* Quick Actions Section */}
-          <div className="quick-actions-section">
-            <div className="section-header">
-              <div>
-                <h2 className="section-title">Quick Actions</h2>
-                <p className="section-subtitle">Frequently used actions</p>
-              </div>
+          {/* Quick Actions Section - 1/4 width */}
+          <div style={{
+            gridColumn: 'span 1',
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            border: '1px solid #e5e7eb',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+            height: 'fit-content',
+            transition: 'all 0.2s ease'
+          }}
+          onMouseOver={(e) => {
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+            e.currentTarget.style.transform = 'translateY(-1px)';
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+            e.currentTarget.style.transform = 'translateY(0)';
+          }}>
+            <div style={{
+              padding: '1.5rem',
+              borderBottom: '1px solid #e5e7eb'
+            }}>
+              <h2 style={{
+                fontSize: '1.25rem',
+                fontWeight: '700',
+                color: '#111827',
+                margin: 0,
+                marginBottom: '0.25rem'
+              }}>Quick Actions</h2>
+              <p style={{
+                fontSize: '0.875rem',
+                color: '#6b7280',
+                margin: 0
+              }}>Frequently used actions</p>
             </div>
             
-            <div className="actions-grid">
-              <div className="action-card blue" onClick={() => router.push('/properties/add')}>
-                <div className="action-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <line x1="12" y1="5" x2="12" y2="19"/>
-                    <line x1="5" y1="12" x2="19" y2="12"/>
-                  </svg>
+            <div style={{
+              padding: '1.5rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1rem'
+            }}>
+              {[
+                {
+                  title: 'Add Property',
+                  subtitle: 'Register New Property',
+                  icon: Plus,
+                  bgColor: '#eff6ff',
+                  iconColor: '#2563eb',
+                  action: () => router.push('/properties/add')
+                },
+                {
+                  title: 'Review Applications',
+                  subtitle: 'Process Tenant Applications',
+                  icon: FileText,
+                  bgColor: '#f0fdf4',
+                  iconColor: '#16a34a',
+                  action: () => router.push('/applications')
+                },
+                {
+                  title: 'Manage Tenants',
+                  subtitle: 'View and Manage Tenants',
+                  icon: Users,
+                  bgColor: '#fff7ed',
+                  iconColor: '#ea580c',
+                  action: () => router.push('/tenants')
+                },
+                {
+                  title: 'Generate Reports',
+                  subtitle: 'Create Financial Reports',
+                  icon: Download,
+                  bgColor: '#faf5ff',
+                  iconColor: '#9333ea',
+                  action: downloadPropertiesReport
+                }
+              ].map((action, index) => (
+                <div key={index}
+                  onClick={action.action}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '1rem',
+                    padding: '1rem',
+                    backgroundColor: action.bgColor,
+                    borderRadius: '8px',
+                    border: `1px solid ${action.bgColor}`,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-1px)';
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
+                >
+                  <div style={{
+                    width: '2.5rem',
+                    height: '2.5rem',
+                    backgroundColor: 'white',
+                    borderRadius: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
+                  }}>
+                    <action.icon style={{ width: '1.25rem', height: '1.25rem', color: action.iconColor }} />
                 </div>
-                <div className="action-content">
-                  <h3 className="action-title">Add Property</h3>
-                  <p className="action-subtitle">Register New Property</p>
+                  <div style={{ flex: 1 }}>
+                    <h3 style={{
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: '#111827',
+                      margin: 0,
+                      marginBottom: '0.125rem'
+                    }}>{action.title}</h3>
+                    <p style={{
+                      fontSize: '0.75rem',
+                      color: '#6b7280',
+                      margin: 0
+                    }}>{action.subtitle}</p>
                 </div>
               </div>
-
-              <div className="action-card blue" onClick={() => router.push('/applications')}>
-                <div className="action-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                    <polyline points="14,2 14,8 20,8"/>
-                    <line x1="16" y1="13" x2="8" y2="13"/>
-                    <line x1="16" y1="17" x2="8" y2="17"/>
-                  </svg>
+              ))}
                 </div>
-                <div className="action-content">
-                  <h3 className="action-title">Review Applications</h3>
-                  <p className="action-subtitle">Process Tenant Applications</p>
-                </div>
-              </div>
-
-              <div className="action-card green" onClick={() => router.push('/tenants')}>
-                <div className="action-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                    <circle cx="12" cy="7" r="4"/>
-                  </svg>
-                </div>
-                <div className="action-content">
-                  <h3 className="action-title">Manage Tenants</h3>
-                  <p className="action-subtitle">View and Manage Tenants</p>
-                </div>
-              </div>
-
-              <div className="action-card purple" onClick={downloadPropertiesReport}>
-                <div className="action-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <line x1="18" y1="20" x2="18" y2="10"/>
-                    <line x1="12" y1="20" x2="12" y2="4"/>
-                    <line x1="6" y1="20" x2="6" y2="14"/>
-                  </svg>
-                </div>
-                <div className="action-content">
-                  <h3 className="action-title">Generate Reports</h3>
-                  <p className="action-subtitle">Create Financial Reports</p>
-                </div>
-              </div>
-
-              <div className="action-card orange" onClick={handleCreateListing}>
-                <div className="action-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M21 12V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h7"/>
-                    <path d="M16 2v4"/>
-                    <path d="M8 2v4"/>
-                    <path d="M3 10h18"/>
-                    <path d="M15 19l2 2 4-4"/>
-                  </svg>
-                </div>
-                <div className="action-content">
-                  <h3 className="action-title">Create Listing</h3>
-                  <p className="action-subtitle">Post to Zillow, Apartments.com, etc.</p>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </div>

@@ -13,6 +13,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import { useAuth, withAuth } from '../lib/auth-context';
 import { Application, Property, Room } from '../lib/types';
 import { apiClient } from '../lib/api';
+import { FileText, Clock, CheckCircle, TrendingUp, Calendar } from 'lucide-react';
 
 interface ConflictResolution {
   applicationId: number;
@@ -1323,20 +1324,84 @@ function Applications() {
       </Head>
       
       <div className="dashboard-container">
-        {/* Custom Header */}
-        <div className="dashboard-header">
-          <div className="header-content">
-            <div className="header-left">
-              <h1 className="dashboard-title">Applications Review</h1>
-              <div className="subtitle-container">
-                <p className="welcome-message">
+        {/* Modern Header */}
+        <div style={{
+          backgroundColor: 'white',
+          borderRadius: '12px',
+          padding: '1.5rem',
+          border: '1px solid #e5e7eb',
+          boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+          marginBottom: '2rem'
+        }}>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '1rem'
+            }}>
+              <div style={{
+                width: '3rem',
+                height: '3rem',
+                backgroundColor: '#dbeafe',
+                borderRadius: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <FileText style={{ width: '1.5rem', height: '1.5rem', color: '#2563eb' }} />
+              </div>
+              <div>
+                <h1 style={{
+                  fontSize: '1.875rem',
+                  fontWeight: '700',
+                  color: '#111827',
+                  margin: '0 0 0.25rem 0'
+                }}>
+                  Applications Review
+                </h1>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  fontSize: '1rem',
+                  color: '#6b7280',
+                  margin: 0
+                }}>
+                  <Calendar style={{ width: '1rem', height: '1rem' }} />
                   Review and decide on rental applications. Approved tenants must be assigned to rooms and moved in.
-                </p>
               </div>
             </div>
-            <div className="header-right">
-              {/* Primary quick-action buttons - reordered */}
-              <button onClick={() => router.push('/listings')} className="view-all-btn" title="View and manage property listings">
+            </div>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              flexWrap: 'wrap'
+            }}>
+              <button 
+                onClick={() => router.push('/listings')} 
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.5rem 1rem',
+                  backgroundColor: '#2563eb',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
+                onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+                title="View and manage property listings"
+              >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
                   <polyline points="9,22 9,12 15,12 15,22"/>
@@ -1346,7 +1411,22 @@ function Applications() {
 
               <button
                 onClick={() => router.push('/tenants')}
-                className="view-all-btn"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.5rem 1rem',
+                  backgroundColor: '#2563eb',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
+                onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
                 title="View all tenants, their lease details, and rental history"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1360,7 +1440,22 @@ function Applications() {
 
               <button
                 onClick={() => setIsViewingManagementOpen(true)}
-                className="view-all-btn"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.5rem 1rem',
+                  backgroundColor: '#2563eb',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
+                onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
                 title="Manage property viewings and track completion status"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1369,34 +1464,11 @@ function Applications() {
                   <line x1="8" y1="2" x2="8" y2="6"/>
                   <line x1="3" y1="10" x2="21" y2="10"/>
                 </svg>
-                {viewingsCount > 0 ? `View Viewings (${viewingsCount})` : 'No Viewings'}
+                Viewings ({viewingsCount} due)
               </button>
-
-              {/* 
-              <button
-                onClick={() => {
-                  const property = properties.find(p => p.id === selectedProperty);
-                  if (property) {
-                    openPropertyRoomManagement(property);
-                  } else if (properties.length > 0) {
-                    openPropertyRoomManagement(properties[0]);
-                  }
-                }}
-                className="view-all-btn room-management-btn"
-                title="Manage room availability, pricing, and assignments across all properties"
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                  <polyline points="9,22 9,12 15,12 15,22" />
-                </svg>
-                Room Management
-              </button>
-              */}
             </div>
           </div>
         </div>
-
-
 
         {/* Alerts */}
         {error && (
@@ -1411,95 +1483,141 @@ function Applications() {
         )}
         
         {/* Top Metrics Row */}
-        <div className="metrics-grid">
-          <div className="metric-card">
-            <div className="metric-header">
-              <div className="metric-info">
-                <h3 className="metric-title">Total Applications</h3>
-                <div className="metric-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                    <polyline points="14,2 14,8 20,8"/>
-                    <line x1="16" y1="13" x2="8" y2="13"/>
-                    <line x1="16" y1="17" x2="8" y2="17"/>
-                  </svg>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+          gap: '1.5rem',
+          marginBottom: '2rem'
+        }}>
+          {[
+            {
+              title: 'Total Applications',
+              value: metrics.total,
+              subtitle: 'Total received',
+              label: 'All time',
+              change: `+${metrics.total > 0 ? '1' : '0'}`,
+              changeType: 'positive',
+              icon: <FileText style={{ width: '1.25rem', height: '1.25rem' }} />,
+              color: '#2563eb',
+              bgColor: '#dbeafe'
+            },
+            {
+              title: 'Pending Review',
+              value: metrics.pending,
+              subtitle: 'Awaiting decision',
+              label: 'Needs review',
+              change: `+${metrics.pending > 0 ? '1' : '0'}`,
+              changeType: 'positive',
+              icon: <Clock style={{ width: '1.25rem', height: '1.25rem' }} />,
+              color: '#f59e0b',
+              bgColor: '#fef3c7'
+            },
+            {
+              title: 'Approved',
+              value: metrics.approved,
+              subtitle: 'Successfully approved',
+              label: 'Approval rate',
+              change: `+${metrics.approved > 0 ? '1' : '0'}`,
+              changeType: 'positive',
+              icon: <CheckCircle style={{ width: '1.25rem', height: '1.25rem' }} />,
+              color: '#059669',
+              bgColor: '#d1fae5'
+            },
+            {
+              title: 'Conversion Rate',
+              value: `${metrics.conversionRate}%`,
+              subtitle: 'Applications to tenants',
+              label: 'Success rate',
+              change: `+${metrics.conversionRate > 50 ? '↗' : metrics.conversionRate > 25 ? '→' : '↘'}`,
+              changeType: metrics.conversionRate > 50 ? 'positive' : metrics.conversionRate > 25 ? 'neutral' : 'negative',
+              icon: <TrendingUp style={{ width: '1.25rem', height: '1.25rem' }} />,
+              color: '#7c3aed',
+              bgColor: '#e9d5ff'
+            }
+          ].map((metric, index) => (
+            <div key={index} style={{
+              backgroundColor: 'white',
+              borderRadius: '12px',
+              padding: '1.5rem',
+              border: '1px solid #e5e7eb',
+              boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.1)';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 1px 3px 0 rgba(0, 0, 0, 0.1)';
+            }}>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '1rem'
+              }}>
+                <h3 style={{
+                  fontSize: '0.875rem',
+                  fontWeight: '600',
+                  color: '#6b7280',
+                  margin: 0,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.025em'
+                }}>
+                  {metric.title}
+                </h3>
+                <div style={{
+                  backgroundColor: metric.bgColor,
+                  borderRadius: '8px',
+                  padding: '0.5rem',
+                  color: metric.color
+                }}>
+                  {metric.icon}
                 </div>
               </div>
+              <div style={{
+                fontSize: '2rem',
+                fontWeight: '700',
+                color: '#111827',
+                marginBottom: '0.25rem',
+                lineHeight: 1
+              }}>
+                {metric.value}
             </div>
-            <div className="metric-content">
-              <div className="metric-value">{metrics.total}</div>
-              <div className="metric-subtitle">Total received</div>
-              <div className="metric-progress">
-                <span className="metric-label">All time</span>
-                <span className="metric-change positive">+{metrics.total > 0 ? '1' : '0'}</span>
+              <div style={{
+                fontSize: '0.875rem',
+                color: '#6b7280',
+                marginBottom: '0.5rem'
+              }}>
+                {metric.subtitle}
               </div>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
+                <span style={{
+                  fontSize: '0.75rem',
+                  color: '#9ca3af'
+                }}>
+                  {metric.label}
+                </span>
+                <span style={{
+                  fontSize: '0.75rem',
+                  fontWeight: '500',
+                  padding: '0.125rem 0.5rem',
+                  borderRadius: '4px',
+                  backgroundColor: metric.changeType === 'positive' ? '#d1fae5' : 
+                                   metric.changeType === 'negative' ? '#fef2f2' : '#f3f4f6',
+                  color: metric.changeType === 'positive' ? '#065f46' : 
+                         metric.changeType === 'negative' ? '#dc2626' : '#6b7280'
+                }}>
+                  {metric.change}
+                </span>
             </div>
           </div>
-          
-          <div className="metric-card">
-            <div className="metric-header">
-              <div className="metric-info">
-                <h3 className="metric-title">Pending Review</h3>
-                <div className="metric-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="12" cy="12" r="10"/>
-                    <polyline points="12,6 12,12 16,14"/>
-                  </svg>
-                </div>
-              </div>
-            </div>
-            <div className="metric-content">
-              <div className="metric-value">{metrics.pending}</div>
-              <div className="metric-subtitle">Awaiting decision</div>
-              <div className="metric-progress">
-                <span className="metric-label">Needs review</span>
-                <span className="metric-change positive">+{metrics.pending > 0 ? '1' : '0'}</span>
-              </div>
-            </div>
-          </div>
-          
-          <div className="metric-card">
-            <div className="metric-header">
-              <div className="metric-info">
-                <h3 className="metric-title">Approved</h3>
-                <div className="metric-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <polyline points="20,6 9,17 4,12"/>
-                  </svg>
-                </div>
-              </div>
-            </div>
-            <div className="metric-content">
-              <div className="metric-value">{metrics.approved}</div>
-              <div className="metric-subtitle">Successfully approved</div>
-              <div className="metric-progress">
-                <span className="metric-label">Approval rate</span>
-                <span className="metric-change positive">+{metrics.approved > 0 ? '1' : '0'}</span>
-              </div>
-            </div>
-          </div>
-          
-          <div className="metric-card">
-            <div className="metric-header">
-              <div className="metric-info">
-                <h3 className="metric-title">Conversion Rate</h3>
-                <div className="metric-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M3 17l6-6 4 4 8-8"/>
-                    <path d="M21 7l-5 5v-4h-4"/>
-                  </svg>
-                </div>
-              </div>
-            </div>
-            <div className="metric-content">
-              <div className="metric-value">{metrics.conversionRate}%</div>
-              <div className="metric-subtitle">Applications to tenants</div>
-              <div className="metric-progress">
-                <span className="metric-label">Success rate</span>
-                <span className="metric-change positive">+{metrics.conversionRate > 50 ? '↗' : metrics.conversionRate > 25 ? '→' : '↘'}</span>
-              </div>
-            </div>
-          </div>
+          ))}
         </div>
 
         {/* Application Kanban with built-in list view */}
@@ -1530,7 +1648,7 @@ function Applications() {
                     disabled={loading}
                     title="Refresh applications data to get the latest information (including newly created leases)"
                     style={{
-                      backgroundColor: loading ? '#e5e5e5' : '#10b981',
+                      backgroundColor: loading ? '#e5e5e5' : '#2563eb',
                       color: loading ? '#999' : 'white',
                       cursor: loading ? 'not-allowed' : 'pointer'
                     }}
@@ -1554,7 +1672,22 @@ function Applications() {
                   </button>
                   <button 
                     onClick={downloadApplicationsReport} 
-                    className="view-all-btn"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      padding: '0.5rem 1rem',
+                      backgroundColor: '#2563eb',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
+                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
                     title="Download a comprehensive report of all applications with analytics and insights"
                   >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

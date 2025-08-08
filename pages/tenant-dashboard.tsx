@@ -1,28 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
-import { 
-  Home, 
-  ArrowLeft, 
-  Phone, 
-  MessageSquare, 
-  CheckCircle,
-  MapPin,
-  Building,
-  Users,
-  ArrowRight,
-  Download,
-  Upload,
-  DollarSign,
-  Clock,
-  FileText,
-  User,
-  Mail,
-  LogOut,
-  Calendar,
-  CreditCard,
-  History
-} from 'lucide-react';
 import { apiClient } from '../lib/api';
 import { Lease } from '../lib/types';
 import PaymentModal from '../components/PaymentModal';
@@ -46,8 +24,8 @@ const TenantDashboard: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<TenantUser | null>(null);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isPaymentHistoryModalOpen, setIsPaymentHistoryModalOpen] = useState(false);
-  const [isContactLandlordModalOpen, setIsContactLandlordModalOpen] = useState(false);
   const [uploadingLease, setUploadingLease] = useState<number | null>(null);
+  const [isContactLandlordModalOpen, setIsContactLandlordModalOpen] = useState(false);
 
   useEffect(() => {
     const accessToken = localStorage.getItem('tenant_access_token');
@@ -147,17 +125,6 @@ const TenantDashboard: React.FC = () => {
     tenantLeases.find(lease => lease.status === 'draft') ||
     tenantLeases[0];
 
-  const getStatusColor = (status: string) => {
-    const statusColors: { [key: string]: string } = {
-      'draft': 'bg-yellow-100 text-yellow-800',
-      'sent_to_tenant': 'bg-blue-100 text-blue-800',
-      'signed': 'bg-purple-100 text-purple-800',
-      'active': 'bg-green-100 text-green-800',
-      'expired': 'bg-red-100 text-red-800'
-    };
-    return statusColors[status] || 'bg-gray-100 text-gray-800';
-  };
-
   const renderLeaseStatus = (status: string) => {
     const statusLabels: { [key: string]: string } = {
       'draft': 'Being Prepared',
@@ -166,172 +133,64 @@ const TenantDashboard: React.FC = () => {
       'active': 'Active',
       'expired': 'Expired'
     };
-    return (
-      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(status)}`}>
-        {statusLabels[status] || status}
-      </span>
-    );
+    return <span>{statusLabels[status] || status}</span>;
   };
 
   const renderLeaseActions = (lease: Lease) => {
     switch (lease.status) {
       case 'draft':
         return (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="flex-shrink-0">
-                <Clock className="h-8 w-8 text-yellow-600" />
-              </div>
           <div>
-                <h3 className="text-lg font-medium text-yellow-900">Lease Being Prepared</h3>
-                <p className="text-sm text-yellow-700 mt-1">
-                  Your landlord is preparing your lease document. You'll receive an SMS notification once it's ready for signing.
-                </p>
-              </div>
-            </div>
+            <h3>Lease Being Prepared</h3>
+            <p>Your landlord is preparing your lease document. You'll receive an SMS notification once it's ready for signing.</p>
           </div>
         );
       case 'sent_to_tenant':
         return (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="flex-shrink-0">
-                <FileText className="h-8 w-8 text-blue-600" />
-              </div>
           <div>
-                <h3 className="text-lg font-medium text-blue-900">Ready for Your Signature</h3>
-                <p className="text-sm text-blue-700 mt-1">
-                  Your lease is ready for review and signing.
-                </p>
-              </div>
-            </div>
-            <div className="bg-white rounded-lg p-4 mb-4">
-              <h4 className="font-medium text-gray-900 mb-3">Next Steps:</h4>
-              <ol className="list-decimal list-inside space-y-2 text-sm text-gray-600">
+            <h3>Ready for Your Signature</h3>
+            <p>Your lease is ready for review and signing. Please follow these steps:</p>
+            <ol>
               <li>Download and review the lease document</li>
               <li>Print and sign the document</li>
               <li>Scan or photograph the signed lease</li>
               <li>Upload the signed document using the button below</li>
             </ol>
-            </div>
-            <div className="flex space-x-3">
-              <button 
-                onClick={() => handleDownloadLease(lease.id)}
-                className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2"
-              >
-                <Download className="w-4 h-4" />
-                <span>Download Lease</span>
-              </button>
-              <button 
-                onClick={() => handleLeaseFileSelect(lease.id)} 
-                disabled={uploadingLease === lease.id}
-                className="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center justify-center space-x-2"
-              >
-                {uploadingLease === lease.id ? (
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <Upload className="w-4 h-4" />
-                )}
-                <span>{uploadingLease === lease.id ? 'Uploading...' : 'Upload Signed Lease'}</span>
+            <div>
+              <button onClick={() => handleDownloadLease(lease.id)}>Download Lease</button>
+              <button onClick={() => handleLeaseFileSelect(lease.id)} disabled={uploadingLease === lease.id}>
+                {uploadingLease === lease.id ? 'Uploading...' : 'Upload Signed Lease'}
               </button>
             </div>
           </div>
         );
       case 'signed':
         return (
-          <div className="bg-purple-50 border border-purple-200 rounded-lg p-6">
-            <div className="flex items-center space-x-3">
-              <div className="flex-shrink-0">
-                <CheckCircle className="h-8 w-8 text-purple-600" />
-              </div>
           <div>
-                <h3 className="text-lg font-medium text-purple-900">Lease Signed Successfully</h3>
-                <p className="text-sm text-purple-700 mt-1">
-                  Your signed lease has been received. Your landlord will review and activate it shortly.
-                </p>
-              </div>
-            </div>
+            <h3>Lease Signed Successfully</h3>
+            <p>Your signed lease has been received. Your landlord will review and activate it shortly.</p>
           </div>
         );
       case 'active':
         return (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="flex-shrink-0">
-                  <CheckCircle className="h-8 w-8 text-green-600" />
-                </div>
           <div>
-                  <h3 className="text-lg font-medium text-green-900">Your lease is now active. Welcome to your new home!</h3>
-                  <p className="text-sm text-green-700 mt-1">You can now make payments and access all tenant features.</p>
-                </div>
-              </div>
-              <button 
-                onClick={() => handleDownloadLease(lease.id)}
-                className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2"
-              >
-                <Download className="w-4 h-4" />
-                <span>Download Lease Copy</span>
-              </button>
-            </div>
+            <h3>Lease Active</h3>
+            <p>Your lease is now active. Welcome to your new home!</p>
+            <button onClick={() => handleDownloadLease(lease.id)}>Download Lease Copy</button>
           </div>
         );
       default:
         return (
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
-            <div className="flex items-center space-x-3">
-              <div className="flex-shrink-0">
-                <Clock className="h-8 w-8 text-gray-600" />
-              </div>
           <div>
-                <h3 className="text-lg font-medium text-gray-900">Processing</h3>
-                <p className="text-sm text-gray-700 mt-1">
-                  Your lease is being processed. Please check back soon.
-                </p>
-              </div>
-            </div>
+            <h3>Processing</h3>
+            <p>Your lease is being processed. Please check back soon.</p>
           </div>
         );
     }
   };
 
   if (loading) {
-    return (
-      <div style={{ 
-        minHeight: '100vh', 
-        background: 'linear-gradient(135deg, #dbeafe 0%, #ffffff 50%, #faf5ff 100%)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '1rem'
-      }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '4rem',
-            height: '4rem',
-            background: 'linear-gradient(135deg, #2563eb, #1e40af)',
-            borderRadius: '1rem',
-            marginBottom: '1rem',
-            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
-          }}>
-            <Home style={{ width: '2rem', height: '2rem', color: 'white' }} />
-          </div>
-          <div style={{
-            width: '2rem',
-            height: '2rem',
-            border: '4px solid #dbeafe',
-            borderTop: '4px solid #2563eb',
-            borderRadius: '50%',
-            animation: 'spin 1s linear infinite',
-            margin: '0 auto 1rem auto'
-          }}></div>
-          <p style={{ color: '#6b7280' }}>Loading your dashboard...</p>
-        </div>
-      </div>
-    );
+    return <div>Loading your dashboard...</div>;
   }
 
   return (
@@ -339,445 +198,701 @@ const TenantDashboard: React.FC = () => {
       <Head>
         <title>Tenant Dashboard - Tink</title>
         <meta name="description" content="Manage your rental, payments, and communicate with your landlord" />
-        <style>{`
-          @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-          }
-          @media (min-width: 1024px) {
-            .dashboard-grid {
-              grid-template-columns: 2fr 1fr !important;
-            }
-          }
-        `}</style>
       </Head>
 
-      <div style={{ 
-        minHeight: '100vh', 
-        background: 'linear-gradient(135deg, #dbeafe 0%, #ffffff 50%, #faf5ff 100%)'
+      <div style={{
+        minHeight: '100vh',
+        backgroundColor: '#f8fafc',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
       }}>
         {/* Header */}
         <header style={{
           backgroundColor: 'white',
-          boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
-          borderBottom: '1px solid #e5e7eb'
+          borderBottom: '1px solid #e2e8f0',
+          padding: '1rem 2rem'
         }}>
           <div style={{
-            maxWidth: '80rem',
-            margin: '0 auto',
-            padding: '0 1rem'
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            maxWidth: '1400px',
+            margin: '0 auto'
           }}>
             <div style={{
               display: 'flex',
-              justifyContent: 'space-between',
               alignItems: 'center',
-              padding: '1.5rem 0'
+              gap: '1rem'
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <div style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '3rem',
-                  height: '3rem',
-                  background: 'linear-gradient(135deg, #2563eb, #1e40af)',
-                  borderRadius: '0.75rem',
-                  boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
-                }}>
-                  <Home style={{ width: '1.5rem', height: '1.5rem', color: 'white' }} />
-                </div>
-      <div>
-                  <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#111827', margin: 0 }}>Tink</h1>
-                  <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>Tenant Portal</p>
-                </div>
+              <div style={{
+                width: '2.5rem',
+                height: '2.5rem',
+                backgroundColor: '#3b82f6',
+                borderRadius: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'white',
+                fontWeight: 'bold',
+                fontSize: '1.25rem'
+              }}>
+                T
               </div>
-              
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <div style={{ textAlign: 'right' }}>
-                  <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>Welcome back,</p>
-                  <p style={{ fontWeight: '600', color: '#111827', margin: 0 }}>{currentUser?.full_name || 'Tenant'}</p>
-                </div>
+              <div>
+                <h1 style={{
+                  fontSize: '1.5rem',
+                  fontWeight: '700',
+                  color: '#1e293b',
+                  margin: 0
+                }}>Tink</h1>
+                <p style={{
+                  fontSize: '0.875rem',
+                  color: '#64748b',
+                  margin: 0
+                }}>Tenant Portal</p>
+              </div>
+            </div>
+
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '1rem'
+            }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem'
+              }}>
                 <div style={{
                   width: '2.5rem',
                   height: '2.5rem',
-                  background: 'linear-gradient(135deg, #2563eb, #1e40af)',
+                  backgroundColor: '#3b82f6',
                   borderRadius: '50%',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   color: 'white',
-                  fontWeight: '600'
+                  fontWeight: 'bold'
                 }}>
-                  {currentUser?.full_name?.charAt(0) || 'T'}
-            </div>
-                <button 
-                  onClick={handleLogout}
-                  style={{
-                    padding: '0.5rem',
-                    color: '#9ca3af',
-                    backgroundColor: 'transparent',
-                    border: 'none',
-                    cursor: 'pointer',
-                    borderRadius: '0.375rem'
-                  }}
-                  title="Logout"
-                  onMouseOver={(e) => e.currentTarget.style.color = '#6b7280'}
-                  onMouseOut={(e) => e.currentTarget.style.color = '#9ca3af'}
-                >
-                  <LogOut style={{ width: '1.25rem', height: '1.25rem' }} />
-                </button>
+                  {currentUser?.full_name?.charAt(0) || 'R'}
+                </div>
+                <div>
+                  <p style={{
+                    fontSize: '0.875rem',
+                    fontWeight: '600',
+                    color: '#1e293b',
+                    margin: 0
+                  }}>{currentUser?.full_name || 'Rohan Dave'}</p>
+                  <p style={{
+                    fontSize: '0.75rem',
+                    color: '#64748b',
+                    margin: 0
+                  }}>Tenant</p>
+                </div>
               </div>
+              <button
+                onClick={handleLogout}
+                style={{
+                  padding: '0.5rem 1rem',
+                  backgroundColor: '#f1f5f9',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '6px',
+                  fontSize: '0.875rem',
+                  color: '#475569',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = '#e2e8f0';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f1f5f9';
+                }}
+              >
+                Logout
+              </button>
             </div>
           </div>
         </header>
 
+        {/* Main Content */}
         <main style={{
-          maxWidth: '80rem',
+          maxWidth: '1400px',
           margin: '0 auto',
-          padding: '2rem 1rem'
+          padding: '2rem',
+          display: 'grid',
+          gridTemplateColumns: '2fr 1fr',
+          gap: '2rem',
+          alignItems: 'start'
         }}>
-          {/* Welcome Section */}
-          <div style={{ marginBottom: '2rem' }}>
-            <h2 style={{ fontSize: '1.875rem', fontWeight: 'bold', color: '#111827', marginBottom: '0.5rem' }}>Welcome back, {currentUser?.full_name || 'Tenant'}</h2>
-            <p style={{ color: '#6b7280', margin: 0 }}>Manage your rental and stay connected with your property</p>
-          </div>
-          
-          {/* Last Login Info */}
+          {/* Left Column */}
           <div style={{
-            backgroundColor: 'white',
-            borderRadius: '0.75rem',
-            boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
-            border: '1px solid #e5e7eb',
-            padding: '1rem',
-            marginBottom: '2rem'
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '2rem'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Clock style={{ width: '1rem', height: '1rem', color: '#9ca3af' }} />
-                <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>Last login: {new Date().toLocaleDateString()}</span>
+            {/* Welcome Section */}
+            <div style={{
+              backgroundColor: 'white',
+              borderRadius: '12px',
+              padding: '2rem',
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+              border: '1px solid #e2e8f0'
+            }}>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'flex-start',
+                marginBottom: '1rem'
+              }}>
+                <div>
+                  <h1 style={{
+                    fontSize: '1.875rem',
+                    fontWeight: '700',
+                    color: '#1e293b',
+                    margin: '0 0 0.5rem 0'
+                  }}>
+                    Welcome back, <span style={{ color: '#3b82f6' }}>{currentUser?.full_name || 'Rohan Dave'}</span>
+                  </h1>
+                  <p style={{
+                    fontSize: '1rem',
+                    color: '#64748b',
+                    margin: 0
+                  }}>Manage your rental and stay connected with your property</p>
+                </div>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  fontSize: '0.875rem',
+                  color: '#64748b'
+                }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <polyline points="12,6 12,12 16,14"/>
+                  </svg>
+                  Last login: {new Date().toLocaleDateString('en-US', { 
+                    month: 'numeric', 
+                    day: 'numeric', 
+                    year: 'numeric' 
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Current Lease Card */}
+            <div style={{
+              backgroundColor: 'white',
+              borderRadius: '12px',
+              padding: '1.5rem',
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+              border: '1px solid #e2e8f0'
+            }}>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '1.5rem'
+              }}>
+                <h2 style={{
+                  fontSize: '1.25rem',
+                  fontWeight: '600',
+                  color: '#1e293b',
+                  margin: 0
+                }}>Current Lease</h2>
+                {primaryLease && (
+                  <span style={{
+                    padding: '0.25rem 0.75rem',
+                    borderRadius: '9999px',
+                    fontSize: '0.875rem',
+                    fontWeight: '600',
+                    backgroundColor: primaryLease.status === 'active' ? '#dcfce7' : '#dbeafe',
+                    color: primaryLease.status === 'active' ? '#166534' : '#1d4ed8'
+                  }}>
+                    {primaryLease.status === 'active' ? 'Active' : renderLeaseStatus(primaryLease.status)}
+                  </span>
+                )}
+              </div>
+
+              {leaseLoading ? (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '2rem',
+                  color: '#64748b'
+                }}>
+                  Loading lease information...
+                </div>
+              ) : primaryLease ? (
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: '1.5rem'
+                }}>
+                  <div>
+                    <div style={{ marginBottom: '1rem' }}>
+                      <dt style={{
+                        fontSize: '0.875rem',
+                        color: '#64748b',
+                        marginBottom: '0.25rem'
+                      }}>Property</dt>
+                      <dd style={{
+                        fontSize: '1rem',
+                        fontWeight: '600',
+                        color: '#1e293b',
+                        margin: 0
+                      }}>{(primaryLease.property_ref as any)?.name || 'Property Address'}</dd>
+                    </div>
+                    <div style={{ marginBottom: '1rem' }}>
+                      <dt style={{
+                        fontSize: '0.875rem',
+                        color: '#64748b',
+                        marginBottom: '0.25rem'
+                      }}>Unit/Room</dt>
+                      <dd style={{
+                        fontSize: '1rem',
+                        fontWeight: '600',
+                        color: '#1e293b',
+                        margin: 0
+                      }}>{primaryLease.room ? `Room ${(primaryLease.room as any)?.name || primaryLease.room}` : 'Room 129'}</dd>
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ marginBottom: '1rem' }}>
+                      <dt style={{
+                        fontSize: '0.875rem',
+                        color: '#64748b',
+                        marginBottom: '0.25rem'
+                      }}>Lease Period</dt>
+                      <dd style={{
+                        fontSize: '1rem',
+                        fontWeight: '600',
+                        color: '#1e293b',
+                        margin: 0
+                      }}>
+                        {new Date(primaryLease.start_date).toLocaleDateString('en-US', { 
+                          month: 'numeric', 
+                          day: 'numeric', 
+                          year: 'numeric' 
+                        })} - {new Date(primaryLease.end_date).toLocaleDateString('en-US', { 
+                          month: 'numeric', 
+                          day: 'numeric', 
+                          year: 'numeric' 
+                        })}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt style={{
+                        fontSize: '0.875rem',
+                        color: '#64748b',
+                        marginBottom: '0.25rem'
+                      }}>Status</dt>
+                      <dd style={{
+                        fontSize: '1rem',
+                        color: '#1e293b',
+                        margin: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem'
+                      }}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2">
+                          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                          <polyline points="22,4 12,14.01 9,11.01"/>
+                        </svg>
+                        Lease Active
+                      </dd>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <p style={{ color: '#64748b', textAlign: 'center', padding: '2rem' }}>
+                  No lease information available
+                </p>
+              )}
+
+              {primaryLease?.status === 'active' && (
+                <div style={{
+                  marginTop: '1.5rem',
+                  padding: '1rem',
+                  backgroundColor: '#f0fdf4',
+                  borderRadius: '8px',
+                  border: '1px solid #bbf7d0'
+                }}>
+                  <p style={{
+                    fontSize: '0.875rem',
+                    color: '#166534',
+                    margin: 0,
+                    fontWeight: '500'
+                  }}>Your lease is now active. Welcome to your new home!</p>
+                  <button
+                    onClick={() => primaryLease && handleDownloadLease(primaryLease.id)}
+                    style={{
+                      marginTop: '0.75rem',
+                      padding: '0.5rem 1rem',
+                      backgroundColor: '#3b82f6',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = '#2563eb';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = '#3b82f6';
+                    }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                      <polyline points="7,10 12,15 17,10"/>
+                      <line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                    Download Lease Copy
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Quick Actions */}
+            <div style={{
+              backgroundColor: 'white',
+              borderRadius: '12px',
+              padding: '1.5rem',
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+              border: '1px solid #e2e8f0'
+            }}>
+              <h2 style={{
+                fontSize: '1.25rem',
+                fontWeight: '600',
+                color: '#1e293b',
+                margin: '0 0 1.5rem 0'
+              }}>Quick Actions</h2>
+              
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: '1rem'
+              }}>
+                <button
+                  onClick={() => setIsPaymentHistoryModalOpen(true)}
+                  style={{
+                    padding: '1.5rem',
+                    backgroundColor: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '8px',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '1rem'
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.backgroundColor = '#f1f5f9';
+                    e.currentTarget.style.transform = 'translateY(-1px)';
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.1)';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.backgroundColor = '#f8fafc';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
+                >
+                  <div style={{
+                    width: '2.5rem',
+                    height: '2.5rem',
+                    backgroundColor: '#10b981',
+                    borderRadius: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
+                  }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                      <circle cx="12" cy="12" r="10"/>
+                      <polyline points="12,6 12,12 16,14"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 style={{
+                      fontSize: '1rem',
+                      fontWeight: '600',
+                      color: '#1e293b',
+                      margin: '0 0 0.25rem 0'
+                    }}>Payment History</h3>
+                    <p style={{
+                      fontSize: '0.875rem',
+                      color: '#64748b',
+                      margin: 0
+                    }}>View all your past rent payments</p>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => setIsContactLandlordModalOpen(true)}
+                  style={{
+                    padding: '1.5rem',
+                    backgroundColor: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '8px',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '1rem'
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.backgroundColor = '#f1f5f9';
+                    e.currentTarget.style.transform = 'translateY(-1px)';
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.1)';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.backgroundColor = '#f8fafc';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
+                >
+                  <div style={{
+                    width: '2.5rem',
+                    height: '2.5rem',
+                    backgroundColor: '#3b82f6',
+                    borderRadius: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
+                  }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                      <polyline points="22,6 12,13 2,6"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 style={{
+                      fontSize: '1rem',
+                      fontWeight: '600',
+                      color: '#1e293b',
+                      margin: '0 0 0.25rem 0'
+                    }}>Contact Landlord</h3>
+                    <p style={{
+                      fontSize: '0.875rem',
+                      color: '#64748b',
+                      margin: 0
+                    }}>Send a message to your property manager</p>
+                  </div>
+                </button>
               </div>
             </div>
           </div>
 
+          {/* Right Column */}
           <div style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr',
-            gap: '2rem'
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1.5rem'
           }}>
-            {/* For larger screens, we'll use CSS media queries in a style tag */}
-            <style jsx>{`
-              @media (min-width: 1024px) {
-                .dashboard-grid {
-                  grid-template-columns: 2fr 1fr !important;
-                }
-              }
-            `}</style>
-            
-            <div className="dashboard-grid" style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr',
-              gap: '2rem'
+            {/* Profile Information */}
+            <div style={{
+              backgroundColor: 'white',
+              borderRadius: '12px',
+              padding: '1.5rem',
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+              border: '1px solid #e2e8f0'
             }}>
-              {/* Main Content */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                {/* Current Lease Section */}
-                <section style={{
-                  backgroundColor: 'white',
-                  borderRadius: '0.75rem',
-                  boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
-                  border: '1px solid #e5e7eb'
+              <h2 style={{
+                fontSize: '1.25rem',
+                fontWeight: '600',
+                color: '#1e293b',
+                margin: '0 0 1.5rem 0'
+              }}>Profile Information</h2>
+              
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '1rem',
+                marginBottom: '1.5rem'
+              }}>
+                <div style={{
+                  width: '3rem',
+                  height: '3rem',
+                  backgroundColor: '#3b82f6',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white',
+                  fontWeight: 'bold',
+                  fontSize: '1.25rem'
                 }}>
-                  <div style={{
-                    padding: '1.5rem 1.5rem 1rem 1.5rem',
-                    borderBottom: '1px solid #e5e7eb'
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <Building style={{ width: '1.25rem', height: '1.25rem', color: '#2563eb' }} />
-                      <h2 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#111827', margin: 0 }}>Current Lease</h2>
-                      {primaryLease && renderLeaseStatus(primaryLease.status)}
-                    </div>
-                  </div>
-                  <div style={{ padding: '1.5rem' }}>
-                {leaseLoading ? (
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: '2rem 0'
-                      }}>
-                        <div style={{
-                          width: '1.5rem',
-                          height: '1.5rem',
-                          border: '2px solid #dbeafe',
-                          borderTop: '2px solid #2563eb',
-                          borderRadius: '50%',
-                          animation: 'spin 1s linear infinite'
-                        }}></div>
-                        <span style={{ marginLeft: '0.75rem', color: '#6b7280' }}>Loading lease information...</span>
-                      </div>
-                ) : primaryLease ? (
-                  <>
-                        <div style={{
-                          display: 'grid',
-                          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-                          gap: '1.5rem',
-                          marginBottom: '1.5rem'
-                        }}>
-                      <div>
-                            <dt style={{ fontSize: '0.875rem', fontWeight: '500', color: '#6b7280', marginBottom: '0.25rem' }}>Property</dt>
-                            <dd style={{ fontSize: '1.125rem', fontWeight: '600', color: '#111827', margin: 0 }}>{(primaryLease.property_ref as any)?.name || 'Property Address'}</dd>
-                      </div>
-                      <div>
-                            <dt style={{ fontSize: '0.875rem', fontWeight: '500', color: '#6b7280', marginBottom: '0.25rem' }}>Lease Period</dt>
-                            <dd style={{ fontSize: '0.875rem', color: '#111827', margin: 0, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                              <Calendar style={{ width: '1rem', height: '1rem', color: '#9ca3af' }} />
-                              <span>
-                          {new Date(primaryLease.start_date).toLocaleDateString()} - {new Date(primaryLease.end_date).toLocaleDateString()}
-                              </span>
-                        </dd>
-                      </div>
-                      <div>
-                            <dt style={{ fontSize: '0.875rem', fontWeight: '500', color: '#6b7280', marginBottom: '0.25rem' }}>Address</dt>
-                            <dd style={{ fontSize: '0.875rem', color: '#111827', margin: 0, display: 'flex', alignItems: 'flex-start', gap: '0.25rem' }}>
-                              <MapPin style={{ width: '1rem', height: '1rem', color: '#9ca3af', marginTop: '0.125rem' }} />
-                              <span>{(primaryLease.property_ref as any)?.address || 'Property Address'}</span>
-                            </dd>
-                      </div>
-                      {primaryLease.room && (
-                        <div>
-                              <dt style={{ fontSize: '0.875rem', fontWeight: '500', color: '#6b7280', marginBottom: '0.25rem' }}>Unit/Room</dt>
-                              <dd style={{ fontSize: '1.125rem', fontWeight: '600', color: '#111827', margin: 0 }}>{(primaryLease.room as any)?.name || `Room ${primaryLease.room}`}</dd>
-                            </div>
-                          )}
-                        </div>
-                      {renderLeaseActions(primaryLease)}
-                  </>
-                ) : (
-                      <div style={{ textAlign: 'center', padding: '2rem 0' }}>
-                        <Building style={{ width: '3rem', height: '3rem', color: '#d1d5db', margin: '0 auto 1rem auto' }} />
-                        <p style={{ color: '#6b7280' }}>No lease information available</p>
-                      </div>
-                )}
-              </div>
-            </section>
-
-                {/* Quick Actions Section */}
-                <section style={{
-                  backgroundColor: 'white',
-                  borderRadius: '0.75rem',
-                  boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
-                  border: '1px solid #e5e7eb'
-                }}>
-                  <div style={{
-                    padding: '1.5rem 1.5rem 1rem 1.5rem',
-                    borderBottom: '1px solid #e5e7eb'
-                  }}>
-                    <h2 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#111827', margin: 0 }}>Quick Actions</h2>
-                  </div>
-                  <div style={{ padding: '1.5rem' }}>
-                    <div style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-                      gap: '1rem'
-                    }}>
-                      <button 
-                        onClick={() => setIsPaymentHistoryModalOpen(true)}
-                        style={{
-                          padding: '1.5rem',
-                          border: '2px solid #e5e7eb',
-                          borderRadius: '0.75rem',
-                          backgroundColor: 'white',
-                          cursor: 'pointer',
-                          textAlign: 'left',
-                          transition: 'all 0.2s'
-                        }}
-                        onMouseOver={(e) => {
-                          e.currentTarget.style.borderColor = '#93c5fd';
-                          e.currentTarget.style.backgroundColor = '#eff6ff';
-                        }}
-                        onMouseOut={(e) => {
-                          e.currentTarget.style.borderColor = '#e5e7eb';
-                          e.currentTarget.style.backgroundColor = 'white';
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                          <div style={{
-                            width: '3rem',
-                            height: '3rem',
-                            backgroundColor: '#dcfce7',
-                            borderRadius: '0.5rem',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                          }}>
-                            <History style={{ width: '1.5rem', height: '1.5rem', color: '#16a34a' }} />
-                          </div>
-                          <div style={{ flex: 1 }}>
-                            <h3 style={{ fontWeight: '600', color: '#111827', margin: '0 0 0.25rem 0' }}>Payment History</h3>
-                            <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>View all your past rent payments</p>
-                          </div>
-                          <ArrowRight style={{ width: '1.25rem', height: '1.25rem', color: '#9ca3af' }} />
-                        </div>
-                </button>
-                                          <button 
-                      onClick={() => setIsContactLandlordModalOpen(true)}
-                      style={{
-                        padding: '1.5rem',
-                        border: '2px solid #e5e7eb',
-                        borderRadius: '0.75rem',
-                        backgroundColor: 'white',
-                        cursor: 'pointer',
-                        textAlign: 'left',
-                        transition: 'all 0.2s'
-                      }}
-                      onMouseOver={(e) => {
-                        e.currentTarget.style.borderColor = '#93c5fd';
-                        e.currentTarget.style.backgroundColor = '#eff6ff';
-                      }}
-                      onMouseOut={(e) => {
-                        e.currentTarget.style.borderColor = '#e5e7eb';
-                        e.currentTarget.style.backgroundColor = 'white';
-                      }}
-                    >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                          <div style={{
-                            width: '3rem',
-                            height: '3rem',
-                            backgroundColor: '#dbeafe',
-                            borderRadius: '0.5rem',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                          }}>
-                            <MessageSquare style={{ width: '1.5rem', height: '1.5rem', color: '#2563eb' }} />
-                          </div>
-                          <div style={{ flex: 1 }}>
-                            <h3 style={{ fontWeight: '600', color: '#111827', margin: '0 0 0.25rem 0' }}>Contact Landlord</h3>
-                            <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>Send a message to your property manager</p>
-                          </div>
-                          <ArrowRight style={{ width: '1.25rem', height: '1.25rem', color: '#9ca3af' }} />
-                        </div>
-                </button>
-                    </div>
-              </div>
-            </section>
-          </div>
-
-              {/* Sidebar */}
-              <aside style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                {/* Profile Information */}
-                <section style={{
-                  backgroundColor: 'white',
-                  borderRadius: '0.75rem',
-                  boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
-                  border: '1px solid #e5e7eb'
-                }}>
-                  <div style={{
-                    padding: '1.5rem 1.5rem 1rem 1.5rem',
-                    borderBottom: '1px solid #e5e7eb'
-                  }}>
-                    <h2 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#111827', margin: 0 }}>Profile Information</h2>
-                  </div>
-                  <div style={{ padding: '1.5rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
-                      <div style={{
-                        width: '4rem',
-                        height: '4rem',
-                        background: 'linear-gradient(135deg, #2563eb, #1e40af)',
-                        borderRadius: '50%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: 'white',
-                        fontSize: '1.25rem',
-                        fontWeight: '600'
-                      }}>
-                        {currentUser?.full_name?.charAt(0) || 'T'}
+                  {currentUser?.full_name?.charAt(0) || 'R'}
                 </div>
                 <div>
-                        <p style={{ fontWeight: '600', color: '#111827', margin: '0 0 0.25rem 0' }}>{currentUser?.full_name || 'Not provided'}</p>
-                        <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>Tenant</p>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <Mail style={{ width: '1rem', height: '1rem', color: '#9ca3af' }} />
-                        <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>{currentUser?.email}</span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <Phone style={{ width: '1rem', height: '1rem', color: '#9ca3af' }} />
-                        <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>{currentUser?.phone}</span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <CheckCircle style={{ width: '1rem', height: '1rem', color: '#10b981' }} />
-                        <span style={{ fontSize: '0.875rem', color: '#059669', fontWeight: '500' }}>Verified Account</span>
-                      </div>
+                  <h3 style={{
+                    fontSize: '1.125rem',
+                    fontWeight: '600',
+                    color: '#1e293b',
+                    margin: '0 0 0.25rem 0'
+                  }}>{currentUser?.full_name || 'Rohan Dave'}</h3>
+                  <p style={{
+                    fontSize: '0.875rem',
+                    color: '#64748b',
+                    margin: 0
+                  }}>Tenant</p>
                 </div>
               </div>
-            </section>
 
-                {/* Rent Payment */}
-                <section style={{
-                  backgroundColor: 'white',
-                  borderRadius: '0.75rem',
-                  boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
-                  border: '1px solid #e5e7eb'
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.75rem'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem'
                 }}>
-                  <div style={{
-                    padding: '1.5rem 1.5rem 1rem 1.5rem',
-                    borderBottom: '1px solid #e5e7eb'
-                  }}>
-                    <h2 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#111827', margin: 0 }}>Rent Payment</h2>
-                  </div>
-                  <div style={{ padding: '1.5rem' }}>
-                    <div style={{ marginBottom: '1.5rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                        <DollarSign style={{ width: '1.25rem', height: '1.25rem', color: '#16a34a' }} />
-                        <dt style={{ fontSize: '0.875rem', fontWeight: '500', color: '#6b7280' }}>Next Payment Due</dt>
-                      </div>
-                      <dd style={{ fontSize: '1.875rem', fontWeight: 'bold', color: '#111827', margin: 0 }}>
-                        ${primaryLease?.monthly_rent || '0'}<span style={{ fontSize: '1.125rem', fontWeight: 'normal', color: '#6b7280' }}>.00</span>
-                      </dd>
-                      <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0.25rem 0 0 0' }}>Due on the 1st of each month</p>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                    <polyline points="22,6 12,13 2,6"/>
+                  </svg>
+                  <span style={{
+                    fontSize: '0.875rem',
+                    color: '#1e293b'
+                  }}>{currentUser?.email || 'rohannn@gseg.com'}</span>
                 </div>
-                {primaryLease?.status === 'active' ? (
-                      <button 
-                        onClick={() => setIsPaymentModalOpen(true)}
-                        style={{
-                          width: '100%',
-                          background: 'linear-gradient(135deg, #16a34a, #15803d)',
-                          color: 'white',
-                          padding: '0.75rem 1rem',
-                          borderRadius: '0.5rem',
-                          border: 'none',
-                          fontWeight: '500',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '0.5rem',
-                          transition: 'all 0.2s'
-                        }}
-                        onMouseOver={(e) => e.currentTarget.style.background = 'linear-gradient(135deg, #15803d, #166534)'}
-                        onMouseOut={(e) => e.currentTarget.style.background = 'linear-gradient(135deg, #16a34a, #15803d)'}
-                      >
-                        <CreditCard style={{ width: '1.25rem', height: '1.25rem' }} />
-                        <span>Pay Rent Now</span>
-                      </button>
-                    ) : (
-                      <div style={{
-                        backgroundColor: '#f9fafb',
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '0.5rem',
-                        padding: '1rem',
-                        textAlign: 'center'
-                      }}>
-                        <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>Payments will be available once your lease is activated</p>
-                      </div>
-                )}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem'
+                }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2">
+                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                  </svg>
+                  <span style={{
+                    fontSize: '0.875rem',
+                    color: '#1e293b'
+                  }}>{currentUser?.phone || '+18572000666'}</span>
+                </div>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem'
+                }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                    <polyline points="22,4 12,14.01 9,11.01"/>
+                  </svg>
+                  <span style={{
+                    fontSize: '0.875rem',
+                    color: '#10b981',
+                    fontWeight: '500'
+                  }}>Verified Account</span>
+                </div>
               </div>
-            </section>
-          </aside>
+            </div>
+
+            {/* Rent Payment */}
+            <div style={{
+              backgroundColor: 'white',
+              borderRadius: '12px',
+              padding: '1.5rem',
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+              border: '1px solid #e2e8f0'
+            }}>
+              <h2 style={{
+                fontSize: '1.25rem',
+                fontWeight: '600',
+                color: '#1e293b',
+                margin: '0 0 1.5rem 0'
+              }}>Rent Payment</h2>
+              
+              <div style={{ marginBottom: '1.5rem' }}>
+                <p style={{
+                  fontSize: '0.875rem',
+                  color: '#64748b',
+                  margin: '0 0 0.5rem 0'
+                }}>Next Payment Due</p>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'baseline',
+                  gap: '0.25rem',
+                  marginBottom: '0.5rem'
+                }}>
+                  <span style={{
+                    fontSize: '2rem',
+                    fontWeight: '700',
+                    color: '#1e293b'
+                  }}>${primaryLease?.monthly_rent || '1,350'}</span>
+                  <span style={{
+                    fontSize: '1rem',
+                    color: '#64748b'
+                  }}>.00</span>
+                </div>
+                <p style={{
+                  fontSize: '0.875rem',
+                  color: '#64748b',
+                  margin: 0
+                }}>Due on the 1st of each month</p>
+              </div>
+
+              {primaryLease?.status === 'active' ? (
+                <button
+                  onClick={() => setIsPaymentModalOpen(true)}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem 1.5rem',
+                    backgroundColor: '#10b981',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '1rem',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem'
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.backgroundColor = '#059669';
+                    e.currentTarget.style.transform = 'translateY(-1px)';
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.4)';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.backgroundColor = '#10b981';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
+                    <line x1="1" y1="10" x2="23" y2="10"/>
+                  </svg>
+                  Pay Rent Now
+                </button>
+              ) : (
+                <div style={{
+                  padding: '1rem',
+                  backgroundColor: '#f8fafc',
+                  borderRadius: '8px',
+                  border: '1px solid #e2e8f0',
+                  textAlign: 'center'
+                }}>
+                  <p style={{
+                    fontSize: '0.875rem',
+                    color: '#64748b',
+                    margin: 0
+                  }}>Payments will be available once your lease is activated</p>
+                </div>
+              )}
             </div>
           </div>
         </main>
@@ -797,12 +912,6 @@ const TenantDashboard: React.FC = () => {
         <ContactLandlordModal
           isOpen={isContactLandlordModalOpen}
           onClose={() => setIsContactLandlordModalOpen(false)}
-          landlordInfo={{
-            name: (primaryLease?.property_ref as any)?.landlord?.name || 'Property Manager',
-            phone: (primaryLease?.property_ref as any)?.landlord?.phone,
-            email: (primaryLease?.property_ref as any)?.landlord?.email,
-            property_name: (primaryLease?.property_ref as any)?.name || 'Your Property'
-          }}
         />
       </div>
     </>

@@ -8,32 +8,22 @@ import { useAuth } from '../lib/auth-context';
 import ApplicationDetailModal from '../components/ApplicationDetailModal';
 import { Application, Property, Room, DashboardStats, Manager, PaymentSummaryResponse, PaymentHistoryResponse, Vendor } from '../lib/types';
 import { apiClient, expenseApi } from '../lib/api';
+import { 
+  Home, 
+  Building, 
+  Users, 
+  Wrench, 
+  DollarSign, 
+  Calendar,
+  Sparkles,
+  Briefcase,
+  Zap,
+  BarChart3,
+  TrendingUp,
+  Target
+} from 'lucide-react';
 
-// Icon Components
-const SparklesIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3L9.27 9.27L3 12l6.27 2.73L12 21l2.73-6.27L21 12l-6.27-2.73z"></path></svg>
-);
-const BriefcaseIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
-);
-const HouseIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
-);
-const LightningIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
-);
-const ChartIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 20V10m12 20V4m6 20V14"></path></svg>
-);
-const BellIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
-);
-const TrendingUpIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
-);
-const TargetIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>
-);
+// Icon Components (keeping for backward compatibility with existing code)
 
 // Custom hook for counter animation
 const useCounterAnimation = (targetValue: number, duration = 2000, isRevenue = false) => {
@@ -229,19 +219,19 @@ function LandlordDashboard() {
   const notificationMessages = useMemo(() => {
     if (!dashboardStats) {
       return [
-        { text: "Loading your business data...", icon: <SparklesIcon /> }
+        { text: "Loading your business data...", icon: <Sparkles /> }
       ];
     }
     
     return [
-      { text: "Here's what's happening with your properties.", icon: <SparklesIcon /> },
-      { text: `You have ${dashboardStats.applications.pending} pending applications to review.`, icon: <BriefcaseIcon /> },
-      { text: `Your portfolio has ${dashboardStats.rooms.occupancy_rate}% occupancy rate.`, icon: <HouseIcon /> },
-      { text: `${dashboardStats.applications.total} total applications this period.`, icon: <LightningIcon /> },
-              { text: `Monthly revenue: $${paymentSummary?.summary.current_month_total_dollars?.toLocaleString() || '0'}.`, icon: <ChartIcon /> },
-      { text: `${dashboardStats.leases.active} active leases across your properties.`, icon: <BellIcon /> },
-      { text: "Your portfolio performance is excellent.", icon: <TrendingUpIcon /> },
-      { text: "All business operations are on track.", icon: <TargetIcon /> }
+      { text: "Here's what's happening with your properties.", icon: <Sparkles /> },
+      { text: `You have ${dashboardStats.applications.pending} pending applications to review.`, icon: <Briefcase /> },
+      { text: `Your portfolio has ${dashboardStats.rooms.occupancy_rate}% occupancy rate.`, icon: <Home /> },
+      { text: `${dashboardStats.applications.total} total applications this period.`, icon: <Zap /> },
+              { text: `Monthly revenue: $${paymentSummary?.summary.current_month_total_dollars?.toLocaleString() || '0'}.`, icon: <BarChart3 /> },
+      { text: `${dashboardStats.leases.active} active leases across your properties.`, icon: <Building /> },
+      { text: "Your portfolio performance is excellent.", icon: <TrendingUp /> },
+      { text: "All business operations are on track.", icon: <Target /> }
     ];
   }, [dashboardStats]);
 
@@ -468,6 +458,7 @@ function LandlordDashboard() {
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
           <line x1="1" y1="10" x2="23" y2="10"/>
+          <path d="M7 15h.01M11 15h4"/>
         </svg>
       ), 
       color: 'purple',
@@ -675,30 +666,65 @@ function LandlordDashboard() {
       
       <div className="dashboard-container">
         {/* Custom Header */}
-        <div className="dashboard-header">
-          <div className="header-content">
-            <div className="header-left">
-              <h1 className="dashboard-title">Landlord Dashboard</h1>
-              <div className="subtitle-container">
-                {WelcomeMessageComponent}
+        <div style={{
+          backgroundColor: 'white',
+          borderRadius: '12px',
+          padding: '2rem',
+          marginBottom: '1.5rem',
+          border: '1px solid #e5e7eb',
+          boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
+        }}>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '1rem'
+            }}>
+              <div style={{
+                width: '3rem',
+                height: '3rem',
+                backgroundColor: '#dbeafe',
+                borderRadius: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <Home style={{ width: '1.5rem', height: '1.5rem', color: '#2563eb' }} />
+              </div>
+              <div>
+                <h1 style={{
+                  fontSize: '1.875rem',
+                  fontWeight: '700',
+                  color: '#111827',
+                  margin: '0 0 0.25rem 0'
+                }}>
+                  Landlord Dashboard
+                </h1>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  fontSize: '1rem',
+                  color: '#6b7280',
+                  margin: 0
+                }}>
+                  <Building style={{ width: '1rem', height: '1rem' }} />
+                  {WelcomeMessageComponent}
+                </div>
               </div>
             </div>
-            <div className="header-right">
-              {/* Weekday on first line, date on second line, right aligned */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center', minWidth: 180 }}>
-                <span style={{ display: 'flex', alignItems: 'center', fontSize: '13px', color: '#94a3b8', fontWeight: 500, letterSpacing: 0.2, marginBottom: 2 }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: 6 }}>
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                  <line x1="16" y1="2" x2="16" y2="6"/>
-                  <line x1="8" y1="2" x2="8" y2="6"/>
-                  <line x1="3" y1="10" x2="21" y2="10"/>
-                </svg>
-                  {weekday}
-                </span>
-                <span style={{ fontSize: '17px', color: '#334155', fontWeight: 600, letterSpacing: 0.1, lineHeight: 1.3, textAlign: 'right', width: '100%' }}>
-                  {dateString}
-                </span>
-              </div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center', minWidth: 180 }}>
+              <span style={{ display: 'flex', alignItems: 'center', fontSize: '13px', color: '#94a3b8', fontWeight: 500, letterSpacing: 0.2, marginBottom: 2 }}>
+                <Calendar style={{ width: '1rem', height: '1rem', marginRight: '0.375rem' }} />
+                {weekday}
+              </span>
+              <span style={{ fontSize: '17px', color: '#334155', fontWeight: 600, letterSpacing: 0.1, lineHeight: 1.3, textAlign: 'right', width: '100%' }}>
+                {dateString}
+              </span>
             </div>
           </div>
         </div>
@@ -766,161 +792,905 @@ function LandlordDashboard() {
         )}
         
         {/* Top Metrics Row */}
-        <div className="metrics-grid">
-          <div className="metric-card">
-            <div className="metric-header">
-              <div className="metric-info">
-                <h3 className="metric-title">Total Properties</h3>
-                <div className="metric-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M3 21h18"/>
-                    <path d="M5 21V7l8-4v18"/>
-                    <path d="M19 21V11l-6-4"/>
-                  </svg>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+          gap: '1.5rem',
+          marginBottom: '2rem'
+        }}>
+          {[
+            {
+              title: 'Total Properties',
+              value: statsLoading ? '...' : propertiesCount,
+              subtitle: metrics.properties.subtitle,
+              label: statsLoading ? 'Loading...' : 
+                     dashboardStats ? `${dashboardStats.properties.occupied} occupied` : 'N/A',
+              change: metrics.properties.change,
+              changeType: metrics.properties.changeType,
+              icon: <Building style={{ width: '1.25rem', height: '1.25rem' }} />,
+              color: '#2563eb',
+              bgColor: '#dbeafe'
+            },
+            {
+              title: 'Occupancy Rate',
+              value: statsLoading ? '...' : `${occupancyRate}%`,
+              subtitle: metrics.occupancy.subtitle,
+              label: statsLoading ? 'Loading...' : 'across portfolio',
+              change: metrics.occupancy.change,
+              changeType: metrics.occupancy.changeType,
+              icon: <Users style={{ width: '1.25rem', height: '1.25rem' }} />,
+              color: '#059669',
+              bgColor: '#d1fae5'
+            },
+            {
+              title: 'Vendors',
+              value: statsLoading ? '...' : vendorsCount,
+              subtitle: 'Active vendors',
+              label: statsLoading ? 'Loading...' : 'service providers',
+              change: `+${(typeof vendorsCount === 'number' ? vendorsCount : 0) > 0 ? '1' : '0'}`,
+              changeType: 'positive',
+              icon: <Wrench style={{ width: '1.25rem', height: '1.25rem' }} />,
+              color: '#7c3aed',
+              bgColor: '#e9d5ff'
+            },
+            {
+              title: 'Monthly Revenue',
+              value: statsLoading ? '...' : revenueValue,
+              subtitle: metrics.revenue.subtitle,
+              label: statsLoading ? 'Loading...' : 
+                     dashboardStats && dashboardStats.leases.active > 0 ? 
+                     `${dashboardStats.leases.active} active leases` : 'No active leases',
+              change: metrics.revenue.change,
+              changeType: metrics.revenue.changeType,
+              icon: <DollarSign style={{ width: '1.25rem', height: '1.25rem' }} />,
+              color: '#ea580c',
+              bgColor: '#fed7aa'
+            }
+          ].map((metric, index) => (
+            <div key={index} style={{
+              backgroundColor: 'white',
+              borderRadius: '12px',
+              padding: '1.5rem',
+              border: '1px solid #e5e7eb',
+              boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.1)';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 1px 3px 0 rgba(0, 0, 0, 0.1)';
+            }}>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '1rem'
+              }}>
+                <h3 style={{
+                  fontSize: '0.875rem',
+                  fontWeight: '600',
+                  color: '#6b7280',
+                  margin: 0,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.025em'
+                }}>
+                  {metric.title}
+                </h3>
+                <div style={{
+                  backgroundColor: metric.bgColor,
+                  borderRadius: '8px',
+                  padding: '0.5rem',
+                  color: metric.color
+                }}>
+                  {metric.icon}
                 </div>
               </div>
-            </div>
-            <div className="metric-content">
-              <div className="metric-value">{statsLoading ? '...' : propertiesCount}</div>
-              <div className="metric-subtitle">{metrics.properties.subtitle}</div>
-              <div className="metric-progress">
-                <span className="metric-label">
-                  {statsLoading ? 'Loading...' : 
-                   dashboardStats ? `${dashboardStats.properties.occupied} occupied` : 'N/A'}
+              <div style={{
+                fontSize: '2rem',
+                fontWeight: '700',
+                color: '#111827',
+                marginBottom: '0.25rem',
+                lineHeight: 1
+              }}>
+                {metric.value}
+              </div>
+              <div style={{
+                fontSize: '0.875rem',
+                color: '#6b7280',
+                marginBottom: '0.5rem'
+              }}>
+                {metric.subtitle}
+              </div>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
+                <span style={{
+                  fontSize: '0.75rem',
+                  color: '#9ca3af'
+                }}>
+                  {metric.label}
                 </span>
-                <span className={`metric-change ${metrics.properties.changeType}`}>
-                  {metrics.properties.change}
+                <span style={{
+                  fontSize: '0.75rem',
+                  fontWeight: '500',
+                  padding: '0.125rem 0.5rem',
+                  borderRadius: '4px',
+                  backgroundColor: metric.changeType === 'positive' ? '#d1fae5' : 
+                                   metric.changeType === 'negative' ? '#fef2f2' : '#f3f4f6',
+                  color: metric.changeType === 'positive' ? '#065f46' : 
+                         metric.changeType === 'negative' ? '#dc2626' : '#6b7280'
+                }}>
+                  {metric.change}
                 </span>
               </div>
             </div>
-          </div>
-
-          <div className="metric-card">
-            <div className="metric-header">
-              <div className="metric-info">
-                <h3 className="metric-title">Occupancy Rate</h3>
-                <div className="metric-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M3 21h18"/>
-                    <path d="M5 21V7l8-4v18"/>
-                    <path d="M19 21V11l-6-4"/>
-                  </svg>
-                </div>
-              </div>
-            </div>
-            <div className="metric-content">
-              <div className="metric-value">{statsLoading ? '...' : `${occupancyRate}%`}</div>
-              <div className="metric-subtitle">{metrics.occupancy.subtitle}</div>
-              <div className="metric-progress">
-                <span className="metric-label">
-                  {statsLoading ? 'Loading...' : 'across portfolio'}
-                </span>
-                <span className={`metric-change ${metrics.occupancy.changeType}`}>
-                  {metrics.occupancy.change}
-                </span>
-              </div>
-            </div>
-          </div>
-          
-          <div className="metric-card">
-            <div className="metric-header">
-              <div className="metric-info">
-                <h3 className="metric-title">Vendors</h3>
-                <div className="metric-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M21 15.999h.01"/>
-                    <path d="M21 12.999h.01"/>
-                    <path d="M21 8.999h.01"/>
-                    <path d="M3 7l4-4h14l-4 4H3z"/>
-                    <path d="M17 7v10c0 .55-.45 1-1 1H8c-.55 0-1-.45-1-1V7"/>
-                    <line x1="5" y1="7" x2="19" y2="7"/>
-                  </svg>
-                </div>
-              </div>
-            </div>
-            <div className="metric-content">
-              <div className="metric-value">{statsLoading ? '...' : vendorsCount}</div>
-              <div className="metric-subtitle">Active vendors</div>
-              <div className="metric-progress">
-                <span className="metric-label">
-                  {statsLoading ? 'Loading...' : 'service providers'}
-                </span>
-                <span className="metric-change positive">
-                  +{(typeof vendorsCount === 'number' ? vendorsCount : 0) > 0 ? '1' : '0'}
-                </span>
-              </div>
-            </div>
-          </div>
-          <div className="metric-card">
-            <div className="metric-header">
-              <div className="metric-info">
-                <h3 className="metric-title">Monthly Revenue</h3>
-                <div className="metric-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <line x1="12" y1="1" x2="12" y2="23"/>
-                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-                  </svg>
-                </div>
-              </div>
-            </div>
-            <div className="metric-content">
-              <div className="metric-value">{statsLoading ? '...' : revenueValue}</div>
-              <div className="metric-subtitle">{metrics.revenue.subtitle}</div>
-              <div className="metric-progress">
-                <span className="metric-label">
-                  {statsLoading ? 'Loading...' : 
-                   dashboardStats && dashboardStats.leases.active > 0 ? 
-                   `${dashboardStats.leases.active} active leases` : 'No active leases'}
-                </span>
-                <span className={`metric-change ${metrics.revenue.changeType}`}>
-                  {metrics.revenue.change}
-                </span>
-              </div>
-            </div>
-          </div>
+          ))}
         </div>
 
-        {/* Main Content */}
-        <div className="main-content">
-          {/* My Properties Section */}
-          <div className="properties-section">
-            <div className="section-header">
+        {/* Properties & Quick Actions Grid */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+          gap: '1.5rem',
+          marginBottom: '2rem'
+        }}>
+          {/* My Properties Section - Takes 3 columns */}
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            padding: '1.5rem',
+            border: '1px solid #e5e7eb',
+            boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+            gridColumn: 'span 3',
+            transition: 'all 0.2s ease'
+          }}
+          onMouseOver={(e) => {
+            e.currentTarget.style.transform = 'translateY(-2px)';
+            e.currentTarget.style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.1)';
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = '0 1px 3px 0 rgba(0, 0, 0, 0.1)';
+          }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              marginBottom: '1.5rem'
+            }}>
               <div>
-                <h2 className="section-title">My Properties</h2>
-                <p className="section-subtitle">Manage and monitor your property portfolio</p>
+                <h2 style={{
+                  fontSize: '1.25rem',
+                  fontWeight: '700',
+                  color: '#111827',
+                  margin: '0 0 0.25rem 0'
+                }}>
+                  My Properties
+                </h2>
+                <p style={{
+                  fontSize: '0.875rem',
+                  color: '#6b7280',
+                  margin: 0
+                }}>
+                  Manage and monitor your property portfolio
+                </p>
               </div>
               <Link href="/properties">
-                <button className="view-all-btn">View All</button>
+                <button style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.5rem 1rem',
+                  backgroundColor: '#2563eb',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
+                onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+                >
+                  View All
+                </button>
               </Link>
             </div>
-            <div className="properties-container">
-              {/* Enhanced Filter Controls */}
-              <div className="properties-filter-controls">
-                <div className="properties-filter-group">
-                  <label className="properties-filter-label">Status:</label>
+            
+            {/* Enhanced Filter Controls */}
+            <div style={{
+              display: 'flex',
+              gap: '1rem',
+              alignItems: 'center',
+              marginBottom: '1.5rem',
+              flexWrap: 'wrap'
+            }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}>
+                <label style={{
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  color: '#374151'
+                }}>
+                  Status:
+                </label>
+                <select
+                  value={propertyFilter}
+                  onChange={e => setPropertyFilter(e.target.value)}
+                  style={{
+                    padding: '0.375rem 0.75rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    backgroundColor: 'white',
+                    fontSize: '0.875rem',
+                    color: '#374151',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="All">All Status</option>
+                  <option value="Active">Active</option>
+                  <option value="Maintenance">Maintenance</option>
+                </select>
+              </div>
+              
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}>
+                <label style={{
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  color: '#374151'
+                }}>
+                  Occupancy:
+                </label>
+                <select style={{
+                  padding: '0.375rem 0.75rem',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  backgroundColor: 'white',
+                  fontSize: '0.875rem',
+                  color: '#374151',
+                  cursor: 'pointer'
+                }}>
+                  <option value="all">All Occupancy</option>
+                  <option value="full">100% Occupied</option>
+                  <option value="high">90%+ Occupied</option>
+                  <option value="medium">70-89% Occupied</option>
+                  <option value="low">Below 70%</option>
+                </select>
+              </div>
+              
+              <button style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.375rem',
+                padding: '0.375rem 0.75rem',
+                backgroundColor: '#f3f4f6',
+                color: '#374151',
+                border: '1px solid #d1d5db',
+                borderRadius: '6px',
+                fontSize: '0.875rem',
+                fontWeight: '500',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#e5e7eb'}
+              onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                  <path d="M3 3v5h5"/>
+                </svg>
+                Reset
+              </button>
+            </div>
+            
+            {/* Properties Table */}
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{
+                width: '100%',
+                borderCollapse: 'collapse',
+                fontSize: '0.875rem'
+              }}>
+                 <thead>
+                   <tr style={{ backgroundColor: '#f9fafb' }}>
+                     <th style={{
+                       padding: '0.75rem',
+                       textAlign: 'center',
+                       fontWeight: '600',
+                       color: '#374151',
+                       borderBottom: '1px solid #e5e7eb'
+                     }}>
+                       Property
+                     </th>
+                     <th style={{
+                       padding: '0.75rem',
+                       textAlign: 'center',
+                       fontWeight: '600',
+                       color: '#374151',
+                       borderBottom: '1px solid #e5e7eb'
+                     }}>
+                       Status
+                     </th>
+                     <th style={{
+                       padding: '0.75rem',
+                       textAlign: 'center',
+                       fontWeight: '600',
+                       color: '#374151',
+                       borderBottom: '1px solid #e5e7eb'
+                     }}>
+                       Occupancy
+                     </th>
+                     <th style={{
+                       padding: '0.75rem',
+                       textAlign: 'center',
+                       fontWeight: '600',
+                       color: '#374151',
+                       borderBottom: '1px solid #e5e7eb'
+                     }}>
+                       Monthly Revenue
+                     </th>
+                     <th style={{
+                       padding: '0.75rem',
+                       textAlign: 'center',
+                       fontWeight: '600',
+                       color: '#374151',
+                       borderBottom: '1px solid #e5e7eb'
+                     }}>
+                       Tasks
+                     </th>
+                     <th style={{
+                       padding: '0.75rem',
+                       textAlign: 'center',
+                       fontWeight: '600',
+                       color: '#374151',
+                       borderBottom: '1px solid #e5e7eb'
+                     }}>
+                       Actions
+                     </th>
+                   </tr>
+                 </thead>
+                 <tbody>
+                   {filteredProperties.map((property) => {
+                     const occupancyData = getPropertyOccupancy(property);
+                     const revenueData = getPropertyRevenue(property);
+                     const status = getPropertyStatus(property);
+                     const tasks = getPropertyTasks(property);
+                     
+                     return (
+                       <tr key={property.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                         <td style={{ padding: '1rem 0.75rem', textAlign: 'center' }}>
+                           <div 
+                             style={{
+                               fontWeight: '600',
+                               color: '#2563eb',
+                               cursor: 'pointer'
+                             }}
+                             onClick={() => router.push(`/properties/${property.id}`)}
+                           >
+                             {property.name}
+                           </div>
+                         </td>
+                         <td style={{ padding: '1rem 0.75rem', textAlign: 'center' }}>
+                           <div style={{ display: 'flex', justifyContent: 'center' }}>
+                             <span style={{
+                               padding: '0.25rem 0.5rem',
+                               borderRadius: '4px',
+                               fontSize: '0.75rem',
+                               fontWeight: '600',
+                               backgroundColor: status.toLowerCase() === 'active' ? '#d1fae5' : '#fef2f2',
+                               color: status.toLowerCase() === 'active' ? '#065f46' : '#dc2626'
+                             }}>
+                               {status}
+                             </span>
+                           </div>
+                         </td>
+                         <td style={{ padding: '1rem 0.75rem', textAlign: 'center' }}>
+                           <div style={{
+                             display: 'flex',
+                             alignItems: 'center',
+                             justifyContent: 'center',
+                             gap: '0.375rem'
+                           }}>
+                             <Users style={{ width: '1rem', height: '1rem', color: '#6b7280' }} />
+                             <span style={{ fontWeight: '600' }}>{occupancyData.occupancy}</span>
+                             <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                               ({occupancyData.occupancyPercent}%)
+                             </span>
+                           </div>
+                         </td>
+                         <td style={{ padding: '1rem 0.75rem', textAlign: 'center' }}>
+                           <div style={{ fontWeight: '600' }}>
+                             ${revenueData.revenue.toLocaleString()}
+                           </div>
+                         </td>
+                         <td style={{ padding: '1rem 0.75rem', textAlign: 'center' }}>
+                           <div style={{
+                             display: 'flex',
+                             alignItems: 'center',
+                             justifyContent: 'center',
+                             gap: '0.375rem'
+                           }}>
+                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2">
+                               <path d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                             </svg>
+                             <span style={{ fontWeight: '600' }}>{tasks} pending</span>
+                           </div>
+                         </td>
+                         <td style={{ padding: '1rem 0.75rem', textAlign: 'center' }}>
+                           <div style={{ display: 'flex', justifyContent: 'center' }}>
+                             <button 
+                               style={{
+                                 display: 'flex',
+                                 alignItems: 'center',
+                                 gap: '0.375rem',
+                                 padding: '0.5rem 0.75rem',
+                                 backgroundColor: '#2563eb',
+                                 color: 'white',
+                                 border: 'none',
+                                 borderRadius: '6px',
+                                 fontSize: '0.75rem',
+                                 fontWeight: '500',
+                                 cursor: 'pointer',
+                                 transition: 'all 0.2s ease'
+                               }}
+                               onClick={() => router.push(`/properties/${property.id}`)}
+                               onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
+                               onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+                             >
+                               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                 <path d="M12 20h9"/>
+                                 <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                               </svg>
+                               Manage
+                             </button>
+                           </div>
+                         </td>
+                       </tr>
+                     );
+                   })}
+                 </tbody>
+               </table>
+             </div>
+           </div>
+
+           {/* Quick Actions Section - Takes 1 column */}
+           <div style={{
+             backgroundColor: 'white',
+             borderRadius: '12px',
+             padding: '1.5rem',
+             border: '1px solid #e5e7eb',
+             boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+             height: 'fit-content',
+             gridColumn: 'span 1',
+             transition: 'all 0.2s ease'
+           }}
+           onMouseOver={(e) => {
+             e.currentTarget.style.transform = 'translateY(-2px)';
+             e.currentTarget.style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.1)';
+           }}
+           onMouseOut={(e) => {
+             e.currentTarget.style.transform = 'translateY(0)';
+             e.currentTarget.style.boxShadow = '0 1px 3px 0 rgba(0, 0, 0, 0.1)';
+           }}>
+             <div style={{
+               marginBottom: '1.5rem'
+             }}>
+               <h2 style={{
+                 fontSize: '1.25rem',
+                 fontWeight: '700',
+                 color: '#111827',
+                 margin: '0 0 0.25rem 0'
+               }}>
+                 Quick Actions
+               </h2>
+               <p style={{
+                 fontSize: '0.875rem',
+                 color: '#6b7280',
+                 margin: 0
+               }}>
+                 Frequently used actions
+               </p>
+             </div>
+             
+             <div style={{
+               display: 'flex',
+               flexDirection: 'column',
+               gap: '0.75rem'
+             }}>
+               {quickActions.map((action, index) => (
+                 <div 
+                   key={index} 
+                   style={{
+                     display: 'flex',
+                     alignItems: 'center',
+                     gap: '0.75rem',
+                     padding: '1rem',
+                     backgroundColor: action.color === 'blue' ? '#eff6ff' : 
+                                      action.color === 'green' ? '#f0fdf4' : 
+                                      action.color === 'orange' ? '#fff7ed' : '#faf5ff',
+                     border: '1px solid #e5e7eb',
+                     borderRadius: '8px',
+                     cursor: 'pointer',
+                     transition: 'all 0.2s ease'
+                   }}
+                   onClick={() => router.push(action.link)}
+                   onMouseOver={(e) => {
+                     e.currentTarget.style.backgroundColor = action.color === 'blue' ? '#dbeafe' : 
+                                                            action.color === 'green' ? '#dcfce7' : 
+                                                            action.color === 'orange' ? '#fed7aa' : '#e9d5ff';
+                     e.currentTarget.style.borderColor = action.color === 'blue' ? '#2563eb' : 
+                                                         action.color === 'green' ? '#059669' : 
+                                                         action.color === 'orange' ? '#ea580c' : '#7c3aed';
+                   }}
+                   onMouseOut={(e) => {
+                     e.currentTarget.style.backgroundColor = action.color === 'blue' ? '#eff6ff' : 
+                                                            action.color === 'green' ? '#f0fdf4' : 
+                                                            action.color === 'orange' ? '#fff7ed' : '#faf5ff';
+                     e.currentTarget.style.borderColor = '#e5e7eb';
+                   }}
+                 >
+                   <div style={{
+                     width: '2.5rem',
+                     height: '2.5rem',
+                     backgroundColor: action.color === 'blue' ? '#dbeafe' : 
+                                      action.color === 'green' ? '#d1fae5' : '#fed7aa',
+                     borderRadius: '8px',
+                     display: 'flex',
+                     alignItems: 'center',
+                     justifyContent: 'center',
+                     color: action.color === 'blue' ? '#2563eb' : 
+                            action.color === 'green' ? '#059669' : '#ea580c'
+                   }}>
+                     {action.color === 'blue' ? <Home style={{ width: '1.25rem', height: '1.25rem' }} /> :
+                      action.color === 'green' ? <DollarSign style={{ width: '1.25rem', height: '1.25rem' }} /> :
+                      <Building style={{ width: '1.25rem', height: '1.25rem' }} />}
+                   </div>
+                   <div style={{ flex: 1 }}>
+                     <h3 style={{
+                       fontSize: '0.875rem',
+                       fontWeight: '600',
+                       color: '#111827',
+                       margin: '0 0 0.125rem 0'
+                     }}>
+                       {action.title}
+                     </h3>
+                     <p style={{
+                       fontSize: '0.75rem',
+                       color: '#6b7280',
+                       margin: 0
+                     }}>
+                       {action.subtitle}
+                     </p>
+                   </div>
+                 </div>
+               ))}
+             </div>
+           </div>
+         </div>
+
+        {/* Rent History Section */}
+        <div style={{
+          backgroundColor: 'white',
+          borderRadius: '12px',
+          padding: '1.5rem',
+          border: '1px solid #e5e7eb',
+          boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+          marginBottom: '2rem',
+          transition: 'all 0.2s ease'
+        }}
+        onMouseOver={(e) => {
+          e.currentTarget.style.transform = 'translateY(-2px)';
+          e.currentTarget.style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.1)';
+        }}
+        onMouseOut={(e) => {
+          e.currentTarget.style.transform = 'translateY(0)';
+          e.currentTarget.style.boxShadow = '0 1px 3px 0 rgba(0, 0, 0, 0.1)';
+        }}>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+            marginBottom: '1.5rem'
+          }}>
+            <div>
+              <h2 style={{
+                fontSize: '1.25rem',
+                fontWeight: '700',
+                color: '#111827',
+                margin: '0 0 0.25rem 0'
+              }}>
+                Rent History
+              </h2>
+              <p style={{
+                fontSize: '0.875rem',
+                color: '#6b7280',
+                margin: 0
+              }}>
+                Recent rent collection logs and payment history
+              </p>
+            </div>
+            <Link href="/accounting">
+              <button style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.5rem 1rem',
+                backgroundColor: '#2563eb',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '0.875rem',
+                fontWeight: '500',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
+              onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}>
+                View All
+              </button>
+            </Link>
+          </div>
+          
+          {/* Summary Cards */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gap: '1rem',
+            marginBottom: '1.5rem'
+          }}>
+            <div style={{
+              backgroundColor: '#f0fdf4',
+              border: '1px solid #bbf7d0',
+              borderRadius: '8px',
+              padding: '1rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem'
+            }}>
+              <div style={{
+                width: '2.5rem',
+                height: '2.5rem',
+                backgroundColor: '#16a34a',
+                borderRadius: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'white'
+              }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                </svg>
+              </div>
+              <div>
+                <div style={{ fontSize: '1.25rem', fontWeight: '700', color: '#111827', marginBottom: '0.25rem' }}>
+                  {paymentLoading ? '...' : `$${paymentSummary?.summary.current_month_total_dollars?.toLocaleString() || '0'}`}
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>Collected This Month</div>
+              </div>
+            </div>
+
+            <div style={{
+              backgroundColor: '#fef3c7',
+              border: '1px solid #fde68a',
+              borderRadius: '8px',
+              padding: '1rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem'
+            }}>
+              <div style={{
+                width: '2.5rem',
+                height: '2.5rem',
+                backgroundColor: '#f59e0b',
+                borderRadius: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'white'
+              }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="10"/>
+                  <polyline points="12,6 12,12 16,14"/>
+                </svg>
+              </div>
+              <div>
+                <div style={{ fontSize: '1.25rem', fontWeight: '700', color: '#111827', marginBottom: '0.25rem' }}>
+                  {paymentLoading ? '...' : `${paymentSummary?.summary.pending_payments || 0} payments`}
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>Pending Collection</div>
+              </div>
+            </div>
+
+            <div style={{
+              backgroundColor: '#fef2f2',
+              border: '1px solid #fecaca',
+              borderRadius: '8px',
+              padding: '1rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem'
+            }}>
+              <div style={{
+                width: '2.5rem',
+                height: '2.5rem',
+                backgroundColor: '#dc2626',
+                borderRadius: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'white'
+              }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="10"/>
+                  <line x1="15" y1="9" x2="9" y2="15"/>
+                  <line x1="9" y1="9" x2="15" y2="15"/>
+                </svg>
+              </div>
+              <div>
+                <div style={{ fontSize: '1.25rem', fontWeight: '700', color: '#111827', marginBottom: '0.25rem' }}>
+                  {paymentLoading ? '...' : `${paymentSummary?.summary.failed_payments || 0} failed`}
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>Failed Payments</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Table Section */}
+          <div>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '1rem'
+            }}>
+              <h3 style={{
+                fontSize: '1rem',
+                fontWeight: '600',
+                color: '#111827',
+                margin: 0
+              }}>
+                Recent Rent Collections
+              </h3>
+              <div style={{
+                display: 'flex',
+                gap: '1rem',
+                alignItems: 'center',
+                flexWrap: 'wrap'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}>
+                  <label style={{
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                    color: '#374151'
+                  }}>
+                    Property:
+                  </label>
                   <select
-                    className="properties-filter-select"
-                    value={propertyFilter}
-                    onChange={e => setPropertyFilter(e.target.value)}
+                    value={rentHistoryPropertyFilter}
+                    onChange={(e) => setRentHistoryPropertyFilter(e.target.value)}
+                    style={{
+                      padding: '0.375rem 0.75rem',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      backgroundColor: 'white',
+                      fontSize: '0.875rem',
+                      color: '#374151',
+                      cursor: 'pointer'
+                    }}
                   >
-                    <option value="All">All Status</option>
-                    <option value="Active">Active</option>
-                    <option value="Maintenance">Maintenance</option>
+                    <option value="all">All Properties</option>
+                    {properties?.map((property) => (
+                      <option key={property.id} value={property.id}>
+                        {property.address}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 
-                <div className="properties-filter-group">
-                  <label className="properties-filter-label">Occupancy:</label>
-                  <select className="properties-filter-select">
-                    <option value="all">All Occupancy</option>
-                    <option value="full">100% Occupied</option>
-                    <option value="high">90%+ Occupied</option>
-                    <option value="medium">70-89% Occupied</option>
-                    <option value="low">Below 70%</option>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}>
+                  <label style={{
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                    color: '#374151'
+                  }}>
+                    Status:
+                  </label>
+                  <select
+                    value={rentHistoryStatusFilter}
+                    onChange={(e) => setRentHistoryStatusFilter(e.target.value)}
+                    style={{
+                      padding: '0.375rem 0.75rem',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      backgroundColor: 'white',
+                      fontSize: '0.875rem',
+                      color: '#374151',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <option value="all">All Status</option>
+                    <option value="collected">Collected</option>
+                    <option value="pending">Pending</option>
+                    <option value="overdue">Overdue</option>
                   </select>
                 </div>
                 
-                <button className="properties-filter-reset-btn">
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}>
+                  <label style={{
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                    color: '#374151'
+                  }}>
+                    Time Period:
+                  </label>
+                  <select
+                    value={rentHistoryTimeFilter}
+                    onChange={(e) => setRentHistoryTimeFilter(e.target.value)}
+                    style={{
+                      padding: '0.375rem 0.75rem',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      backgroundColor: 'white',
+                      fontSize: '0.875rem',
+                      color: '#374151',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <option value="all">All Time</option>
+                    <option value="this-month">This Month</option>
+                    <option value="last-month">Last Month</option>
+                    <option value="last-3-months">Last 3 Months</option>
+                    <option value="this-year">This Year</option>
+                  </select>
+                </div>
+                
+                <button
+                  onClick={() => {
+                    setRentHistoryPropertyFilter('all');
+                    setRentHistoryStatusFilter('all');
+                    setRentHistoryTimeFilter('all');
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.375rem',
+                    padding: '0.375rem 0.75rem',
+                    backgroundColor: '#f3f4f6',
+                    color: '#374151',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#e5e7eb'}
+                  onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+                >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
                     <path d="M3 3v5h5"/>
@@ -928,422 +1698,566 @@ function LandlordDashboard() {
                   Reset
                 </button>
               </div>
-              {/* Remove tabs, keep table always visible */}
-              <div className="properties-scroll-container">
-                <div className="properties-table-container">
-                  <table className="properties-table">
-                  <thead>
+            </div>
+
+            {/* Table */}
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{
+                width: '100%',
+                borderCollapse: 'collapse',
+                fontSize: '0.875rem'
+              }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#f9fafb' }}>
+                    <th style={{
+                      padding: '0.75rem',
+                      textAlign: 'center',
+                      fontWeight: '600',
+                      color: '#374151',
+                      borderBottom: '1px solid #e5e7eb'
+                    }}>
+                      Date
+                    </th>
+                    <th style={{
+                      padding: '0.75rem',
+                      textAlign: 'center',
+                      fontWeight: '600',
+                      color: '#374151',
+                      borderBottom: '1px solid #e5e7eb'
+                    }}>
+                      Tenant
+                    </th>
+                    <th style={{
+                      padding: '0.75rem',
+                      textAlign: 'center',
+                      fontWeight: '600',
+                      color: '#374151',
+                      borderBottom: '1px solid #e5e7eb'
+                    }}>
+                      Property
+                    </th>
+                    <th style={{
+                      padding: '0.75rem',
+                      textAlign: 'center',
+                      fontWeight: '600',
+                      color: '#374151',
+                      borderBottom: '1px solid #e5e7eb'
+                    }}>
+                      Amount
+                    </th>
+                    <th style={{
+                      padding: '0.75rem',
+                      textAlign: 'center',
+                      fontWeight: '600',
+                      color: '#374151',
+                      borderBottom: '1px solid #e5e7eb'
+                    }}>
+                      Status
+                    </th>
+                    <th style={{
+                      padding: '0.75rem',
+                      textAlign: 'center',
+                      fontWeight: '600',
+                      color: '#374151',
+                      borderBottom: '1px solid #e5e7eb'
+                    }}>
+                      Period
+                    </th>
+                    <th style={{
+                      padding: '0.75rem',
+                      textAlign: 'center',
+                      fontWeight: '600',
+                      color: '#374151',
+                      borderBottom: '1px solid #e5e7eb'
+                    }}>
+                      Method
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paymentLoading ? (
                     <tr>
-                      <th className="table-left">Property</th>
-                      <th className="table-left">Status</th>
-                      <th className="table-center">Occupancy</th>
-                      <th className="table-center">Monthly Revenue</th>
-                      <th className="table-center">Tasks</th>
-                      <th className="table-center">Actions</th>
+                      <td colSpan={7} style={{
+                        padding: '2rem',
+                        textAlign: 'center',
+                        color: '#6b7280',
+                        fontStyle: 'italic'
+                      }}>
+                        Loading payment history...
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                      {filteredProperties.map((property) => {
-                        const occupancyData = getPropertyOccupancy(property);
-                        const revenueData = getPropertyRevenue(property);
-                        const status = getPropertyStatus(property);
-                        const tasks = getPropertyTasks(property);
-                        
-                        return (
-                      <tr key={property.id}>
-                        <td className="table-left">
-                          <div 
-                            className="property-name-link"
-                            onClick={() => router.push(`/properties/${property.id}`)}
-                          >
-                            {property.name}
-                          </div>
-                        </td>
-                        <td className="table-left">
-                              <span className={`status-badge ${status.toLowerCase()}`}>
-                                {status}
-                          </span>
-                        </td>
-                        <td className="table-center">
-                          <div className="occupancy-cell">
-                            <div className="occupancy-info">
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                                <circle cx="12" cy="7" r="4"/>
-                              </svg>
-                                  <span className="occupancy-text">{occupancyData.occupancy}</span>
-                                  <span className="occupancy-percent">{occupancyData.occupancyPercent}%</span>
-                        </div>
-                          </div>
-                        </td>
-                        <td className="table-center">
-                          <div className="revenue-cell">
-                                <div className="revenue-amount">$ {revenueData.revenue.toLocaleString()}</div>
-                                <div className="revenue-change">{revenueData.revenueChange} vs last month</div>
-                          </div>
-                        </td>
-                        <td className="table-center">
-                          <div className="tasks-cell">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2">
-                              <path d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                            </svg>
-                                <span className="tasks-count">{tasks} pending</span>
-                          </div>
-                        </td>
-                        <td className="table-center">
-                          <button 
-                            className="manage-btn"
-                            onClick={() => router.push(`/properties/${property.id}`)}
-                          >
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <path d="M12 20h9"/>
-                              <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
-                            </svg>
-                            Manage
-                          </button>
-                        </td>
-                      </tr>
-                        );
-                      })}
-                  </tbody>
-                </table>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Actions Section */}
-          <div className="quick-actions-section">
-            <div className="section-header">
-              <div>
-                <h2 className="section-title">Quick Actions</h2>
-                <p className="section-subtitle">Frequently used actions</p>
-              </div>
-            </div>
-            
-            <div className="actions-grid">
-              {quickActions.map((action, index) => (
-                <div 
-                  key={index} 
-                  className={`action-card ${action.color}`}
-                  onClick={() => router.push(action.link)}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <div className="action-icon">
-                    {action.icon}
-                  </div>
-                  <div className="action-content">
-                    <h3 className="action-title">{action.title}</h3>
-                    <p className="action-subtitle">{action.subtitle}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Rent History Section */}
-        <div className="rent-history-section full-width">
-          <div className="section-header">
-            <div>
-              <h2 className="section-title">Rent History</h2>
-              <p className="section-subtitle">Recent rent collection logs and payment history</p>
-            </div>
-            <Link href="/accounting">
-              <button className="view-all-btn">View All</button>
-            </Link>
-          </div>
-          
-          <div className="rent-history-content">
-            <div className="rent-summary-cards">
-              <div className="summary-card collected">
-                <div className="summary-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                  </svg>
-                </div>
-                <div className="summary-content">
-                  <div className="summary-value">
-                    {paymentLoading ? '...' : `$${paymentSummary?.summary.current_month_total_dollars?.toLocaleString() || '0'}`}
-                  </div>
-                  <div className="summary-label">Collected This Month</div>
-                </div>
-              </div>
-
-              <div className="summary-card pending">
-                <div className="summary-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="12" cy="12" r="10"/>
-                    <polyline points="12,6 12,12 16,14"/>
-                  </svg>
-                </div>
-                <div className="summary-content">
-                  <div className="summary-value">
-                    {paymentLoading ? '...' : `${paymentSummary?.summary.pending_payments || 0} payments`}
-                  </div>
-                  <div className="summary-label">Pending Collection</div>
-                </div>
-              </div>
-
-              <div className="summary-card overdue">
-                <div className="summary-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="12" cy="12" r="10"/>
-                    <line x1="15" y1="9" x2="9" y2="15"/>
-                    <line x1="9" y1="9" x2="15" y2="15"/>
-                  </svg>
-                </div>
-                <div className="summary-content">
-                  <div className="summary-value">
-                    {paymentLoading ? '...' : `${paymentSummary?.summary.failed_payments || 0} failed`}
-                  </div>
-                  <div className="summary-label">Failed Payments</div>
-                </div>
-              </div>
-            </div>
-
-            <div className="rent-logs-container">
-              <div className="rent-logs-header">
-                <h3>Recent Rent Collections</h3>
-                <div className="filter-controls">
-                  <div className="filter-group">
-                    <label className="filter-label">Property:</label>
-                    <select 
-                      className="filter-select"
-                      value={rentHistoryPropertyFilter}
-                      onChange={(e) => setRentHistoryPropertyFilter(e.target.value)}
-                    >
-                      <option value="all">All Properties</option>
-                      {properties?.map((property) => (
-                        <option key={property.id} value={property.id}>
-                          {property.address}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  <div className="filter-group">
-                    <label className="filter-label">Status:</label>
-                    <select 
-                      className="filter-select"
-                      value={rentHistoryStatusFilter}
-                      onChange={(e) => setRentHistoryStatusFilter(e.target.value)}
-                    >
-                      <option value="all">All Status</option>
-                      <option value="collected">Collected</option>
-                      <option value="pending">Pending</option>
-                      <option value="overdue">Overdue</option>
-                    </select>
-                  </div>
-                  
-                  <div className="filter-group">
-                    <label className="filter-label">Time Period:</label>
-                    <select 
-                      className="filter-select"
-                      value={rentHistoryTimeFilter}
-                      onChange={(e) => setRentHistoryTimeFilter(e.target.value)}
-                    >
-                      <option value="all">All Time</option>
-                      <option value="this-month">This Month</option>
-                      <option value="last-month">Last Month</option>
-                      <option value="last-3-months">Last 3 Months</option>
-                      <option value="this-year">This Year</option>
-                    </select>
-                  </div>
-                  
-                  <button 
-                    className="filter-reset-btn"
-                    onClick={() => {
-                      setRentHistoryPropertyFilter('all');
-                      setRentHistoryStatusFilter('all');
-                      setRentHistoryTimeFilter('all');
-                    }}
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-                      <path d="M3 3v5h5"/>
-                    </svg>
-                    Reset
-                  </button>
-                </div>
-              </div>
-
-              <div className="rent-logs-table-container">
-                <table className="rent-logs-table">
-                  <thead>
+                  ) : paymentError ? (
                     <tr>
-                      <th>Date</th>
-                      <th>Tenant</th>
-                      <th>Property</th>
-                      <th>Amount</th>
-                      <th>Status</th>
-                      <th>Period</th>
-                      <th>Method</th>
+                      <td colSpan={7} style={{
+                        padding: '2rem',
+                        textAlign: 'center',
+                        color: '#dc2626',
+                        fontStyle: 'italic'
+                      }}>
+                        Failed to load payments
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {paymentLoading ? (
-                      <tr>
-                        <td colSpan={7} className="loading-cell">Loading payment history...</td>
-                      </tr>
-                    ) : paymentError ? (
-                      <tr>
-                        <td colSpan={7} className="error-cell">Failed to load payments</td>
-                      </tr>
-                    ) : filteredPaymentHistory?.length ? (
-                      filteredPaymentHistory.map((payment) => {
-                        const paymentDate = new Date(payment.payment_date);
-                        const tenantName = payment.tenant_name || 'Unknown Tenant';
-                        const initials = tenantName.split(' ').map(n => n[0]).join('').toUpperCase();
-                        const statusClass = payment.status === 'succeeded' ? 'collected' : 
-                                          payment.status === 'pending' ? 'pending' : 'overdue';
-                        const statusText = payment.status === 'succeeded' ? 'Collected' :
-                                         payment.status === 'pending' ? 'Pending' : 'Failed';
-                        
-                        return (
-                          <tr key={payment.id}>
-                            <td>{paymentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</td>
-                            <td>
-                              <div className="tenant-info">
-                                <div className="tenant-avatar">{initials}</div>
-                                <span>{tenantName}</span>
+                  ) : filteredPaymentHistory?.length ? (
+                    filteredPaymentHistory.map((payment) => {
+                      const paymentDate = new Date(payment.payment_date);
+                      const tenantName = payment.tenant_name || 'Unknown Tenant';
+                      const initials = tenantName.split(' ').map(n => n[0]).join('').toUpperCase();
+                      const statusClass = payment.status === 'succeeded' ? 'collected' : 
+                                        payment.status === 'pending' ? 'pending' : 'overdue';
+                      const statusText = payment.status === 'succeeded' ? 'Collected' :
+                                       payment.status === 'pending' ? 'Pending' : 'Failed';
+                      
+                      return (
+                        <tr key={payment.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                          <td style={{ padding: '1rem 0.75rem', textAlign: 'center' }}>
+                            {paymentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          </td>
+                          <td style={{ padding: '1rem 0.75rem', textAlign: 'center' }}>
+                            <div style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '0.5rem'
+                            }}>
+                              <div style={{
+                                width: '2rem',
+                                height: '2rem',
+                                backgroundColor: '#2563eb',
+                                borderRadius: '50%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: 'white',
+                                fontSize: '0.75rem',
+                                fontWeight: '600'
+                              }}>
+                                {initials}
                               </div>
-                            </td>
-                            <td>{payment.property_name || 'Property'}</td>
-                            <td className="amount-cell">${payment.amount_dollars}</td>
-                            <td><span className={`status-badge ${statusClass}`}>{statusText}</span></td>
-                            <td>{payment.rent_period_start ? 
-                                 `${new Date(payment.rent_period_start).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}` : 
-                                 'N/A'}</td>
-                            <td>Stripe</td>
-                          </tr>
-                        );
-                      })
-                    ) : (
-                      <tr>
-                        <td colSpan={7} className="empty-cell">No payments found</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                              <span>{tenantName}</span>
+                            </div>
+                          </td>
+                          <td style={{ padding: '1rem 0.75rem', textAlign: 'center' }}>
+                            {payment.property_name || 'Property'}
+                          </td>
+                          <td style={{ padding: '1rem 0.75rem', textAlign: 'center', fontWeight: '600' }}>
+                            ${payment.amount_dollars}
+                          </td>
+                          <td style={{ padding: '1rem 0.75rem', textAlign: 'center' }}>
+                            <div style={{ display: 'flex', justifyContent: 'center' }}>
+                              <span style={{
+                                padding: '0.25rem 0.5rem',
+                                borderRadius: '4px',
+                                fontSize: '0.75rem',
+                                fontWeight: '600',
+                                backgroundColor: statusClass === 'collected' ? '#d1fae5' : 
+                                               statusClass === 'pending' ? '#fef3c7' : '#fef2f2',
+                                color: statusClass === 'collected' ? '#065f46' : 
+                                       statusClass === 'pending' ? '#92400e' : '#dc2626'
+                              }}>
+                                {statusText}
+                              </span>
+                            </div>
+                          </td>
+                          <td style={{ padding: '1rem 0.75rem', textAlign: 'center' }}>
+                            {payment.rent_period_start ? 
+                             `${new Date(payment.rent_period_start).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}` : 
+                             'N/A'}
+                          </td>
+                          <td style={{ padding: '1rem 0.75rem', textAlign: 'center' }}>
+                            Stripe
+                          </td>
+                        </tr>
+                      );
+                    })
+                  ) : (
+                    <tr>
+                      <td colSpan={7} style={{
+                        padding: '2rem',
+                        textAlign: 'center',
+                        color: '#6b7280',
+                        fontStyle: 'italic'
+                      }}>
+                        No payments found
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
         
-        {/* Applications and Teams Section */}
-        <div className="applications-teams-container">
-          {/* Recent Applications Section */}
-          <div className="applications-section">
-            <div className="section-header">
+        {/* Applications and Vendors Grid */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+          gap: '1.5rem',
+          marginBottom: '2rem'
+        }}>
+          {/* Recent Applications Section - Takes 3 columns */}
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            padding: '1.5rem',
+            border: '1px solid #e5e7eb',
+            boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+            gridColumn: 'span 3',
+            transition: 'all 0.2s ease'
+          }}
+          onMouseOver={(e) => {
+            e.currentTarget.style.transform = 'translateY(-2px)';
+            e.currentTarget.style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.1)';
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = '0 1px 3px 0 rgba(0, 0, 0, 0.1)';
+          }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              marginBottom: '1.5rem'
+            }}>
               <div>
-                <h2 className="section-title">Recent Applications</h2>
-                <p className="section-subtitle">Latest tenant applications requiring review</p>
+                <h2 style={{
+                  fontSize: '1.25rem',
+                  fontWeight: '700',
+                  color: '#111827',
+                  margin: '0 0 0.25rem 0'
+                }}>
+                  Recent Applications
+                </h2>
+                <p style={{
+                  fontSize: '0.875rem',
+                  color: '#6b7280',
+                  margin: 0
+                }}>
+                  Latest tenant applications requiring review
+                </p>
               </div>
-              <button 
-                className="view-all-btn"
+              <button
                 onClick={() => router.push('/applications')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.5rem 1rem',
+                  backgroundColor: '#2563eb',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
+                onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
               >
                 View All Applications
               </button>
             </div>
 
-            <div className="applications-scroll-container">
-              <div className="applications-grid">
-                {applications.slice(0, 3).map((application) => (
-                  <div key={application.id} className="application-card">
-                    <div className="application-header">
-                      <div className="applicant-avatar">{getApplicantInitials(application)}</div>
-                      <span className="status-badge pending">PENDING REVIEW</span>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+              gap: '1rem'
+            }}>
+              {applications.slice(0, 3).map((application) => (
+                <div key={application.id} style={{
+                  backgroundColor: '#f8fafc',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  padding: '1rem',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f1f5f9';
+                  e.currentTarget.style.borderColor = '#2563eb';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f8fafc';
+                  e.currentTarget.style.borderColor = '#e5e7eb';
+                }}>
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: '0.75rem'
+                  }}>
+                    <div style={{
+                      width: '2.5rem',
+                      height: '2.5rem',
+                      backgroundColor: '#2563eb',
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'white',
+                      fontSize: '0.875rem',
+                      fontWeight: '600'
+                    }}>
+                      {getApplicantInitials(application)}
                     </div>
-                    
-                    <div className="application-content">
-                      <h3 className="applicant-name">{application.tenant_name}</h3>
-                      <div className="application-time">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <circle cx="12" cy="12" r="10"/>
-                          <polyline points="12,6 12,12 16,14"/>
-                        </svg>
-                        Applied {getTimeSinceApplication(application)}
-                      </div>
-                      <div className="application-property">
-                        <span className="detail-label">Property:</span> {getPropertyName(application)}
-                      </div>
-                    </div>
-
-                    <button 
-                      className="review-btn"
-                      onClick={() => handleViewApplication(application)}
-                    >
-                      View Application
-                    </button>
+                    <span style={{
+                      padding: '0.25rem 0.5rem',
+                      borderRadius: '4px',
+                      fontSize: '0.75rem',
+                      fontWeight: '600',
+                      backgroundColor: '#fef3c7',
+                      color: '#92400e'
+                    }}>
+                      PENDING REVIEW
+                    </span>
                   </div>
-                ))}
-              </div>
+                  
+                  <div style={{ marginBottom: '1rem' }}>
+                    <h3 style={{
+                      fontSize: '1rem',
+                      fontWeight: '600',
+                      color: '#111827',
+                      margin: '0 0 0.5rem 0'
+                    }}>
+                      {application.tenant_name}
+                    </h3>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.375rem',
+                      fontSize: '0.75rem',
+                      color: '#6b7280',
+                      marginBottom: '0.25rem'
+                    }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <polyline points="12,6 12,12 16,14"/>
+                      </svg>
+                      Applied {getTimeSinceApplication(application)}
+                    </div>
+                    <div style={{
+                      fontSize: '0.75rem',
+                      color: '#374151'
+                    }}>
+                      <span style={{ fontWeight: '500' }}>Property:</span> {getPropertyName(application)}
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => handleViewApplication(application)}
+                    style={{
+                      width: '100%',
+                      padding: '0.5rem',
+                      backgroundColor: '#2563eb',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
+                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+                  >
+                    View Application
+                  </button>
+                </div>
+              ))}
             </div>
           </div>
 
-          {/* Vendors Section */}
-          <div className="vendors-section">
-            <div className="section-header">
-              <div>
-                <h2 className="section-title">My Vendors</h2>
-                <p className="section-subtitle">Manage your service providers and contractors</p>
-              </div>
-              <button 
-                className="view-all-btn"
-                onClick={() => router.push('/tenants')}
-              >
-                Manage Vendors
-              </button>
+          {/* My Vendors Section - Takes 1 column */}
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            padding: '1.5rem',
+            border: '1px solid #e5e7eb',
+            boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+            height: 'fit-content',
+            gridColumn: 'span 1',
+            transition: 'all 0.2s ease'
+          }}
+          onMouseOver={(e) => {
+            e.currentTarget.style.transform = 'translateY(-2px)';
+            e.currentTarget.style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.1)';
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = '0 1px 3px 0 rgba(0, 0, 0, 0.1)';
+          }}>
+            <div style={{
+              marginBottom: '1.5rem'
+            }}>
+              <h2 style={{
+                fontSize: '1.25rem',
+                fontWeight: '700',
+                color: '#111827',
+                margin: '0 0 0.25rem 0'
+              }}>
+                My Vendors
+              </h2>
+              <p style={{
+                fontSize: '0.875rem',
+                color: '#6b7280',
+                margin: 0
+              }}>
+                Manage your service providers
+              </p>
             </div>
 
-            <div className="vendors-scroll-container">
-              <div className="vendors-list">
-                {vendors.length > 0 ? vendors.slice(0, 5).map((vendor) => (
-                  <div key={vendor.id} className="vendor-row">
-                    <div className="vendor-avatar">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <circle cx="12" cy="12" r="3"/>
-                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-                      </svg>
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.75rem'
+            }}>
+              {vendors.length > 0 ? vendors.slice(0, 5).map((vendor) => (
+                <div key={vendor.id} style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                  padding: '0.75rem',
+                  backgroundColor: '#f8fafc',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f1f5f9';
+                  e.currentTarget.style.borderColor = '#2563eb';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f8fafc';
+                  e.currentTarget.style.borderColor = '#e5e7eb';
+                }}>
+                  <div style={{
+                    width: '2rem',
+                    height: '2rem',
+                    backgroundColor: '#7c3aed',
+                    borderRadius: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'white',
+                    flexShrink: 0
+                  }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="12" r="3"/>
+                      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                    </svg>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: '#111827',
+                      marginBottom: '0.125rem',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {vendor.name}
                     </div>
-                    <div className="vendor-info">
-                      <div className="vendor-name">{vendor.name}</div>
-                      <div className="vendor-type">{vendor.vendor_type_display}</div>
-                      <div className="vendor-expenses">
-                        Total expenses: ${vendor.total_expense_amount || 0}
-                      </div>
-                      <div className="vendor-contact">
-                        {vendor.contact_email && (
-                          <span className="date-highlight">{vendor.contact_email}</span>
-                        )}
-                      </div>
+                    <div style={{
+                      fontSize: '0.75rem',
+                      color: '#6b7280',
+                      marginBottom: '0.125rem'
+                    }}>
+                      {vendor.vendor_type_display}
                     </div>
-                    <div className="vendor-status">
-                      <span className={`status-badge-small ${vendor.is_active ? 'active' : 'inactive'}`}>
+                    <div style={{
+                      fontSize: '0.75rem',
+                      color: '#374151',
+                      marginBottom: '0.125rem'
+                    }}>
+                      Total: ${vendor.total_expense_amount || 0}
+                    </div>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between'
+                    }}>
+                      <span style={{
+                        padding: '0.125rem 0.375rem',
+                        borderRadius: '4px',
+                        fontSize: '0.625rem',
+                        fontWeight: '600',
+                        backgroundColor: vendor.is_active ? '#d1fae5' : '#fef2f2',
+                        color: vendor.is_active ? '#065f46' : '#dc2626'
+                      }}>
                         {vendor.is_active ? 'Active' : 'Inactive'}
                       </span>
+                      {vendor.contact_phone && (
+                        <button
+                          onClick={() => window.open(`tel:${vendor.contact_phone}`)}
+                          style={{
+                            padding: '0.25rem',
+                            backgroundColor: '#2563eb',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                          </svg>
+                        </button>
+                      )}
                     </div>
-                    <button className="contact-btn-small" onClick={() => vendor.contact_phone && window.open(`tel:${vendor.contact_phone}`)}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
-                      </svg>
-                    </button>
                   </div>
-                )) : (
-                  <div className="empty-vendors">
-                    <p>No vendors added yet</p>
-                    <button 
-                      className="add-vendor-btn"
-                      onClick={() => router.push('/tenants')}
-                    >
-                      Add First Vendor
-                    </button>
-                  </div>
-                )}
-              </div>
+                </div>
+              )) : (
+                <div style={{
+                  textAlign: 'center',
+                  padding: '2rem 1rem',
+                  color: '#6b7280'
+                }}>
+                  <p style={{ margin: '0 0 1rem 0' }}>No vendors added yet</p>
+                  <button
+                    onClick={() => router.push('/tenants')}
+                    style={{
+                      padding: '0.5rem 1rem',
+                      backgroundColor: '#2563eb',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
+                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+                  >
+                    Add First Vendor
+                  </button>
+                </div>
+              )}
             </div>
+
+            <button
+              onClick={() => router.push('/tenants')}
+              style={{
+                width: '100%',
+                marginTop: '1rem',
+                padding: '0.5rem',
+                backgroundColor: '#f3f4f6',
+                color: '#374151',
+                border: '1px solid #d1d5db',
+                borderRadius: '6px',
+                fontSize: '0.875rem',
+                fontWeight: '500',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#e5e7eb'}
+              onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+            >
+              Manage All Vendors
+            </button>
           </div>
         </div>
       </div>
