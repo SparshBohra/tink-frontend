@@ -564,46 +564,123 @@ function CommunicationPage() {
       </Head>
       
       <div className="dashboard-container">
-        {/* Custom Header */}
-        <div className="dashboard-header">
-          <div className="header-content">
-            <div className="header-left">
-              <h1 className="dashboard-title">
-                Communication
+        {/* Modern Title Section */}
+        <div style={{
+          backgroundColor: 'white',
+          borderRadius: '12px',
+          border: '1px solid #e5e7eb',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+          marginBottom: '2rem',
+          transition: 'all 0.2s ease'
+        }}
+        onMouseOver={(e) => {
+          e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+          e.currentTarget.style.transform = 'translateY(-1px)';
+        }}
+        onMouseOut={(e) => {
+          e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+          e.currentTarget.style.transform = 'translateY(0)';
+        }}>
+          <div style={{
+            padding: '1.5rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '1rem'
+            }}>
+              <div style={{
+                width: '3rem',
+                height: '3rem',
+                backgroundColor: '#7c3aed',
+                borderRadius: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+              }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
+              </div>
+              <div>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem'
+                }}>
+                  <h1 style={{
+                    fontSize: '1.875rem',
+                    fontWeight: '700',
+                    color: '#111827',
+                    margin: 0
+                  }}>Communication</h1>
                 {isAutoRefreshing && (
-                  <span className="auto-refresh-indicator">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="spinning">
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      padding: '0.25rem 0.75rem',
+                      backgroundColor: '#dbeafe',
+                      borderRadius: '6px',
+                      fontSize: '0.75rem',
+                      fontWeight: '500',
+                      color: '#1d4ed8'
+                    }}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="spinning">
                       <path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c0 5-4 9-9 9s-9-4-9-9m9 9v-9"/>
                     </svg>
                     New messages detected
-                  </span>
+                    </div>
                 )}
-              </h1>
-              <div className="subtitle-container">
-                <p className="welcome-message">
-                  Manage tenant communications and announcements
-                </p>
-              </div>
-            </div>
-            <div className="header-actions">
-              <Link 
-                href="/communication-log" 
-                className="communication-log-btn"
-                style={{
-                  background: '#4f46e5',
-                  color: 'white',
-                  border: 'none',
-                  padding: '10px 16px',
-                  borderRadius: '6px',
-                  fontSize: '13px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
+                </div>
+                <div style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px',
+                  gap: '0.5rem',
+                  fontSize: '0.875rem',
+                  color: '#6b7280',
+                  marginTop: '0.25rem'
+                }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                  </svg>
+                  Manage tenant communications and announcements
+              </div>
+            </div>
+            </div>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem'
+            }}>
+              <Link 
+                href="/communication-log" 
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.5rem 1rem',
+                  backgroundColor: '#2563eb',
+                  border: '1px solid #2563eb',
+                  borderRadius: '8px',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  color: 'white',
+                  cursor: 'pointer',
                   transition: 'all 0.2s ease',
-                  textDecoration: 'none',
-                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+                  textDecoration: 'none'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = '#1d4ed8';
+                  e.currentTarget.style.borderColor = '#1d4ed8';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = '#2563eb';
+                  e.currentTarget.style.borderColor = '#2563eb';
                 }}
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
@@ -631,15 +708,51 @@ function CommunicationPage() {
           </div>
         )}
         
-        {/* Chat Interface */}
+        {/* Chat Interface Layout */}
         <div className="chat-container">
+          {/* Main Content Area (Messages) */}
+          <div className="main-content">
           {/* Conversations List */}
           <div className="conversations-panel">
-            <div className="conversations-header">
-              <h2 className="conversations-title">My Messages</h2>
+            {/* Modern Conversations Header */}
+            <div style={{
+              padding: '1.5rem',
+              borderBottom: '1px solid #f1f5f9',
+              backgroundColor: 'white',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <h2 style={{
+                fontSize: '1.25rem',
+                fontWeight: '700',
+                color: '#111827',
+                margin: 0
+              }}>My Messages</h2>
               <button 
-                className="new-chat-btn"
                 onClick={() => setShowMessageForm(true)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.5rem 1rem',
+                  backgroundColor: '#16a34a',
+                  border: '1px solid #16a34a',
+                  borderRadius: '8px',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  color: 'white',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = '#15803d';
+                  e.currentTarget.style.borderColor = '#15803d';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = '#16a34a';
+                  e.currentTarget.style.borderColor = '#16a34a';
+                }}
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M12 20h9"/>
@@ -649,144 +762,488 @@ function CommunicationPage() {
               </button>
             </div>
             
-            {/* Search and Filters */}
-            <div className="conversations-filters">
-              <div className="search-container">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="search-icon">
+            {/* Modern Search and Filters */}
+            <div style={{
+              padding: '1rem 1.5rem',
+              backgroundColor: '#f8fafc',
+              borderBottom: '1px solid #f1f5f9'
+            }}>
+              {/* Search Container */}
+              <div style={{
+                position: 'relative',
+                marginBottom: '1rem'
+              }}>
+                <div style={{
+                  position: 'absolute',
+                  left: '0.75rem',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  color: '#6b7280',
+                  pointerEvents: 'none'
+                }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <circle cx="11" cy="11" r="8"/>
                   <path d="m21 21-4.35-4.35"/>
                 </svg>
+                </div>
                 <input
                   type="text"
-                  placeholder="Search"
-                  className="search-input"
+                  placeholder="Search conversations..."
+                  style={{
+                    width: '100%',
+                    paddingLeft: '2.5rem',
+                    paddingRight: '3rem',
+                    paddingTop: '0.5rem',
+                    paddingBottom: '0.5rem',
+                    backgroundColor: 'white',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '8px',
+                    fontSize: '0.875rem',
+                    outline: 'none',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = '#2563eb';
+                    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.1)';
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = '#e2e8f0';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
                 />
-                <button className="filter-btn">
+                <button style={{
+                  position: 'absolute',
+                  right: '0.5rem',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  padding: '0.25rem',
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  color: '#6b7280',
+                  cursor: 'pointer',
+                  borderRadius: '4px',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f1f5f9';
+                  e.currentTarget.style.color = '#374151';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.color = '#6b7280';
+                }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
                   </svg>
                 </button>
               </div>
               
-              <div className="message-type-filters">
-                <button className="type-filter active">All Types</button>
-                <button className="type-filter">Text Messages</button>
-                <button className="type-filter">Announcements</button>
+              {/* Message Type Filters */}
+              <div style={{
+                display: 'flex',
+                gap: '0.5rem',
+                marginBottom: '1rem'
+              }}>
+                {['All Types', 'Text Messages', 'Announcements'].map((type, index) => (
+                  <button key={type} style={{
+                    padding: '0.375rem 0.75rem',
+                    fontSize: '0.75rem',
+                    fontWeight: '500',
+                    borderRadius: '6px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    backgroundColor: index === 0 ? '#2563eb' : '#f1f5f9',
+                    color: index === 0 ? 'white' : '#6b7280'
+                  }}
+                  onMouseOver={(e) => {
+                    if (index !== 0) {
+                      e.currentTarget.style.backgroundColor = '#e2e8f0';
+                      e.currentTarget.style.color = '#374151';
+                    }
+                  }}
+                  onMouseOut={(e) => {
+                    if (index !== 0) {
+                      e.currentTarget.style.backgroundColor = '#f1f5f9';
+                      e.currentTarget.style.color = '#6b7280';
+                    }
+                  }}>
+                    {type}
+                  </button>
+                ))}
               </div>
               
-              <div className="conversations-controls">
-                <div className="sort-control">
-                  <select className="sort-select">
+              {/* Controls Row */}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
+                {/* Sort Control */}
+                <div style={{
+                  position: 'relative'
+                }}>
+                  <select style={{
+                    padding: '0.375rem 2rem 0.375rem 0.75rem',
+                    backgroundColor: 'white',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '6px',
+                    fontSize: '0.75rem',
+                    fontWeight: '500',
+                    color: '#374151',
+                    cursor: 'pointer',
+                    outline: 'none',
+                    appearance: 'none'
+                  }}>
                     <option value="newest">Newest</option>
                     <option value="oldest">Oldest</option>
                     <option value="name">Name</option>
                   </select>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="sort-arrow">
+                  <div style={{
+                    position: 'absolute',
+                    right: '0.5rem',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    pointerEvents: 'none',
+                    color: '#6b7280'
+                  }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <polyline points="6,9 12,15 18,9"/>
                   </svg>
+                  </div>
                 </div>
                 
-                <div className="unreads-toggle">
-                  <span className="unreads-label">Unreads</span>
-                  <label className="toggle-switch">
-                    <input type="checkbox" className="toggle-input" />
-                    <span className="toggle-slider"></span>
+                {/* Unreads Toggle */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}>
+                  <span style={{
+                    fontSize: '0.75rem',
+                    fontWeight: '500',
+                    color: '#6b7280'
+                  }}>Unreads</span>
+                  <label style={{
+                    position: 'relative',
+                    display: 'inline-block',
+                    width: '2.5rem',
+                    height: '1.25rem',
+                    cursor: 'pointer'
+                  }}>
+                    <input type="checkbox" style={{
+                      opacity: 0,
+                      width: 0,
+                      height: 0
+                    }} />
+                    <span style={{
+                      position: 'absolute',
+                      cursor: 'pointer',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      backgroundColor: '#e2e8f0',
+                      borderRadius: '1.25rem',
+                      transition: 'all 0.2s ease'
+                    }}>
+                      <span style={{
+                        position: 'absolute',
+                        content: '',
+                        height: '1rem',
+                        width: '1rem',
+                        left: '0.125rem',
+                        bottom: '0.125rem',
+                        backgroundColor: 'white',
+                        borderRadius: '50%',
+                        transition: 'all 0.2s ease'
+                      }}></span>
+                    </span>
                   </label>
                 </div>
               </div>
             </div>
             
-            <div className="conversations-list">
+            {/* Modern Conversations List */}
+            <div style={{
+              flex: 1,
+              overflowY: 'auto',
+              backgroundColor: 'white'
+            }}>
               {conversations.map((conversation) => (
                 <div 
                   key={conversation.id} 
-                  className={`conversation-item ${selectedConversation === conversation.id ? 'active' : ''}`}
                   onClick={() => selectConversation(conversation.id)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    padding: '1rem 1.5rem',
+                    cursor: 'pointer',
+                    borderBottom: '1px solid #f1f5f9',
+                    transition: 'all 0.2s ease',
+                    backgroundColor: selectedConversation === conversation.id ? '#f0f9ff' : 'white',
+                    borderLeft: selectedConversation === conversation.id ? '3px solid #2563eb' : '3px solid transparent'
+                  }}
+                  onMouseOver={(e) => {
+                    if (selectedConversation !== conversation.id) {
+                      e.currentTarget.style.backgroundColor = '#f8fafc';
+                    }
+                  }}
+                  onMouseOut={(e) => {
+                    if (selectedConversation !== conversation.id) {
+                      e.currentTarget.style.backgroundColor = 'white';
+                    }
+                  }}
                 >
-                  <div className="conversation-avatar">
+                  {/* Avatar */}
+                  <div style={{
+                    width: '2.5rem',
+                    height: '2.5rem',
+                    backgroundColor: '#7c3aed',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '0.875rem',
+                    fontWeight: '600',
+                    color: 'white',
+                    flexShrink: 0
+                  }}>
                     {conversation.tenantName.split(' ').map(n => n[0]).join('')}
                   </div>
-                  <div className="conversation-content">
-                    <div className="conversation-header">
-                      <div className="conversation-name">{conversation.tenantName}</div>
-                      <div className="conversation-time">
+                  
+                  {/* Conversation Content */}
+                  <div style={{
+                    flex: 1,
+                    minWidth: 0
+                  }}>
+                    {/* Header Row */}
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginBottom: '0.25rem'
+                    }}>
+                      <div style={{
+                        fontSize: '0.875rem',
+                        fontWeight: '600',
+                        color: '#111827',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        {conversation.tenantName}
+                      </div>
+                      <div style={{
+                        fontSize: '0.75rem',
+                        color: '#6b7280',
+                        flexShrink: 0,
+                        marginLeft: '0.5rem'
+                      }}>
                         {new Date(conversation.lastMessageDate).toLocaleDateString()}
                 </div>
                   </div>
-                    <div className="conversation-preview">
-                      <div className="conversation-unit">{conversation.tenantUnit} • {conversation.tenantProperty}</div>
-                      <div className="conversation-last-message">{conversation.lastMessage}</div>
+                    
+                    {/* Unit Info */}
+                    <div style={{
+                      fontSize: '0.75rem',
+                      color: '#6b7280',
+                      marginBottom: '0.25rem'
+                    }}>
+                      {conversation.tenantUnit} • {conversation.tenantProperty}
                 </div>
+                    
+                    {/* Last Message */}
+                    <div style={{
+                      fontSize: '0.75rem',
+                      color: '#9ca3af',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {conversation.lastMessage}
               </div>
+                  </div>
+                  
+                  {/* Unread Badge */}
                   {conversation.unreadCount > 0 && (
-                    <div className="unread-badge">{conversation.unreadCount}</div>
+                    <div style={{
+                      backgroundColor: '#ef4444',
+                      color: 'white',
+                      fontSize: '0.75rem',
+                      fontWeight: '600',
+                      borderRadius: '50%',
+                      minWidth: '1.25rem',
+                      height: '1.25rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0
+                    }}>
+                      {conversation.unreadCount}
+                    </div>
                   )}
                     </div>
               ))}
                 </div>
               </div>
               
-          {/* Chat Window */}
-          <div className="chat-window">
+          {/* Modern Chat Window */}
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            backgroundColor: 'white',
+            borderLeft: '1px solid #f1f5f9'
+          }}>
             {selectedConversation ? (
               <>
-                {/* Chat Header */}
-                <div className="chat-header">
-                  <div className="chat-participant">
-                    <div className="participant-avatar">
+                {/* Modern Chat Header */}
+                <div style={{
+                  padding: '1.5rem',
+                  borderBottom: '1px solid #f1f5f9',
+                  backgroundColor: 'white',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem'
+                }}>
+                  <div style={{
+                    width: '2.5rem',
+                    height: '2.5rem',
+                    backgroundColor: '#7c3aed',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '0.875rem',
+                    fontWeight: '600',
+                    color: 'white',
+                    flexShrink: 0
+                  }}>
                       {conversations.find(c => c.id === selectedConversation)?.tenantName.split(' ').map(n => n[0]).join('')}
                     </div>
-                    <div className="participant-info">
-                      <div className="participant-name">
+                  <div style={{
+                    flex: 1
+                  }}>
+                    <div style={{
+                      fontSize: '1rem',
+                      fontWeight: '600',
+                      color: '#111827',
+                      marginBottom: '0.125rem'
+                    }}>
                         {conversations.find(c => c.id === selectedConversation)?.tenantName}
                   </div>
-                      <div className="participant-details">
+                    <div style={{
+                      fontSize: '0.75rem',
+                      color: '#6b7280'
+                    }}>
                         {conversations.find(c => c.id === selectedConversation)?.tenantUnit} • {conversations.find(c => c.id === selectedConversation)?.tenantProperty}
-                </div>
                   </div>
                 </div>
               </div>
 
-                {/* Messages Area */}
-                <div className="messages-area">
+                {/* Modern Messages Area */}
+                <div style={{
+                  flex: 1,
+                  padding: '1.5rem',
+                  overflowY: 'auto',
+                  backgroundColor: '#f8fafc',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '1rem'
+                }}>
                   {messages.map((message) => (
                     <div 
                       key={message.id} 
-                      className={`message-bubble ${message.sender === 'user' ? 'sent' : 'received'}`}
+                      style={{
+                        display: 'flex',
+                        justifyContent: message.sender === 'user' ? 'flex-end' : 'flex-start'
+                      }}
                     >
-                      <div className="message-content">
+                      <div style={{
+                        maxWidth: '70%',
+                        padding: '0.75rem 1rem',
+                        borderRadius: '1rem',
+                        backgroundColor: message.sender === 'user' ? '#2563eb' : 'white',
+                        color: message.sender === 'user' ? 'white' : '#111827',
+                        border: message.sender === 'user' ? 'none' : '1px solid #e2e8f0',
+                        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                        position: 'relative'
+                      }}>
+                        <div style={{
+                          fontSize: '0.875rem',
+                          lineHeight: '1.5',
+                          marginBottom: '0.5rem'
+                        }}>
                         {message.message}
                 </div>
-                      <div className="message-meta">
-                        <span className="message-time">
+                        <div style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          fontSize: '0.75rem',
+                          opacity: 0.7
+                        }}>
+                          <span>
                           {new Date(message.sent_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                 </span>
                         {message.sender === 'user' && (
-                          <span className={`message-status ${message.status}`}>
+                            <span style={{
+                              marginLeft: '0.5rem'
+                            }}>
                             {message.status === 'read' && '✓✓'}
                             {message.status === 'delivered' && '✓'}
                             {message.status === 'sent' && '⏱'}
                           </span>
               )}
+                        </div>
             </div>
           </div>
                   ))}
               </div>
               
                 {/* Message Input */}
-                <div className="message-input-area">
-                  <div className="message-input-container">
+                <div style={{
+                  padding: '16px',
+                  borderTop: '1px solid #e2e8f0',
+                  backgroundColor: 'white'
+                }}>
+                  <div style={{
+                    display: 'flex',
+                    gap: '12px',
+                    alignItems: 'center'
+                  }}>
                     <input
                       type="text"
                       value={newMessage}
                       onChange={(e) => setNewMessage(e.target.value)}
                       placeholder="Type a message..."
-                      className="message-input"
+                      style={{
+                        flex: 1,
+                        padding: '12px 16px',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '24px',
+                        fontSize: '14px',
+                        outline: 'none',
+                        transition: 'all 0.2s ease'
+                      }}
                       onKeyPress={(e) => e.key === 'Enter' && sendChatMessage()}
                       disabled={sending}
                     />
                     <button 
-                      className="send-btn"
+                      style={{
+                        width: '40px',
+                        height: '40px',
+                        background: '#4f46e5',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                      }}
                       onClick={sendChatMessage}
                       disabled={!newMessage.trim() || sending}
                     >
@@ -805,16 +1262,57 @@ function CommunicationPage() {
                   </div>
               </>
             ) : (
-              <div className="no-chat-selected">
-                <div className="no-chat-icon">
-                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <div style={{
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                textAlign: 'center',
+                padding: '40px',
+                color: '#64748b'
+              }}>
+                <div style={{
+                  width: '80px',
+                  height: '80px',
+                  marginBottom: '24px',
+                  color: '#cbd5e1',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
                     </svg>
                   </div>
-                <h3>Select a conversation</h3>
-                <p>Choose a tenant from the list to start messaging</p>
+                <h3 style={{
+                  fontSize: '18px',
+                  fontWeight: '600',
+                  color: '#1e293b',
+                  marginBottom: '8px'
+                }}>Select a conversation</h3>
+                <p style={{
+                  fontSize: '14px',
+                  marginBottom: '20px'
+                }}>Choose a tenant from the list to start messaging</p>
                 <button 
-                  className="start-new-chat-btn"
+                  style={{
+                    background: '#2563eb',
+                    color: 'white',
+                    border: 'none',
+                    padding: '12px 20px',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.backgroundColor = '#1d4ed8';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.backgroundColor = '#2563eb';
+                  }}
                   onClick={() => setShowMessageForm(true)}
                 >
                   Start New Conversation
@@ -822,37 +1320,134 @@ function CommunicationPage() {
                   </div>
             )}
           </div>
+          </div>
 
-          {/* Right Sidebar */}
-          <div className="right-sidebar">
-            {/* Quick Actions Section */}
-            <div className="quick-actions-section">
-              <div className="section-header">
-                <div>
-                  <h2 className="section-title">Quick Actions</h2>
-                  <p className="section-subtitle">Frequently used actions</p>
-                </div>
+          {/* Modern Quick Actions Section */}
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            border: '1px solid #e5e7eb',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+            padding: '1.5rem',
+            height: 'fit-content',
+            transition: 'all 0.2s ease'
+          }}
+          onMouseOver={(e) => {
+            e.currentTarget.style.transform = 'translateY(-2px)';
+            e.currentTarget.style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.1)';
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+          }}>
+            {/* Header */}
+            <div style={{
+              marginBottom: '1.5rem'
+            }}>
+              <h2 style={{
+                fontSize: '1.25rem',
+                fontWeight: '700',
+                color: '#111827',
+                margin: '0 0 0.25rem 0'
+              }}>Quick Actions</h2>
+              <p style={{
+                fontSize: '0.875rem',
+                color: '#6b7280',
+                margin: 0
+              }}>Frequently used actions</p>
               </div>
               
-              <div className="actions-grid">
-                <div 
-                  className="action-card blue"
+            {/* Actions Grid */}
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.75rem'
+            }}>
+              {/* Send Message */}
+              <div 
                   onClick={() => setShowMessageForm(true)}
-                >
-                  <div className="action-icon">
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                  padding: '1rem',
+                  backgroundColor: '#eff6ff',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = '#dbeafe';
+                  e.currentTarget.style.borderColor = '#2563eb';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = '#eff6ff';
+                  e.currentTarget.style.borderColor = '#e5e7eb';
+                }}
+              >
+                <div style={{
+                  width: '2.5rem',
+                  height: '2.5rem',
+                  backgroundColor: '#dbeafe',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#2563eb'
+                }}>
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
                       <polyline points="22,6 12,13 2,6"/>
                     </svg>
                   </div>
-                  <div className="action-content">
-                    <h3 className="action-title">Send Message</h3>
-                    <p className="action-subtitle">Send message to tenants</p>
+                <div style={{ flex: 1 }}>
+                  <h3 style={{
+                    fontSize: '0.875rem',
+                    fontWeight: '600',
+                    color: '#111827',
+                    margin: '0 0 0.125rem 0'
+                  }}>Send Message</h3>
+                  <p style={{
+                    fontSize: '0.75rem',
+                    color: '#6b7280',
+                    margin: 0
+                  }}>Send message to tenants</p>
                   </div>
                 </div>
 
-                <div className="action-card green">
-                  <div className="action-icon">
+              {/* Templates */}
+              <div 
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                  padding: '1rem',
+                  backgroundColor: '#f0fdf4',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = '#dcfce7';
+                  e.currentTarget.style.borderColor = '#059669';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f0fdf4';
+                  e.currentTarget.style.borderColor = '#e5e7eb';
+                }}
+              >
+                <div style={{
+                  width: '2.5rem',
+                  height: '2.5rem',
+                  backgroundColor: '#d1fae5',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#059669'
+                }}>
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
                       <polyline points="14,2 14,8 20,8"/>
@@ -860,14 +1455,53 @@ function CommunicationPage() {
                       <line x1="16" y1="17" x2="8" y2="17"/>
                     </svg>
                   </div>
-                  <div className="action-content">
-                    <h3 className="action-title">Templates</h3>
-                    <p className="action-subtitle">Use message templates</p>
+                <div style={{ flex: 1 }}>
+                  <h3 style={{
+                    fontSize: '0.875rem',
+                    fontWeight: '600',
+                    color: '#111827',
+                    margin: '0 0 0.125rem 0'
+                  }}>Templates</h3>
+                  <p style={{
+                    fontSize: '0.75rem',
+                    color: '#6b7280',
+                    margin: 0
+                  }}>Use message templates</p>
                   </div>
                 </div>
 
-                <div className="action-card purple">
-                  <div className="action-icon">
+              {/* Broadcast */}
+              <div 
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                  padding: '1rem',
+                  backgroundColor: '#fff7ed',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = '#fed7aa';
+                  e.currentTarget.style.borderColor = '#ea580c';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = '#fff7ed';
+                  e.currentTarget.style.borderColor = '#e5e7eb';
+                }}
+              >
+                <div style={{
+                  width: '2.5rem',
+                  height: '2.5rem',
+                  backgroundColor: '#fed7aa',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#ea580c'
+                }}>
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
                       <circle cx="9" cy="7" r="4"/>
@@ -875,77 +1509,74 @@ function CommunicationPage() {
                       <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
                     </svg>
                   </div>
-                  <div className="action-content">
-                    <h3 className="action-title">Broadcast</h3>
-                    <p className="action-subtitle">Send to all tenants</p>
-                  </div>
-                </div>
+                <div style={{ flex: 1 }}>
+                  <h3 style={{
+                    fontSize: '0.875rem',
+                    fontWeight: '600',
+                    color: '#111827',
+                    margin: '0 0 0.125rem 0'
+                  }}>Broadcast</h3>
+                  <p style={{
+                    fontSize: '0.75rem',
+                    color: '#6b7280',
+                    margin: 0
+                  }}>Send to all tenants</p>
               </div>
             </div>
 
-            {/* Quick Templates Section */}
-            <div className="templates-section">
-              <div className="section-header">
-                <div>
-                  <h2 className="section-title">Quick Templates</h2>
-                  <p className="section-subtitle">Common message templates</p>
-                </div>
-              </div>
-              
-              <div className="templates-grid">
-                {templates.slice(0, 4).map((template) => (
-                  <div 
-                    key={template.id} 
-                    className="template-card"
-                    onClick={() => {
-                      if (selectedConversation) {
-                        setNewMessage(template.body);
-                      } else {
-                        handleTemplateSelect(template.id);
-                        setShowMessageForm(true);
-                      }
-                    }}
-                  >
-                    <div className="template-icon">
+              {/* Communication Log */}
+              <div 
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                  padding: '1rem',
+                  backgroundColor: '#faf5ff',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = '#e9d5ff';
+                  e.currentTarget.style.borderColor = '#7c3aed';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = '#faf5ff';
+                  e.currentTarget.style.borderColor = '#e5e7eb';
+                }}
+              >
+                <div style={{
+                  width: '2.5rem',
+                  height: '2.5rem',
+                  backgroundColor: '#e9d5ff',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#7c3aed'
+                }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        {template.category === 'Payment' && (
-                          <>
-                            <line x1="12" y1="1" x2="12" y2="23"/>
-                            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-                          </>
-                        )}
-                        {template.category === 'Maintenance' && (
-                          <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
-                        )}
-                        {template.category === 'General' && (
-                          <>
-                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                            <circle cx="12" cy="7" r="4"/>
-                          </>
-                        )}
-                        {template.category === 'Lease' && (
-                          <>
                             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
                             <polyline points="14,2 14,8 20,8"/>
                             <line x1="16" y1="13" x2="8" y2="13"/>
                             <line x1="16" y1="17" x2="8" y2="17"/>
-                          </>
-                        )}
-                        {template.category === 'Emergency' && (
-                          <>
-                            <circle cx="12" cy="12" r="10"/>
-                            <line x1="12" y1="8" x2="12" y2="12"/>
-                            <line x1="12" y1="16" x2="12.01" y2="16"/>
-                          </>
-                        )}
+                    <line x1="12" y1="9" x2="8" y2="9"/>
                       </svg>
                     </div>
-                    <div className="template-content">
-                      <h4 className="template-title">{template.name}</h4>
-                      <p className="template-description">{template.category} template</p>
+                <div style={{ flex: 1 }}>
+                  <h3 style={{
+                    fontSize: '0.875rem',
+                    fontWeight: '600',
+                    color: '#111827',
+                    margin: '0 0 0.125rem 0'
+                  }}>Communication Log</h3>
+                  <p style={{
+                    fontSize: '0.75rem',
+                    color: '#6b7280',
+                    margin: 0
+                  }}>View message history</p>
                     </div>
-                  </div>
-                ))}
               </div>
             </div>
           </div>
@@ -1245,11 +1876,23 @@ function CommunicationPage() {
         /* Chat Interface Layout */
         .chat-container {
           display: grid;
-          grid-template-columns: 350px 1fr 300px;
+          grid-template-columns: 3fr 1fr;
+          gap: 1.5rem;
           height: calc(100vh - 140px);
+          background: transparent;
+          border-radius: 0;
+          border: none;
+          overflow: visible;
+        }
+
+        /* Main Content Area (Messages) */
+        .main-content {
+          display: grid;
+          grid-template-columns: 350px 1fr;
           background: white;
-          border-radius: 8px;
-          border: 1px solid #e2e8f0;
+          border-radius: 12px;
+          border: 1px solid #e5e7eb;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
           overflow: hidden;
         }
 
@@ -1422,7 +2065,7 @@ function CommunicationPage() {
 
         .unreads-toggle {
           display: flex;
-          align-items: center;
+          alignItems: 'center';
           gap: 8px;
         }
 
@@ -1486,7 +2129,7 @@ function CommunicationPage() {
 
         .conversation-item {
           display: flex;
-          align-items: center;
+          alignItems: 'center';
           gap: 12px;
           padding: 12px;
           border-radius: 8px;
@@ -1512,8 +2155,8 @@ function CommunicationPage() {
           background: #4f46e5;
           color: white;
           display: flex;
-          align-items: center;
-          justify-content: center;
+          alignItems: 'center';
+          justifyContent: 'center';
           font-weight: 600;
           font-size: 14px;
           flex-shrink: 0;
@@ -1530,8 +2173,8 @@ function CommunicationPage() {
 
         .conversation-header {
           display: flex;
-          justify-content: space-between;
-          align-items: center;
+          justifyContent: 'space-between';
+          alignItems: 'center';
           margin-bottom: 4px;
         }
 
@@ -1593,8 +2236,8 @@ function CommunicationPage() {
           width: 20px;
           height: 20px;
           display: flex;
-          align-items: center;
-          justify-content: center;
+          alignItems: 'center';
+          justifyContent: 'center';
           font-size: 11px;
           font-weight: 600;
         }
@@ -1610,14 +2253,14 @@ function CommunicationPage() {
           padding: 16px;
           border-bottom: 1px solid #e2e8f0;
           display: flex;
-          justify-content: space-between;
-          align-items: center;
+          justifyContent: 'space-between';
+          alignItems: 'center';
           background: white;
         }
 
         .chat-participant {
           display: flex;
-          align-items: center;
+          alignItems: 'center';
           gap: 12px;
         }
 
@@ -1628,8 +2271,8 @@ function CommunicationPage() {
           background: #4f46e5;
           color: white;
           display: flex;
-          align-items: center;
-          justify-content: center;
+          alignItems: 'center';
+          justifyContent: 'center';
           font-weight: 600;
           font-size: 14px;
         }
@@ -1663,8 +2306,8 @@ function CommunicationPage() {
           background: white;
           border-radius: 6px;
           display: flex;
-          align-items: center;
-          justify-content: center;
+          alignItems: 'center';
+          justifyContent: 'center';
           cursor: pointer;
           transition: all 0.2s ease;
           color: #64748b;
@@ -1693,12 +2336,12 @@ function CommunicationPage() {
 
         .message-bubble.sent {
           align-self: flex-end;
-          align-items: flex-end;
+          alignItems: flex-end;
         }
 
         .message-bubble.received {
           align-self: flex-start;
-          align-items: flex-start;
+          alignItems: flex-start;
         }
 
         .message-content {
@@ -1721,7 +2364,7 @@ function CommunicationPage() {
 
         .message-meta {
           display: flex;
-          align-items: center;
+          alignItems: 'center';
           gap: 6px;
           font-size: 11px;
           color: #64748b;
@@ -1755,7 +2398,7 @@ function CommunicationPage() {
         .message-input-container {
           display: flex;
           gap: 12px;
-          align-items: center;
+          alignItems: 'center';
         }
 
         .message-input {
@@ -1781,8 +2424,8 @@ function CommunicationPage() {
           border: none;
           border-radius: 50%;
           display: flex;
-          align-items: center;
-          justify-content: center;
+          alignItems: 'center';
+          justifyContent: 'center';
           cursor: pointer;
           transition: all 0.2s ease;
         }
@@ -1802,9 +2445,9 @@ function CommunicationPage() {
           flex: 1;
           display: flex;
           flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          text-align: center;
+          alignItems: 'center';
+          justifyContent: 'center';
+          textAlign: 'center';
           padding: 40px;
           color: #64748b;
         }
@@ -1847,20 +2490,23 @@ function CommunicationPage() {
 
         /* Right Sidebar */
         .right-sidebar {
-          background: #f8fafc;
-          border-left: 1px solid #e2e8f0;
+          background: white;
+          border: 1px solid #e5e7eb;
+          border-radius: 12px;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
           display: flex;
           flex-direction: column;
           gap: 20px;
-          padding: 16px;
+          padding: 1.5rem;
           overflow-y: auto;
+          height: fit-content;
         }
 
         /* Section Headers */
         .section-header {
           display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
+          justifyContent: 'space-between';
+          alignItems: 'flex-start';
           margin-bottom: 12px;
         }
 
@@ -1895,14 +2541,14 @@ function CommunicationPage() {
 
         .action-card {
           display: flex;
-          align-items: center;
+          alignItems: 'center';
           gap: 12px;
           padding: 12px;
           border-radius: 6px;
-          border: 1px solid #e2e8f0;
+          border: none;
           cursor: pointer;
           transition: all 0.2s ease;
-          text-decoration: none;
+          textDecoration: none;
         }
 
         .action-card:hover {
@@ -1930,8 +2576,8 @@ function CommunicationPage() {
           height: 32px;
           border-radius: 6px;
           display: flex;
-          align-items: center;
-          justify-content: center;
+          alignItems: 'center';
+          justifyContent: 'center';
           flex-shrink: 0;
         }
 
@@ -1995,7 +2641,7 @@ function CommunicationPage() {
 
         .template-card {
           display: flex;
-          align-items: center;
+          alignItems: 'center';
           gap: 12px;
           padding: 10px 12px;
           border-radius: 6px;
@@ -2016,8 +2662,8 @@ function CommunicationPage() {
           height: 28px;
           border-radius: 6px;
           display: flex;
-          align-items: center;
-          justify-content: center;
+          alignItems: 'center';
+          justifyContent: 'center';
           flex-shrink: 0;
           background: #eef2ff;
           color: #4f46e5;
@@ -2047,15 +2693,15 @@ function CommunicationPage() {
 
         .metric-header {
           display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
+          justifyContent: 'space-between';
+          alignItems: 'flex-start';
           margin-bottom: 12px;
         }
 
         .metric-info {
           display: flex;
-          justify-content: space-between;
-          align-items: center;
+          justifyContent: 'space-between';
+          alignItems: 'center';
           width: 100%;
         }
 
@@ -2092,8 +2738,8 @@ function CommunicationPage() {
 
         .metric-progress {
           display: flex;
-          justify-content: space-between;
-          align-items: center;
+          justifyContent: 'space-between';
+          alignItems: 'center';
         }
 
         .metric-label {
@@ -2113,8 +2759,8 @@ function CommunicationPage() {
         /* Section Headers */
         .section-header {
           display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
+          justifyContent: 'space-between';
+          alignItems: 'flex-start';
           margin-bottom: 16px;
         }
 
@@ -2134,7 +2780,7 @@ function CommunicationPage() {
         .section-actions {
           display: flex;
           gap: 12px;
-          align-items: center;
+          alignItems: 'center';
         }
 
         /* Messages Section */
@@ -2159,7 +2805,7 @@ function CommunicationPage() {
           font-weight: 600;
           cursor: pointer;
           display: flex;
-          align-items: center;
+          alignItems: 'center';
           gap: 6px;
           transition: all 0.2s ease;
         }
@@ -2204,7 +2850,7 @@ function CommunicationPage() {
           font-size: 14px;
           font-weight: 600;
           cursor: pointer;
-          text-decoration: none;
+          textDecoration: none;
           display: inline-block;
           transition: all 0.2s ease;
         }
@@ -2311,11 +2957,11 @@ function CommunicationPage() {
           font-weight: 500;
           cursor: pointer;
           display: flex;
-          align-items: center;
-          justify-content: center;
+          alignItems: 'center';
+          justifyContent: 'center';
           gap: 6px;
           transition: all 0.2s ease;
-          text-decoration: none;
+          textDecoration: none;
           margin: 0 auto;
         }
 
@@ -2337,7 +2983,7 @@ function CommunicationPage() {
 
         .template-card {
           display: flex;
-          align-items: center;
+          alignItems: 'center';
           gap: 12px;
           padding: 10px 12px;
           border-radius: 6px;
@@ -2357,8 +3003,8 @@ function CommunicationPage() {
           height: 32px;
           border-radius: 6px;
           display: flex;
-          align-items: center;
-          justify-content: center;
+          alignItems: 'center';
+          justifyContent: 'center';
           flex-shrink: 0;
           background: #eef2ff;
           color: #4f46e5;
@@ -2408,14 +3054,14 @@ function CommunicationPage() {
 
         .action-card {
           display: flex;
-          align-items: center;
+          alignItems: 'center';
           gap: 12px;
           padding: 10px 12px;
           border-radius: 6px;
-          border: 1px solid #e2e8f0;
+          border: none;
           cursor: pointer;
           transition: all 0.2s ease;
-          text-decoration: none;
+          textDecoration: none;
         }
 
         .action-card:hover {
@@ -2443,8 +3089,8 @@ function CommunicationPage() {
           height: 32px;
           border-radius: 6px;
           display: flex;
-          align-items: center;
-          justify-content: center;
+          alignItems: 'center';
+          justifyContent: 'center';
         }
 
         .action-card.blue .action-icon {
@@ -2494,7 +3140,7 @@ function CommunicationPage() {
           background: rgba(0, 0, 0, 0.5);
           display: flex;
           justify-content: center;
-          align-items: center;
+          alignItems: 'center';
           z-index: 1000;
         }
 
@@ -2617,11 +3263,11 @@ function CommunicationPage() {
           font-weight: 600;
           cursor: pointer;
           display: flex;
-          align-items: center;
-          justify-content: center;
+          alignItems: 'center';
+          justifyContent: 'center';
           gap: 8px;
           transition: all 0.2s ease;
-          text-decoration: none;
+          textDecoration: none;
           border: none;
         }
 
@@ -2664,7 +3310,7 @@ function CommunicationPage() {
 
         .tenant-checkbox {
           display: flex;
-          align-items: center;
+          alignItems: 'center';
           gap: 8px;
           padding: 6px 0;
           cursor: pointer;
@@ -2762,7 +3408,7 @@ function CommunicationPage() {
           .section-header {
             flex-direction: column;
             gap: 12px;
-            align-items: stretch;
+            alignItems: stretch;
           }
         }
 
@@ -3013,7 +3659,7 @@ function CommunicationPage() {
         /* Auto-refresh indicator styles */
         .auto-refresh-indicator {
           display: inline-flex;
-          align-items: center;
+          alignItems: 'center';
           gap: 6px;
           margin-left: 12px;
           font-size: 14px;

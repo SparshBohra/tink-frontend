@@ -8,6 +8,16 @@ import { apiClient } from '../lib/api';
 import { Lease, Tenant, Property, Room } from '../lib/types';
 import { formatCurrency } from '../lib/utils';
 import LoadingSpinner from '../components/LoadingSpinner';
+import { 
+  FileText, 
+  Clock, 
+  DollarSign, 
+  Edit, 
+  RefreshCw, 
+  Download,
+  AlertTriangle,
+  CheckCircle
+} from 'lucide-react';
 
 function Leases() {
   const router = useRouter();
@@ -278,206 +288,416 @@ function Leases() {
         <title>Lease Management - Tink Property Management</title>
       </Head>
       
-      <div className="dashboard-container">
-        {/* Custom Header */}
-        <div className="dashboard-header">
-          <div className="header-content">
-            <div className="header-left">
-              <h1 className="dashboard-title">Lease Management</h1>
-              <div className="subtitle-container">
-                <p className="welcome-message">
-                  Manage active leases, process renewals, and handle move-outs
-                </p>
+      <div style={{ padding: '2rem' }}>
+        {/* Modern Header - Full Width */}
+        <div style={{
+          backgroundColor: 'white',
+          borderRadius: '12px',
+          border: '1px solid #e5e7eb',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+          marginBottom: '2rem',
+          transition: 'all 0.2s ease'
+        }}
+        onMouseOver={(e) => {
+          e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+          e.currentTarget.style.transform = 'translateY(-1px)';
+        }}
+        onMouseOut={(e) => {
+          e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+          e.currentTarget.style.transform = 'translateY(0)';
+        }}>
+          <div style={{
+            padding: '1.5rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '1rem'
+            }}>
+              <div style={{
+                width: '3rem',
+                height: '3rem',
+                backgroundColor: '#2563eb',
+                borderRadius: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+              }}>
+                <FileText style={{ width: '1.5rem', height: '1.5rem', color: 'white' }} />
               </div>
+              <div>
+                <h1 style={{
+                  fontSize: '1.875rem',
+                  fontWeight: '700',
+                  color: '#111827',
+                  margin: 0,
+                  marginBottom: '0.25rem'
+                }}>Lease Management</h1>
+                <div style={{
+                  fontSize: '0.875rem',
+                  color: '#6b7280'
+                }}>
+                  Manage active leases, process renewals, and handle move-outs
+              </div>
+              </div>
+            </div>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem'
+            }}>
+              <button 
+                onClick={() => fetchData()}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.5rem 0.75rem',
+                  backgroundColor: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '6px',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f1f5f9';
+                  e.currentTarget.style.borderColor = '#cbd5e1';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f8fafc';
+                  e.currentTarget.style.borderColor = '#e2e8f0';
+                }}
+              >
+                <RefreshCw style={{ width: '1rem', height: '1rem' }} />
+                Refresh
+              </button>
+              <button 
+                onClick={downloadLeasesReport}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.5rem 0.75rem',
+                  backgroundColor: '#2563eb',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
+                onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+              >
+                <Download style={{ width: '1rem', height: '1rem' }} />
+                Download Report
+              </button>
             </div>
           </div>
         </div>
 
         {error && (
-          <div className="error-banner">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="10"/>
-              <line x1="15" y1="9" x2="9" y2="15"/>
-              <line x1="9" y1="9" x2="15" y2="15"/>
-            </svg>
+          <div style={{
+            backgroundColor: '#fef2f2',
+            border: '1px solid #fecaca',
+            borderRadius: '8px',
+            padding: '1rem',
+            marginBottom: '1.5rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem',
+            color: '#dc2626'
+          }}>
+            <AlertTriangle style={{ width: '1.25rem', height: '1.25rem', flexShrink: 0 }} />
             {error}
           </div>
         )}
         
-        {/* Top Metrics Row */}
-        <div className="metrics-grid">
-          <div className="metric-card">
-            <div className="metric-header">
-              <div className="metric-info">
-                <h3 className="metric-title">Active Leases</h3>
-                <div className="metric-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                    <polyline points="14,2 14,8 20,8"/>
-                  </svg>
+        {/* Modern Metrics Grid */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '3fr 1fr',
+          gap: '1.5rem',
+          marginBottom: '2rem'
+        }}>
+          {/* Left side - 3 metric cards */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            gap: '1.5rem'
+          }}>
+            {[
+              {
+                title: 'Active Leases',
+                value: activeLeases.length,
+                subtitle: 'Currently active',
+                icon: FileText,
+                bgColor: '#eff6ff',
+                iconColor: '#2563eb'
+              },
+              {
+                title: 'Expiring Soon',
+                value: expiringLeases.length,
+                subtitle: 'Within 90 days',
+                icon: Clock,
+                bgColor: '#fff7ed',
+                iconColor: '#ea580c'
+              },
+              {
+                title: 'Monthly Revenue',
+                value: formatCurrency(monthlyRevenue),
+                subtitle: 'From active leases',
+                icon: DollarSign,
+                bgColor: '#f0fdf4',
+                iconColor: '#16a34a'
+              }
+            ].map((metric, index) => (
+              <div key={index} style={{
+                backgroundColor: 'white',
+                borderRadius: '12px',
+                border: '1px solid #e5e7eb',
+                padding: '1.5rem',
+                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                transition: 'all 0.2s ease',
+                cursor: 'pointer'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+                e.currentTarget.style.transform = 'translateY(-2px)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+                e.currentTarget.style.transform = 'translateY(0)';
+              }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: '1rem'
+                }}>
+                  <h3 style={{
+                    fontSize: '0.875rem',
+                    fontWeight: '600',
+                    color: '#374151',
+                    margin: 0
+                  }}>{metric.title}</h3>
+                  <div style={{
+                    width: '2.5rem',
+                    height: '2.5rem',
+                    backgroundColor: metric.bgColor,
+                    borderRadius: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    <metric.icon style={{ width: '1.25rem', height: '1.25rem', color: metric.iconColor }} />
                 </div>
               </div>
+                <div style={{
+                  fontSize: '1.875rem',
+                  fontWeight: '700',
+                  color: '#111827',
+                  marginBottom: '0.5rem'
+                }}>{metric.value}</div>
+                <p style={{
+                  fontSize: '0.75rem',
+                  color: '#6b7280',
+                  margin: 0
+                }}>{metric.subtitle}</p>
             </div>
-            <div className="metric-content">
-              <div className="metric-value">{activeLeases.length}</div>
-              <div className="metric-subtitle">Currently active</div>
-              <div className="metric-progress">
-                <span className="metric-label">Across all properties</span>
-                <span className="metric-change positive">+{activeLeases.length > 0 ? '1' : '0'}</span>
+            ))}
+          </div>
+          
+          {/* Right side - Draft Leases metric card */}
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            border: '1px solid #e5e7eb',
+            padding: '1.5rem',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+            transition: 'all 0.2s ease',
+            cursor: 'pointer'
+          }}
+          onMouseOver={(e) => {
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+            e.currentTarget.style.transform = 'translateY(-2px)';
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+            e.currentTarget.style.transform = 'translateY(0)';
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '1rem'
+            }}>
+              <h3 style={{
+                fontSize: '0.875rem',
+                fontWeight: '600',
+                color: '#374151',
+                margin: 0
+              }}>Draft Leases</h3>
+              <div style={{
+                width: '2.5rem',
+                height: '2.5rem',
+                backgroundColor: '#fdf4ff',
+                borderRadius: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <Edit style={{ width: '1.25rem', height: '1.25rem', color: '#a855f7' }} />
+                </div>
               </div>
+            <div style={{
+              fontSize: '1.875rem',
+              fontWeight: '700',
+              color: '#111827',
+              marginBottom: '0.5rem'
+            }}>{draftLeases.length}</div>
+            <p style={{
+              fontSize: '0.75rem',
+              color: '#6b7280',
+              margin: 0
+            }}>Awaiting activation</p>
             </div>
           </div>
           
-          <div className="metric-card">
-            <div className="metric-header">
-              <div className="metric-info">
-                <h3 className="metric-title">Expiring Soon</h3>
-                <div className="metric-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="12" cy="12" r="10"/>
-                    <polyline points="12,6 12,12 16,14"/>
-                  </svg>
-                </div>
-              </div>
-            </div>
-            <div className="metric-content">
-              <div className="metric-value">{expiringLeases.length}</div>
-              <div className="metric-subtitle">Within 90 days</div>
-              <div className="metric-progress">
-                <span className="metric-label">Needs attention</span>
-                <span className="metric-change ${expiringLeases.length > 0 ? 'warning' : 'positive'}">
-                  {expiringLeases.length > 0 ? (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
-                      <path d="M12 9v4"/>
-                      <path d="m12 17 .01 0"/>
-                    </svg>
-                  ) : (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M20 6 9 17l-5-5"/>
-                    </svg>
-                  )}
-                </span>
-              </div>
-            </div>
-          </div>
-          
-          <div className="metric-card">
-            <div className="metric-header">
-              <div className="metric-info">
-                <h3 className="metric-title">Monthly Revenue</h3>
-                <div className="metric-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <line x1="12" y1="1" x2="12" y2="23"/>
-                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-                  </svg>
-                </div>
-              </div>
-            </div>
-            <div className="metric-content">
-              <div className="metric-value">{formatCurrency(monthlyRevenue)}</div>
-              <div className="metric-subtitle">From active leases</div>
-              <div className="metric-progress">
-                <span className="metric-label">Recurring income</span>
-                <span className="metric-change positive">+5%</span>
-              </div>
-            </div>
-          </div>
-          
-          <div className="metric-card">
-            <div className="metric-header">
-              <div className="metric-info">
-                <h3 className="metric-title">Draft Leases</h3>
-                <div className="metric-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M12 20h9"/>
-                    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
-                  </svg>
-                </div>
-              </div>
-            </div>
-            <div className="metric-content">
-              <div className="metric-value">{draftLeases.length}</div>
-              <div className="metric-subtitle">Awaiting activation</div>
-              <div className="metric-progress">
-                <span className="metric-label">Pending action</span>
-                <span className="metric-change ${draftLeases.length > 0 ? 'warning' : 'positive'}">
-                  {draftLeases.length > 0 ? (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
-                      <path d="M12 9v4"/>
-                      <path d="m12 17 .01 0"/>
-                    </svg>
-                  ) : (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M20 6 9 17l-5-5"/>
-                    </svg>
-                  )}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Main Content */}
-        <div className="main-content">
-          {/* Unified Leases Section */}
-          <div className="leases-section">
-            <div className="section-header">
+        {/* Main Content - 3:1 Grid Layout */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '3fr 1fr',
+          gap: '1.5rem',
+          alignItems: 'start'
+        }}>
+          {/* Left Column (3 parts): All Leases Table */}
               <div>
-                <h2 className="section-title">All Leases ({leases.length})</h2>
-                <p className="section-subtitle">Manage all draft, active, and expiring leases in one place</p>
-              </div>
-              <div className="section-actions">
-                <button 
-                  onClick={() => fetchData()} 
-                  className="refresh-btn"
-                  title="Refresh lease data to get the latest information"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <polyline points="23 4 23 10 17 10"/>
-                    <polyline points="1 20 1 14 7 14"/>
-                    <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>
-                  </svg>
-                  Refresh
-                </button>
-                <button 
-                  onClick={downloadLeasesReport} 
-                  className="download-btn"
-                  title="Download a comprehensive CSV report of all leases with details and analytics"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                    <polyline points="7,10 12,15 17,10"/>
-                    <line x1="12" y1="15" x2="12" y2="3"/>
-                  </svg>
-                  Export CSV
-                </button>
+            {/* All Leases Section */}
+            <div style={{
+              backgroundColor: 'white',
+              borderRadius: '12px',
+              border: '1px solid #e5e7eb',
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+              overflow: 'visible',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+              e.currentTarget.style.transform = 'translateY(-1px)';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+              e.currentTarget.style.transform = 'translateY(0)';
+            }}>
+              <div style={{
+                padding: '1.5rem',
+                borderBottom: '1px solid #e5e7eb',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+              }}>
+                <div>
+                  <h2 style={{
+                    fontSize: '1.25rem',
+                    fontWeight: '700',
+                    color: '#111827',
+                    margin: 0,
+                    marginBottom: '0.25rem'
+                  }}>All Leases ({leases.length})</h2>
+                  <p style={{
+                    fontSize: '0.875rem',
+                    color: '#6b7280',
+                    margin: 0
+                  }}>Manage all draft, active, and expiring leases in one place</p>
               </div>
             </div>
 
             {leases.length === 0 ? (
-              <div className="empty-state">
-                <div className="empty-icon">
-                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                    <polyline points="14,2 14,8 20,8"/>
-                  </svg>
+                <div style={{
+                  padding: '3rem',
+                  textAlign: 'center',
+                  color: '#6b7280'
+                }}>
+                  <div style={{
+                    width: '3rem',
+                    height: '3rem',
+                    backgroundColor: '#f3f4f6',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    margin: '0 auto 1rem'
+                  }}>
+                    <FileText style={{ width: '1.5rem', height: '1.5rem', color: '#9ca3af' }} />
                 </div>
-                <h3>No leases found</h3>
-                <p>There are no leases in the system yet.</p>
+                  <h3 style={{
+                    fontSize: '1.125rem',
+                    fontWeight: '600',
+                    color: '#374151',
+                    margin: '0 0 0.5rem'
+                  }}>No leases found</h3>
+                  <p style={{
+                    fontSize: '0.875rem',
+                    color: '#6b7280',
+                    margin: 0
+                  }}>There are no leases in the system yet.</p>
               </div>
             ) : (
-              <div className="leases-scroll-container">
-                <div className="leases-table-container">
-                  <table className="leases-table">
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{
+                    width: '100%',
+                    borderCollapse: 'collapse'
+                  }}>
                     <thead>
-                      <tr>
-                        <th className="table-left">Tenant</th>
-                        <th className="table-left">Property</th>
-                        <th className="table-left">Lease Details</th>
-                        <th className="table-center">Status</th>
-                        <th className="table-center">Actions</th>
+                      <tr style={{ backgroundColor: '#f8fafc' }}>
+                        <th style={{
+                          padding: '0.75rem 1rem',
+                          textAlign: 'center',
+                          fontSize: '0.875rem',
+                          fontWeight: '600',
+                          color: '#374151',
+                          borderBottom: '1px solid #e5e7eb'
+                        }}>Tenant</th>
+                        <th style={{
+                          padding: '0.75rem 1rem',
+                          textAlign: 'center',
+                          fontSize: '0.875rem',
+                          fontWeight: '600',
+                          color: '#374151',
+                          borderBottom: '1px solid #e5e7eb'
+                        }}>Property</th>
+                        <th style={{
+                          padding: '0.75rem 1rem',
+                          textAlign: 'center',
+                          fontSize: '0.875rem',
+                          fontWeight: '600',
+                          color: '#374151',
+                          borderBottom: '1px solid #e5e7eb'
+                        }}>Lease Details</th>
+                        <th style={{
+                          padding: '0.75rem 1rem',
+                          textAlign: 'center',
+                          fontSize: '0.875rem',
+                          fontWeight: '600',
+                          color: '#374151',
+                          borderBottom: '1px solid #e5e7eb'
+                        }}>Status</th>
+                        <th style={{
+                          padding: '0.75rem 1rem',
+                          textAlign: 'center',
+                          fontSize: '0.875rem',
+                          fontWeight: '600',
+                          color: '#374151',
+                          borderBottom: '1px solid #e5e7eb'
+                        }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -489,45 +709,180 @@ function Leases() {
                         const room = getRoomNameFromLease(lease);
                         
                         return (
-                          <tr key={lease.id}>
-                            <td className="table-left">
+                          <tr key={lease.id} style={{
+                            borderBottom: '1px solid #f3f4f6',
+                            transition: 'background-color 0.2s ease'
+                          }}
+                          onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'}
+                          onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+                            <td style={{
+                              padding: '1rem',
+                              textAlign: 'center',
+                              borderBottom: '1px solid #f3f4f6'
+                            }}>
                               <div 
-                                className="tenant-name clickable-name" 
                                 onClick={() => router.push(`/tenants/${lease.tenant}`)}
-                                title={`View ${tenant}'s tenant profile and lease history`}
+                                style={{
+                                  fontSize: '0.875rem',
+                                  fontWeight: '500',
+                                  color: '#374151',
+                                  cursor: 'pointer',
+                                  transition: 'color 0.2s ease'
+                                }}
+                                onMouseOver={(e) => e.currentTarget.style.color = '#1f2937'}
+                                onMouseOut={(e) => e.currentTarget.style.color = '#374151'}
                               >
                                 {tenant}
                               </div>
                               {tenantContact && (
-                                <div className="tenant-contact">{tenantContact.phone}</div>
+                                <div style={{
+                                  fontSize: '0.75rem',
+                                  color: '#6b7280'
+                                }}>{tenantContact.phone}</div>
                               )}
                             </td>
-                            <td className="table-left">
+                            <td style={{
+                              padding: '1rem',
+                              textAlign: 'center',
+                              borderBottom: '1px solid #f3f4f6'
+                            }}>
                               <div 
-                                className="property-name clickable-property" 
                                 onClick={() => router.push(`/properties/${lease.property_ref}`)}
-                                title={`View ${property} property details and room management`}
+                                style={{
+                                  fontSize: '0.875rem',
+                                  fontWeight: '500',
+                                  color: '#374151',
+                                  cursor: 'pointer',
+                                  marginBottom: '0.25rem',
+                                  transition: 'color 0.2s ease'
+                                }}
+                                onMouseOver={(e) => e.currentTarget.style.color = '#1f2937'}
+                                onMouseOut={(e) => e.currentTarget.style.color = '#374151'}
                               >
                                 {property}
                               </div>
-                              <div className="room-name">{room}</div>
+                              <div style={{
+                                fontSize: '0.75rem',
+                                color: '#6b7280'
+                              }}>{room}</div>
                             </td>
-                            <td className="table-left">
-                              <div className="lease-details">
-                                <div className="lease-term">Term: <span className="date-highlight">{formatDate(lease.start_date)}</span> to <span className="date-highlight">{formatDate(lease.end_date)}</span></div>
-                                <div className="lease-rent">Rent: ${lease.monthly_rent}/month</div>
-                                <div className="lease-deposit">Deposit: ${lease.security_deposit}</div>
+                            <td style={{
+                              padding: '1rem',
+                              textAlign: 'center',
+                              borderBottom: '1px solid #f3f4f6'
+                            }}>
+                              <div style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '0.375rem',
+                                alignItems: 'center'
+                              }}>
+                                <div style={{
+                                  fontSize: '0.8125rem',
+                                  color: '#374151',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '0.25rem'
+                                }}>
+                                  <span style={{ 
+                                    fontWeight: '600',
+                                    color: '#1f2937'
+                                  }}>Term:</span> 
+                                  <span style={{
+                                    backgroundColor: '#f3f4f6',
+                                    padding: '0.125rem 0.375rem',
+                                    borderRadius: '4px',
+                                    fontSize: '0.75rem',
+                                    fontWeight: '600',
+                                    color: '#374151'
+                                  }}>
+                                    {formatDate(lease.start_date)}
+                                  </span>
+                                  <span style={{ color: '#6b7280' }}>to</span>
+                                  <span style={{
+                                    backgroundColor: '#f3f4f6',
+                                    padding: '0.125rem 0.375rem',
+                                    borderRadius: '4px',
+                                    fontSize: '0.75rem',
+                                    fontWeight: '600',
+                                    color: '#374151'
+                                  }}>
+                                    {formatDate(lease.end_date)}
+                                  </span>
+                                </div>
+                                <div style={{
+                                  fontSize: '0.8125rem',
+                                  color: '#374151',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '0.25rem'
+                                }}>
+                                  <span style={{ 
+                                    fontWeight: '600',
+                                    color: '#1f2937'
+                                  }}>Rent:</span> 
+                                  <span style={{
+                                    backgroundColor: '#f3f4f6',
+                                    padding: '0.125rem 0.375rem',
+                                    borderRadius: '4px',
+                                    fontSize: '0.75rem',
+                                    fontWeight: '600',
+                                    color: '#374151'
+                                  }}>
+                                    ${lease.monthly_rent}/month
+                                  </span>
+                                </div>
+                                <div style={{
+                                  fontSize: '0.8125rem',
+                                  color: '#374151',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '0.25rem'
+                                }}>
+                                  <span style={{ 
+                                    fontWeight: '600',
+                                    color: '#1f2937'
+                                  }}>Deposit:</span> 
+                                  <span style={{
+                                    backgroundColor: '#f3f4f6',
+                                    padding: '0.125rem 0.375rem',
+                                    borderRadius: '4px',
+                                    fontSize: '0.75rem',
+                                    fontWeight: '600',
+                                    color: '#374151'
+                                  }}>
+                                    ${lease.security_deposit}
+                                  </span>
+                                </div>
                               </div>
                             </td>
-                            <td className="table-center">
-                              <span className={`status-badge ${
-                                lease.status === 'draft' ? 'draft' :
-                                lease.status === 'sent_to_tenant' ? 'sent' :
-                                lease.status === 'signed' ? 'signed' :
-                                lease.status === 'active' ? 'active' :
-                                daysToExpiry <= 30 ? 'critical' : 
-                                daysToExpiry <= 90 ? 'warning' : 'active'
-                              }`}>
+                            <td style={{
+                              padding: '1rem',
+                              textAlign: 'center',
+                              borderBottom: '1px solid #f3f4f6'
+                            }}>
+                              <span style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                padding: '0.375rem 0.875rem',
+                                borderRadius: '9999px',
+                                fontSize: '0.8125rem',
+                                fontWeight: '600',
+                                backgroundColor: 
+                                  lease.status === 'draft' ? '#fef3c7' :
+                                  lease.status === 'sent_to_tenant' ? '#dbeafe' :
+                                  lease.status === 'signed' ? '#d1fae5' :
+                                  lease.status === 'active' ? '#dcfce7' :
+                                  daysToExpiry <= 30 ? '#fecaca' : 
+                                  daysToExpiry <= 90 ? '#fed7aa' : '#dcfce7',
+                                color:
+                                  lease.status === 'draft' ? '#92400e' :
+                                  lease.status === 'sent_to_tenant' ? '#1d4ed8' :
+                                  lease.status === 'signed' ? '#065f46' :
+                                  lease.status === 'active' ? '#166534' :
+                                  daysToExpiry <= 30 ? '#dc2626' : 
+                                  daysToExpiry <= 90 ? '#ea580c' : '#166534'
+                              }}>
                                 {lease.status === 'draft' ? 'Draft' : 
                                  lease.status === 'sent_to_tenant' ? 'Sent to Tenant' :
                                  lease.status === 'signed' ? 'Signed' :
@@ -536,38 +891,100 @@ function Leases() {
                                  daysToExpiry <= 90 ? `${daysToExpiry} days left` : 'Active'}
                               </span>
                             </td>
-                            <td className="table-center">
+                            <td style={{
+                              padding: '1rem',
+                              textAlign: 'center',
+                              borderBottom: '1px solid #f3f4f6'
+                            }}>
                               {lease.status === 'draft' ? (
-                                <div className="action-buttons">
+                                <div style={{
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  alignItems: 'center',
+                                  gap: '0.5rem'
+                                }}>
                                   <button 
-                                    className="send-to-tenant-btn" 
                                     onClick={() => handleSendToTenant(lease)}
-                                    title={`Send lease to ${getTenantNameFromLease(lease)} for signing`}
+                                    style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      gap: '0.375rem',
+                                      padding: '0.5rem 0.875rem',
+                                      backgroundColor: '#2563eb',
+                                      color: 'white',
+                                      border: 'none',
+                                      borderRadius: '6px',
+                                      fontSize: '0.8125rem',
+                                      fontWeight: '500',
+                                      cursor: 'pointer',
+                                      transition: 'all 0.2s ease',
+                                      minWidth: '140px'
+                                    }}
+                                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
+                                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
                                   >
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                       <line x1="22" y1="2" x2="11" y2="13"/>
                                       <polygon points="22,2 15,22 11,13 2,9 22,2"/>
                                     </svg>
                                     Send to Tenant
                                   </button>
-                                  <Link href={`/leases/${lease.id}`} legacyBehavior>
-                                    <a 
-                                      className="edit-lease-btn"
-                                      title={`Edit ${getTenantNameFromLease(lease)}'s lease details`}
+                                  <Link href={`/leases/${lease.id}`}>
+                                    <button style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      gap: '0.375rem',
+                                      padding: '0.5rem 0.875rem',
+                                      backgroundColor: '#f8fafc',
+                                      color: '#374151',
+                                      border: '1px solid #cbd5e1',
+                                      borderRadius: '6px',
+                                      fontSize: '0.8125rem',
+                                      fontWeight: '500',
+                                      cursor: 'pointer',
+                                      transition: 'all 0.2s ease',
+                                      minWidth: '140px'
+                                    }}
+                                    onMouseOver={(e) => {
+                                      e.currentTarget.style.backgroundColor = '#f1f5f9';
+                                      e.currentTarget.style.borderColor = '#94a3b8';
+                                    }}
+                                    onMouseOut={(e) => {
+                                      e.currentTarget.style.backgroundColor = '#f8fafc';
+                                      e.currentTarget.style.borderColor = '#cbd5e1';
+                                    }}
                                     >
-                                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                        <circle cx="12" cy="12" r="3"/>
                                       </svg>
-                                      Edit Lease
-                                    </a>
+                                      View Lease
+                                    </button>
                                   </Link>
                                   <button 
-                                    className="download-lease-btn" 
                                     onClick={() => handleDownloadLease(lease)}
-                                    title={`Download ${getTenantNameFromLease(lease)}'s lease PDF ${lease.status === 'signed' || lease.status === 'active' ? '(signed version when available)' : '(draft version)'}`}
+                                    style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      gap: '0.375rem',
+                                      padding: '0.5rem 0.875rem',
+                                      backgroundColor: '#16a34a',
+                                      color: 'white',
+                                      border: 'none',
+                                      borderRadius: '6px',
+                                      fontSize: '0.8125rem',
+                                      fontWeight: '500',
+                                      cursor: 'pointer',
+                                      transition: 'all 0.2s ease',
+                                      minWidth: '140px'
+                                    }}
+                                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#15803d'}
+                                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#16a34a'}
                                   >
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                                       <polyline points="7,10 12,15 17,10"/>
                                       <line x1="12" y1="15" x2="12" y2="3"/>
@@ -576,64 +993,101 @@ function Leases() {
                                   </button>
                                 </div>
                               ) : lease.status === 'sent_to_tenant' ? (
-                                <div className="action-buttons">
-                                  <div className="status-text">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{display: 'inline', marginRight: '6px', color: '#10b981'}}>
+                                <div style={{
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  alignItems: 'center',
+                                  gap: '0.5rem'
+                                }}>
+                                  <div style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.375rem',
+                                    fontSize: '0.8125rem',
+                                    color: '#16a34a',
+                                    fontWeight: '500',
+                                    backgroundColor: '#f0fdf4',
+                                    padding: '0.375rem 0.75rem',
+                                    borderRadius: '6px',
+                                    border: '1px solid #bbf7d0'
+                                  }}>
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                       <line x1="22" y1="2" x2="11" y2="13"/>
                                       <polygon points="22,2 15,22 11,13 2,9 22,2"/>
                                     </svg>
-                                    Sent to Tenant - Awaiting Signature
+                                    Awaiting Signature
                                   </div>
-                                  <Link href={`/leases/${lease.id}`} legacyBehavior>
-                                    <a 
-                                      className="manage-lease-btn view-variant"
-                                      title={`View ${getTenantNameFromLease(lease)}'s lease details`}
+                                  <Link href={`/leases/${lease.id}`}>
+                                    <button style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      gap: '0.375rem',
+                                      padding: '0.5rem 0.875rem',
+                                      backgroundColor: '#f8fafc',
+                                      color: '#374151',
+                                      border: '1px solid #cbd5e1',
+                                      borderRadius: '6px',
+                                      fontSize: '0.8125rem',
+                                      fontWeight: '500',
+                                      cursor: 'pointer',
+                                      transition: 'all 0.2s ease',
+                                      minWidth: '140px'
+                                    }}
+                                    onMouseOver={(e) => {
+                                      e.currentTarget.style.backgroundColor = '#f1f5f9';
+                                      e.currentTarget.style.borderColor = '#94a3b8';
+                                    }}
+                                    onMouseOut={(e) => {
+                                      e.currentTarget.style.backgroundColor = '#f8fafc';
+                                      e.currentTarget.style.borderColor = '#cbd5e1';
+                                    }}
                                     >
-                                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                         <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
                                         <circle cx="12" cy="12" r="3"/>
                                       </svg>
                                       View Lease
-                                    </a>
-                                  </Link>
-                                </div>
-                              ) : lease.status === 'signed' ? (
-                                <div className="action-buttons">
-                                  <button 
-                                    className="activate-btn" 
-                                    onClick={() => handleActivateLease(lease)}
-                                    title={`Activate ${getTenantNameFromLease(lease)}'s signed lease`}
-                                  >
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                      <polygon points="13,2 3,14 12,14 11,22 21,10 12,10 13,2"/>
-                                    </svg>
-                                    Activate Lease
                                   </button>
-                                  <Link href={`/leases/${lease.id}`} legacyBehavior>
-                                    <a 
-                                      className="manage-lease-btn"
-                                      title={`Manage ${getTenantNameFromLease(lease)}'s lease`}
-                                    >
-                                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                        <path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
-                                      </svg>
-                                      Manage Lease
-                                    </a>
                                   </Link>
                                 </div>
                               ) : (
-                                <div className="action-buttons">
-                                  <Link href={`/leases/${lease.id}`} legacyBehavior>
-                                    <a 
-                                      className="manage-lease-btn"
-                                      title={`Manage ${getTenantNameFromLease(lease)}'s lease - view details, process renewals, handle move-outs`}
-                                    >
-                                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                        <path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                                <div style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  gap: '0.5rem'
+                                }}>
+                                  <div style={{
+                                    display: 'flex',
+                                    justifyContent: 'center'
+                                  }}>
+                                    <Link href={`/leases/${lease.id}`}>
+                                      <button style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '0.375rem',
+                                        padding: '0.5rem 0.875rem',
+                                        backgroundColor: '#2563eb',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '6px',
+                                        fontSize: '0.8125rem',
+                                        fontWeight: '500',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s ease'
+                                      }}
+                                      onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
+                                      onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+                                      >
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                          <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
                                       </svg>
                                       Manage Lease
-                                    </a>
+                                      </button>
                                   </Link>
+                                  </div>
                                 </div>
                               )}
                             </td>
@@ -642,154 +1096,382 @@ function Leases() {
                       })}
                     </tbody>
                   </table>
-                </div>
               </div>
             )}
+            </div>
           </div>
 
-          {/* Quick Actions Section */}
-          <div className="quick-actions-section">
-            <div className="section-header">
+          {/* Right Column (1 part): Quick Actions */}
               <div>
-                <h2 className="section-title">Quick Actions</h2>
-                <p className="section-subtitle">Common lease management tasks</p>
-              </div>
+            <div style={{
+              backgroundColor: 'white',
+              borderRadius: '12px',
+              border: '1px solid #e5e7eb',
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+              overflow: 'visible',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+              e.currentTarget.style.transform = 'translateY(-1px)';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+              e.currentTarget.style.transform = 'translateY(0)';
+            }}>
+              <div style={{
+                padding: '1.5rem',
+                borderBottom: '1px solid #e5e7eb'
+              }}>
+                <h2 style={{
+                  fontSize: '1.25rem',
+                  fontWeight: '700',
+                  color: '#111827',
+                  margin: 0,
+                  marginBottom: '0.25rem'
+                }}>Quick Actions</h2>
+                <p style={{
+                  fontSize: '0.875rem',
+                  color: '#6b7280',
+                  margin: 0
+                }}>Manage leases efficiently</p>
             </div>
             
-            <div className="actions-grid">
-              <div className="action-card blue" onClick={() => router.push('/applications')}>
-                <div className="action-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                    <polyline points="14,2 14,8 20,8"/>
-                    <line x1="16" y1="13" x2="8" y2="13"/>
-                    <line x1="16" y1="17" x2="8" y2="17"/>
-                  </svg>
+              <div style={{
+                padding: '1.5rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '1rem'
+              }}>
+                {[
+                  {
+                    title: 'Export All Data',
+                    subtitle: 'Download comprehensive report',
+                    icon: <Download style={{ width: '1.25rem', height: '1.25rem', color: '#16a34a' }} />,
+                    bgColor: '#f0fdf4',
+                    onClick: downloadLeasesReport
+                  },
+                  {
+                    title: 'Refresh Data',
+                    subtitle: 'Update lease information',
+                    icon: <RefreshCw style={{ width: '1.25rem', height: '1.25rem', color: '#ea580c' }} />,
+                    bgColor: '#fff7ed',
+                    onClick: () => fetchData()
+                  },
+                  {
+                    title: 'Expiring Soon',
+                    subtitle: `${expiringLeases.length} leases need attention`,
+                    icon: <Clock style={{ width: '1.25rem', height: '1.25rem', color: '#a855f7' }} />,
+                    bgColor: '#fdf4ff',
+                    onClick: () => {}
+                  }
+                ].map((action, index) => (
+                  <div key={index}
+                    onClick={action.onClick}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '1rem',
+                      padding: '1rem',
+                      backgroundColor: action.bgColor,
+                      borderRadius: '8px',
+                      border: '1px solid #e5e7eb',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = 'none';
+                    }}
+                  >
+                    <div style={{
+                      width: '2.5rem',
+                      height: '2.5rem',
+                      backgroundColor: 'white',
+                      borderRadius: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0
+                    }}>
+                      {action.icon}
                 </div>
-                <div className="action-content">
-                  <h3 className="action-title">Review Applications</h3>
-                  <p className="action-subtitle">Process new lease applications</p>
+                    <div style={{ flex: 1 }}>
+                      <h3 style={{
+                        fontSize: '0.875rem',
+                        fontWeight: '600',
+                        color: '#111827',
+                        margin: 0,
+                        marginBottom: '0.125rem'
+                      }}>{action.title}</h3>
+                      <p style={{
+                        fontSize: '0.75rem',
+                        color: '#6b7280',
+                        margin: 0
+                      }}>{action.subtitle}</p>
                 </div>
               </div>
-
-              <div className="action-card green" onClick={downloadLeasesReport}>
-                <div className="action-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                    <polyline points="7,10 12,15 17,10"/>
-                    <line x1="12" y1="15" x2="12" y2="3"/>
-                  </svg>
+                ))}
                 </div>
-                <div className="action-content">
-                  <h3 className="action-title">Download Report</h3>
-                  <p className="action-subtitle">Export lease data to CSV</p>
-                </div>
-              </div>
-
-              <div className="action-card purple" onClick={() => router.push('/tenants')}>
-                <div className="action-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                    <circle cx="12" cy="7" r="4"/>
-                  </svg>
-                </div>
-                <div className="action-content">
-                  <h3 className="action-title">Manage Tenants</h3>
-                  <p className="action-subtitle">View and manage all tenants</p>
-                </div>
-              </div>
-
-              <div className="action-card blue" onClick={() => router.push('/properties')}>
-                <div className="action-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M3 21h18"/>
-                    <path d="M5 21V7l8-4v18"/>
-                    <path d="M19 21V11l-6-4"/>
-                  </svg>
-                </div>
-                <div className="action-content">
-                  <h3 className="action-title">View Properties</h3>
-                  <p className="action-subtitle">Manage property portfolio</p>
-                </div>
-              </div>
             </div>
           </div>
         </div>
 
         {/* Additional Sections */}
+        {/* Expiring Soon Section */}
         {expiringLeases.length > 0 && (
-          <div className="expiring-section">
-            <div className="section-header">
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            border: '1px solid #e5e7eb',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+            overflow: 'visible',
+            marginTop: '2rem',
+            transition: 'all 0.2s ease'
+          }}
+          onMouseOver={(e) => {
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+            e.currentTarget.style.transform = 'translateY(-1px)';
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+            e.currentTarget.style.transform = 'translateY(0)';
+          }}>
+            <div style={{
+              padding: '1.5rem',
+              borderBottom: '1px solid #e5e7eb',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
               <div>
-                <h2 className="section-title">Expiring Soon ({expiringLeases.length})</h2>
-                <p className="section-subtitle">Leases expiring within the next 90 days</p>
+                <h2 style={{
+                  fontSize: '1.25rem',
+                  fontWeight: '700',
+                  color: '#111827',
+                  margin: 0,
+                  marginBottom: '0.25rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}>
+                  <Clock style={{ width: '1.25rem', height: '1.25rem', color: '#ea580c' }} />
+                  Expiring Soon ({expiringLeases.length})
+                </h2>
+                <p style={{
+                  fontSize: '0.875rem',
+                  color: '#6b7280',
+                  margin: 0
+                }}>Leases expiring within the next 90 days</p>
               </div>
             </div>
             
-            <div className="expiring-scroll-container">
-              <div className="expiring-table-container">
-                <table className="expiring-table">
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{
+                width: '100%',
+                borderCollapse: 'collapse'
+              }}>
                   <thead>
-                    <tr>
-                      <th className="table-left">Tenant</th>
-                      <th className="table-left">Property</th>
-                      <th className="table-center">Expiry</th>
-                      <th className="table-center">Status</th>
-                      <th className="table-center">Actions</th>
+                  <tr style={{ backgroundColor: '#f8fafc' }}>
+                    <th style={{
+                      padding: '0.75rem 1rem',
+                      textAlign: 'center',
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: '#374151',
+                      borderBottom: '1px solid #e5e7eb'
+                    }}>Tenant</th>
+                    <th style={{
+                      padding: '0.75rem 1rem',
+                      textAlign: 'center',
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: '#374151',
+                      borderBottom: '1px solid #e5e7eb'
+                    }}>Property</th>
+                    <th style={{
+                      padding: '0.75rem 1rem',
+                      textAlign: 'center',
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: '#374151',
+                      borderBottom: '1px solid #e5e7eb'
+                    }}>Expiry</th>
+                    <th style={{
+                      padding: '0.75rem 1rem',
+                      textAlign: 'center',
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: '#374151',
+                      borderBottom: '1px solid #e5e7eb'
+                    }}>Status</th>
+                    <th style={{
+                      padding: '0.75rem 1rem',
+                      textAlign: 'center',
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: '#374151',
+                      borderBottom: '1px solid #e5e7eb'
+                    }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {expiringLeases.map((lease) => {
                       const daysToExpiry = getDaysUntilExpiry(lease.end_date);
+                    const tenant = getTenantNameFromLease(lease);
+                    const property = getPropertyNameFromLease(lease);
+                    const room = getRoomNameFromLease(lease);
+                    
                       return (
-                        <tr key={lease.id}>
-                          <td className="table-left">
-                            <div 
-                              className="tenant-name clickable-name" 
+                      <tr key={lease.id} style={{
+                        borderBottom: '1px solid #f3f4f6',
+                        transition: 'background-color 0.2s ease'
+                      }}
+                      onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'}
+                      onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+                        <td style={{
+                          padding: '1rem',
+                          textAlign: 'center',
+                          borderBottom: '1px solid #f3f4f6'
+                        }}>
+                          <div 
                               onClick={() => router.push(`/tenants/${lease.tenant}`)}
-                              title={`View ${getTenantNameFromLease(lease)}'s tenant profile and lease history`}
-                            >
-                              {getTenantNameFromLease(lease)}
+                            style={{
+                              fontSize: '0.875rem',
+                              fontWeight: '500',
+                              color: '#374151',
+                              cursor: 'pointer',
+                              transition: 'color 0.2s ease'
+                            }}
+                            onMouseOver={(e) => e.currentTarget.style.color = '#1f2937'}
+                            onMouseOut={(e) => e.currentTarget.style.color = '#374151'}
+                          >
+                            {tenant}
                             </div>
                           </td>
-                          <td className="table-left">
-                            <div 
-                              className="property-name clickable-property" 
+                        <td style={{
+                          padding: '1rem',
+                          textAlign: 'center',
+                          borderBottom: '1px solid #f3f4f6'
+                        }}>
+                          <div 
                               onClick={() => router.push(`/properties/${lease.property_ref}`)}
-                              title={`View ${getPropertyNameFromLease(lease)} property details and room management`}
-                            >
-                              {getPropertyNameFromLease(lease)}
+                            style={{
+                              fontSize: '0.875rem',
+                              fontWeight: '500',
+                              color: '#374151',
+                              cursor: 'pointer',
+                              marginBottom: '0.25rem',
+                              transition: 'color 0.2s ease'
+                            }}
+                            onMouseOver={(e) => e.currentTarget.style.color = '#1f2937'}
+                            onMouseOut={(e) => e.currentTarget.style.color = '#374151'}
+                          >
+                            {property}
                             </div>
-                            <div className="room-name">{getRoomNameFromLease(lease)}</div>
+                          <div style={{
+                            fontSize: '0.75rem',
+                            color: '#6b7280'
+                          }}>{room}</div>
                           </td>
-                          <td className="table-center">
-                            <div className="expiry-date"><span className="date-highlight">{formatDate(lease.end_date)}</span></div>
-                            <div className="expiry-days">{daysToExpiry} days left</div>
+                        <td style={{
+                          padding: '1rem',
+                          textAlign: 'center',
+                          borderBottom: '1px solid #f3f4f6'
+                        }}>
+                          <div style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '0.25rem'
+                          }}>
+                            <span style={{
+                              backgroundColor: '#f3f4f6',
+                              padding: '0.125rem 0.375rem',
+                              borderRadius: '4px',
+                              fontSize: '0.75rem',
+                              fontWeight: '500',
+                              color: '#374151'
+                            }}>
+                              {formatDate(lease.end_date)}
+                            </span>
+                            <span style={{
+                              fontSize: '0.75rem',
+                              color: daysToExpiry <= 30 ? '#dc2626' : '#ea580c',
+                              fontWeight: '600'
+                            }}>
+                              {daysToExpiry} days left
+                            </span>
+                          </div>
                           </td>
-                          <td className="table-center">
-                            <span className={`status-badge ${daysToExpiry <= 30 ? 'critical' : 'warning'}`}>
-                              {daysToExpiry <= 30 ? 'Critical' : 'Expiring soon'}
+                        <td style={{
+                          padding: '1rem',
+                          textAlign: 'center',
+                          borderBottom: '1px solid #f3f4f6'
+                        }}>
+                          <span style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.25rem',
+                            padding: '0.375rem 0.875rem',
+                            borderRadius: '9999px',
+                            fontSize: '0.8125rem',
+                            fontWeight: '600',
+                            backgroundColor: daysToExpiry <= 30 ? '#fecaca' : '#fed7aa',
+                            color: daysToExpiry <= 30 ? '#dc2626' : '#ea580c'
+                          }}>
+                            <AlertTriangle style={{ 
+                              width: '0.875rem', 
+                              height: '0.875rem' 
+                            }} />
+                            {daysToExpiry <= 30 ? 'Critical' : 'Expiring Soon'}
                             </span>
                           </td>
-                          <td className="table-center">
-                            <Link href={`/leases/${lease.id}`} legacyBehavior>
-                              <a 
-                                className="manage-lease-btn"
-                                title={`Manage ${getTenantNameFromLease(lease)}'s lease - view details, process renewals, handle move-outs`}
+                        <td style={{
+                          padding: '1rem',
+                          textAlign: 'center',
+                          borderBottom: '1px solid #f3f4f6'
+                        }}>
+                          <div style={{
+                            display: 'flex',
+                            justifyContent: 'center'
+                          }}>
+                            <Link href={`/leases/${lease.id}`}>
+                              <button style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '0.375rem',
+                                padding: '0.5rem 0.875rem',
+                                backgroundColor: '#2563eb',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '6px',
+                                fontSize: '0.8125rem',
+                                fontWeight: '500',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease'
+                              }}
+                              onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
+                              onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
                               >
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                  <path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
                                 </svg>
                                 Manage Lease
-                              </a>
+                              </button>
                             </Link>
+                          </div>
                           </td>
                         </tr>
                       );
                     })}
                   </tbody>
                 </table>
-              </div>
             </div>
           </div>
         )}
@@ -857,9 +1539,9 @@ function Leases() {
         /* Metrics Grid */
         .metrics-grid {
           display: grid;
-          grid-template-columns: repeat(4, 1fr);
-          gap: 12px;
-          margin-bottom: 20px;
+          grid-template-columns: 3fr 1fr;
+          gap: 1.5rem;
+          margin-bottom: 2rem;
         }
 
         .metric-card {
@@ -1199,35 +1881,59 @@ function Leases() {
         }
 
         .lease-details {
-          font-size: 13px;
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
         }
 
-        .lease-term, .lease-rent, .lease-deposit {
-          margin-bottom: 4px;
-          color: #1e293b;
+        /* Dropdown Menu Styles */
+        .dropdown-menu {
+          position: absolute;
+          top: 100%;
+          right: 0;
+          background: white;
+          border: 1px solid #e5e7eb;
+          border-radius: 8px;
+          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+          z-index: 1000;
+          min-width: 160px;
+          overflow: visible;
         }
 
-        .lease-rent, .lease-deposit {
-          font-size: 12px;
-          color: #64748b;
-        }
-
-        .expiry-date {
-          color: #1e293b;
-          margin-bottom: 4px;
-        }
-
-        .expiry-days {
-          font-size: 12px;
-          color: #64748b;
-        }
-
-        .date-highlight {
-          font-weight: 600;
+        .dropdown-menu button {
+          width: 100%;
+          padding: 8px 12px;
+          border: none;
+          background: none;
+          text-align: left;
+          font-size: 14px;
           color: #374151;
+          cursor: pointer;
+          transition: background-color 0.2s ease;
+        }
+
+        .dropdown-menu button:hover {
           background-color: #f3f4f6;
-          padding: 2px 6px;
-          border-radius: 4px;
+        }
+
+        .dropdown-menu button:first-child {
+          border-radius: 8px 8px 0 0;
+        }
+
+        .dropdown-menu button:last-child {
+          border-radius: 0 0 8px 8px;
+        }
+
+        /* Table container positioning for dropdowns */
+        .table-container {
+          position: relative;
+          overflow: visible;
+        }
+
+        /* Action button container */
+        .action-buttons {
+          position: relative;
+          display: inline-block;
         }
 
         .status-badge {
@@ -1678,6 +2384,48 @@ function Leases() {
           display: flex;
           flex-direction: column;
           gap: 4px;
+        }
+
+        /* Dropdown Menu Styles */
+        .dropdown-menu {
+          position: absolute;
+          top: 100%;
+          right: 0;
+          background: white;
+          border: 1px solid #e5e7eb;
+          border-radius: 8px;
+          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+          z-index: 1000;
+          min-width: 160px;
+          overflow: visible;
+        }
+
+        .dropdown-menu button {
+          width: 100%;
+          padding: 8px 12px;
+          border: none;
+          background: none;
+          text-align: left;
+          font-size: 14px;
+          color: #374151;
+          cursor: pointer;
+          transition: background-color 0.2s ease;
+        }
+
+        .dropdown-menu button:hover {
+          background-color: #f3f4f6;
+        }
+
+        /* Table container positioning for dropdowns */
+        .table-container {
+          position: relative;
+          overflow: visible;
+        }
+
+        /* Action button container */
+        .action-buttons {
+          position: relative;
+          display: inline-block;
         }
       `}</style>
     </DashboardLayout>

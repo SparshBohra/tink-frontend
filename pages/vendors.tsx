@@ -159,48 +159,109 @@ function Vendors() {
   };
 
   return (
-    <DashboardLayout title="Vendors">
+    <DashboardLayout title="">
       <Head>
         <title>Vendors - Tink</title>
       </Head>
 
       <div className="dashboard-container">
-
-
-        {/* Alerts */}
-        {error && (
-          <div className="error-banner">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="10"/>
-              <line x1="15" y1="9" x2="9" y2="15"/>
-              <line x1="9" y1="9" x2="15" y2="15"/>
+        {/* Modern Title Section */}
+        <div style={{
+          backgroundColor: 'white',
+          borderRadius: '12px',
+          border: '1px solid #e5e7eb',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+          marginBottom: '2rem',
+          marginTop: '1.5rem',
+          transition: 'all 0.2s ease'
+        }}
+        onMouseOver={(e) => {
+          e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+          e.currentTarget.style.transform = 'translateY(-1px)';
+        }}
+        onMouseOut={(e) => {
+          e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+          e.currentTarget.style.transform = 'translateY(0)';
+        }}>
+          <div style={{
+            padding: '1.5rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '1rem'
+            }}>
+              <div style={{
+                width: '3rem',
+                height: '3rem',
+                backgroundColor: '#7c3aed',
+                borderRadius: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+              }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                  <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+                  <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
+                  <line x1="12" y1="11" x2="12" y2="11.01"/>
+                  <line x1="12" y1="16" x2="12" y2="16.01"/>
             </svg>
-            <span>{error}</span>
-            <button onClick={() => setError(null)} className="close-alert">×</button>
           </div>
-        )}
-
-        {success && (
-          <div className="success-banner">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <polyline points="20,6 9,17 4,12"/>
+              <div>
+                <h1 style={{
+                  fontSize: '1.875rem',
+                  fontWeight: '700',
+                  color: '#111827',
+                  margin: 0,
+                  marginBottom: '0.25rem'
+                }}>Vendor Management</h1>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  fontSize: '0.875rem',
+                  color: '#6b7280'
+                }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
             </svg>
-            <span>{success}</span>
-            <button onClick={() => setSuccess(null)} className="close-alert">×</button>
+                  Manage your vendors and suppliers across all properties
           </div>
-        )}
-
-        {/* Vendors Section */}
-        <div className="vendors-section">
-          <div className="section-header">
-            <div>
-              <h2 className="section-title">Vendor Management ({vendors.length})</h2>
-              <p className="section-subtitle">Manage your vendors and suppliers</p>
             </div>
-            <div className="section-actions">
+            </div>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem'
+            }}>
               <button 
                 onClick={() => fetchVendors()}
-                className="refresh-btn"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.5rem 1rem',
+                  backgroundColor: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '8px',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  color: '#475569',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f1f5f9';
+                  e.currentTarget.style.borderColor = '#cbd5e1';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f8fafc';
+                  e.currentTarget.style.borderColor = '#e2e8f0';
+                }}
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <polyline points="23 4 23 10 17 10"/>
@@ -211,7 +272,28 @@ function Vendors() {
               </button>
               <button 
                 onClick={handleCreateVendor}
-                className="create-btn"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.5rem 1rem',
+                  backgroundColor: '#2563eb',
+                  border: '1px solid #2563eb',
+                  borderRadius: '8px',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  color: 'white',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = '#1d4ed8';
+                  e.currentTarget.style.borderColor = '#1d4ed8';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = '#2563eb';
+                  e.currentTarget.style.borderColor = '#2563eb';
+                }}
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <line x1="12" y1="5" x2="12" y2="19"/>
@@ -221,22 +303,176 @@ function Vendors() {
               </button>
             </div>
           </div>
+        </div>
+
+        {/* Alerts */}
+        {error && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem',
+            padding: '0.75rem 1rem',
+            backgroundColor: '#fef2f2',
+            border: '1px solid #fecaca',
+            borderRadius: '8px',
+            marginBottom: '1.5rem',
+            fontSize: '0.875rem',
+            color: '#991b1b'
+          }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="15" y1="9" x2="9" y2="15"/>
+              <line x1="9" y1="9" x2="15" y2="15"/>
+            </svg>
+            <span>{error}</span>
+            <button 
+              onClick={() => setError(null)}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'inherit',
+                cursor: 'pointer',
+                fontSize: '1.125rem',
+                marginLeft: 'auto',
+                padding: '0.25rem'
+              }}
+            >×</button>
+          </div>
+        )}
+
+        {success && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem',
+            padding: '0.75rem 1rem',
+            backgroundColor: '#f0fdf4',
+            border: '1px solid #bbf7d0',
+            borderRadius: '8px',
+            marginBottom: '1.5rem',
+            fontSize: '0.875rem',
+            color: '#166534'
+          }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <polyline points="20,6 9,17 4,12"/>
+            </svg>
+            <span>{success}</span>
+            <button 
+              onClick={() => setSuccess(null)}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'inherit',
+                cursor: 'pointer',
+                fontSize: '1.125rem',
+                marginLeft: 'auto',
+                padding: '0.25rem'
+              }}
+            >×</button>
+          </div>
+        )}
+
+        {/* Modern Vendor Management Section */}
+        <div style={{
+          backgroundColor: 'white',
+          borderRadius: '12px',
+          border: '1px solid #e5e7eb',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+          overflow: 'hidden'
+        }}>
+          <div style={{ padding: '1.5rem' }}>
+            {/* Section Header */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              marginBottom: '1.5rem'
+            }}>
+              <div>
+                <h2 style={{
+                  fontSize: '1.25rem',
+                  fontWeight: '700',
+                  color: '#111827',
+                  margin: 0,
+                  marginBottom: '0.25rem'
+                }}>
+                  All Vendors ({vendors.length})
+                </h2>
+                <p style={{
+                  fontSize: '0.875rem',
+                  color: '#6b7280',
+                  margin: 0
+                }}>
+                  Manage your vendor relationships and supplier information
+                </p>
+            </div>
+          </div>
           
           {vendorLoading ? (
-            <div className="loading-container">
+              <div style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                minHeight: '200px'
+              }}>
               <LoadingSpinner />
             </div>
           ) : vendors.length === 0 ? (
-            <div className="empty-state">
-              <div className="empty-icon">
+              <div style={{
+                textAlign: 'center',
+                padding: '3rem 1.5rem',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minHeight: '300px'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  marginBottom: '1rem',
+                  color: '#9ca3af'
+                }}>
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
                   <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
                 </svg>
               </div>
-              <h3>No vendors yet</h3>
-              <p>Start by adding your first vendor or supplier</p>
-              <button onClick={handleCreateVendor} className="create-btn">
+                <h3 style={{
+                  fontSize: '1.125rem',
+                  fontWeight: '600',
+                  color: '#111827',
+                  margin: '0 0 0.5rem 0'
+                }}>No vendors yet</h3>
+                <p style={{
+                  color: '#6b7280',
+                  margin: '0 0 1.5rem 0'
+                }}>Start by adding your first vendor or supplier</p>
+                <button 
+                  onClick={handleCreateVendor}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    padding: '0.75rem 1.5rem',
+                    backgroundColor: '#2563eb',
+                    border: '1px solid #2563eb',
+                    borderRadius: '8px',
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                    color: 'white',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.backgroundColor = '#1d4ed8';
+                    e.currentTarget.style.borderColor = '#1d4ed8';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.backgroundColor = '#2563eb';
+                    e.currentTarget.style.borderColor = '#2563eb';
+                  }}
+                >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <line x1="12" y1="5" x2="12" y2="19"/>
                   <line x1="5" y1="12" x2="19" y2="12"/>
@@ -245,79 +481,244 @@ function Vendors() {
               </button>
             </div>
           ) : (
-            <div className="vendors-table-container">
-              <table className="vendors-table">
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{
+                  width: '100%',
+                  borderCollapse: 'collapse',
+                  fontSize: '0.875rem',
+                  lineHeight: '1.25rem'
+                }}>
                 <thead>
-                  <tr>
-                    <th className="table-left">Vendor</th>
-                    <th className="table-left">Type</th>
-                    <th className="table-left">Contact</th>
-                    <th className="table-center">Total Expenses</th>
-                    <th className="table-center">Status</th>
-                    <th className="table-center">Actions</th>
+                    <tr style={{ backgroundColor: '#f8fafc' }}>
+                      <th style={{
+                        padding: '0.75rem 1rem',
+                        textAlign: 'center',
+                        fontSize: '0.875rem',
+                        fontWeight: '600',
+                        color: '#374151',
+                        borderBottom: '1px solid #e5e7eb'
+                      }}>Vendor</th>
+                      <th style={{
+                        padding: '0.75rem 1rem',
+                        textAlign: 'center',
+                        fontSize: '0.875rem',
+                        fontWeight: '600',
+                        color: '#374151',
+                        borderBottom: '1px solid #e5e7eb'
+                      }}>Type</th>
+                      <th style={{
+                        padding: '0.75rem 1rem',
+                        textAlign: 'center',
+                        fontSize: '0.875rem',
+                        fontWeight: '600',
+                        color: '#374151',
+                        borderBottom: '1px solid #e5e7eb'
+                      }}>Contact</th>
+                      <th style={{
+                        padding: '0.75rem 1rem',
+                        textAlign: 'center',
+                        fontSize: '0.875rem',
+                        fontWeight: '600',
+                        color: '#374151',
+                        borderBottom: '1px solid #e5e7eb'
+                      }}>Total Expenses</th>
+                      <th style={{
+                        padding: '0.75rem 1rem',
+                        textAlign: 'center',
+                        fontSize: '0.875rem',
+                        fontWeight: '600',
+                        color: '#374151',
+                        borderBottom: '1px solid #e5e7eb'
+                      }}>Status</th>
+                      <th style={{
+                        padding: '0.75rem 1rem',
+                        textAlign: 'center',
+                        fontSize: '0.875rem',
+                        fontWeight: '600',
+                        color: '#374151',
+                        borderBottom: '1px solid #e5e7eb'
+                      }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {vendors.map((vendor) => (
-                    <tr key={vendor.id}>
-                      <td className="table-left">
-                        <div className="vendor-info">
-                          <div className="vendor-name">{vendor.name}</div>
-                          <div className="vendor-id">ID: {vendor.id}</div>
-                        </div>
+                      <tr key={vendor.id} style={{
+                        borderBottom: '1px solid #f3f4f6',
+                        transition: 'background-color 0.2s ease'
+                      }}
+                      onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'}
+                      onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+                        <td style={{
+                          textAlign: 'center',
+                          padding: '1rem',
+                          borderBottom: '1px solid #f3f4f6'
+                        }}>
+                          <div style={{
+                            fontSize: '0.875rem',
+                            fontWeight: '500',
+                            color: '#374151',
+                            marginBottom: '0.25rem'
+                          }}>{vendor.name}</div>
+                          <div style={{
+                            fontSize: '0.75rem',
+                            color: '#6b7280'
+                          }}>ID: {vendor.id}</div>
                       </td>
-                      <td className="table-left">
-                        <span className="vendor-type-badge">
-                          {vendor.vendor_type_display}
+                        <td style={{
+                          textAlign: 'center',
+                          padding: '1rem',
+                          borderBottom: '1px solid #f3f4f6'
+                        }}>
+                          <span style={{
+                            padding: '0.25rem 0.75rem',
+                            borderRadius: '9999px',
+                            fontSize: '0.75rem',
+                            fontWeight: '600',
+                            backgroundColor: '#dbeafe',
+                            color: '#1e40af',
+                            textTransform: 'capitalize'
+                          }}>
+                            {vendor.vendor_type.replace('_', ' ')}
                         </span>
                       </td>
-                      <td className="table-left">
-                        <div className="vendor-contact">
+                        <td style={{
+                          textAlign: 'center',
+                          padding: '1rem',
+                          borderBottom: '1px solid #f3f4f6'
+                        }}>
+                          <div style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '0.125rem',
+                            alignItems: 'center'
+                          }}>
                           {vendor.contact_person && (
-                            <div className="contact-person">{vendor.contact_person}</div>
+                              <div style={{
+                                fontSize: '0.875rem',
+                                fontWeight: '500',
+                                color: '#374151'
+                              }}>{vendor.contact_person}</div>
                           )}
                           {vendor.contact_email && (
-                            <div className="contact-email">{vendor.contact_email}</div>
+                              <div style={{
+                                fontSize: '0.75rem',
+                                color: '#6b7280'
+                              }}>{vendor.contact_email}</div>
                           )}
                           {vendor.contact_phone && (
-                            <div className="contact-phone">{vendor.contact_phone}</div>
+                              <div style={{
+                                fontSize: '0.75rem',
+                                color: '#6b7280'
+                              }}>{vendor.contact_phone}</div>
                           )}
                         </div>
                       </td>
-                      <td className="table-center">
-                        <div className="expense-amount">
-                          ${vendor.total_expense_amount.toLocaleString()}
+                        <td style={{
+                          textAlign: 'center',
+                          padding: '1rem',
+                          borderBottom: '1px solid #f3f4f6'
+                        }}>
+                          <div style={{
+                            fontSize: '0.875rem',
+                            fontWeight: '600',
+                            color: '#059669'
+                          }}>
+                            ${vendor.total_expense_amount?.toLocaleString() || '0'}
                         </div>
                       </td>
-                      <td className="table-center">
-                        <span className={`status-badge ${vendor.is_active ? 'active' : 'inactive'}`}>
-                          {vendor.is_active ? 'Active' : 'Inactive'}
+                        <td style={{
+                          textAlign: 'center',
+                          padding: '1rem',
+                          borderBottom: '1px solid #f3f4f6'
+                        }}>
+                          <span style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            padding: '0.375rem 0.875rem',
+                            borderRadius: '9999px',
+                            fontSize: '0.8125rem',
+                            fontWeight: '600',
+                            backgroundColor: vendor.is_active ? '#d1fae5' : '#fee2e2',
+                            color: vendor.is_active ? '#065f46' : '#991b1b'
+                          }}>
+                            {vendor.is_active ? '✓ Active' : '○ Inactive'}
                         </span>
                       </td>
-                      <td className="table-center">
-                        <div className="action-buttons">
+                        <td style={{
+                          textAlign: 'center',
+                          padding: '1rem'
+                        }}>
+                          <div style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '0.5rem',
+                            alignItems: 'center'
+                          }}>
                           <button 
                             onClick={() => handleEditVendor(vendor)} 
-                            className="edit-btn"
-                            title="Edit vendor"
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '0.375rem',
+                                padding: '0.5rem 1rem',
+                                backgroundColor: '#f8fafc',
+                                color: '#475569',
+                                border: '1px solid #cbd5e1',
+                                borderRadius: '8px',
+                                fontSize: '0.875rem',
+                                fontWeight: '500',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease',
+                                minWidth: '140px'
+                              }}
+                              onMouseOver={(e) => {
+                                e.currentTarget.style.backgroundColor = '#f1f5f9';
+                                e.currentTarget.style.borderColor = '#94a3b8';
+                              }}
+                              onMouseOut={(e) => {
+                                e.currentTarget.style.backgroundColor = '#f8fafc';
+                                e.currentTarget.style.borderColor = '#cbd5e1';
+                              }}
                           >
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <path d="M12 20h9"/>
-                              <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                             </svg>
-                            Edit
+                              Edit Vendor
                           </button>
                           <button 
                             onClick={() => handleDeleteVendor(vendor.id, vendor.name)} 
-                            className="delete-btn"
-                            title="Delete vendor"
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '0.375rem',
+                                padding: '0.5rem 1rem',
+                                backgroundColor: '#fef2f2',
+                                color: '#dc2626',
+                                border: '1px solid #fecaca',
+                                borderRadius: '8px',
+                                fontSize: '0.875rem',
+                                fontWeight: '500',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease',
+                                minWidth: '140px'
+                              }}
+                              onMouseOver={(e) => {
+                                e.currentTarget.style.backgroundColor = '#fee2e2';
+                              }}
+                              onMouseOut={(e) => {
+                                e.currentTarget.style.backgroundColor = '#fef2f2';
+                              }}
                           >
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                               <polyline points="3,6 5,6 21,6"/>
                               <path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2V6"/>
                               <line x1="10" y1="11" x2="10" y2="17"/>
                               <line x1="14" y1="11" x2="14" y2="17"/>
                             </svg>
+                              Delete Vendor
                           </button>
                         </div>
                       </td>
@@ -544,12 +945,14 @@ function Vendors() {
           </div>
         </div>
       )}
+      </div>
 
       <style jsx>{`
         .dashboard-container {
           width: 100%;
+          padding: 16px 20px 20px 20px;
           background: #f8fafc;
-          min-height: calc(100vh - 72px - 58px); /* Full height minus topbar and page header */
+          min-height: calc(100vh - 72px);
           box-sizing: border-box;
         }
 

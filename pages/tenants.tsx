@@ -377,22 +377,151 @@ function Tenants() {
       </Head>
       
       <div className="dashboard-container">
-        {/* Custom Header */}
-        <div className="dashboard-header">
-          <div className="header-content">
-            <div className="header-left">
-              <h1 className="dashboard-title">Tenant Management</h1>
-              <div className="subtitle-container">
-                <p className="welcome-message">
-                  Manage tenants across all properties
-                </p>
+        {/* Modern Title Section */}
+        <div style={{
+          backgroundColor: 'white',
+          borderRadius: '12px',
+          border: '1px solid #e5e7eb',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+          marginBottom: '2rem',
+          transition: 'all 0.2s ease'
+        }}
+        onMouseOver={(e) => {
+          e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+          e.currentTarget.style.transform = 'translateY(-1px)';
+        }}
+        onMouseOut={(e) => {
+          e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+          e.currentTarget.style.transform = 'translateY(0)';
+        }}>
+          <div style={{
+            padding: '1.5rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '1rem'
+            }}>
+              <div style={{
+                width: '3rem',
+                height: '3rem',
+                backgroundColor: '#2563eb',
+                borderRadius: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+              }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                  <circle cx="12" cy="7" r="4"/>
+                </svg>
               </div>
+              <div>
+                <h1 style={{
+                  fontSize: '1.875rem',
+                  fontWeight: '700',
+                  color: '#111827',
+                  margin: 0,
+                  marginBottom: '0.25rem'
+                }}>Tenant Management</h1>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  fontSize: '0.875rem',
+                  color: '#6b7280'
+                }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                  </svg>
+                  Manage tenants across all properties
+              </div>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  fontSize: '0.75rem',
+                  color: '#9ca3af',
+                  marginTop: '0.25rem'
+                }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                    <circle cx="12" cy="7" r="4"/>
+                  </svg>
+                  {tenants.length} {tenants.length === 1 ? 'tenant' : 'tenants'} total
+                </div>
+              </div>
+            </div>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem'
+            }}>
+              <button 
+                onClick={() => {
+                  fetchTenants();
+                  fetchPropertiesAndRooms();
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.5rem 0.75rem',
+                  backgroundColor: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '6px',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f1f5f9';
+                  e.currentTarget.style.borderColor = '#cbd5e1';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f8fafc';
+                  e.currentTarget.style.borderColor = '#e2e8f0';
+                }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M1 4v6h6"/>
+                  <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+                </svg>
+                Refresh
+              </button>
+              <button
+                onClick={() => setShowForm(true)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.5rem 1rem',
+                  backgroundColor: '#2563eb',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  color: 'white',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
+                onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M12 5v14"/>
+                  <path d="M5 12h14"/>
+                </svg>
+                Add Tenant
+              </button>
             </div>
           </div>
         </div>
-
-        {/* Tab Navigation */}
-
 
         {/* Alerts */}
         {error && (
@@ -418,100 +547,213 @@ function Tenants() {
         {/* Main Content Layout */}
         <div className="main-content-grid">
           <div className="left-column">
-            {/* Top Metrics Row */}
-            <div className="metrics-grid">
-              <div className="metric-card">
-                <div className="metric-header">
-                  <div className="metric-info">
-                    <h3 className="metric-title">Total Tenants</h3>
-                    <div className="metric-icon">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            {/* Top Metrics Row (3 cards left) */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, 1fr)',
+              gap: '1.5rem',
+              marginBottom: '0.75rem'
+            }}>
+              {[
+                {
+                  title: 'Total Tenants',
+                  value: metrics.totalCount,
+                  subtitle: 'Registered in system',
+                  label: 'Active accounts',
+                  change: `+${metrics.totalCount > 0 ? '1' : '0'}`,
+                  changeType: 'positive',
+                  icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
                         <circle cx="12" cy="7" r="4"/>
-                      </svg>
-                    </div>
-                  </div>
-                </div>
-                <div className="metric-content">
-                  <div className="metric-value">{metrics.totalCount}</div>
-                  <div className="metric-subtitle">Registered in system</div>
-                  <div className="metric-progress">
-                    <span className="metric-label">Active accounts</span>
-                    <span className="metric-change positive">+{metrics.totalCount > 0 ? '1' : '0'}</span>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="metric-card">
-                <div className="metric-header">
-                  <div className="metric-info">
-                    <h3 className="metric-title">Active Tenants</h3>
-                    <div className="metric-icon">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  </svg>,
+                  color: '#2563eb',
+                  bgColor: '#dbeafe'
+                },
+                {
+                  title: 'Active Tenants',
+                  value: metrics.activeCount,
+                  subtitle: 'Currently active',
+                  label: 'In the system',
+                  change: '+2',
+                  changeType: 'positive',
+                  icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
                         <circle cx="8.5" cy="7" r="4"/>
                         <path d="M20 8v6"/>
                         <path d="M23 11h-6"/>
-                      </svg>
-                    </div>
-                  </div>
-                </div>
-                <div className="metric-content">
-                  <div className="metric-value">{metrics.activeCount}</div>
-                  <div className="metric-subtitle">In the system</div>
-                  <div className="metric-progress">
-                    <span className="metric-label">Currently active</span>
-                    <span className="metric-change positive">+2</span>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="metric-card">
-                <div className="metric-header">
-                  <div className="metric-info">
-                    <h3 className="metric-title">Applications</h3>
-                    <div className="metric-icon">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  </svg>,
+                  color: '#059669',
+                  bgColor: '#d1fae5'
+                },
+                {
+                  title: 'Applications',
+                  value: metrics.pendingCount,
+                  subtitle: 'Pending review',
+                  label: 'Check Applications page',
+                  change: `+${metrics.pendingCount > 0 ? '1' : '0'}`,
+                  changeType: 'positive',
+                  icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
                         <polyline points="14,2 14,8 20,8"/>
                         <line x1="16" y1="13" x2="8" y2="13"/>
                         <line x1="16" y1="17" x2="8" y2="17"/>
-                      </svg>
+                  </svg>,
+                  color: '#ea580c',
+                  bgColor: '#fed7aa'
+                }
+              ].map((metric, index) => (
+                <div key={index} style={{
+                  backgroundColor: 'white',
+                  borderRadius: '12px',
+                  padding: '1.5rem',
+                  border: '1px solid #e5e7eb',
+                  boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.1)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 1px 3px 0 rgba(0, 0, 0, 0.1)';
+                }}>
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: '1rem'
+                  }}>
+                    <h3 style={{
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: '#6b7280',
+                      margin: 0,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.025em'
+                    }}>
+                      {metric.title}
+                    </h3>
+                    <div style={{
+                      backgroundColor: metric.bgColor,
+                      borderRadius: '8px',
+                      padding: '0.5rem',
+                      color: metric.color
+                    }}>
+                      {metric.icon}
                     </div>
                   </div>
+                  <div style={{
+                    fontSize: '2rem',
+                    fontWeight: '700',
+                    color: '#111827',
+                    marginBottom: '0.25rem',
+                    lineHeight: 1
+                  }}>
+                    {metric.value}
                 </div>
-                <div className="metric-content">
-                  <div className="metric-value">{metrics.pendingCount}</div>
-                  <div className="metric-subtitle">Check Applications page</div>
-                  <div className="metric-progress">
-                    <span className="metric-label">Pending review</span>
-                    <span className="metric-change positive">+{metrics.pendingCount > 0 ? '1' : '0'}</span>
+                  <div style={{
+                    fontSize: '0.875rem',
+                    color: '#6b7280',
+                    marginBottom: '0.5rem'
+                  }}>
+                    {metric.subtitle}
                   </div>
-                </div>
+                  <div style={{ height: '0.25rem' }}></div>
               </div>
+              ))}
             </div>
             {/* Tenants Section */}
-            <div className="tenants-section">
-              <div className="section-header">
+            <div style={{
+              backgroundColor: 'white',
+              borderRadius: '12px',
+              border: '1px solid #e5e7eb',
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+              overflow: 'hidden',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+              e.currentTarget.style.transform = 'translateY(-1px)';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+              e.currentTarget.style.transform = 'translateY(0)';
+            }}>
+              <div style={{
+                padding: '1.5rem',
+                borderBottom: '1px solid #e5e7eb',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+              }}>
                 <div>
-                  <h2 className="section-title">All Tenants ({tenants.length})</h2>
-                  <p className="section-subtitle">{tenants.length} tenant(s) registered in the system</p>
+                  <h2 style={{
+                    fontSize: '1.25rem',
+                    fontWeight: '700',
+                    color: '#111827',
+                    margin: 0,
+                    marginBottom: '0.25rem'
+                  }}>All Tenants ({tenants.length})</h2>
+                  <p style={{
+                    fontSize: '0.875rem',
+                    color: '#6b7280',
+                    margin: 0
+                  }}>{tenants.length} tenant(s) registered in the system</p>
                 </div>
-                <div className="section-actions">
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem'
+                }}>
                   <button 
                     onClick={() => fetchTenants()}
-                    className="refresh-btn"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      padding: '0.5rem 0.75rem',
+                      backgroundColor: '#f8fafc',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '6px',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = '#f1f5f9';
+                      e.currentTarget.style.borderColor = '#cbd5e1';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = '#f8fafc';
+                      e.currentTarget.style.borderColor = '#e2e8f0';
+                    }}
                   >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <polyline points="23 4 23 10 17 10"/>
-                      <polyline points="1 20 1 14 7 14"/>
-                      <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>
+                      <path d="M1 4v6h6"/>
+                      <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
                     </svg>
                     Refresh
                   </button>
                   <button 
                     onClick={downloadTenantsReport}
-                    className="download-btn"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      padding: '0.5rem 0.75rem',
+                      backgroundColor: '#2563eb',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
+                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
                   >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -521,7 +763,6 @@ function Tenants() {
                     Download Report
                   </button>
                   <button 
-                    className="register-btn"
                     onClick={() => {
                       setEditingTenant(null);
                       setFormData({
@@ -533,10 +774,26 @@ function Tenants() {
                       });
                       setShowForm(true);
                     }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      padding: '0.5rem 1rem',
+                      backgroundColor: '#16a34a',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#15803d'}
+                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#16a34a'}
                   >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <line x1="12" y1="5" x2="12" y2="19"/>
-                      <line x1="5" y1="12" x2="19" y2="12"/>
+                      <path d="M12 5v14"/>
+                      <path d="M5 12h14"/>
                     </svg>
                     Register New Tenant
                   </button>
@@ -545,56 +802,101 @@ function Tenants() {
 
               {/* Tenant Form */}
               {showForm && (
-                <div className="tenant-form-section">
-                  <div className="form-header">
-                    <h3 className="form-title">
+                <div style={{
+                  padding: '1.5rem',
+                  borderBottom: '1px solid #e5e7eb',
+                  backgroundColor: '#f8fafc'
+                }}>
+                  <div style={{ marginBottom: '1rem' }}>
+                    <h3 style={{
+                      fontSize: '1.125rem',
+                      fontWeight: '600',
+                      color: '#111827',
+                      margin: 0,
+                      marginBottom: '0.25rem'
+                    }}>
                       {editingTenant ? "Edit Tenant" : "Register New Tenant"}
                     </h3>
-                    <p className="form-subtitle">
+                    <p style={{
+                      fontSize: '0.875rem',
+                      color: '#6b7280',
+                      margin: 0
+                    }}>
                       {editingTenant ? `Updating information for ${editingTenant.full_name}` : "Add a new tenant to the system"}
                     </p>
                   </div>
                   
-                  <form onSubmit={handleSubmit} className="tenant-form">
-                    <div className="form-grid">
-                      <div className="form-group">
-                        <label htmlFor="full_name" className="form-label">
+                  <form onSubmit={handleSubmit} style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+                    gap: '1rem',
+                    marginBottom: '1rem'
+                  }}>
+                    <div>
+                      <label style={{
+                        display: 'block',
+                        fontSize: '0.875rem',
+                        fontWeight: '500',
+                        color: '#374151',
+                        marginBottom: '0.5rem'
+                      }}>
                           Full Name *
                         </label>
                         <input
-                          id="full_name"
                           name="full_name"
                           type="text"
                           value={formData.full_name}
                           onChange={(e) => setFormData({...formData, full_name: e.target.value})}
                           required
-                          className="form-input"
+                        style={{
+                          width: '100%',
+                          padding: '0.75rem',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '6px',
+                          fontSize: '0.875rem'
+                        }}
                           placeholder="John Doe"
                         />
                       </div>
                       
-                      <div className="form-group">
-                        <label htmlFor="email" className="form-label">
+                    <div>
+                      <label style={{
+                        display: 'block',
+                        fontSize: '0.875rem',
+                        fontWeight: '500',
+                        color: '#374151',
+                        marginBottom: '0.5rem'
+                      }}>
                           Email Address *
                         </label>
                         <input
-                          id="email"
                           name="email"
                           type="email"
                           value={formData.email}
                           onChange={(e) => setFormData({...formData, email: e.target.value})}
                           required
-                          className="form-input"
+                        style={{
+                          width: '100%',
+                          padding: '0.75rem',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '6px',
+                          fontSize: '0.875rem'
+                        }}
                           placeholder="john.doe@example.com"
                         />
                       </div>
                         
-                      <div className="form-group">
-                        <label htmlFor="phone" className="form-label">
+                    <div>
+                      <label style={{
+                        display: 'block',
+                        fontSize: '0.875rem',
+                        fontWeight: '500',
+                        color: '#374151',
+                        marginBottom: '0.5rem'
+                      }}>
                           Phone Number *
                         </label>
                         <USPhoneInput
-                          id="phone"
                           name="phone"
                           value={formData.phone}
                           onChange={(value) => {
@@ -607,33 +909,53 @@ function Tenants() {
                           placeholder="(555) 123-4567"
                         />
                         {formData.phone && !phoneError && (
-                          <div className="field-success">
+                        <div style={{
+                          fontSize: '0.75rem',
+                          color: '#16a34a',
+                          marginTop: '0.25rem'
+                        }}>
                             ✓ Valid phone number
                           </div>
                         )}
                       </div>
 
-                      <div className="form-group">
-                        <label htmlFor="emergency_contact_name" className="form-label">
+                    <div>
+                      <label style={{
+                        display: 'block',
+                        fontSize: '0.875rem',
+                        fontWeight: '500',
+                        color: '#374151',
+                        marginBottom: '0.5rem'
+                      }}>
                           Emergency Contact Name
                         </label>
                         <input
-                          id="emergency_contact_name"
                           name="emergency_contact_name"
                           type="text"
                           value={formData.emergency_contact_name || ''}
                           onChange={(e) => setFormData({...formData, emergency_contact_name: e.target.value})}
-                          className="form-input"
+                        style={{
+                          width: '100%',
+                          padding: '0.75rem',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '6px',
+                          fontSize: '0.875rem'
+                        }}
                           placeholder="Jane Doe"
                         />
                       </div>
                         
-                      <div className="form-group">
-                        <label htmlFor="emergency_contact_phone" className="form-label">
+                    <div>
+                      <label style={{
+                        display: 'block',
+                        fontSize: '0.875rem',
+                        fontWeight: '500',
+                        color: '#374151',
+                        marginBottom: '0.5rem'
+                      }}>
                           Emergency Contact Phone
                         </label>
                         <USPhoneInput
-                          id="emergency_contact_phone"
                           name="emergency_contact_phone"
                           value={formData.emergency_contact_phone || ''}
                           onChange={(value) => {
@@ -651,45 +973,103 @@ function Tenants() {
                           placeholder="(555) 987-6543"
                         />
                         {formData.emergency_contact_phone && !emergencyPhoneError && (
-                          <div className="field-success">
+                        <div style={{
+                          fontSize: '0.75rem',
+                          color: '#16a34a',
+                          marginTop: '0.25rem'
+                        }}>
                             ✓ Valid phone number
                           </div>
                         )}
                       </div>
-                    </div>
+                  </form>
 
-                    <div className="form-actions">
+                  <div style={{
+                    display: 'flex',
+                    gap: '0.75rem'
+                  }}>
                       <button 
                         type="submit"
-                        className="save-btn"
+                      onClick={handleSubmit}
+                      style={{
+                        padding: '0.75rem 1.5rem',
+                        backgroundColor: '#2563eb',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '0.875rem',
+                        fontWeight: '500',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
+                      onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
                       >
                         {editingTenant ? 'Update Tenant' : 'Save Tenant'}
                       </button>
                         
                       <button 
                         type="button"
-                        className="cancel-btn"
                         onClick={() => setShowForm(false)}
+                      style={{
+                        padding: '0.75rem 1.5rem',
+                        backgroundColor: '#f8fafc',
+                        color: '#374151',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '6px',
+                        fontSize: '0.875rem',
+                        fontWeight: '500',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.backgroundColor = '#f1f5f9';
+                        e.currentTarget.style.borderColor = '#cbd5e1';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.backgroundColor = '#f8fafc';
+                        e.currentTarget.style.borderColor = '#e2e8f0';
+                      }}
                       >
                         Cancel
                       </button>
                     </div>
-                  </form>
                 </div>
               )}
 
               {tenants.length === 0 ? (
-                <div className="empty-state">
-                  <div className="empty-icon">
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <div style={{
+                  padding: '3rem',
+                  textAlign: 'center',
+                  color: '#6b7280'
+                }}>
+                  <div style={{
+                    width: '3rem',
+                    height: '3rem',
+                    backgroundColor: '#f3f4f6',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    margin: '0 auto 1rem'
+                  }}>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
                       <circle cx="12" cy="7" r="4"/>
                     </svg>
                   </div>
-                  <h3>No tenants registered</h3>
-                  <p>Start by registering your first tenant in the system.</p>
+                  <h3 style={{
+                    fontSize: '1.125rem',
+                    fontWeight: '600',
+                    color: '#374151',
+                    margin: '0 0 0.5rem'
+                  }}>No tenants registered</h3>
+                  <p style={{
+                    fontSize: '0.875rem',
+                    color: '#6b7280',
+                    margin: 0
+                  }}>Start by registering your first tenant in the system.</p>
                   <button 
-                    className="empty-action-btn"
                     onClick={() => {
                       setEditingTenant(null);
                       setFormData({
@@ -701,78 +1081,236 @@ function Tenants() {
                       });
                       setShowForm(true);
                     }}
+                    style={{
+                      marginTop: '1rem',
+                      padding: '0.75rem 1.5rem',
+                      backgroundColor: '#2563eb',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
+                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
                   >
                     Register New Tenant
                   </button>
                 </div>
               ) : (
-                <div className="tenants-scroll-container">
-                  <div className="tenants-table-container">
-                    <table className="tenants-table">
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{
+                    width: '100%',
+                    borderCollapse: 'collapse'
+                  }}>
                       <thead>
-                        <tr>
-                          <th className="table-left">Tenant</th>
-                          <th className="table-left">Contact Information</th>
-                          <th className="table-left">Emergency Contact</th>
-                          <th className="table-center">Created</th>
-                          <th className="table-center">Actions</th>
+                      <tr style={{ backgroundColor: '#f8fafc' }}>
+                        <th style={{
+                          padding: '0.75rem 1rem',
+                          textAlign: 'left',
+                          fontSize: '0.875rem',
+                          fontWeight: '600',
+                          color: '#374151',
+                          borderBottom: '1px solid #e5e7eb'
+                        }}>Tenant</th>
+                        <th style={{
+                          padding: '0.75rem 1rem',
+                          textAlign: 'left',
+                          fontSize: '0.875rem',
+                          fontWeight: '600',
+                          color: '#374151',
+                          borderBottom: '1px solid #e5e7eb'
+                        }}>Contact Information</th>
+                        <th style={{
+                          padding: '0.75rem 1rem',
+                          textAlign: 'left',
+                          fontSize: '0.875rem',
+                          fontWeight: '600',
+                          color: '#374151',
+                          borderBottom: '1px solid #e5e7eb'
+                        }}>Emergency Contact</th>
+                        <th style={{
+                          padding: '0.75rem 1rem',
+                          textAlign: 'center',
+                          fontSize: '0.875rem',
+                          fontWeight: '600',
+                          color: '#374151',
+                          borderBottom: '1px solid #e5e7eb'
+                        }}>Created</th>
+                        <th style={{
+                          padding: '0.75rem 1rem',
+                          textAlign: 'center',
+                          fontSize: '0.875rem',
+                          fontWeight: '600',
+                          color: '#374151',
+                          borderBottom: '1px solid #e5e7eb'
+                        }}>Actions</th>
                         </tr>
                       </thead>
                       <tbody>
                         {tenants.map((tenant) => (
-                          <tr key={tenant.id}>
-                            <td className="table-left">
-                              <Link href={`/tenants/${tenant.id}`} className="tenant-name-link">
-                                <div className="tenant-name">{tenant.full_name}</div>
-                              </Link>
-                              <div className="tenant-id">ID: {tenant.id}</div>
-                            </td>
-                              
-                            <td className="table-left">
-                              <div className="tenant-contact">
-                                <div className="tenant-phone">{phoneUtils.displayPhoneNumber(tenant.phone)}</div>
-                                <div className="tenant-email">{tenant.email}</div>
+                        <tr key={tenant.id} style={{
+                          borderBottom: '1px solid #f3f4f6',
+                          transition: 'background-color 0.2s ease'
+                        }}
+                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'}
+                        onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+                          <td style={{
+                            padding: '1rem',
+                            textAlign: 'left',
+                            borderBottom: '1px solid #f3f4f6'
+                          }}>
+                            <Link href={`/tenants/${tenant.id}`}>
+                              <div style={{
+                                fontSize: '0.875rem',
+                                fontWeight: '500',
+                                color: '#374151',
+                                cursor: 'pointer',
+                                marginBottom: '0.25rem',
+                                transition: 'color 0.2s ease'
+                              }}
+                              onMouseOver={(e) => e.currentTarget.style.color = '#1f2937'}
+                              onMouseOut={(e) => e.currentTarget.style.color = '#374151'}>
+                                {tenant.full_name}
                               </div>
+                              </Link>
+                            <div style={{
+                              fontSize: '0.75rem',
+                              color: '#6b7280'
+                            }}>ID: {tenant.id}</div>
                             </td>
                               
-                            <td className="table-left">
+                          <td style={{
+                            padding: '1rem',
+                            textAlign: 'left',
+                            borderBottom: '1px solid #f3f4f6'
+                          }}>
+                            <div style={{
+                              fontSize: '0.875rem',
+                              color: '#374151',
+                              marginBottom: '0.25rem'
+                            }}>{phoneUtils.displayPhoneNumber(tenant.phone)}</div>
+                            <div style={{
+                              fontSize: '0.75rem',
+                              color: '#6b7280'
+                            }}>{tenant.email}</div>
+                            </td>
+                              
+                          <td style={{
+                            padding: '1rem',
+                            textAlign: 'left',
+                            borderBottom: '1px solid #f3f4f6'
+                          }}>
                               {tenant.emergency_contact_name ? (
                                 <div>
-                                  <div className="emergency-name">{tenant.emergency_contact_name}</div>
-                                  <div className="emergency-phone">{tenant.emergency_contact_phone ? phoneUtils.displayPhoneNumber(tenant.emergency_contact_phone) : 'No phone'}</div>
+                                <div style={{
+                                  fontSize: '0.875rem',
+                                  color: '#374151',
+                                  marginBottom: '0.25rem'
+                                }}>{tenant.emergency_contact_name}</div>
+                                <div style={{
+                                  fontSize: '0.75rem',
+                                  color: '#6b7280'
+                                }}>{tenant.emergency_contact_phone ? phoneUtils.displayPhoneNumber(tenant.emergency_contact_phone) : 'No phone'}</div>
                                 </div>
                               ) : (
-                                <span className="text-muted">Not provided</span>
+                              <span style={{
+                                fontSize: '0.875rem',
+                                color: '#9ca3af',
+                                fontStyle: 'italic'
+                              }}>Not provided</span>
                               )}
                             </td>
 
-                            <td className="table-center">
-                              <div className="tenant-date">
-                                <span className="date-highlight">
+                          <td style={{
+                            padding: '1rem',
+                            textAlign: 'center',
+                            borderBottom: '1px solid #f3f4f6'
+                          }}>
+                            <div style={{
+                              display: 'flex',
+                              justifyContent: 'center'
+                            }}>
+                              <span style={{
+                                backgroundColor: '#f3f4f6',
+                                padding: '0.25rem 0.5rem',
+                                borderRadius: '4px',
+                                fontSize: '0.75rem',
+                                fontWeight: '500',
+                                color: '#374151'
+                              }}>
                                   {formatDate(tenant.created_at)}
                                 </span>
                               </div>
                             </td>
                               
-                            <td className="table-center">
-                              <div className="action-buttons">
-                                <button onClick={() => router.push(`/tenants/${tenant.id}`)} className="manage-btn">
-                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <path d="M12 20h9"/>
-                                    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                          <td style={{
+                            padding: '1rem',
+                            textAlign: 'center',
+                            borderBottom: '1px solid #f3f4f6'
+                          }}>
+                            <div style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '0.5rem'
+                            }}>
+                              <button 
+                                onClick={() => router.push(`/tenants/${tenant.id}`)}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '0.375rem',
+                                  padding: '0.5rem 0.875rem',
+                                  backgroundColor: '#2563eb',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '6px',
+                                  fontSize: '0.8125rem',
+                                  fontWeight: '500',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.2s ease'
+                                }}
+                                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
+                                onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+                              >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                                   </svg>
                                   Manage
                                 </button>
                                 <button 
                                   onClick={() => handleDeleteTenant(tenant.id, tenant.full_name)} 
-                                  className="icon-btn delete-icon-btn"
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  width: '2.25rem',
+                                  height: '2.25rem',
+                                  backgroundColor: '#fef2f2',
+                                  color: '#dc2626',
+                                  border: '1px solid #fecaca',
+                                  borderRadius: '6px',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.2s ease'
+                                }}
+                                onMouseOver={(e) => {
+                                  e.currentTarget.style.backgroundColor = '#fee2e2';
+                                  e.currentTarget.style.borderColor = '#fca5a5';
+                                }}
+                                onMouseOut={(e) => {
+                                  e.currentTarget.style.backgroundColor = '#fef2f2';
+                                  e.currentTarget.style.borderColor = '#fecaca';
+                                }}
                                   title="Delete tenant"
                                 >
-                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <polyline points="3,6 5,6 21,6"/>
-                                    <path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2V6"/>
-                                    <line x1="10" y1="11" x2="10" y2="17"/>
-                                    <line x1="14" y1="11" x2="14" y2="17"/>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                  <path d="M3 6h18"/>
+                                  <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                                  <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
                                   </svg>
                                 </button>
                               </div>
@@ -781,26 +1319,67 @@ function Tenants() {
                         ))}
                       </tbody>
                     </table>
-                  </div>
                 </div>
               )}
             </div>
           </div>
 
           <div className="right-column">
-            {/* Quick Actions Section */}
-            <div className="quick-actions-section">
-              <div className="section-header">
-                <div>
-                  <h2 className="section-title">Quick Actions</h2>
-                  <p className="section-subtitle">Common tenant management tasks</p>
-                </div>
+            {/* Quick Actions Section (acts as 4th card) */}
+            <div style={{
+              backgroundColor: 'white',
+              borderRadius: '12px',
+              padding: '1.5rem',
+              border: '1px solid #e5e7eb',
+              boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+              height: 'fit-content',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.1)';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 1px 3px 0 rgba(0, 0, 0, 0.1)';
+            }}>
+              <div style={{
+                marginBottom: '1.5rem'
+              }}>
+                <h2 style={{
+                  fontSize: '1.25rem',
+                  fontWeight: '700',
+                  color: '#111827',
+                  margin: '0 0 0.25rem 0'
+                }}>
+                  Quick Actions
+                </h2>
+                <p style={{
+                  fontSize: '0.875rem',
+                  color: '#6b7280',
+                  margin: 0
+                }}>
+                  Common tenant management tasks
+                </p>
               </div>
               
-              <div className="actions-grid">
-                <div 
-                  className="action-card blue"
-                  onClick={() => {
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.75rem'
+              }}>
+                {[
+                  {
+                    title: 'Register Tenant',
+                    subtitle: 'Add new tenant to system',
+                    icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                      <circle cx="8.5" cy="7" r="4"/>
+                      <path d="M20 8v6"/>
+                      <path d="M23 11h-6"/>
+                    </svg>,
+                    color: 'blue',
+                    onClick: () => {
                     setEditingTenant(null);
                     setFormData({
                       full_name: '',
@@ -810,62 +1389,107 @@ function Tenants() {
                       emergency_contact_phone: ''
                     });
                     setShowForm(true);
-                  }}
-                >
-                  <div className="action-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                      <circle cx="8.5" cy="7" r="4"/>
-                      <path d="M20 8v6"/>
-                      <path d="M23 11h-6"/>
-                    </svg>
-                  </div>
-                  <div className="action-content">
-                    <h3 className="action-title">Register Tenant</h3>
-                    <p className="action-subtitle">Add new tenant to system</p>
-                  </div>
-                </div>
-
-                <div className="action-card green" onClick={downloadTenantsReport}>
-                  <div className="action-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    }
+                  },
+                  {
+                    title: 'Download Report',
+                    subtitle: 'Export tenant data to CSV',
+                    icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                       <polyline points="7,10 12,15 17,10"/>
                       <line x1="12" y1="15" x2="12" y2="3"/>
-                    </svg>
-                  </div>
-                  <div className="action-content">
-                    <h3 className="action-title">Download Report</h3>
-                    <p className="action-subtitle">Export tenant data to CSV</p>
-                  </div>
-                </div>
-
-                <div className="action-card purple" onClick={downloadContactList}>
-                  <div className="action-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    </svg>,
+                    color: 'green',
+                    onClick: downloadTenantsReport
+                  },
+                  {
+                    title: 'Contact List',
+                    subtitle: 'Download contact information',
+                    icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
-                    </svg>
-                  </div>
-                  <div className="action-content">
-                    <h3 className="action-title">Contact List</h3>
-                    <p className="action-subtitle">Download contact information</p>
-                  </div>
-                </div>
-
-                <div className="action-card blue" onClick={() => window.location.href = '/applications'}>
-                  <div className="action-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    </svg>,
+                    color: 'purple',
+                    onClick: downloadContactList
+                  },
+                  {
+                    title: 'View Applications',
+                    subtitle: 'Review tenant applications',
+                    icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
                       <polyline points="14,2 14,8 20,8"/>
                       <line x1="16" y1="13" x2="8" y2="13"/>
                       <line x1="16" y1="17" x2="8" y2="17"/>
-                    </svg>
+                    </svg>,
+                    color: 'orange',
+                    onClick: () => router.push('/applications')
+                  }
+                ].map((action, index) => (
+                  <div 
+                    key={index} 
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.75rem',
+                      padding: '1rem',
+                      backgroundColor: action.color === 'blue' ? '#eff6ff' : 
+                                       action.color === 'green' ? '#f0fdf4' : 
+                                       action.color === 'orange' ? '#fff7ed' : '#faf5ff',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onClick={action.onClick}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = action.color === 'blue' ? '#dbeafe' : 
+                                                             action.color === 'green' ? '#dcfce7' : 
+                                                             action.color === 'orange' ? '#fed7aa' : '#e9d5ff';
+                      e.currentTarget.style.borderColor = action.color === 'blue' ? '#2563eb' : 
+                                                          action.color === 'green' ? '#059669' : 
+                                                          action.color === 'orange' ? '#ea580c' : '#7c3aed';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = action.color === 'blue' ? '#eff6ff' : 
+                                                             action.color === 'green' ? '#f0fdf4' : 
+                                                             action.color === 'orange' ? '#fff7ed' : '#faf5ff';
+                      e.currentTarget.style.borderColor = '#e5e7eb';
+                    }}
+                  >
+                    <div style={{
+                      width: '2.5rem',
+                      height: '2.5rem',
+                      backgroundColor: action.color === 'blue' ? '#dbeafe' : 
+                                       action.color === 'green' ? '#d1fae5' : 
+                                       action.color === 'orange' ? '#fed7aa' : '#e9d5ff',
+                      borderRadius: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: action.color === 'blue' ? '#2563eb' : 
+                             action.color === 'green' ? '#059669' : 
+                             action.color === 'orange' ? '#ea580c' : '#7c3aed'
+                    }}>
+                      {action.icon}
                   </div>
-                  <div className="action-content">
-                    <h3 className="action-title">View Applications</h3>
-                    <p className="action-subtitle">Manage tenant applications</p>
+                    <div style={{ flex: 1 }}>
+                      <h3 style={{
+                        fontSize: '0.875rem',
+                        fontWeight: '600',
+                        color: '#111827',
+                        margin: '0 0 0.125rem 0'
+                      }}>
+                        {action.title}
+                      </h3>
+                      <p style={{
+                        fontSize: '0.75rem',
+                        color: '#6b7280',
+                        margin: 0
+                      }}>
+                        {action.subtitle}
+                      </p>
                   </div>
                 </div>
+                ))}
               </div>
             </div>
           </div>
@@ -1252,7 +1876,7 @@ function Tenants() {
           font-weight: 500;
         }
 
-        /* Metrics Grid */
+        /* Metrics Grid - aligns with 3:1 layout */
         .metrics-grid {
           display: grid;
           grid-template-columns: repeat(3, 1fr);
@@ -1341,7 +1965,7 @@ function Tenants() {
         /* Main Layout Grid */
         .main-content-grid {
           display: grid;
-          grid-template-columns: 2.5fr 1fr;
+          grid-template-columns: 3fr 1fr;
           gap: 24px;
           align-items: flex-start;
         }

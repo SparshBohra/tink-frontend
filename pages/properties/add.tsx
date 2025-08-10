@@ -7,6 +7,7 @@ import DashboardLayout from '../../components/DashboardLayout';
 import { usStates } from '../../lib/states';
 import { Landlord } from '../../lib/types';
 import MapboxAddressAutocomplete from '../../components/MapboxAddressAutocomplete';
+import { ArrowLeft, Building, Home } from 'lucide-react';
 
 interface RoomTypeConfig {
   id: string;
@@ -370,6 +371,10 @@ export default function AddProperty() {
     return roomTypeConfigs.reduce((total, config) => total + (config.quantity * config.maxCapacity), 0);
   };
 
+  const calculateTotalRevenue = () => {
+    return roomTypeConfigs.reduce((total, config) => total + (config.quantity * config.monthlyRent), 0);
+  };
+
   // Don't render the form until profile is resolved
   if (!profileResolved) {
   return (
@@ -406,62 +411,254 @@ export default function AddProperty() {
       </Head>
       <DashboardLayout title="">
         <div className="dashboard-container">
-          <div className="dashboard-header">
-            <div className="header-content">
-              <div className="header-left">
-                <h1 className="dashboard-title">Add New Property</h1>
-                <p className="welcome-message">Create a new property in your portfolio.</p>
+          {/* Modern Title Section */}
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            border: '1px solid #e5e7eb',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+            marginBottom: '2rem',
+            marginTop: '1.5rem',
+            transition: 'all 0.2s ease'
+          }}
+          onMouseOver={(e) => {
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+            e.currentTarget.style.transform = 'translateY(-1px)';
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+            e.currentTarget.style.transform = 'translateY(0)';
+          }}>
+            <div style={{
+              padding: '1.5rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '1rem'
+              }}>
+                <button
+                  onClick={() => router.push('/properties')}
+                  style={{
+                    width: '2.5rem',
+                    height: '2.5rem',
+                    backgroundColor: '#f3f4f6',
+                    border: 'none',
+                    borderRadius: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#e5e7eb'}
+                  onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+                >
+                  <ArrowLeft style={{ width: '1.25rem', height: '1.25rem', color: '#6b7280' }} />
+                </button>
+                <div style={{
+                  width: '3rem',
+                  height: '3rem',
+                  backgroundColor: '#16a34a',
+                  borderRadius: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
+                }}>
+                  <Building style={{ width: '1.5rem', height: '1.5rem', color: 'white' }} />
               </div>
-              <div className="header-right">
-                <Link href="/properties" className="back-btn">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M19 12H5"/>
-                    <path d="M12 19l-7-7 7-7"/>
-                  </svg>
-                  Back to Properties
-                </Link>
+                <div>
+                  <h1 style={{
+                    fontSize: '1.875rem',
+                    fontWeight: '700',
+                    color: '#111827',
+                    margin: 0,
+                    marginBottom: '0.25rem'
+                  }}>Add New Property</h1>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    fontSize: '0.875rem',
+                    color: '#6b7280'
+                  }}>
+                    <Home style={{ width: '1rem', height: '1rem' }} />
+                    Create a new property in your portfolio
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
-          {error && <div className="alert alert-error"><strong>Error:</strong> {error}</div>}
-          {success && <div className="alert alert-success"><strong>Success:</strong> {success}</div>}
-
-          <div className="main-content-grid">
-            <div className="form-section">
-              <div className="section-header">
-                  <h2 className="section-title">Property Details</h2>
-                <p className="section-subtitle">Enter the basic information for your new property.</p>
+          {error && (
+            <div style={{
+              backgroundColor: '#fef2f2',
+              border: '1px solid #fecaca',
+              borderRadius: '8px',
+              padding: '1rem',
+              marginBottom: '1.5rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="15" y1="9" x2="9" y2="15"/>
+                <line x1="9" y1="9" x2="15" y2="15"/>
+              </svg>
+              <div style={{ color: '#dc2626', fontWeight: '600' }}>
+                <strong>Error:</strong> {error}
               </div>
+            </div>
+          )}
+          
+          {success && (
+            <div style={{
+              backgroundColor: '#f0fdf4',
+              border: '1px solid #bbf7d0',
+              borderRadius: '8px',
+              padding: '1rem',
+              marginBottom: '1.5rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                <polyline points="22,4 12,14.01 9,11.01"/>
+              </svg>
+              <div style={{ color: '#16a34a', fontWeight: '600' }}>
+                <strong>Success:</strong> {success}
+              </div>
+            </div>
+          )}
 
-              <form onSubmit={handleSubmit} className="property-form">
-                {/* Basic Information */}
-                <div className="form-group">
-                  <label htmlFor="name" className="form-label required">Property Name</label>
+          {/* Modern Property Details Section */}
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            border: '1px solid #e5e7eb',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+            transition: 'all 0.2s ease'
+          }}
+          onMouseOver={(e) => {
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+            e.currentTarget.style.transform = 'translateY(-1px)';
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+            e.currentTarget.style.transform = 'translateY(0)';
+          }}>
+            {/* Section Header */}
+            <div style={{
+              padding: '1.5rem',
+              borderBottom: '1px solid #e5e7eb',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <div>
+                <h2 style={{
+                  fontSize: '1.25rem',
+                  fontWeight: '700',
+                  color: '#111827',
+                  margin: 0,
+                  marginBottom: '0.25rem'
+                }}>Property Details</h2>
+                <p style={{
+                  fontSize: '0.875rem',
+                  color: '#6b7280',
+                  margin: 0
+                }}>Enter the basic information for your new property</p>
+              </div>
+            </div>
+
+            {/* Form Content */}
+            <form onSubmit={handleSubmit} style={{ padding: '1.5rem' }}>
+              {/* Property Name */}
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label style={{
+                  display: 'block',
+                  fontSize: '0.875rem',
+                  fontWeight: '600',
+                  color: '#374151',
+                  marginBottom: '0.5rem'
+                }}>
+                  Property Name <span style={{ color: '#dc2626' }}>*</span>
+                </label>
                   <input
                     type="text"
                     id="name"
                     name="name"
                     value={formData.name}
                     onChange={handleChange}
-                    className="form-input"
                     placeholder="e.g., Main Street Apartments"
                     maxLength={200}
                     required
-                  />
-                  <div className="form-hint">Maximum 200 characters</div>
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '8px',
+                    fontSize: '0.875rem',
+                    transition: 'all 0.2s ease',
+                    outline: 'none'
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#2563eb';
+                    e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.1)';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#d1d5db';
+                    e.target.style.boxShadow = 'none';
+                  }}
+                />
+                <div style={{
+                  fontSize: '0.75rem',
+                  color: '#6b7280',
+                  marginTop: '0.25rem'
+                }}>Maximum 200 characters</div>
                   </div>
 
                 {/* Property Type */}
-                <div className="form-group">
-                  <label htmlFor="property_type" className="form-label required">Property Type</label>
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label style={{
+                  display: 'block',
+                  fontSize: '0.875rem',
+                  fontWeight: '600',
+                  color: '#374151',
+                  marginBottom: '0.5rem'
+                }}>
+                  Property Type <span style={{ color: '#dc2626' }}>*</span>
+                </label>
                   <select
                     id="property_type"
                     name="property_type"
                     value={formData.property_type}
                     onChange={handleChange}
-                    className="form-select"
                     required
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '8px',
+                    fontSize: '0.875rem',
+                    backgroundColor: 'white',
+                    transition: 'all 0.2s ease',
+                    outline: 'none'
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#2563eb';
+                    e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.1)';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#d1d5db';
+                    e.target.style.boxShadow = 'none';
+                  }}
                   >
                     {PROPERTY_TYPES.map(type => (
                       <option key={type.value} value={type.value}>
@@ -469,21 +666,50 @@ export default function AddProperty() {
                       </option>
                     ))}
                   </select>
-                  <div className="form-hint">
+                <div style={{
+                  fontSize: '0.75rem',
+                  color: '#6b7280',
+                  marginTop: '0.25rem'
+                }}>
                     {PROPERTY_TYPES.find(t => t.value === formData.property_type)?.description}
                   </div>
                   </div>
 
                 {/* Rent Structure */}
-                  <div className="form-group">
-                  <label htmlFor="rent_type" className="form-label required">Rent Structure</label>
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label style={{
+                  display: 'block',
+                  fontSize: '0.875rem',
+                  fontWeight: '600',
+                  color: '#374151',
+                  marginBottom: '0.5rem'
+                }}>
+                  Rent Structure <span style={{ color: '#dc2626' }}>*</span>
+                </label>
                   <select
                     id="rent_type"
                     name="rent_type"
                     value={formData.rent_type}
                     onChange={handleChange}
-                    className="form-select"
                     required
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '8px',
+                    fontSize: '0.875rem',
+                    backgroundColor: 'white',
+                    transition: 'all 0.2s ease',
+                    outline: 'none'
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#2563eb';
+                    e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.1)';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#d1d5db';
+                    e.target.style.boxShadow = 'none';
+                  }}
                   >
                     {RENT_TYPES.map(type => (
                       <option key={type.value} value={type.value}>
@@ -491,7 +717,11 @@ export default function AddProperty() {
                       </option>
                       ))}
                     </select>
-                  <div className="form-hint">
+                <div style={{
+                  fontSize: '0.75rem',
+                  color: '#6b7280',
+                  marginTop: '0.25rem'
+                }}>
                     {RENT_TYPES.find(t => t.value === formData.rent_type)?.description}
                   </div>
                 </div>
@@ -499,66 +729,186 @@ export default function AddProperty() {
                 {/* Conditional Fields based on Rent Type */}
                 {formData.rent_type === 'per_property' && (
                   <>
-                  <div className="form-group">
-                      <label htmlFor="total_rooms" className="form-label required">Total Rooms</label>
+                  <div style={{ marginBottom: '1.5rem' }}>
+                    <label style={{
+                      display: 'block',
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: '#374151',
+                      marginBottom: '0.5rem'
+                    }}>
+                      Total Rooms <span style={{ color: '#dc2626' }}>*</span>
+                    </label>
                       <input
                         type="number"
                         id="total_rooms"
                         name="total_rooms"
                         value={formData.total_rooms}
                         onChange={(e) => setFormData(prev => ({ ...prev, total_rooms: parseInt(e.target.value) || 1 }))}
-                        className="form-input"
                         min="1"
                         max="50"
                         required
-                      />
-                      <div className="form-hint">Number of rooms in this property (1-50)</div>
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '8px',
+                        fontSize: '0.875rem',
+                        transition: 'all 0.2s ease',
+                        outline: 'none'
+                      }}
+                      onFocus={(e) => {
+                        e.target.style.borderColor = '#2563eb';
+                        e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.1)';
+                      }}
+                      onBlur={(e) => {
+                        e.target.style.borderColor = '#d1d5db';
+                        e.target.style.boxShadow = 'none';
+                      }}
+                    />
+                    <div style={{
+                      fontSize: '0.75rem',
+                      color: '#6b7280',
+                      marginTop: '0.25rem'
+                    }}>Number of rooms in this property (1-50)</div>
                   </div>
 
-                  <div className="form-group">
-                      <label htmlFor="monthly_rent" className="form-label required">Monthly Rent</label>
-                      <div className="input-group">
-                        <span className="input-prefix">$</span>
+                  <div style={{ marginBottom: '1.5rem' }}>
+                    <label style={{
+                      display: 'block',
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: '#374151',
+                      marginBottom: '0.5rem'
+                    }}>
+                      Monthly Rent <span style={{ color: '#dc2626' }}>*</span>
+                    </label>
+                    <div style={{ position: 'relative' }}>
+                      <span style={{
+                        position: 'absolute',
+                        left: '0.75rem',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        color: '#6b7280',
+                        fontSize: '0.875rem',
+                        fontWeight: '500'
+                      }}>$</span>
                         <input
                           type="number"
                           id="monthly_rent"
                           name="monthly_rent"
                           value={formData.monthly_rent}
                           onChange={handleChange}
-                          className="form-input"
                           placeholder="3500.00"
                           min="0"
                           step="0.01"
                           required
+                        style={{
+                          width: '100%',
+                          padding: '0.75rem 0.75rem 0.75rem 2rem',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '8px',
+                          fontSize: '0.875rem',
+                          transition: 'all 0.2s ease',
+                          outline: 'none'
+                        }}
+                        onFocus={(e) => {
+                          e.target.style.borderColor = '#2563eb';
+                          e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.1)';
+                        }}
+                        onBlur={(e) => {
+                          e.target.style.borderColor = '#d1d5db';
+                          e.target.style.boxShadow = 'none';
+                        }}
                         />
                   </div>
-                      <div className="form-hint">Total monthly rent for the entire property</div>
+                    <div style={{
+                      fontSize: '0.75rem',
+                      color: '#6b7280',
+                      marginTop: '0.25rem'
+                    }}>Total monthly rent for the entire property</div>
                     </div>
 
-                    <div className="form-group">
-                      <label htmlFor="security_deposit" className="form-label">Security Deposit</label>
-                      <div className="input-group">
-                        <span className="input-prefix">$</span>
+                  <div style={{ marginBottom: '1.5rem' }}>
+                    <label style={{
+                      display: 'block',
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: '#374151',
+                      marginBottom: '0.5rem'
+                    }}>
+                      Security Deposit
+                    </label>
+                    <div style={{ position: 'relative' }}>
+                      <span style={{
+                        position: 'absolute',
+                        left: '0.75rem',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        color: '#6b7280',
+                        fontSize: '0.875rem',
+                        fontWeight: '500'
+                      }}>$</span>
                           <input 
                           type="number"
                           id="security_deposit"
                           name="security_deposit"
                           value={formData.security_deposit}
                             onChange={handleChange}
-                          className="form-input"
                           placeholder="1750.00"
                           min="0"
                           step="0.01"
+                        style={{
+                          width: '100%',
+                          padding: '0.75rem 0.75rem 0.75rem 2rem',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '8px',
+                          fontSize: '0.875rem',
+                          transition: 'all 0.2s ease',
+                          outline: 'none'
+                        }}
+                        onFocus={(e) => {
+                          e.target.style.borderColor = '#2563eb';
+                          e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.1)';
+                        }}
+                        onBlur={(e) => {
+                          e.target.style.borderColor = '#d1d5db';
+                          e.target.style.boxShadow = 'none';
+                        }}
                         />
                             </div>
-                      <div className="form-hint">Optional security deposit amount</div>
+                    <div style={{
+                      fontSize: '0.75rem',
+                      color: '#6b7280',
+                      marginTop: '0.25rem'
+                    }}>Optional security deposit amount</div>
                           </div>
                   </>
                 )}
 
                 {/* Address Information */}
-                <div className="form-group">
-                  <label htmlFor="address_line1" className="form-label required">Address Line 1</label>
+              <div style={{
+                borderTop: '1px solid #e5e7eb',
+                paddingTop: '1.5rem',
+                marginTop: '1.5rem'
+              }}>
+                <h3 style={{
+                  fontSize: '1.125rem',
+                  fontWeight: '600',
+                  color: '#111827',
+                  marginBottom: '1rem'
+                }}>Address Information</h3>
+
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <label style={{
+                    display: 'block',
+                    fontSize: '0.875rem',
+                    fontWeight: '600',
+                    color: '#374151',
+                    marginBottom: '0.5rem'
+                  }}>
+                    Address Line 1 <span style={{ color: '#dc2626' }}>*</span>
+                  </label>
                   <MapboxAddressAutocomplete
                     id="address_line1"
                     name="address_line1"
@@ -571,43 +921,121 @@ export default function AddProperty() {
                   />
                 </div>
 
-                <div className="form-group">
-                  <label htmlFor="address_line2" className="form-label">Address Line 2 (Optional)</label>
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <label style={{
+                    display: 'block',
+                    fontSize: '0.875rem',
+                    fontWeight: '600',
+                    color: '#374151',
+                    marginBottom: '0.5rem'
+                  }}>
+                    Address Line 2 (Optional)
+                  </label>
                   <input
                     type="text"
                     id="address_line2"
                     name="address_line2"
                     value={formData.address_line2}
                     onChange={handleChange}
-                    className="form-input"
                     placeholder="Apartment, suite, unit, building, floor, etc."
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '8px',
+                      fontSize: '0.875rem',
+                      transition: 'all 0.2s ease',
+                      outline: 'none'
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = '#2563eb';
+                      e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.1)';
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = '#d1d5db';
+                      e.target.style.boxShadow = 'none';
+                    }}
                   />
                           </div>
 
-                <div className="form-row">
-                  <div className="form-group">
-                    <label htmlFor="city" className="form-label required">City</label>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr 1fr',
+                  gap: '1rem',
+                  marginBottom: '1.5rem'
+                }}>
+                  <div>
+                    <label style={{
+                      display: 'block',
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: '#374151',
+                      marginBottom: '0.5rem'
+                    }}>
+                      City <span style={{ color: '#dc2626' }}>*</span>
+                    </label>
                     <input
                       type="text"
                       id="city"
                       name="city"
                       value={formData.city}
                       onChange={handleChange}
-                      className="form-input"
                       placeholder="San Francisco"
                       required
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '8px',
+                        fontSize: '0.875rem',
+                        transition: 'all 0.2s ease',
+                        outline: 'none'
+                      }}
+                      onFocus={(e) => {
+                        e.target.style.borderColor = '#2563eb';
+                        e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.1)';
+                      }}
+                      onBlur={(e) => {
+                        e.target.style.borderColor = '#d1d5db';
+                        e.target.style.boxShadow = 'none';
+                      }}
                     />
                       </div>
 
-                  <div className="form-group">
-                    <label htmlFor="state" className="form-label required">State</label>
+                  <div>
+                    <label style={{
+                      display: 'block',
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: '#374151',
+                      marginBottom: '0.5rem'
+                    }}>
+                      State <span style={{ color: '#dc2626' }}>*</span>
+                    </label>
                     <select
                       id="state"
                       name="state"
                       value={formData.state}
                       onChange={handleChange}
-                      className="form-select"
                       required
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '8px',
+                        fontSize: '0.875rem',
+                        backgroundColor: 'white',
+                        transition: 'all 0.2s ease',
+                        outline: 'none'
+                      }}
+                      onFocus={(e) => {
+                        e.target.style.borderColor = '#2563eb';
+                        e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.1)';
+                      }}
+                      onBlur={(e) => {
+                        e.target.style.borderColor = '#d1d5db';
+                        e.target.style.boxShadow = 'none';
+                      }}
                     >
                       <option value="">Select State</option>
                       {usStates.map(state => (
@@ -618,43 +1046,116 @@ export default function AddProperty() {
                     </select>
                     </div>
 
-                  <div className="form-group">
-                    <label htmlFor="postal_code" className="form-label required">ZIP Code</label>
+                  <div>
+                    <label style={{
+                      display: 'block',
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: '#374151',
+                      marginBottom: '0.5rem'
+                    }}>
+                      ZIP Code <span style={{ color: '#dc2626' }}>*</span>
+                    </label>
                     <input
                       type="text"
                       id="postal_code"
                       name="postal_code"
                       value={formData.postal_code}
                       onChange={handleChange}
-                      className="form-input"
                       placeholder="94102"
                       required
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '8px',
+                        fontSize: '0.875rem',
+                        transition: 'all 0.2s ease',
+                        outline: 'none'
+                      }}
+                      onFocus={(e) => {
+                        e.target.style.borderColor = '#2563eb';
+                        e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.1)';
+                      }}
+                      onBlur={(e) => {
+                        e.target.style.borderColor = '#d1d5db';
+                        e.target.style.boxShadow = 'none';
+                      }}
                     />
                   </div>
                 </div>
 
-                <div className="form-group">
-                  <label htmlFor="country" className="form-label required">Country</label>
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <label style={{
+                    display: 'block',
+                    fontSize: '0.875rem',
+                    fontWeight: '600',
+                    color: '#374151',
+                    marginBottom: '0.5rem'
+                  }}>
+                    Country <span style={{ color: '#dc2626' }}>*</span>
+                  </label>
                         <input 
                     type="text"
                     id="country"
                     name="country"
                     value={formData.country}
                           onChange={handleChange} 
-                    className="form-input"
                           required 
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '8px',
+                      fontSize: '0.875rem',
+                      transition: 'all 0.2s ease',
+                      outline: 'none'
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = '#2563eb';
+                      e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.1)';
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = '#d1d5db';
+                      e.target.style.boxShadow = 'none';
+                    }}
                         />
                       </div>
 
-                <div className="form-group">
-                  <label htmlFor="timezone" className="form-label required">Timezone</label>
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <label style={{
+                    display: 'block',
+                    fontSize: '0.875rem',
+                    fontWeight: '600',
+                    color: '#374151',
+                    marginBottom: '0.5rem'
+                  }}>
+                    Timezone <span style={{ color: '#dc2626' }}>*</span>
+                  </label>
                   <select
                     id="timezone"
                     name="timezone"
                     value={formData.timezone}
                     onChange={handleChange}
-                    className="form-select"
                     required
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '8px',
+                      fontSize: '0.875rem',
+                      backgroundColor: 'white',
+                      transition: 'all 0.2s ease',
+                      outline: 'none'
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = '#2563eb';
+                      e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.1)';
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = '#d1d5db';
+                      e.target.style.boxShadow = 'none';
+                    }}
                   >
                     {TIMEZONE_OPTIONS.map(tz => (
                       <option key={tz.value} value={tz.value}>
@@ -662,49 +1163,121 @@ export default function AddProperty() {
                       </option>
                     ))}
                   </select>
-                  <div className="form-hint">
+                  <div style={{
+                    fontSize: '0.75rem',
+                    color: '#6b7280',
+                    marginTop: '0.25rem'
+                  }}>
                     {TIMEZONE_OPTIONS.find(t => t.value === formData.timezone)?.description}
+                  </div>
                     </div>
                 </div>
 
                 {/* Room Configuration for per_room rent type */}
                   {formData.rent_type === 'per_room' && (
-                  <div className="room-configuration-section">
-                    <div className="section-header">
-                      <h3 className="section-title">Room Configuration</h3>
-                      <p className="section-subtitle">Configure the types and quantities of rooms for this property.</p>
+                <div style={{
+                  borderTop: '1px solid #e5e7eb',
+                  paddingTop: '1.5rem',
+                  marginTop: '1.5rem'
+                }}>
+                  <div style={{ marginBottom: '1.5rem' }}>
+                    <h3 style={{
+                      fontSize: '1.125rem',
+                      fontWeight: '600',
+                      color: '#111827',
+                      margin: 0,
+                      marginBottom: '0.25rem'
+                    }}>Room Configuration</h3>
+                    <p style={{
+                      fontSize: '0.875rem',
+                      color: '#6b7280',
+                      margin: 0
+                    }}>Configure the types and quantities of rooms for this property</p>
                         </div>
 
                     {roomTypeConfigs.length > 0 && (
-                      <div className="room-configs-list">
+                    <div style={{ marginBottom: '1.5rem' }}>
                         {roomTypeConfigs.map((config) => (
-                          <div key={config.id} className="room-config-card">
-                            <div className="room-config-header">
-                              <div className="room-config-info">
-                                <h4 className="room-config-title">
+                        <div key={config.id} style={{
+                          backgroundColor: '#f9fafb',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          padding: '1.5rem',
+                          marginBottom: '1rem'
+                        }}>
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            marginBottom: '1rem'
+                          }}>
+                            <h4 style={{
+                              fontSize: '1rem',
+                              fontWeight: '600',
+                              color: '#111827',
+                              margin: 0
+                            }}>
                                   {ROOM_TYPES.find(rt => rt.value === config.roomType)?.label || 'Room Type'}
                                 </h4>
-                        </div>
                               <button
                                 type="button"
                                 onClick={() => removeRoomTypeConfig(config.id)}
-                                className="remove-room-config-btn"
                                 title="Remove room configuration"
+                              style={{
+                                width: '2.5rem',
+                                height: '2.5rem',
+                                backgroundColor: '#fef2f2',
+                                border: '1px solid #fecaca',
+                                borderRadius: '6px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: 'pointer',
+                                color: '#dc2626',
+                                transition: 'all 0.2s ease'
+                              }}
+                              onMouseOver={(e) => {
+                                e.currentTarget.style.backgroundColor = '#fee2e2';
+                              }}
+                              onMouseOut={(e) => {
+                                e.currentTarget.style.backgroundColor = '#fef2f2';
+                              }}
                               >
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                <polyline points="3,6 5,6 21,6"/>
+                                <path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2V6"/>
+                                <line x1="10" y1="11" x2="10" y2="17"/>
+                                <line x1="14" y1="11" x2="14" y2="17"/>
                                 </svg>
                               </button>
                       </div>
 
-                            <div className="room-config-fields">
-                              <div className="form-group">
-                                <label className="form-label">Room Type</label>
+                          <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                            gap: '1rem'
+                          }}>
+                            <div>
+                              <label style={{
+                                display: 'block',
+                                fontSize: '0.875rem',
+                                fontWeight: '600',
+                                color: '#374151',
+                                marginBottom: '0.5rem'
+                              }}>Room Type</label>
                                 <select
                                   value={config.roomType}
                                   onChange={(e) => updateRoomTypeConfig(config.id, 'roomType', e.target.value)}
-                                  className="form-select"
+                                style={{
+                                  width: '100%',
+                                  padding: '0.75rem',
+                                  border: '1px solid #d1d5db',
+                                  borderRadius: '8px',
+                                  fontSize: '0.875rem',
+                                  backgroundColor: 'white',
+                                  transition: 'all 0.2s ease',
+                                  outline: 'none'
+                                }}
                                 >
                                   {ROOM_TYPES.map(type => (
                                     <option key={type.value} value={type.value}>
@@ -714,104 +1287,224 @@ export default function AddProperty() {
                                 </select>
                     </div>
 
-                              <div className="form-group">
-                                <label className="form-label">Quantity</label>
+                            <div>
+                              <label style={{
+                                display: 'block',
+                                fontSize: '0.875rem',
+                                fontWeight: '600',
+                                color: '#374151',
+                                marginBottom: '0.5rem'
+                              }}>Quantity</label>
                                 <input
                                   type="number"
                                   value={config.quantity}
                                   onChange={(e) => updateRoomTypeConfig(config.id, 'quantity', parseInt(e.target.value) || 1)}
-                                  className="form-input"
                                   min="1"
                                   max="20"
+                                style={{
+                                  width: '100%',
+                                  padding: '0.75rem',
+                                  border: '1px solid #d1d5db',
+                                  borderRadius: '8px',
+                                  fontSize: '0.875rem',
+                                  transition: 'all 0.2s ease',
+                                  outline: 'none',
+                                  MozAppearance: 'textfield'
+                                }}
+                                onFocus={(e) => {
+                                  e.target.style.borderColor = '#2563eb';
+                                  e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.1)';
+                                }}
+                                onBlur={(e) => {
+                                  e.target.style.borderColor = '#d1d5db';
+                                  e.target.style.boxShadow = 'none';
+                                }}
+                                onWheel={(e) => e.currentTarget.blur()}
                                 />
                 </div>
 
-                              <div className="form-group">
-                                <label className="form-label">Monthly Rent</label>
-                                <div className="input-group">
-                                  <span className="input-prefix">$</span>
+                            <div>
+                              <label style={{
+                                display: 'block',
+                                fontSize: '0.875rem',
+                                fontWeight: '600',
+                                color: '#374151',
+                                marginBottom: '0.5rem'
+                              }}>Monthly Rent</label>
+                              <div style={{ position: 'relative' }}>
+                                <span style={{
+                                  position: 'absolute',
+                                  left: '0.75rem',
+                                  top: '50%',
+                                  transform: 'translateY(-50%)',
+                                  color: '#6b7280',
+                                  fontSize: '0.875rem',
+                                  fontWeight: '500'
+                                }}>$</span>
                                   <input
                                     type="number"
-                                    value={config.monthlyRent || ''}
+                                  value={config.monthlyRent}
                                     onChange={(e) => updateRoomTypeConfig(config.id, 'monthlyRent', parseFloat(e.target.value) || 0)}
-                                    className="form-input"
-                                    placeholder="1200.00"
                                     min="0"
                                     step="0.01"
+                                  style={{
+                                    width: '100%',
+                                    padding: '0.75rem 0.75rem 0.75rem 2rem',
+                                    border: '1px solid #d1d5db',
+                                    borderRadius: '8px',
+                                    fontSize: '0.875rem',
+                                    transition: 'all 0.2s ease',
+                                    outline: 'none',
+                                    MozAppearance: 'textfield'
+                                  }}
+                                  onFocus={(e) => {
+                                    e.target.style.borderColor = '#2563eb';
+                                    e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.1)';
+                                  }}
+                                  onBlur={(e) => {
+                                    e.target.style.borderColor = '#d1d5db';
+                                    e.target.style.boxShadow = 'none';
+                                  }}
+                                  onWheel={(e) => e.currentTarget.blur()}
                                   />
                 </div>
             </div>
 
-                              <div className="form-group">
-                                <label className="form-label">Max Capacity</label>
+                            <div>
+                              <label style={{
+                                display: 'block',
+                                fontSize: '0.875rem',
+                                fontWeight: '600',
+                                color: '#374151',
+                                marginBottom: '0.5rem'
+                              }}>Max Capacity</label>
                                 <input
                                   type="number"
                                   value={config.maxCapacity}
                                   onChange={(e) => updateRoomTypeConfig(config.id, 'maxCapacity', parseInt(e.target.value) || 1)}
-                                  className="form-input"
                                   min="1"
                                   max="10"
+                                style={{
+                                  width: '100%',
+                                  padding: '0.75rem',
+                                  border: '1px solid #d1d5db',
+                                  borderRadius: '8px',
+                                  fontSize: '0.875rem',
+                                  transition: 'all 0.2s ease',
+                                  outline: 'none',
+                                  MozAppearance: 'textfield'
+                                }}
+                                onFocus={(e) => {
+                                  e.target.style.borderColor = '#2563eb';
+                                  e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.1)';
+                                }}
+                                onBlur={(e) => {
+                                  e.target.style.borderColor = '#d1d5db';
+                                  e.target.style.boxShadow = 'none';
+                                }}
+                                onWheel={(e) => e.currentTarget.blur()}
                                 />
                               </div>
 
-                              <div className="form-group">
-                                <label className="form-label">Floor (Optional)</label>
+                            <div>
+                              <label style={{
+                                display: 'block',
+                                fontSize: '0.875rem',
+                                fontWeight: '600',
+                                color: '#374151',
+                                marginBottom: '0.5rem'
+                              }}>Floor</label>
                                 <input
                                   type="text"
                                   value={config.floor}
                                   onChange={(e) => updateRoomTypeConfig(config.id, 'floor', e.target.value)}
-                                  className="form-input"
-                                  placeholder="1, 2, Ground, etc."
+                                placeholder="e.g., 1st, Ground"
+                                style={{
+                                  width: '100%',
+                                  padding: '0.75rem',
+                                  border: '1px solid #d1d5db',
+                                  borderRadius: '8px',
+                                  fontSize: '0.875rem',
+                                  transition: 'all 0.2s ease',
+                                  outline: 'none'
+                                }}
                                 />
                 </div>
-              </div>
-
-                            <div className="room-config-summary">
-                              <span className="summary-item">
-                                <strong>{config.quantity}</strong> rooms
-                              </span>
-                              <span className="summary-item">
-                                <strong>{config.quantity * config.maxCapacity}</strong> max occupancy
-                              </span>
-                              <span className="summary-item">
-                                <strong>${(config.quantity * config.monthlyRent).toLocaleString()}</strong>/month revenue
-                              </span>
                   </div>
                 </div>
                         ))}
                   </div>
                     )}
 
-                    <div className="add-room-type-section">
                       <button
                         type="button"
                         onClick={addRoomTypeConfig}
-                        className="btn btn-secondary add-room-type-btn"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      padding: '0.75rem 1rem',
+                      backgroundColor: '#f0fdf4',
+                      color: '#16a34a',
+                      border: '1px solid #bbf7d0',
+                      borderRadius: '8px',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      marginBottom: '1.5rem'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = '#dcfce7';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = '#f0fdf4';
+                    }}
                       >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <line x1="12" y1="5" x2="12" y2="19"></line>
-                          <line x1="5" y1="12" x2="19" y2="12"></line>
+                      <line x1="12" y1="5" x2="12" y2="19"/>
+                      <line x1="5" y1="12" x2="19" y2="12"/>
                         </svg>
-                        Add Room Type
+                    Add Room Configuration
                       </button>
-                </div>
 
-                    {/* Property Summary */}
+                  {/* Revenue Projection */}
                     {roomTypeConfigs.length > 0 && (
-                      <div className="property-summary">
-                        <h4 className="summary-title">Property Summary</h4>
-                        <div className="summary-metrics">
-                          <div className="summary-metric">
-                            <div className="metric-value">{getTotalRooms()}</div>
-                            <div className="metric-label">Total Rooms</div>
+                    <div style={{
+                      backgroundColor: '#f8fafc',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      padding: '1.5rem'
+                    }}>
+                      <h4 style={{
+                        fontSize: '1rem',
+                        fontWeight: '600',
+                        color: '#111827',
+                        marginBottom: '1rem'
+                      }}>Revenue Projection</h4>
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+                        gap: '1rem'
+                      }}>
+                        <div style={{
+                          backgroundColor: 'white',
+                          padding: '1rem',
+                          borderRadius: '6px',
+                          textAlign: 'center'
+                        }}>
+                          <div style={{
+                            fontSize: '1.25rem',
+                            fontWeight: '700',
+                            color: '#059669'
+                          }}>
+                            ${calculateTotalRevenue().toLocaleString()}
                   </div>
-                          <div className="summary-metric">
-                            <div className="metric-value">{getTotalCapacity()}</div>
-                            <div className="metric-label">Max Occupancy</div>
-                </div>
-                          <div className="summary-metric">
-                            <div className="metric-value">${getEstimatedRevenue().toLocaleString()}</div>
-                            <div className="metric-label">Monthly Revenue</div>
+                          <div style={{
+                            fontSize: '0.75rem',
+                            color: '#6b7280',
+                            marginTop: '0.25rem'
+                          }}>Monthly Revenue</div>
                   </div>
                 </div>
               </div>
@@ -819,24 +1512,70 @@ export default function AddProperty() {
             </div>
                 )}
 
-                <div className="form-actions">
+              {/* Form Actions */}
+              <div style={{
+                borderTop: '1px solid #e5e7eb',
+                paddingTop: '1.5rem',
+                marginTop: '1.5rem',
+                display: 'flex',
+                justifyContent: 'flex-end'
+              }}>
                   <button
                     type="submit"
                     disabled={loading}
-                    className="btn btn-primary"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    padding: '0.75rem 1.5rem',
+                    backgroundColor: loading ? '#9ca3af' : '#16a34a',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '0.875rem',
+                    fontWeight: '600',
+                    cursor: loading ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseOver={(e) => {
+                    if (!loading) {
+                      e.currentTarget.style.backgroundColor = '#15803d';
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(22, 163, 74, 0.4)';
+                    }
+                  }}
+                  onMouseOut={(e) => {
+                    if (!loading) {
+                      e.currentTarget.style.backgroundColor = '#16a34a';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = 'none';
+                    }
+                  }}
                   >
                     {loading ? (
                       <>
-                        <div className="btn-spinner"></div>
+                      <div style={{
+                        width: '1rem',
+                        height: '1rem',
+                        border: '2px solid transparent',
+                        borderTop: '2px solid white',
+                        borderRadius: '50%',
+                        animation: 'spin 1s linear infinite'
+                      }}></div>
                         Creating Property...
                       </>
                     ) : (
-                      'Create Property'
+                    <>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                        <polyline points="22,4 12,14.01 9,11.01"/>
+                      </svg>
+                      Create Property
+                    </>
                     )}
                   </button>
                 </div>
               </form>
-            </div>
           </div>
         </div>
       </DashboardLayout>
@@ -1332,6 +2071,24 @@ export default function AddProperty() {
           .room-config-grid { grid-template-columns: 1fr; }
           .summary-grid { grid-template-columns: 1fr; }
           .room-summary { flex-direction: column; gap: 12px; }
+          .summary-grid { grid-template-columns: 1fr; }
+          .room-summary { flex-direction: column; gap: 12px; }
+        }
+
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+
+        /* Hide number input spinners */
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+
+        input[type="number"] {
+          -moz-appearance: textfield;
         }
       `}</style>
     </>

@@ -74,7 +74,7 @@ function Accounting() {
   const [error, setError] = useState<string | null>(null);
   const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | 'quarter' | 'year'>('month');
   const [selectedProperty, setSelectedProperty] = useState<string>('all');
-  const [activeTab, setActiveTab] = useState<'overview' | 'rentroll' | 'expenses' | 'analytics'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'rentroll' | 'expenses'>('rentroll');
 
   // Expense management state
   const [realExpenses, setRealExpenses] = useState<Expense[]>([]);
@@ -486,13 +486,16 @@ function Accounting() {
       setError(null);
       
       // Fetch real data from backend APIs
-      const [propertiesResponse, paymentSummary, paymentHistory] = await Promise.all([
+      const [propertiesResponse, paymentSummary, paymentHistory, roomsResponse, expensesResponse] = await Promise.all([
         apiClient.getProperties(),
         apiClient.getLandlordPaymentSummary(),
-        apiClient.getPaymentHistory({ page_size: 50 })
+        apiClient.getPaymentHistory({ page_size: 50 }),
+        apiClient.getRooms(),
+        expenseApi.getExpenses()
       ]);
 
       const properties = propertiesResponse.results || [];
+      const allRooms = roomsResponse.results || [];
       
       // Transform real data into PropertyFinancials format
       const realPropertyFinancials: PropertyFinancials[] = properties.map(property => {
@@ -507,25 +510,32 @@ function Accounting() {
         const avgRentPerUnit = monthlyRentValue && property.total_rooms ? 
           monthlyRentValue / property.total_rooms : monthlyRentValue;
         
-        // Calculate occupancy rate with estimation (we don't have current_occupancy in the Property type)
-        // Assume 90% occupancy as default
-        const occupancyRate = property.total_rooms > 0 ? 
-          ((property.total_rooms * 0.9) / property.total_rooms) * 100 : 0;
-        const occupiedUnits = Math.round((occupancyRate / 100) * property.total_rooms);
+        // Calculate occupancy rate from real rooms data
+        const propertyRooms = allRooms.filter((r:any) => r.property_ref === property.id);
+        const totalUnits = property.total_rooms || propertyRooms.length || 0;
+        const occupiedUnits = propertyRooms.filter((r:any) => !r.is_available).length;
+        const occupancyRate = totalUnits > 0 ? (occupiedUnits / totalUnits) * 100 : 0;
         
-        // Estimate expenses as 30% of gross rent (common property management ratio)
-        const estimatedExpenses = monthlyRentValue * 0.3;
-        const netIncome = totalCollected - estimatedExpenses;
+        // Compute expenses for this property from real expensesResponse
+        const propertyExpenses = (expensesResponse || []).filter((e:any) => {
+          if (e.property_ref) {
+            return e.property_ref === property.id;
+          }
+          // fallback by name if provided
+          return e.property_name && e.property_name === property.name;
+        });
+        const totalPropertyExpenses = propertyExpenses.reduce((sum:number, e:any) => sum + parseFloat(e.amount || 0), 0);
+        const netIncome = totalCollected - totalPropertyExpenses;
 
         return {
           id: property.id,
           name: property.name,
           address: `${property.address_line1}${property.address_line2 ? ', ' + property.address_line2 : ''}, ${property.city}, ${property.state}`,
-          totalUnits: property.total_rooms || 1,
+          totalUnits: totalUnits || 0,
           occupiedUnits: occupiedUnits,
           monthlyRent: monthlyRentValue,
           actualRent: totalCollected,
-          expenses: estimatedExpenses,
+          expenses: totalPropertyExpenses,
           netIncome: netIncome,
           occupancyRate: Math.round(occupancyRate * 10) / 10,
           avgRentPerUnit: Math.round(avgRentPerUnit)
@@ -603,7 +613,7 @@ function Accounting() {
       // Calculate totals from real data  
       const totalGrossRent = realPropertyFinancials.reduce((sum, p) => sum + p.monthlyRent, 0);
       const totalCollected = realPropertyFinancials.reduce((sum, p) => sum + p.actualRent, 0);
-      const totalExpenses = realPropertyFinancials.reduce((sum, p) => sum + p.expenses, 0);
+      const totalExpenses = (expensesResponse || []).reduce((sum: number, e: any) => sum + parseFloat(e.amount || 0), 0);
       const netCashFlow = totalCollected - totalExpenses;
       const collectionRate = (totalCollected / totalGrossRent) * 100;
       const vacancyLoss = totalGrossRent - totalCollected;
@@ -611,7 +621,16 @@ function Accounting() {
 
       setPropertyFinancials(realPropertyFinancials);
       setRentRoll(realRentRoll);
-      setExpenses(realExpenses);
+      setExpenses((expensesResponse || []).map((e:any, idx:number) => ({
+        id: e.id || idx,
+        date: e.expense_date || e.created_at || '',
+        propertyName: e.property_name || (properties.find(p => p.id === e.property_ref)?.name || 'All Properties'),
+        category: e.vendor_type || 'Other',
+        description: e.title || e.description || '',
+        amount: parseFloat(e.amount || 0),
+        vendor: e.effective_vendor_name || e.vendor_name || 'Vendor',
+        status: (e.status || 'pending') as 'pending' | 'paid' | 'approved'
+      })));
       setCashFlowSummary({
         totalGrossRent,
         totalCollected,
@@ -725,22 +744,89 @@ function Accounting() {
       </Head>
       
       <div className="dashboard-container">
-        {/* Custom Header */}
-        <div className="dashboard-header">
-          <div className="header-content">
-            <div className="header-left">
-              <h1 className="dashboard-title">Property Accounting</h1>
-              <div className="subtitle-container">
-                <p className="welcome-message">
+        {/* Modern Title Section */}
+        <div style={{
+          backgroundColor: 'white',
+          borderRadius: '12px',
+          border: '1px solid #e5e7eb',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+          marginBottom: '2rem',
+          transition: 'all 0.2s ease'
+        }}
+        onMouseOver={(e) => {
+          e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+          e.currentTarget.style.transform = 'translateY(-1px)';
+        }}
+        onMouseOut={(e) => {
+          e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+          e.currentTarget.style.transform = 'translateY(0)';
+        }}>
+          <div style={{
+            padding: '1.5rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '1rem'
+            }}>
+              <div style={{
+                width: '3rem',
+                height: '3rem',
+                backgroundColor: '#16a34a',
+                borderRadius: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+              }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                  <line x1="12" y1="1" x2="12" y2="23"/>
+                  <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                </svg>
+              </div>
+              <div>
+                <h1 style={{
+                  fontSize: '1.875rem',
+                  fontWeight: '700',
+                  color: '#111827',
+                  margin: 0,
+                  marginBottom: '0.25rem'
+                }}>Property Accounting</h1>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  fontSize: '0.875rem',
+                  color: '#6b7280'
+                }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                  </svg>
                   Financial overview and rent management across your property portfolio
-                </p>
               </div>
             </div>
-            <div className="header-right">
+            </div>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem'
+            }}>
               <select 
                 value={selectedProperty} 
                 onChange={(e) => setSelectedProperty(e.target.value)}
-                className="property-selector"
+                style={{
+                  padding: '0.5rem 0.75rem',
+                  backgroundColor: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '6px',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
               >
                 {getUniqueProperties().map(property => (
                   <option key={property.id} value={property.id}>{property.name}</option>
@@ -749,7 +835,16 @@ function Accounting() {
               <select 
                 value={selectedPeriod} 
                 onChange={(e) => setSelectedPeriod(e.target.value as any)}
-                className="period-selector"
+                style={{
+                  padding: '0.5rem 0.75rem',
+                  backgroundColor: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '6px',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
               >
                 <option value="week">This Week</option>
                 <option value="month">This Month</option>
@@ -761,7 +856,17 @@ function Accounting() {
         </div>
 
         {error && (
-          <div className="error-banner">
+          <div style={{
+            backgroundColor: '#fef2f2',
+            border: '1px solid #fecaca',
+            borderRadius: '8px',
+            padding: '1rem',
+            marginBottom: '1.5rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem',
+            color: '#dc2626'
+          }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="12" cy="12" r="10"/>
               <line x1="15" y1="9" x2="9" y2="15"/>
@@ -771,158 +876,278 @@ function Accounting() {
           </div>
         )}
         
-        {/* Key Performance Indicators */}
-        <div className="metrics-grid">
-          <div className="metric-card">
-            <div className="metric-header">
-              <div className="metric-info">
-                <h3 className="metric-title">Net Cash Flow</h3>
-                <div className="metric-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        {/* Modern Metrics Grid */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(4, 1fr)',
+          gap: '1.5rem',
+          marginBottom: '2rem'
+        }}>
+          {[
+            {
+              title: 'Net Cash Flow',
+              value: formatCurrency(cashFlowSummary.netCashFlow),
+              subtitle: 'Monthly net income',
+              label: 'vs last month',
+              change: '+8.2%',
+              changeType: 'positive',
+              icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <polyline points="22,12 18,12 15,21 9,3 6,12 2,12"/>
-                  </svg>
-                </div>
-              </div>
-            </div>
-            <div className="metric-content">
-              <div className="metric-value">{formatCurrency(cashFlowSummary.netCashFlow)}</div>
-              <div className="metric-subtitle">Monthly net income</div>
-              <div className="metric-progress">
-                <span className="metric-label">vs last month</span>
-                <span className="metric-change positive">+8.2%</span>
-              </div>
-            </div>
-          </div>
-          
-          <div className="metric-card">
-            <div className="metric-header">
-              <div className="metric-info">
-                <h3 className="metric-title">Collection Rate</h3>
-                <div className="metric-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              </svg>,
+              color: '#16a34a',
+              bgColor: '#d1fae5'
+            },
+            {
+              title: 'Collection Rate',
+              value: `${cashFlowSummary.collectionRate.toFixed(1)}%`,
+              subtitle: 'Of gross potential rent',
+              label: `${formatCurrency(cashFlowSummary.totalCollected)} collected`,
+              change: '+2.1%',
+              changeType: 'positive',
+              icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-                  </svg>
-                </div>
-              </div>
-            </div>
-            <div className="metric-content">
-              <div className="metric-value">{cashFlowSummary.collectionRate.toFixed(1)}%</div>
-              <div className="metric-subtitle">Of gross potential rent</div>
-              <div className="metric-progress">
-                <span className="metric-label">{formatCurrency(cashFlowSummary.totalCollected)} collected</span>
-                <span className="metric-change positive">+2.1%</span>
-              </div>
-            </div>
-          </div>
-          
-          <div className="metric-card">
-            <div className="metric-header">
-              <div className="metric-info">
-                <h3 className="metric-title">Avg Occupancy</h3>
-                <div className="metric-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              </svg>,
+              color: '#2563eb',
+              bgColor: '#dbeafe'
+            },
+            {
+              title: 'Avg Occupancy',
+              value: `${(propertyFinancials.reduce((sum, p) => sum + p.occupancyRate, 0) / propertyFinancials.length || 0).toFixed(1)}%`,
+              subtitle: 'Across all properties',
+              label: `${propertyFinancials.reduce((sum, p) => sum + p.occupiedUnits, 0)} / ${propertyFinancials.reduce((sum, p) => sum + p.totalUnits, 0)} units`,
+              change: '+1.3%',
+              changeType: 'positive',
+              icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M3 21V8L12 3L21 8V21H3Z"/>
                     <path d="M9 21V12H15V21"/>
-                  </svg>
-                </div>
-              </div>
-            </div>
-            <div className="metric-content">
-              <div className="metric-value">
-                {(propertyFinancials.reduce((sum, p) => sum + p.occupancyRate, 0) / propertyFinancials.length).toFixed(1)}%
-              </div>
-              <div className="metric-subtitle">Across all properties</div>
-              <div className="metric-progress">
-                <span className="metric-label">
-                  {propertyFinancials.reduce((sum, p) => sum + p.occupiedUnits, 0)} / {propertyFinancials.reduce((sum, p) => sum + p.totalUnits, 0)} units
-                </span>
-                <span className="metric-change positive">+1.3%</span>
-              </div>
-            </div>
-          </div>
-          
-          <div className="metric-card">
-            <div className="metric-header">
-              <div className="metric-info">
-                <h3 className="metric-title">Expense Ratio</h3>
-                <div className="metric-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              </svg>,
+              color: '#7c3aed',
+              bgColor: '#e9d5ff'
+            },
+            {
+              title: 'Expense Ratio',
+              value: `${cashFlowSummary.operatingExpenseRatio.toFixed(1)}%`,
+              subtitle: 'Operating expenses',
+              label: `${formatCurrency(cashFlowSummary.totalExpenses)} total`,
+              change: '-0.5%',
+              changeType: 'positive',
+              icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
                     <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
-                  </svg>
+                <path d="M12 11h4"/>
+                <path d="M12 16h4"/>
+                <path d="M8 11h.01"/>
+                <path d="M8 16h.01"/>
+              </svg>,
+              color: '#ea580c',
+              bgColor: '#fed7aa'
+            }
+          ].map((metric, index) => (
+            <div key={index} style={{
+              backgroundColor: 'white',
+              borderRadius: '12px',
+              padding: '1.5rem',
+              border: '1px solid #e5e7eb',
+              boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.1)';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 1px 3px 0 rgba(0, 0, 0, 0.1)';
+            }}>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '1rem'
+              }}>
+                <h3 style={{
+                  fontSize: '0.875rem',
+                  fontWeight: '600',
+                  color: '#6b7280',
+                  margin: 0,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.025em'
+                }}>
+                  {metric.title}
+                </h3>
+                <div style={{
+                  backgroundColor: metric.bgColor,
+                  borderRadius: '8px',
+                  padding: '0.5rem',
+                  color: metric.color
+                }}>
+                  {metric.icon}
                 </div>
               </div>
+              <div style={{
+                fontSize: '2rem',
+                fontWeight: '700',
+                color: '#111827',
+                marginBottom: '0.25rem',
+                lineHeight: 1
+              }}>
+                {metric.value}
             </div>
-            <div className="metric-content">
-              <div className="metric-value">{cashFlowSummary.operatingExpenseRatio.toFixed(1)}%</div>
-              <div className="metric-subtitle">Of gross potential rent</div>
-              <div className="metric-progress">
-                <span className="metric-label">{formatCurrency(cashFlowSummary.totalExpenses)} total</span>
-                <span className="metric-change warning">+5.2%</span>
+              <div style={{
+                fontSize: '0.875rem',
+                color: '#6b7280',
+                marginBottom: '0.5rem'
+              }}>
+                {metric.subtitle}
               </div>
-            </div>
+              <div style={{ height: '0.25rem' }}></div>
           </div>
+          ))}
         </div>
 
-        {/* Tab Navigation */}
-        <div className="tab-navigation">
-          <button 
-            className={`tab-button ${activeTab === 'overview' ? 'active' : ''}`}
-            onClick={() => setActiveTab('overview')}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <rect x="3" y="3" width="7" height="7"/>
-              <rect x="14" y="3" width="7" height="7"/>
-              <rect x="14" y="14" width="7" height="7"/>
-              <rect x="3" y="14" width="7" height="7"/>
-            </svg>
-            Property Overview
-          </button>
-          <button 
-            className={`tab-button ${activeTab === 'rentroll' ? 'active' : ''}`}
-            onClick={() => setActiveTab('rentroll')}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        {/* Modern Tab Navigation */}
+        <div style={{
+          backgroundColor: 'white',
+          borderRadius: '12px',
+          border: '1px solid #e5e7eb',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+          marginBottom: '2rem',
+          padding: '0.75rem',
+          display: 'flex',
+          gap: '0.5rem'
+        }}>
+          {[
+            {
+              key: 'rentroll',
+              label: 'Rent Roll',
+              icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
               <polyline points="14,2 14,8 20,8"/>
               <line x1="16" y1="13" x2="8" y2="13"/>
               <line x1="16" y1="17" x2="8" y2="17"/>
             </svg>
-            Rent Roll
-          </button>
-          <button 
-            className={`tab-button ${activeTab === 'expenses' ? 'active' : ''}`}
-            onClick={() => setActiveTab('expenses')}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            },
+            {
+              key: 'expenses',
+              label: 'Expenses',
+              icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
               <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
             </svg>
-            Expenses
-          </button>
-          <button 
-            className={`tab-button ${activeTab === 'analytics' ? 'active' : ''}`}
-            onClick={() => setActiveTab('analytics')}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M21 21H3V3"/>
-              <path d="M7 14L12 9L16 13L21 8"/>
+            },
+            {
+              key: 'overview',
+              label: 'Property Overview',
+              icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="3" width="7" height="7"/>
+              <rect x="14" y="3" width="7" height="7"/>
+              <rect x="14" y="14" width="7" height="7"/>
+              <rect x="3" y="14" width="7" height="7"/>
             </svg>
-            Analytics
+            }
+          ].map((tab) => (
+          <button 
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key as 'overview' | 'rentroll' | 'expenses')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.75rem 1.25rem',
+                borderRadius: '8px',
+                border: 'none',
+                fontSize: '0.875rem',
+                fontWeight: '500',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                backgroundColor: activeTab === tab.key ? '#2563eb' : 'transparent',
+                color: activeTab === tab.key ? 'white' : '#6b7280',
+                flex: 1,
+                justifyContent: 'center'
+              }}
+              onMouseOver={(e) => {
+                if (activeTab !== tab.key) {
+                  e.currentTarget.style.backgroundColor = '#f1f5f9';
+                  e.currentTarget.style.color = '#374151';
+                }
+              }}
+              onMouseOut={(e) => {
+                if (activeTab !== tab.key) {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.color = '#6b7280';
+                }
+              }}
+            >
+              {tab.icon}
+              {tab.label}
           </button>
+          ))}
         </div>
 
         {/* Tab Content */}
         {activeTab === 'overview' && (
-          <div className="tab-content">
-            <div className="properties-section">
-              <div className="section-header">
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            border: '1px solid #e5e7eb',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+            overflow: 'hidden'
+          }}>
+            <div style={{ padding: '1.5rem' }}>
+              {/* Section Header */}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'flex-start',
+                marginBottom: '1.5rem'
+              }}>
                 <div>
-                  <h2 className="section-title">Property Performance ({filteredData.propertyFinancials.length})</h2>
-                  <p className="section-subtitle">Financial overview by property</p>
+                  <h2 style={{
+                    fontSize: '1.25rem',
+                    fontWeight: '700',
+                    color: '#111827',
+                    margin: 0,
+                    marginBottom: '0.25rem'
+                  }}>
+                    Property Performance ({filteredData.propertyFinancials.length})
+                  </h2>
+                  <p style={{
+                    fontSize: '0.875rem',
+                    color: '#6b7280',
+                    margin: 0
+                  }}>
+                    Financial overview by property
+                  </p>
                 </div>
-                <div className="section-actions">
-                  <button onClick={() => fetchData()} className="refresh-btn">
+                <div style={{
+                  display: 'flex',
+                  gap: '0.75rem'
+                }}>
+                  <button 
+                    onClick={() => fetchData()}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      padding: '0.5rem 1rem',
+                      backgroundColor: '#f8fafc',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      color: '#475569',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = '#f1f5f9';
+                      e.currentTarget.style.borderColor = '#cbd5e1';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = '#f8fafc';
+                      e.currentTarget.style.borderColor = '#e2e8f0';
+                    }}
+                  >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <polyline points="23 4 23 10 17 10"/>
                       <polyline points="1 20 1 14 7 14"/>
@@ -930,7 +1155,31 @@ function Accounting() {
                     </svg>
                     Refresh
                   </button>
-                  <button onClick={downloadFinancialReport} className="download-btn">
+                  <button 
+                    onClick={downloadFinancialReport}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      padding: '0.5rem 1rem',
+                      backgroundColor: '#2563eb',
+                      border: '1px solid #2563eb',
+                      borderRadius: '8px',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      color: 'white',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = '#1d4ed8';
+                      e.currentTarget.style.borderColor = '#1d4ed8';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = '#2563eb';
+                      e.currentTarget.style.borderColor = '#2563eb';
+                    }}
+                  >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                       <polyline points="7,10 12,15 17,10"/>
@@ -941,54 +1190,142 @@ function Accounting() {
                 </div>
               </div>
 
-              <div className="properties-table-container">
-                <table className="properties-table">
+              {/* Properties Table */}
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{
+                  width: '100%',
+                  borderCollapse: 'collapse',
+                  fontSize: '0.875rem'
+                }}>
                   <thead>
-                    <tr>
-                      <th className="table-left">Property</th>
-                      <th className="table-right">Gross Rent</th>
-                      <th className="table-right">Actual Rent</th>
-                      <th className="table-right">Expenses</th>
-                      <th className="table-right">Net Income</th>
+                    <tr style={{
+                      backgroundColor: '#f8fafc',
+                      borderBottom: '1px solid #e2e8f0'
+                    }}>
+                      <th style={{
+                        textAlign: 'left',
+                        padding: '0.75rem 1rem',
+                        fontWeight: '600',
+                        color: '#374151',
+                        fontSize: '0.75rem',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em'
+                      }}>
+                        Property
+                      </th>
+                      <th style={{
+                        textAlign: 'center',
+                        padding: '0.75rem 1rem',
+                        fontWeight: '600',
+                        color: '#374151',
+                        fontSize: '0.75rem',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em'
+                      }}>
+                        Monthly Rent
+                      </th>
+                      <th style={{
+                        textAlign: 'center',
+                        padding: '0.75rem 1rem',
+                        fontWeight: '600',
+                        color: '#374151',
+                        fontSize: '0.75rem',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em'
+                      }}>
+                        Rent Collected So Far
+                      </th>
+                      <th style={{
+                        textAlign: 'center',
+                        padding: '0.75rem 1rem',
+                        fontWeight: '600',
+                        color: '#374151',
+                        fontSize: '0.75rem',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em'
+                      }}>
+                        Security Deposit
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredData.propertyFinancials.map((property) => (
-                      <tr key={property.id}>
-                        <td className="table-left">
-                          <div className="property-info">
-                            <div className="property-name">{property.name}</div>
-                            <div className="property-address">{property.address}</div>
+                    {filteredData.propertyFinancials.map((property, index) => (
+                      <tr key={property.id} style={{
+                        borderBottom: index < filteredData.propertyFinancials.length - 1 ? '1px solid #f1f5f9' : 'none',
+                        transition: 'background-color 0.2s ease'
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.backgroundColor = '#f8fafc';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                      }}>
+                        <td style={{
+                          textAlign: 'left',
+                          padding: '1rem'
+                        }}>
+                          <div>
+                            <div style={{
+                              fontWeight: '600',
+                              color: '#111827',
+                              marginBottom: '0.25rem'
+                            }}>
+                              {property.name}
+                            </div>
+                            <div style={{
+                              fontSize: '0.75rem',
+                              color: '#6b7280'
+                            }}>
+                              {property.address}
+                            </div>
                           </div>
                         </td>
-                        <td className="table-right">
-                          <div className="amount-info">
-                            <div className="amount-primary">{formatCurrency(property.monthlyRent)}</div>
-                            <div className="amount-secondary">{formatCurrency(property.avgRentPerUnit)}/unit</div>
+                        <td style={{
+                          textAlign: 'center',
+                          padding: '1rem'
+                        }}>
+                          <div>
+                            <div style={{
+                              fontWeight: '600',
+                              color: '#111827',
+                              marginBottom: '0.25rem'
+                            }}>
+                              {formatCurrency(property.monthlyRent)}
+                            </div>
+                            <div style={{
+                              fontSize: '0.75rem',
+                              color: '#6b7280'
+                            }}>
+                              {formatCurrency(property.avgRentPerUnit)}/unit
+                            </div>
                           </div>
                         </td>
-                        <td className="table-right">
-                          <div className="amount-info">
-                            <div className="amount-primary">{formatCurrency(property.actualRent)}</div>
-                            <div className="amount-secondary">
+                        <td style={{
+                          textAlign: 'center',
+                          padding: '1rem'
+                        }}>
+                          <div>
+                            <div style={{
+                              fontWeight: '600',
+                              color: '#111827',
+                              marginBottom: '0.25rem'
+                            }}>
+                              {formatCurrency(property.actualRent)}
+                            </div>
+                            <div style={{
+                              fontSize: '0.75rem',
+                              color: '#6b7280'
+                            }}>
                               {((property.actualRent / property.monthlyRent) * 100).toFixed(1)}% collected
                             </div>
                           </div>
                         </td>
-                        <td className="table-right">
-                          <div className="amount-info">
-                            <div className="amount-primary expense">{formatCurrency(property.expenses)}</div>
-                            <div className="amount-secondary">
-                              {((property.expenses / property.monthlyRent) * 100).toFixed(1)}% of gross
-                            </div>
-                          </div>
-                        </td>
-                        <td className="table-right">
-                          <div className="amount-info">
-                            <div className="amount-primary income">{formatCurrency(property.netIncome)}</div>
-                            <div className="amount-secondary">
-                              {((property.netIncome / property.actualRent) * 100).toFixed(1)}% margin
-                            </div>
+                        <td style={{
+                          textAlign: 'center',
+                          padding: '1rem'
+                        }}>
+                          <div style={{ fontWeight: '600', color: '#111827' }}>
+                            N/A
                           </div>
                         </td>
                       </tr>
@@ -1001,222 +1338,388 @@ function Accounting() {
         )}
 
         {activeTab === 'rentroll' && (
-          <div className="tab-content">
-            <div className="rentroll-section">
-              <div className="section-header">
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            border: '1px solid #e5e7eb',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+            overflow: 'hidden'
+          }}>
+            <div style={{ padding: '1.5rem' }}>
+              {/* Section Header */}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'flex-start',
+                marginBottom: '1.5rem'
+              }}>
                 <div>
-                  <h2 className="section-title">Rent Roll ({filteredData.rentRoll.length} units)</h2>
-                  <p className="section-subtitle">Current month rent collection status</p>
+                  <h2 style={{
+                    fontSize: '1.25rem',
+                    fontWeight: '700',
+                    color: '#111827',
+                    margin: 0,
+                    marginBottom: '0.25rem'
+                  }}>
+                    Rent Roll ({filteredData.rentRoll.length} units)
+                  </h2>
+                  <p style={{
+                    fontSize: '0.875rem',
+                    color: '#6b7280',
+                    margin: 0
+                  }}>
+                    Current month rent collection status
+                  </p>
                 </div>
-                <div className="section-actions">
-                  <button className="action-btn primary">
+                <div style={{
+                  display: 'flex',
+                  gap: '0.75rem'
+                }}>
+                  {/* <button 
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      padding: '0.5rem 1rem',
+                      backgroundColor: '#16a34a',
+                      border: '1px solid #16a34a',
+                      borderRadius: '8px',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      color: 'white',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = '#15803d';
+                      e.currentTarget.style.borderColor = '#15803d';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = '#16a34a';
+                      e.currentTarget.style.borderColor = '#16a34a';
+                    }}
+                  >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
                     </svg>
                     Collect Rent
-                  </button>
-                  <button className="action-btn secondary">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M3 16l4 4 4-4"/>
-                      <path d="M7 20V4"/>
-                      <path d="M11 4L21 4"/>
-                    </svg>
-                    Send Reminders
-                  </button>
+                  </button> */}
                 </div>
               </div>
 
-              <div className="rentroll-table-container">
-                <table className="rentroll-table">
+              {/* Rent Roll Table */}
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{
+                  width: '100%',
+                  borderCollapse: 'collapse',
+                  fontSize: '0.875rem'
+                }}>
                   <thead>
-                    <tr>
-                      <th className="table-left">Unit Details</th>
-                      <th className="table-left">Tenant</th>
-                      <th className="table-right">Rent Amount</th>
-                      <th className="table-right">Paid Amount</th>
-                      <th className="table-center">Due Date</th>
-                      <th className="table-center">Status</th>
-                      <th className="table-center">Actions</th>
+                    <tr style={{
+                      backgroundColor: '#f8fafc',
+                      borderBottom: '1px solid #e2e8f0'
+                    }}>
+                      <th style={{
+                        textAlign: 'left',
+                        padding: '0.75rem 1rem',
+                        fontWeight: '600',
+                        color: '#374151',
+                        fontSize: '0.75rem',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em'
+                      }}>
+                        Unit Details
+                      </th>
+                      <th style={{
+                        textAlign: 'left',
+                        padding: '0.75rem 1rem',
+                        fontWeight: '600',
+                        color: '#374151',
+                        fontSize: '0.75rem',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em'
+                      }}>
+                        Tenant
+                      </th>
+                      <th style={{
+                        textAlign: 'center',
+                        padding: '0.75rem 1rem',
+                        fontWeight: '600',
+                        color: '#374151',
+                        fontSize: '0.75rem',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em'
+                      }}>
+                        Rent Amount
+                      </th>
+                      <th style={{
+                        textAlign: 'center',
+                        padding: '0.75rem 1rem',
+                        fontWeight: '600',
+                        color: '#374151',
+                        fontSize: '0.75rem',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em'
+                      }}>
+                        Paid Amount
+                      </th>
+                      <th style={{
+                        textAlign: 'center',
+                        padding: '0.75rem 1rem',
+                        fontWeight: '600',
+                        color: '#374151',
+                        fontSize: '0.75rem',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em'
+                      }}>
+                        Due Date
+                      </th>
+                      <th style={{
+                        textAlign: 'center',
+                        padding: '0.75rem 1rem',
+                        fontWeight: '600',
+                        color: '#374151',
+                        fontSize: '0.75rem',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em'
+                      }}>
+                        Status
+                      </th>
+                      <th style={{
+                        textAlign: 'center',
+                        padding: '0.75rem 1rem',
+                        fontWeight: '600',
+                        color: '#374151',
+                        fontSize: '0.75rem',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em'
+                      }}>
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredData.rentRoll.map((item) => (
-                      <tr key={item.id}>
-                        <td className="table-left">
-                          <div className="unit-info">
-                            <div className="unit-number">{item.unitNumber}</div>
-                            <div className="property-name">{item.propertyName}</div>
+                    {filteredData.rentRoll.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} style={{ padding: '2rem', textAlign: 'center', color: '#6b7280' }}>
+                          No rent roll entries to display for the selected period.
+                        </td>
+                      </tr>
+                    ) : filteredData.rentRoll.map((item, index) => (
+                      <tr key={item.id} style={{
+                        borderBottom: index < filteredData.rentRoll.length - 1 ? '1px solid #f1f5f9' : 'none',
+                        transition: 'background-color 0.2s ease'
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.backgroundColor = '#f8fafc';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                      }}>
+                        <td style={{
+                          textAlign: 'left',
+                          padding: '1rem'
+                        }}>
+                          <div>
+                            <div style={{
+                              fontWeight: '600',
+                              color: '#111827',
+                              marginBottom: '0.25rem'
+                            }}>
+                              {item.unitNumber}
+                            </div>
+                            <div style={{
+                              fontSize: '0.75rem',
+                              color: '#6b7280'
+                            }}>
+                              {item.propertyName}
+                            </div>
                           </div>
                         </td>
-                        <td className="table-left">
-                          <div className="tenant-info">
+                        <td style={{
+                          textAlign: 'left',
+                          padding: '1rem'
+                        }}>
+                          <div style={{
+                            fontWeight: '500',
+                            color: item.tenantName ? '#111827' : '#9ca3af'
+                          }}>
                             {item.tenantName || 'Vacant'}
                           </div>
                         </td>
-                        <td className="table-right">
-                          <div className="amount">{formatCurrency(item.rentAmount)}</div>
+                        <td style={{
+                          textAlign: 'center',
+                          padding: '1rem'
+                        }}>
+                          <div style={{
+                            fontWeight: '600',
+                            color: '#111827'
+                          }}>
+                            {formatCurrency(item.rentAmount)}
+                          </div>
                         </td>
-                        <td className="table-right">
-                          <div className="amount">
+                        <td style={{
+                          textAlign: 'center',
+                          padding: '1rem'
+                        }}>
+                          <div>
+                            <div style={{
+                              fontWeight: '600',
+                              color: '#111827',
+                              marginBottom: item.paidAmount < item.rentAmount && item.status !== 'vacant' ? '0.25rem' : 0
+                            }}>
                             {formatCurrency(item.paidAmount)}
+                            </div>
                             {item.paidAmount < item.rentAmount && item.status !== 'vacant' && (
-                              <div className="amount-shortage">
+                              <div style={{
+                                fontSize: '0.75rem',
+                                color: '#dc2626',
+                                fontWeight: '500'
+                              }}>
                                 -{formatCurrency(item.rentAmount - item.paidAmount)} remaining
                               </div>
                             )}
                           </div>
                         </td>
-                        <td className="table-center">
-                          <div className="due-date">
+                        <td style={{
+                          textAlign: 'center',
+                          padding: '1rem'
+                        }}>
+                          <div>
+                            <div style={{
+                              fontSize: '0.75rem',
+                              fontWeight: '500',
+                              padding: '0.125rem 0.375rem',
+                              borderRadius: '4px',
+                              backgroundColor: '#f3f4f6',
+                              color: '#374151',
+                              marginBottom: item.daysOverdue && item.daysOverdue > 0 ? '0.25rem' : 0
+                            }}>
                             {formatDate(item.dueDate)}
+                            </div>
                             {item.daysOverdue && item.daysOverdue > 0 && (
-                              <div className="overdue-indicator">
+                              <div style={{
+                                fontSize: '0.75rem',
+                                color: '#dc2626',
+                                fontWeight: '500'
+                              }}>
                                 {item.daysOverdue} days overdue
                               </div>
                             )}
                           </div>
                         </td>
-                        <td className="table-center">
-                          <span className={`rent-status-badge ${item.status}`}>
+                        <td style={{
+                          textAlign: 'center',
+                          padding: '1rem'
+                        }}>
+                          <span style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            padding: '0.25rem 0.75rem',
+                            borderRadius: '6px',
+                            fontSize: '0.75rem',
+                            fontWeight: '600',
+                            backgroundColor: item.status === 'paid' ? '#d1fae5' : 
+                                           item.status === 'partial' ? '#fef3c7' : 
+                                           item.status === 'overdue' ? '#fecaca' : '#f3f4f6',
+                            color: item.status === 'paid' ? '#065f46' : 
+                                   item.status === 'partial' ? '#92400e' : 
+                                   item.status === 'overdue' ? '#dc2626' : '#6b7280'
+                          }}>
                             {item.status === 'paid' && '✓ Paid'}
                             {item.status === 'partial' && '⚠ Partial'}
                             {item.status === 'overdue' && '⚠ Overdue'}
                             {item.status === 'vacant' && '○ Vacant'}
                           </span>
                         </td>
-                        <td className="table-center">
-                          <div className="rent-actions">
+                        <td style={{
+                          textAlign: 'center',
+                          padding: '1rem'
+                        }}>
+                          <div style={{
+                            display: 'flex',
+                            justifyContent: 'center',
+                            gap: '0.5rem'
+                          }}>
                             {item.status === 'partial' || item.status === 'overdue' ? (
                               <>
-                                <button className="rent-action-btn collect">Collect</button>
-                                <button className="rent-action-btn remind">Remind</button>
+                                <button style={{
+                                  padding: '0.25rem 0.75rem',
+                                  backgroundColor: '#16a34a',
+                                  border: '1px solid #16a34a',
+                                  borderRadius: '4px',
+                                  fontSize: '0.75rem',
+                                  fontWeight: '500',
+                                  color: 'white',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.2s ease'
+                                }}
+                                onMouseOver={(e) => {
+                                  e.currentTarget.style.backgroundColor = '#15803d';
+                                }}
+                                onMouseOut={(e) => {
+                                  e.currentTarget.style.backgroundColor = '#16a34a';
+                                }}>
+                                  Collect
+                                </button>
+                                <button style={{
+                                  padding: '0.25rem 0.75rem',
+                                  backgroundColor: '#f59e0b',
+                                  border: '1px solid #f59e0b',
+                                  borderRadius: '4px',
+                                  fontSize: '0.75rem',
+                                  fontWeight: '500',
+                                  color: 'white',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.2s ease'
+                                }}
+                                onMouseOver={(e) => {
+                                  e.currentTarget.style.backgroundColor = '#d97706';
+                                }}
+                                onMouseOut={(e) => {
+                                  e.currentTarget.style.backgroundColor = '#f59e0b';
+                                }}>
+                                  Remind
+                                </button>
                               </>
                             ) : item.status === 'vacant' ? (
-                              <button className="rent-action-btn market">Market</button>
+                              <button style={{
+                                padding: '0.25rem 0.75rem',
+                                backgroundColor: '#7c3aed',
+                                border: '1px solid #7c3aed',
+                                borderRadius: '4px',
+                                fontSize: '0.75rem',
+                                fontWeight: '500',
+                                color: 'white',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease'
+                              }}
+                              onMouseOver={(e) => {
+                                e.currentTarget.style.backgroundColor = '#6d28d9';
+                              }}
+                              onMouseOut={(e) => {
+                                e.currentTarget.style.backgroundColor = '#7c3aed';
+                              }}>
+                                Market
+                              </button>
                             ) : (
-                              <button className="rent-action-btn view">View</button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'expenses' && (
-          <div className="tab-content">
-            <div className="expenses-section">
-              <div className="section-header">
-                <div>
-                  <h2 className="section-title">Expense Tracking ({realExpenses.length})</h2>
-                  <p className="section-subtitle">Property expenses and vendor payments</p>
-                </div>
-                <div className="section-actions">
-                  <button className="action-btn primary" onClick={handleCreateExpense}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <line x1="12" y1="5" x2="12" y2="19"/>
-                      <line x1="5" y1="12" x2="19" y2="12"/>
-                    </svg>
-                    Add Expense
-                  </button>
-                  <button className="action-btn secondary">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                      <polyline points="7,10 12,15 17,10"/>
-                      <line x1="12" y1="15" x2="12" y2="3"/>
-                    </svg>
-                    Export
-                  </button>
-                </div>
-              </div>
-
-              <div className="expenses-table-container">
-                <table className="expenses-table">
-                  <thead>
-                    <tr>
-                      <th className="table-left">Date</th>
-                      <th className="table-left">Property</th>
-                      <th className="table-left">Category</th>
-                      <th className="table-left">Description</th>
-                      <th className="table-left">Vendor</th>
-                      <th className="table-right">Amount</th>
-                      <th className="table-center">Status</th>
-                      <th className="table-center">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {realExpenses.map((expense) => (
-                      <tr key={expense.id}>
-                        <td className="table-left">
-                          <div className="expense-date">{formatDate(expense.expense_date)}</div>
-                        </td>
-                        <td className="table-left">
-                          <div className="expense-property">{expense.property_name}</div>
-                        </td>
-                        <td className="table-left">
-                          <span className="category-badge">{expense.vendor_type || 'General'}</span>
-                        </td>
-                        <td className="table-left">
-                          <div className="expense-description">{expense.title}</div>
-                        </td>
-                        <td className="table-left">
-                          <div className="expense-vendor">{expense.effective_vendor_name}</div>
-                        </td>
-                        <td className="table-right">
-                          <div className="expense-amount">{formatCurrency(parseFloat(expense.amount))}</div>
-                        </td>
-                        <td className="table-center">
-                          <span className={`expense-status-badge ${expense.status}`}>
-                            {expense.status === 'paid' && '✓ Paid'}
-                            {expense.status === 'approved' && '○ Approved'}
-                            {expense.status === 'pending' && '⚠ Pending'}
-                          </span>
-                        </td>
-                        <td className="table-center">
-                          <div className="expense-actions">
-                            {expense.status === 'pending' && (
-                              <>
-                                <button 
-                                  className="expense-action-btn approve"
-                                  onClick={() => handleExpenseAction(expense, 'approve')}
-                                  disabled={expenseLoading}
-                                >
-                                  Approve
-                                </button>
-                                <button 
-                                  className="expense-action-btn edit"
-                                  onClick={() => handleEditExpense(expense)}
-                                >
-                                  Edit
-                                </button>
-                              </>
-                            )}
-                            {expense.status === 'approved' && (
-                              <>
-                                <button 
-                                  className="expense-action-btn pay"
-                                  onClick={() => handleExpenseAction(expense, 'pay')}
-                                  disabled={expenseLoading}
-                                >
-                                  Pay
-                                </button>
-                                <button 
-                                  className="expense-action-btn edit"
-                                  onClick={() => handleEditExpense(expense)}
-                                >
-                                  Edit
-                                </button>
-                              </>
-                            )}
-                            {expense.status === 'paid' && (
-                              <button 
-                                className="expense-action-btn view"
-                                onClick={() => handleEditExpense(expense)}
-                              >
+                              <button style={{
+                                padding: '0.25rem 0.75rem',
+                                backgroundColor: '#f8fafc',
+                                border: '1px solid #e2e8f0',
+                                borderRadius: '4px',
+                                fontSize: '0.75rem',
+                                fontWeight: '500',
+                                color: '#475569',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease'
+                              }}
+                              onMouseOver={(e) => {
+                                e.currentTarget.style.backgroundColor = '#f1f5f9';
+                              }}
+                              onMouseOut={(e) => {
+                                e.currentTarget.style.backgroundColor = '#f8fafc';
+                              }}>
                                 View
                               </button>
                             )}
@@ -1231,267 +1734,474 @@ function Accounting() {
           </div>
         )}
 
-        {activeTab === 'analytics' && (
-          <div className="tab-content">
-            <div className="analytics-section">
-              {/* Analytics Time Filter */}
-              <div className="analytics-filters">
-                <div className="filter-group">
-                  <h3 className="analytics-section-title">
-                    Financial Analytics
-                    <span className="analytics-subtitle">
-                      {expenseAnalytics.periodLabel === 'all time' 
-                        ? `All expense data (${expenseAnalytics.expenseCount} total expenses)`
-                        : `Data for ${expenseAnalytics.periodLabel} (${expenseAnalytics.expenseCount} expenses)`
-                      }
-                    </span>
-                  </h3>
+        {activeTab === 'expenses' && (
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            border: '1px solid #e5e7eb',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+            overflow: 'hidden'
+          }}>
+            <div style={{ padding: '1.5rem' }}>
+              {/* Section Header */}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'flex-start',
+                marginBottom: '1.5rem'
+              }}>
+                <div>
+                  <h2 style={{
+                    fontSize: '1.25rem',
+                    fontWeight: '700',
+                    color: '#111827',
+                    margin: 0,
+                    marginBottom: '0.25rem'
+                  }}>
+                    Expense Tracking ({realExpenses.length})
+                  </h2>
+                  <p style={{
+                    fontSize: '0.875rem',
+                    color: '#6b7280',
+                    margin: 0
+                  }}>
+                    Property expenses and vendor payments
+                  </p>
                 </div>
-                
-                <div className="filter-controls">
-                  <div className="filter-item">
-                    <label>Time Period:</label>
-                    <select 
-                      value={analyticsTimeRange} 
-                      onChange={(e) => setAnalyticsTimeRange(e.target.value as 'all' | 'month' | 'year')}
-                      className="filter-select"
-                    >
-                      <option value="all">All Time</option>
-                      <option value="month">Monthly View</option>
-                      <option value="year">Yearly View</option>
-                    </select>
-                  </div>
-
-                  {analyticsTimeRange === 'month' && (
-                    <>
-                      <div className="filter-item">
-                        <label>Month:</label>
-                        <select 
-                          value={selectedMonth} 
-                          onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-                          className="filter-select"
-                        >
-                          {Array.from({length: 12}, (_, i) => (
-                            <option key={i} value={i}>
-                              {new Date(2024, i).toLocaleDateString('en-US', { month: 'long' })}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="filter-item">
-                        <label>Year:</label>
-                        <select 
-                          value={selectedYear} 
-                          onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-                          className="filter-select"
-                        >
-                          {Array.from({length: 5}, (_, i) => {
-                            const year = new Date().getFullYear() - 2 + i;
-                            return <option key={year} value={year}>{year}</option>
-                          })}
-                        </select>
-                      </div>
-                    </>
-                  )}
-
-                  {analyticsTimeRange === 'year' && (
-                    <div className="filter-item">
-                      <label>Year:</label>
-                      <select 
-                        value={selectedYear} 
-                        onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-                        className="filter-select"
-                      >
-                        {Array.from({length: 5}, (_, i) => {
-                          const year = new Date().getFullYear() - 2 + i;
-                          return <option key={year} value={year}>{year}</option>
-                        })}
-                      </select>
-                    </div>
-                  )}
+                <div style={{
+                  display: 'flex',
+                  gap: '0.75rem'
+                }}>
+                  <button 
+                    onClick={handleCreateExpense}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      padding: '0.5rem 1rem',
+                      backgroundColor: '#16a34a',
+                      border: '1px solid #16a34a',
+                      borderRadius: '8px',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      color: 'white',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = '#15803d';
+                      e.currentTarget.style.borderColor = '#15803d';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = '#16a34a';
+                      e.currentTarget.style.borderColor = '#16a34a';
+                    }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <line x1="12" y1="5" x2="12" y2="19"/>
+                      <line x1="5" y1="12" x2="19" y2="12"/>
+                    </svg>
+                    Add Expense
+                  </button>
+                  <button 
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      padding: '0.5rem 1rem',
+                      backgroundColor: '#f8fafc',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      color: '#475569',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = '#f1f5f9';
+                      e.currentTarget.style.borderColor = '#cbd5e1';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = '#f8fafc';
+                      e.currentTarget.style.borderColor = '#e2e8f0';
+                    }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                      <polyline points="7,10 12,15 17,10"/>
+                      <line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                    Export
+                  </button>
                 </div>
               </div>
 
-              <div className="analytics-grid">
-                <div className="analytics-card">
-                  <h3 className="analytics-title">Cash Flow Trend</h3>
-                  <div className="analytics-placeholder">
-                    <svg width="100%" height="200" viewBox="0 0 400 200">
-                      <path d="M20,180 L80,120 L140,100 L200,80 L260,60 L320,40 L380,20" 
-                            stroke="#4f46e5" strokeWidth="3" fill="none"/>
-                      <circle cx="380" cy="20" r="4" fill="#4f46e5"/>
-                    </svg>
-                    <p>Net cash flow trending upward over the last 6 months</p>
-                  </div>
-                </div>
-
-                <div className="analytics-card">
-                  <h3 className="analytics-title">Property Performance</h3>
-                  <div className="performance-comparison">
-                    {filteredData.propertyFinancials.map((property, index) => (
-                      <div key={property.id} className="performance-item">
-                        <div className="performance-name">{property.name.split(' ')[0]}</div>
-                        <div className="performance-bar">
-                          <div 
-                            className="performance-fill" 
-                            style={{ width: `${property.occupancyRate}%` }}
-                          ></div>
-                        </div>
-                        <div className="performance-value">{property.occupancyRate}%</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="analytics-card">
-                  <h3 className="analytics-title">
-                    Expense Breakdown by Category
-                    <span className="card-subtitle">Percentage of total spending: {formatCurrency(expenseAnalytics.totalExpenses)}</span>
-                  </h3>
-                  <div className="expense-breakdown">
-                    {Object.entries(expenseAnalytics.expensesByCategory).length > 0 ? (
-                      Object.entries(expenseAnalytics.expensesByCategory)
-                        .sort(([,a], [,b]) => b - a)
-                        .map(([category, amount]) => {
-                          const percentage = ((amount / expenseAnalytics.totalExpenses) * 100).toFixed(1);
-                          const categoryClass = category.toLowerCase().replace(/[^a-z]/g, '');
-                          const count = expenseAnalytics.categoryCounts[category] || 0;
-                          const avgPerExpense = amount / count;
-                          
-                          return (
-                            <div key={category} className="expense-item" title={`${count} expense${count !== 1 ? 's' : ''} • Average: ${formatCurrency(avgPerExpense)}`}>
-                              <div className="expense-category-info">
-                                <span className="expense-category">{category}</span>
-                                <span className="expense-details">{count} expense{count !== 1 ? 's' : ''}</span>
-                              </div>
-                              <div className="expense-amounts">
-                                <span className="expense-amount">{formatCurrency(amount)}</span>
-                                <span className="expense-percentage">{percentage}%</span>
-                              </div>
-                              <div className="expense-bar">
-                                <div 
-                                  className={`expense-fill ${categoryClass}`} 
-                                  style={{ width: `${percentage}%` }}
-                                ></div>
-                              </div>
-                            </div>
-                          );
-                        })
-                    ) : (
-                      <div className="no-data">
-                        <p>No expense data available</p>
-                        <small>Add some expenses to see category breakdown</small>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="analytics-card">
-                  <h3 className="analytics-title">
-                    Top Vendors by Spending
-                    <span className="card-subtitle">Ranked by total amount spent • {expenseAnalytics.topVendors.length} vendors</span>
-                  </h3>
-                  <div className="top-vendors">
-                    {expenseAnalytics.topVendors.length > 0 ? (
-                      expenseAnalytics.topVendors.map((vendor, index) => {
-                        return (
-                          <div key={vendor.vendor} className="vendor-item" title={`${vendor.count} transaction${vendor.count !== 1 ? 's' : ''} • Average: ${formatCurrency(vendor.amount / vendor.count)}`}>
-                            <div className="vendor-rank">#{index + 1}</div>
-                            <div className="vendor-info">
-                              <div className="vendor-name">{vendor.vendor}</div>
-                              <div className="vendor-amount">
-                                {formatCurrency(vendor.amount)} • {vendor.count} transaction{vendor.count !== 1 ? 's' : ''}
-                              </div>
-                            </div>
-                            <div className="vendor-percentage">{vendor.percentage}%</div>
+              {/* Expenses Table */}
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{
+                  width: '100%',
+                  borderCollapse: 'collapse',
+                  fontSize: '0.875rem'
+                }}>
+                  <thead>
+                    <tr style={{
+                      backgroundColor: '#f8fafc',
+                      borderBottom: '1px solid #e2e8f0'
+                    }}>
+                      <th style={{
+                        textAlign: 'left',
+                        padding: '0.75rem 1rem',
+                        fontWeight: '600',
+                        color: '#374151',
+                        fontSize: '0.75rem',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em'
+                      }}>
+                        Date
+                      </th>
+                      <th style={{
+                        textAlign: 'left',
+                        padding: '0.75rem 1rem',
+                        fontWeight: '600',
+                        color: '#374151',
+                        fontSize: '0.75rem',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em'
+                      }}>
+                        Property
+                      </th>
+                      <th style={{
+                        textAlign: 'left',
+                        padding: '0.75rem 1rem',
+                        fontWeight: '600',
+                        color: '#374151',
+                        fontSize: '0.75rem',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em'
+                      }}>
+                        Category
+                      </th>
+                      <th style={{
+                        textAlign: 'left',
+                        padding: '0.75rem 1rem',
+                        fontWeight: '600',
+                        color: '#374151',
+                        fontSize: '0.75rem',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em'
+                      }}>
+                        Description
+                      </th>
+                      <th style={{
+                        textAlign: 'left',
+                        padding: '0.75rem 1rem',
+                        fontWeight: '600',
+                        color: '#374151',
+                        fontSize: '0.75rem',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em'
+                      }}>
+                        Vendor
+                      </th>
+                      <th style={{
+                        textAlign: 'center',
+                        padding: '0.75rem 1rem',
+                        fontWeight: '600',
+                        color: '#374151',
+                        fontSize: '0.75rem',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em'
+                      }}>
+                        Amount
+                      </th>
+                      <th style={{
+                        textAlign: 'center',
+                        padding: '0.75rem 1rem',
+                        fontWeight: '600',
+                        color: '#374151',
+                        fontSize: '0.75rem',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em'
+                      }}>
+                        Status
+                      </th>
+                      <th style={{
+                        textAlign: 'center',
+                        padding: '0.75rem 1rem',
+                        fontWeight: '600',
+                        color: '#374151',
+                        fontSize: '0.75rem',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em'
+                      }}>
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {realExpenses.length === 0 ? (
+                      <tr>
+                        <td colSpan={9} style={{ padding: '2rem', textAlign: 'center', color: '#6b7280' }}>
+                          No expenses recorded for the selected period.
+                        </td>
+                      </tr>
+                    ) : realExpenses.map((expense, index) => (
+                      <tr key={expense.id} style={{
+                        borderBottom: index < realExpenses.length - 1 ? '1px solid #f1f5f9' : 'none',
+                        transition: 'background-color 0.2s ease'
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.backgroundColor = '#f8fafc';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                      }}>
+                        <td style={{
+                          textAlign: 'left',
+                          padding: '1rem'
+                        }}>
+                          <div style={{
+                            fontSize: '0.75rem',
+                            fontWeight: '500',
+                            padding: '0.125rem 0.375rem',
+                            borderRadius: '4px',
+                            backgroundColor: '#f3f4f6',
+                            color: '#374151',
+                            display: 'inline-block'
+                          }}>
+                            {formatDate((expense as any).date)}
                           </div>
-                        );
-                      })
-                    ) : (
-                      <div className="no-data">
-                        <p>No vendor data available</p>
-                        <small>Add expenses to see top vendors</small>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="analytics-card">
-                  <h3 className="analytics-title">Expense Status Overview</h3>
-                  <div className="status-overview">
-                    {Object.entries(expenseAnalytics.expensesByStatus).length > 0 ? (
-                      Object.entries(expenseAnalytics.expensesByStatus).map(([status, count]) => {
-                        const statusColors = {
-                          pending: '#f59e0b',
-                          approved: '#3b82f6', 
-                          paid: '#10b981',
-                          draft: '#6b7280',
-                          cancelled: '#ef4444'
-                        };
-                        const statusLabels = {
-                          pending: 'Pending Approval',
-                          approved: 'Approved',
-                          paid: 'Paid',
-                          draft: 'Draft',
-                          cancelled: 'Cancelled'
-                        };
-                        
-                        return (
-                          <div key={status} className="status-item">
-                            <div 
-                              className="status-dot" 
-                              style={{ backgroundColor: statusColors[status as keyof typeof statusColors] || '#6b7280' }}
-                            ></div>
-                            <div className="status-info">
-                              <div className="status-label">{statusLabels[status as keyof typeof statusLabels] || status}</div>
-                              <div className="status-count">{count} expense{count !== 1 ? 's' : ''}</div>
-                            </div>
+                        </td>
+                        <td style={{
+                          textAlign: 'left',
+                          padding: '1rem'
+                        }}>
+                          <div style={{
+                            fontWeight: '500',
+                            color: '#111827'
+                          }}>
+                            {expense.property_name}
                           </div>
-                        );
-                      })
-                    ) : (
-                      <div className="no-data">
-                        <p>No expense status data</p>
-                        <small>Add expenses to see status breakdown</small>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="analytics-card">
-                  <h3 className="analytics-title">Key Insights</h3>
-                  <div className="insights-list">
-                    <div className="insight-item positive">
-                      <div className="insight-icon">↗</div>
-                      <div className="insight-text">Collection rate improved by 2.1% this month</div>
-                    </div>
-                    
-                    {expenseAnalytics.insights.map((insight, index) => (
-                      <div key={index} className={`insight-item ${insight.type}`}>
-                        <div className="insight-icon">{insight.icon}</div>
-                        <div className="insight-text">{insight.text}</div>
-                      </div>
+                        </td>
+                        <td style={{
+                          textAlign: 'left',
+                          padding: '1rem'
+                        }}>
+                          <span style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            padding: '0.25rem 0.75rem',
+                            borderRadius: '6px',
+                            fontSize: '0.75rem',
+                            fontWeight: '600',
+                            backgroundColor: '#e0e7ff',
+                            color: '#3730a3'
+                          }}>
+                            {expense.vendor_type || 'General'}
+                          </span>
+                        </td>
+                        <td style={{
+                          textAlign: 'left',
+                          padding: '1rem'
+                        }}>
+                          <div style={{
+                            fontWeight: '500',
+                            color: '#111827'
+                          }}>
+                            {expense.title}
+                          </div>
+                        </td>
+                        <td style={{
+                          textAlign: 'left',
+                          padding: '1rem'
+                        }}>
+                          <div style={{
+                            fontWeight: '500',
+                            color: '#6b7280'
+                          }}>
+                            {expense.effective_vendor_name}
+                          </div>
+                        </td>
+                        <td style={{
+                          textAlign: 'center',
+                          padding: '1rem'
+                        }}>
+                          <div style={{
+                            fontWeight: '600',
+                            color: '#dc2626'
+                          }}>
+                            {formatCurrency(parseFloat(expense.amount))}
+                          </div>
+                        </td>
+                        <td style={{
+                          textAlign: 'center',
+                          padding: '1rem'
+                        }}>
+                          <span style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            padding: '0.25rem 0.75rem',
+                            borderRadius: '6px',
+                            fontSize: '0.75rem',
+                            fontWeight: '600',
+                            backgroundColor: expense.status === 'paid' ? '#d1fae5' : 
+                                           expense.status === 'approved' ? '#dbeafe' : '#fef3c7',
+                            color: expense.status === 'paid' ? '#065f46' : 
+                                   expense.status === 'approved' ? '#1e40af' : '#92400e'
+                          }}>
+                            {expense.status === 'paid' && '✓ Paid'}
+                            {expense.status === 'approved' && '○ Approved'}
+                            {expense.status === 'pending' && '⚠ Pending'}
+                          </span>
+                        </td>
+                        <td style={{
+                          textAlign: 'center',
+                          padding: '1rem'
+                        }}>
+                          <div style={{
+                            display: 'flex',
+                            justifyContent: 'center',
+                            gap: '0.5rem'
+                          }}>
+                            {expense.status === 'pending' && (
+                              <>
+                                <button 
+                                  onClick={() => handleExpenseAction(expense, 'approve')}
+                                  disabled={expenseLoading}
+                                  style={{
+                                    padding: '0.25rem 0.75rem',
+                                    backgroundColor: '#16a34a',
+                                    border: '1px solid #16a34a',
+                                    borderRadius: '4px',
+                                    fontSize: '0.75rem',
+                                    fontWeight: '500',
+                                    color: 'white',
+                                    cursor: expenseLoading ? 'not-allowed' : 'pointer',
+                                    opacity: expenseLoading ? 0.5 : 1,
+                                    transition: 'all 0.2s ease'
+                                  }}
+                                  onMouseOver={(e) => {
+                                    if (!expenseLoading) {
+                                      e.currentTarget.style.backgroundColor = '#15803d';
+                                    }
+                                  }}
+                                  onMouseOut={(e) => {
+                                    if (!expenseLoading) {
+                                      e.currentTarget.style.backgroundColor = '#16a34a';
+                                    }
+                                  }}
+                                >
+                                  Approve
+                                </button>
+                                <button 
+                                  onClick={() => handleEditExpense(expense)}
+                                  style={{
+                                    padding: '0.25rem 0.75rem',
+                                    backgroundColor: '#f8fafc',
+                                    border: '1px solid #e2e8f0',
+                                    borderRadius: '4px',
+                                    fontSize: '0.75rem',
+                                    fontWeight: '500',
+                                    color: '#475569',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease'
+                                  }}
+                                  onMouseOver={(e) => {
+                                    e.currentTarget.style.backgroundColor = '#f1f5f9';
+                                  }}
+                                  onMouseOut={(e) => {
+                                    e.currentTarget.style.backgroundColor = '#f8fafc';
+                                  }}
+                                >
+                                  Edit
+                                </button>
+                              </>
+                            )}
+                            {expense.status === 'approved' && (
+                              <>
+                                <button 
+                                  onClick={() => handleExpenseAction(expense, 'pay')}
+                                  disabled={expenseLoading}
+                                  style={{
+                                    padding: '0.25rem 0.75rem',
+                                    backgroundColor: '#2563eb',
+                                    border: '1px solid #2563eb',
+                                    borderRadius: '4px',
+                                    fontSize: '0.75rem',
+                                    fontWeight: '500',
+                                    color: 'white',
+                                    cursor: expenseLoading ? 'not-allowed' : 'pointer',
+                                    opacity: expenseLoading ? 0.5 : 1,
+                                    transition: 'all 0.2s ease'
+                                  }}
+                                  onMouseOver={(e) => {
+                                    if (!expenseLoading) {
+                                      e.currentTarget.style.backgroundColor = '#1d4ed8';
+                                    }
+                                  }}
+                                  onMouseOut={(e) => {
+                                    if (!expenseLoading) {
+                                      e.currentTarget.style.backgroundColor = '#2563eb';
+                                    }
+                                  }}
+                                >
+                                  Pay
+                                </button>
+                                <button 
+                                  onClick={() => handleEditExpense(expense)}
+                                  style={{
+                                    padding: '0.25rem 0.75rem',
+                                    backgroundColor: '#f8fafc',
+                                    border: '1px solid #e2e8f0',
+                                    borderRadius: '4px',
+                                    fontSize: '0.75rem',
+                                    fontWeight: '500',
+                                    color: '#475569',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease'
+                                  }}
+                                  onMouseOver={(e) => {
+                                    e.currentTarget.style.backgroundColor = '#f1f5f9';
+                                  }}
+                                  onMouseOut={(e) => {
+                                    e.currentTarget.style.backgroundColor = '#f8fafc';
+                                  }}
+                                >
+                                  Edit
+                                </button>
+                              </>
+                            )}
+                            {expense.status === 'paid' && (
+                              <button 
+                                onClick={() => handleEditExpense(expense)}
+                                style={{
+                                  padding: '0.25rem 0.75rem',
+                                  backgroundColor: '#f8fafc',
+                                  border: '1px solid #e2e8f0',
+                                  borderRadius: '4px',
+                                  fontSize: '0.75rem',
+                                  fontWeight: '500',
+                                  color: '#475569',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.2s ease'
+                                }}
+                                onMouseOver={(e) => {
+                                  e.currentTarget.style.backgroundColor = '#f1f5f9';
+                                }}
+                                onMouseOut={(e) => {
+                                  e.currentTarget.style.backgroundColor = '#f8fafc';
+                                }}
+                              >
+                                View
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
                     ))}
-                    
-                    {expenseAnalytics.totalExpenses > 0 && (
-                      <div className="insight-item neutral">
-                        <div className="insight-icon">💰</div>
-                        <div className="insight-text">
-                          Total expenses: {formatCurrency(expenseAnalytics.totalExpenses)} across {Object.keys(expenseAnalytics.expensesByCategory).length} categories
-                        </div>
-                      </div>
-                    )}
-                    
-                    <div className="insight-item positive">
-                      <div className="insight-icon">✓</div>
-                      <div className="insight-text">Sunset Gardens has highest profitability</div>
-                    </div>
-                    <div className="insight-item neutral">
-                      <div className="insight-icon">○</div>
-                      <div className="insight-text">Average rent increase opportunity: 3-5%</div>
-                    </div>
-                  </div>
-                </div>
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>

@@ -2,6 +2,25 @@ import React, { useState } from 'react';
 import StatusBadge from './StatusBadge';
 import StatusProgressIndicator from './StatusProgressIndicator';
 import { Application } from '../lib/types';
+import { 
+  FileText, 
+  Clock, 
+  CheckCircle, 
+  Calendar, 
+  ArrowUpDown, 
+  SortAsc, 
+  Users, 
+  Eye, 
+  UserCheck, 
+  X, 
+  Play, 
+  FileCheck, 
+  Home, 
+  Edit, 
+  Send, 
+  Download, 
+  Trash2 
+} from 'lucide-react';
 
 interface ApplicationKanbanProps {
   applications: Application[];
@@ -226,59 +245,224 @@ export default function ApplicationKanban({
   });
 
   return (
-    <div className="kanban-container">
-      {/* Header with View Toggle */}
-      <div className="kanban-header">
-        <div className="header-content">
-          <h2 className="kanban-title">Application Journey Board</h2>
-          <p className="kanban-description">
-            Track each applicant&apos;s progress from initial review to becoming an active tenant. 
+    <div style={{
+      backgroundColor: 'white',
+      borderRadius: '12px',
+      padding: '1.5rem',
+      border: '1px solid #e5e7eb',
+      boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+      marginBottom: '2rem',
+      transition: 'all 0.2s ease'
+    }}
+    onMouseOver={(e) => {
+      e.currentTarget.style.transform = 'translateY(-2px)';
+      e.currentTarget.style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.1)';
+    }}
+    onMouseOut={(e) => {
+      e.currentTarget.style.transform = 'translateY(0)';
+      e.currentTarget.style.boxShadow = '0 1px 3px 0 rgba(0, 0, 0, 0.1)';
+    }}>
+      {/* Modern Header */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        marginBottom: '2rem'
+      }}>
+        <div>
+          <h2 style={{
+            fontSize: '1.25rem',
+            fontWeight: '700',
+            color: '#111827',
+            margin: '0 0 0.25rem 0'
+          }}>
+            Application Journey Board
+          </h2>
+          <p style={{
+            fontSize: '0.875rem',
+            color: '#6b7280',
+            margin: 0,
+            lineHeight: 1.5
+          }}>
+            Track each applicant's progress from initial review to becoming an active tenant. 
             Drag applications through stages or use action buttons to advance them in the rental process.
           </p>
         </div>
         {extraActions && (
-          <div className="header-actions">
+          <div style={{
+            display: 'flex',
+            gap: '0.75rem',
+            alignItems: 'center'
+          }}>
             {extraActions}
           </div>
         )}
       </div>
       
-      {/* Render Current View */}
-      <div className="kanban-board">
+      {/* Modern Kanban Board */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+        gap: '1.5rem',
+        overflowX: 'auto'
+      }}>
         {STATUS_COLUMNS.map((col) => (
-          <div key={col.title} className="kanban-column">
-            <div className="kanban-column-header">
-              <div className="column-header-content">
-                <span className="column-title">
+          <div key={col.title} style={{
+            backgroundColor: '#f8fafc',
+            borderRadius: '8px',
+            border: '1px solid #e5e7eb',
+            minHeight: '400px',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            <div style={{
+              padding: '1rem',
+              borderBottom: '1px solid #e5e7eb',
+              backgroundColor: '#ffffff',
+              borderRadius: '8px 8px 0 0',
+              minHeight: '120px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between'
+            }}>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '0.5rem'
+              }}>
+                <span style={{
+                  fontSize: '0.875rem',
+                  fontWeight: '600',
+                  color: '#111827'
+                }}>
                   {col.title} ({grouped[col.title]?.length || 0})
                 </span>
                 <button
-                  className="sort-toggle-btn"
                   onClick={() => toggleSort(col.title)}
                   title={getSortLabel(sortSettings[col.title] || 'default')}
+                  style={{
+                    padding: '0.25rem',
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    color: '#6b7280',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.backgroundColor = '#f3f4f6';
+                    e.currentTarget.style.color = '#374151';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.color = '#6b7280';
+                  }}
                 >
                   {getSortIcon(sortSettings[col.title] || 'default')}
                 </button>
               </div>
-              <div className="stage-description">
+              <div style={{
+                fontSize: '0.75rem',
+                color: '#6b7280',
+                lineHeight: 1.4,
+                flex: 1
+              }}>
                 {getStageDescription(col.title)}
               </div>
             </div>
-            <div className="kanban-column-body">
+            <div style={{
+              padding: '1rem',
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.75rem'
+            }}>
               {(grouped[col.title] || []).length === 0 ? (
-                <div className="kanban-empty">No items</div>
+                <div style={{
+                  textAlign: 'center',
+                  padding: '2rem 1rem',
+                  color: '#9ca3af',
+                  fontSize: '0.875rem',
+                  fontStyle: 'italic'
+                }}>
+                  No items
+                </div>
               ) : (
                 grouped[col.title].map((app) => (
-                  <div key={app.id} className={`kanban-card ${getCardColorClass(app.status)}`}>
-                    <div className="card-top">
-                      <div className="applicant-name" onClick={() => onReview(app)}>
+                  <div key={app.id} style={{
+                    backgroundColor: 'white',
+                    borderRadius: '8px',
+                    border: '1px solid #e5e7eb',
+                    padding: '1rem',
+                    boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+                    transition: 'all 0.2s ease',
+                    cursor: 'pointer'
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 1px 3px 0 rgba(0, 0, 0, 0.1)';
+                  }}>
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'flex-start',
+                      marginBottom: '0.75rem'
+                    }}>
+                      <div 
+                        onClick={() => onReview(app)}
+                        style={{
+                          fontSize: '0.875rem',
+                          fontWeight: '600',
+                          color: '#111827',
+                          cursor: 'pointer',
+                          transition: 'color 0.2s ease'
+                        }}
+                        onMouseOver={(e) => e.currentTarget.style.color = '#2563eb'}
+                        onMouseOut={(e) => e.currentTarget.style.color = '#111827'}
+                      >
                         {app.tenant_name || `Applicant #${app.id}`}
                       </div>
                       <StatusBadge status={app.status} small />
                     </div>
-                    <div className="app-prop">{getPropertyName(app.property_ref)}</div>
-                    <div className="app-dates">Applied: {formatDate(app.application_date)}</div>
-                    <div className="app-status-text">
+                    <div style={{
+                      fontSize: '0.75rem',
+                      color: '#6b7280',
+                      marginBottom: '0.5rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.25rem'
+                    }}>
+                      <Home style={{ width: '0.75rem', height: '0.75rem' }} />
+                      {getPropertyName(app.property_ref)}
+                    </div>
+                    <div style={{
+                      fontSize: '0.75rem',
+                      color: '#6b7280',
+                      marginBottom: '0.75rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.25rem'
+                    }}>
+                      <Calendar style={{ width: '0.75rem', height: '0.75rem' }} />
+                      Applied: {formatDate(app.application_date)}
+                    </div>
+                    <div style={{
+                      fontSize: '0.75rem',
+                      fontWeight: '500',
+                      color: '#1e40af',
+                      marginBottom: '1rem',
+                      padding: '0.5rem',
+                      backgroundColor: '#eff6ff',
+                      borderRadius: '6px',
+                      border: '1px solid #bfdbfe',
+                      textAlign: 'center',
+                      boxShadow: '0 1px 2px rgba(59, 130, 246, 0.1)'
+                    }}>
                       {app.status === 'pending' && 'Awaiting Review'}
                       {app.status === 'approved' && 'Shortlisted'}
                       {app.status === 'rejected' && 'Application Rejected'}
@@ -298,17 +482,79 @@ export default function ApplicationKanban({
                       {app.status === 'moved_in' && 'Tenant Moved In'}
                       {app.status === 'active' && 'Active Tenant'}
                     </div>
-                    <div className="kanban-actions">
+                    <div style={{
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: '0.5rem',
+                      marginTop: 'auto'
+                    }}>
                       {/* Pending actions */}
                       {app.status === 'pending' && (
                         <>
-                          <button className="btn-sm primary" onClick={() => onReview(app)}>
+                          <button 
+                            onClick={() => onReview(app)}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.375rem',
+                              padding: '0.375rem 0.75rem',
+                              backgroundColor: '#2563eb',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              fontSize: '0.75rem',
+                              fontWeight: '500',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease'
+                            }}
+                            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
+                            onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+                          >
+                            <Eye style={{ width: '0.75rem', height: '0.75rem' }} />
                             Review
                           </button>
-                          <button className="btn-sm success" onClick={() => onQualify && onQualify(app.id)}>
+                          <button 
+                            onClick={() => onQualify && onQualify(app.id)}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.375rem',
+                              padding: '0.375rem 0.75rem',
+                              backgroundColor: '#059669',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              fontSize: '0.75rem',
+                              fontWeight: '500',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease'
+                            }}
+                            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#047857'}
+                            onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#059669'}
+                          >
+                            <UserCheck style={{ width: '0.75rem', height: '0.75rem' }} />
                             Shortlist
                           </button>
-                          <button className="btn-sm btn-error" onClick={() => onReject(app.id)}>
+                          <button 
+                            onClick={() => onReject(app.id)}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.375rem',
+                              padding: '0.375rem 0.75rem',
+                              backgroundColor: '#dc2626',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              fontSize: '0.75rem',
+                              fontWeight: '500',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease'
+                            }}
+                            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#b91c1c'}
+                            onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
+                          >
+                            <X style={{ width: '0.75rem', height: '0.75rem' }} />
                             Reject
                           </button>
                         </>
@@ -318,13 +564,48 @@ export default function ApplicationKanban({
                       {app.status === 'rejected' && (
                         <>
                           <button 
-                            className="btn-sm success" 
                             onClick={() => onQualify && onQualify(app.id)}
                             title="Restore application to pending status for fresh review"
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.375rem',
+                              padding: '0.375rem 0.75rem',
+                              backgroundColor: '#059669',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              fontSize: '0.75rem',
+                              fontWeight: '500',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease'
+                            }}
+                            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#047857'}
+                            onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#059669'}
                           >
+                            <CheckCircle style={{ width: '0.75rem', height: '0.75rem' }} />
                             Undo
                           </button>
-                          <button className="btn-sm primary" onClick={() => onReview(app)}>
+                          <button 
+                            onClick={() => onReview(app)}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.375rem',
+                              padding: '0.375rem 0.75rem',
+                              backgroundColor: '#2563eb',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              fontSize: '0.75rem',
+                              fontWeight: '500',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease'
+                            }}
+                            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
+                            onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+                          >
+                            <Eye style={{ width: '0.75rem', height: '0.75rem' }} />
                             Review Details
                           </button>
                         </>

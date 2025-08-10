@@ -8,6 +8,7 @@ import { apiClient } from '../../lib/api';
 import { Lease, Tenant, Property, Room } from '../../lib/types';
 import { formatCurrency } from '../../lib/utils';
 import LeaseSigningActions from '../../components/LeaseSigningActions';
+import { ArrowLeft, FileText, Home, User, Calendar } from 'lucide-react';
 
 function LeaseDetail() {
   const router = useRouter();
@@ -264,315 +265,1183 @@ function LeaseDetail() {
       
       <DashboardLayout title="">
         <div className="dashboard-container">
-          {/* Header */}
-          <div className="dashboard-header">
-            <div className="header-content">
-              <div className="header-left">
-                <h1 className="dashboard-title">Lease #{lease.id}</h1>
-                <div className="subtitle-container">
-                  <p className="welcome-message">
-                    {tenant?.full_name || 'Unknown Tenant'} • {property?.name || 'Unknown Property'}
-                    {room && ` • ${room.name}`}
-                  </p>
+          {/* Modern Title Section */}
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            border: '1px solid #e5e7eb',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+            marginBottom: '2rem',
+            marginTop: '1.5rem',
+            transition: 'all 0.2s ease'
+          }}
+          onMouseOver={(e) => {
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+            e.currentTarget.style.transform = 'translateY(-1px)';
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+            e.currentTarget.style.transform = 'translateY(0)';
+          }}>
+            <div style={{
+              padding: '1.5rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '1rem'
+              }}>
+                <Link href="/leases" style={{ textDecoration: 'none' }}>
+                  <button
+                    style={{
+                      width: '2.5rem',
+                      height: '2.5rem',
+                      backgroundColor: '#f3f4f6',
+                      border: 'none',
+                      borderRadius: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#e5e7eb'}
+                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+                  >
+                    <ArrowLeft style={{ width: '1.25rem', height: '1.25rem', color: '#6b7280' }} />
+                  </button>
+                </Link>
+                <div style={{
+                  width: '3rem',
+                  height: '3rem',
+                  backgroundColor: '#3b82f6',
+                  borderRadius: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
+                }}>
+                  <FileText style={{ width: '1.5rem', height: '1.5rem', color: 'white' }} />
+                </div>
+                <div>
+                  <h1 style={{
+                    fontSize: '1.875rem',
+                    fontWeight: '700',
+                    color: '#111827',
+                    margin: 0,
+                    marginBottom: '0.25rem'
+                  }}>Lease #{lease.id}</h1>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    fontSize: '0.875rem',
+                    color: '#6b7280'
+                  }}>
+                    <User style={{ width: '1rem', height: '1rem' }} />
+                    {tenant?.full_name || 'Unknown Tenant'}
+                    <span style={{ color: '#d1d5db' }}>•</span>
+                    <Home style={{ width: '1rem', height: '1rem' }} />
+                    {property?.name || 'Unknown Property'}
+                    {room && (
+                      <>
+                        <span style={{ color: '#d1d5db' }}>•</span>
+                        {room.name}
+                      </>
+                    )}
+              </div>
                 </div>
               </div>
-              <div className="header-right">
-                <Link href="/leases" legacyBehavior>
-                  <a className="back-btn">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M19 12H5m7 7l-7-7 7-7"/>
-                    </svg>
-                    Back
-                  </a>
-                </Link>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem'
+              }}>
                 {lease.status === 'draft' && (
                   <>
-                    <button onClick={() => setShowEditModal(true)} className="btn btn-secondary">
+                    <button
+                      onClick={() => setShowEditModal(true)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        padding: '0.5rem 1rem',
+                        backgroundColor: '#f8fafc',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '8px',
+                        fontSize: '0.875rem',
+                        fontWeight: '500',
+                        color: '#475569',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.backgroundColor = '#f1f5f9';
+                        e.currentTarget.style.borderColor = '#cbd5e1';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.backgroundColor = '#f8fafc';
+                        e.currentTarget.style.borderColor = '#e2e8f0';
+                      }}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                      </svg>
                       Edit Lease
                     </button>
-                    <button onClick={handleDownloadLease} className="btn btn-outline">
-                      Download Lease
+                    <button
+                      onClick={handleDownloadLease}
+                  style={{ 
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        padding: '0.5rem 1rem',
+                        backgroundColor: '#f8fafc',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '8px',
+                        fontSize: '0.875rem',
+                        fontWeight: '500',
+                        color: '#475569',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.backgroundColor = '#f1f5f9';
+                        e.currentTarget.style.borderColor = '#cbd5e1';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.backgroundColor = '#f8fafc';
+                        e.currentTarget.style.borderColor = '#e2e8f0';
+                      }}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="7,10 12,15 17,10"/>
+                        <line x1="12" y1="15" x2="12" y2="3"/>
+                      </svg>
+                      Download
                     </button>
                   </>
                 )}
-                <div 
-                  className="status-badge" 
-                  style={{ 
-                    backgroundColor: getLeaseStatusBackground(lease.status),
-                    color: getLeaseStatusColor(lease.status)
-                  }}
-                >
+                <div style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  padding: '0.375rem 0.875rem',
+                  borderRadius: '9999px',
+                  fontSize: '0.8125rem',
+                  fontWeight: '600',
+                  backgroundColor: 
+                    lease.status === 'draft' ? '#fef3c7' :
+                    lease.status === 'sent_to_tenant' ? '#dbeafe' :
+                    lease.status === 'signed' ? '#d1fae5' :
+                    lease.status === 'active' ? '#dcfce7' : '#f3f4f6',
+                  color:
+                    lease.status === 'draft' ? '#92400e' :
+                    lease.status === 'sent_to_tenant' ? '#1d4ed8' :
+                    lease.status === 'signed' ? '#065f46' :
+                    lease.status === 'active' ? '#166534' : '#6b7280'
+                }}>
                   {lease.status?.replace('_', ' ').toUpperCase()}
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Metrics */}
-          <div className="metrics-grid">
-            <div className="metric-card">
-              <div className="metric-header">
-                <div className="metric-info">
-                  <h3 className="metric-title">Monthly Rent</h3>
-                  <div className="metric-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          {/* Main Layout - 3:1 Grid */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '3fr 1fr',
+            gap: '2rem',
+            alignItems: 'start'
+          }}>
+            {/* Left Side - 3 Columns */}
+            <div>
+              {/* Metric Cards - 3 Columns */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(3, 1fr)',
+                gap: '1.5rem',
+                marginBottom: '2rem'
+              }}>
+                {/* Monthly Rent Card */}
+                <div style={{
+                  backgroundColor: 'white',
+                  borderRadius: '12px',
+                  padding: '1.5rem',
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                  border: '1px solid #e5e7eb',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: '1rem'
+                  }}>
+                    <h3 style={{
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: '#6b7280',
+                      margin: 0,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em'
+                    }}>Monthly Rent</h3>
+                    <div style={{
+                      width: '2rem',
+                      height: '2rem',
+                      backgroundColor: '#10b981',
+                      borderRadius: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
                       <line x1="12" y1="1" x2="12" y2="23"/>
                       <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
                     </svg>
                   </div>
                 </div>
-              </div>
-              <div className="metric-content">
-                <div className="metric-value">{formatCurrency(lease.monthly_rent)}</div>
-                <div className="metric-subtitle">per month</div>
+                  <div>
+                    <div style={{
+                      fontSize: '1.875rem',
+                      fontWeight: '700',
+                      color: '#111827',
+                      marginBottom: '0.25rem'
+                    }}>{formatCurrency(lease.monthly_rent)}</div>
+                    <div style={{
+                      fontSize: '0.875rem',
+                      color: '#6b7280'
+                    }}>per month</div>
               </div>
             </div>
 
-            <div className="metric-card">
-              <div className="metric-header">
-                <div className="metric-info">
-                  <h3 className="metric-title">Security Deposit</h3>
-                  <div className="metric-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                {/* Security Deposit Card */}
+                <div style={{
+                  backgroundColor: 'white',
+                  borderRadius: '12px',
+                  padding: '1.5rem',
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                  border: '1px solid #e5e7eb',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: '1rem'
+                  }}>
+                    <h3 style={{
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: '#6b7280',
+                      margin: 0,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em'
+                    }}>Security Deposit</h3>
+                    <div style={{
+                      width: '2rem',
+                      height: '2rem',
+                      backgroundColor: '#f59e0b',
+                      borderRadius: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
                       <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
                       <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                     </svg>
                   </div>
                 </div>
-              </div>
-              <div className="metric-content">
-                <div className="metric-value">{formatCurrency(lease.security_deposit)}</div>
-                <div className="metric-subtitle">security deposit</div>
+                  <div>
+                    <div style={{
+                      fontSize: '1.875rem',
+                      fontWeight: '700',
+                      color: '#111827',
+                      marginBottom: '0.25rem'
+                    }}>{formatCurrency(lease.security_deposit)}</div>
+                    <div style={{
+                      fontSize: '0.875rem',
+                      color: '#6b7280'
+                    }}>security deposit</div>
               </div>
             </div>
 
-            <div className="metric-card">
-              <div className="metric-header">
-                <div className="metric-info">
-                  <h3 className="metric-title">Days Remaining</h3>
-                  <div className="metric-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                {/* Days Remaining Card */}
+                <div style={{
+                  backgroundColor: 'white',
+                  borderRadius: '12px',
+                  padding: '1.5rem',
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                  border: '1px solid #e5e7eb',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: '1rem'
+                  }}>
+                    <h3 style={{
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: '#6b7280',
+                      margin: 0,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em'
+                    }}>Days Remaining</h3>
+                    <div style={{
+                      width: '2rem',
+                      height: '2rem',
+                      backgroundColor: '#3b82f6',
+                      borderRadius: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
                       <circle cx="12" cy="12" r="10"/>
                       <polyline points="12 6 12 12 16 14"/>
                     </svg>
                   </div>
                 </div>
-              </div>
-              <div className="metric-content">
-                <div className="metric-value">{getDaysRemaining()}</div>
-                <div className="metric-subtitle">days until expiry</div>
+                  <div>
+                    <div style={{
+                      fontSize: '1.875rem',
+                      fontWeight: '700',
+                      color: '#111827',
+                      marginBottom: '0.25rem'
+                    }}>{getDaysRemaining()}</div>
+                    <div style={{
+                      fontSize: '0.875rem',
+                      color: '#6b7280'
+                    }}>days until expiry</div>
               </div>
             </div>
           </div>
 
-          {/* Main Content */}
-          <div className="main-content-grid">
-            <div className="left-column">
-              {/* Lease Information */}
-              <div className="info-section">
-                <div className="section-header">
+              {/* Content Sections - Full Width Stacked */}
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '1.5rem'
+              }}>
+                {/* Lease Information - Full Width */}
+                <div style={{
+                  backgroundColor: 'white',
+                  borderRadius: '12px',
+                  padding: '1.5rem',
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                  border: '1px solid #e5e7eb',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}>
+                  <div style={{
+                    borderBottom: '1px solid #e5e7eb',
+                    paddingBottom: '1rem',
+                    marginBottom: '1.5rem'
+                  }}>
+                    <h2 style={{
+                      fontSize: '1.25rem',
+                      fontWeight: '700',
+                      color: '#111827',
+                      margin: 0,
+                      marginBottom: '0.25rem'
+                    }}>Lease Information</h2>
+                    <p style={{
+                      fontSize: '0.875rem',
+                      color: '#6b7280',
+                      margin: 0
+                    }}>Agreement details and terms</p>
+                  </div>
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(4, 1fr)',
+                    gap: '1.5rem'
+                  }}>
                   <div>
-                    <h2 className="section-title">Lease Information</h2>
-                    <p className="section-subtitle">Agreement details and terms</p>
+                      <div style={{
+                        fontSize: '0.875rem',
+                        fontWeight: '600',
+                        color: '#374151',
+                        marginBottom: '0.25rem'
+                      }}>Lease ID</div>
+                      <div style={{
+                        fontSize: '1rem',
+                        color: '#111827'
+                      }}>#{lease.id}</div>
                   </div>
-                </div>
-                <div className="info-grid">
-                  <div className="info-item">
-                    <strong>Lease ID</strong>
-                    <div className="info-value">#{lease.id}</div>
-                  </div>
-                  <div className="info-item">
-                    <strong>Status</strong>
-                    <div className="info-value">
-                      <span 
-                        className="status-badge-small" 
-                        style={{ 
-                          backgroundColor: getLeaseStatusBackground(lease.status),
-                          color: getLeaseStatusColor(lease.status)
-                        }}
-                      >
+                    <div>
+                      <div style={{
+                        fontSize: '0.875rem',
+                        fontWeight: '600',
+                        color: '#374151',
+                        marginBottom: '0.25rem'
+                      }}>Status</div>
+                      <div style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        padding: '0.25rem 0.75rem',
+                        borderRadius: '9999px',
+                        fontSize: '0.75rem',
+                        fontWeight: '600',
+                        backgroundColor: 
+                          lease.status === 'draft' ? '#fef3c7' :
+                          lease.status === 'sent_to_tenant' ? '#dbeafe' :
+                          lease.status === 'signed' ? '#d1fae5' :
+                          lease.status === 'active' ? '#dcfce7' : '#f3f4f6',
+                        color:
+                          lease.status === 'draft' ? '#92400e' :
+                          lease.status === 'sent_to_tenant' ? '#1d4ed8' :
+                          lease.status === 'signed' ? '#065f46' :
+                          lease.status === 'active' ? '#166534' : '#6b7280'
+                      }}>
                         {lease.status?.replace('_', ' ')}
-                      </span>
+                </div>
+                  </div>
+                    <div>
+                      <div style={{
+                        fontSize: '0.875rem',
+                        fontWeight: '600',
+                        color: '#374151',
+                        marginBottom: '0.25rem'
+                      }}>Start Date</div>
+                      <div style={{
+                        fontSize: '1rem',
+                        color: '#111827'
+                      }}>{formatDate(lease.start_date)}</div>
                     </div>
+                    <div>
+                      <div style={{
+                        fontSize: '0.875rem',
+                        fontWeight: '600',
+                        color: '#374151',
+                        marginBottom: '0.25rem'
+                      }}>End Date</div>
+                      <div style={{
+                        fontSize: '1rem',
+                        color: '#111827'
+                      }}>{formatDate(lease.end_date)}</div>
                   </div>
-                  <div className="info-item">
-                    <strong>Start Date</strong>
-                    <div className="info-value">{formatDate(lease.start_date)}</div>
+                    <div>
+                      <div style={{
+                        fontSize: '0.875rem',
+                        fontWeight: '600',
+                        color: '#374151',
+                        marginBottom: '0.25rem'
+                      }}>Monthly Rent</div>
+                      <div style={{
+                        fontSize: '1rem',
+                        color: '#111827'
+                      }}>{formatCurrency(lease.monthly_rent)}</div>
                   </div>
-                  <div className="info-item">
-                    <strong>End Date</strong>
-                    <div className="info-value">{formatDate(lease.end_date)}</div>
+                    <div>
+                      <div style={{
+                        fontSize: '0.875rem',
+                        fontWeight: '600',
+                        color: '#374151',
+                        marginBottom: '0.25rem'
+                      }}>Security Deposit</div>
+                      <div style={{
+                        fontSize: '1rem',
+                        color: '#111827'
+                      }}>{formatCurrency(lease.security_deposit)}</div>
                   </div>
-                  <div className="info-item">
-                    <strong>Monthly Rent</strong>
-                    <div className="info-value">{formatCurrency(lease.monthly_rent)}</div>
+                    <div>
+                      <div style={{
+                        fontSize: '0.875rem',
+                        fontWeight: '600',
+                        color: '#374151',
+                        marginBottom: '0.25rem'
+                      }}>Lease Term</div>
+                      <div style={{
+                        fontSize: '1rem',
+                        color: '#111827'
+                      }}>{getDaysRemaining()} days remaining</div>
                   </div>
-                  <div className="info-item">
-                    <strong>Security Deposit</strong>
-                    <div className="info-value">{formatCurrency(lease.security_deposit)}</div>
+                    <div>
+                      <div style={{
+                        fontSize: '0.875rem',
+                        fontWeight: '600',
+                        color: '#374151',
+                        marginBottom: '0.25rem'
+                      }}>Created</div>
+                      <div style={{
+                        fontSize: '1rem',
+                        color: '#111827'
+                      }}>{lease.created_at ? formatDate(lease.created_at) : 'N/A'}</div>
                   </div>
                 </div>
               </div>
 
-              {/* Tenant Information */}
-              <div className="info-section">
-                <div className="section-header">
+                {/* Tenant Information - Full Width */}
+                <div style={{
+                  backgroundColor: 'white',
+                  borderRadius: '12px',
+                  padding: '1.5rem',
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                  border: '1px solid #e5e7eb',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}>
+                  <div style={{
+                    borderBottom: '1px solid #e5e7eb',
+                    paddingBottom: '1rem',
+                    marginBottom: '1.5rem'
+                  }}>
+                    <h2 style={{
+                      fontSize: '1.25rem',
+                      fontWeight: '700',
+                      color: '#111827',
+                      margin: 0,
+                      marginBottom: '0.25rem'
+                    }}>Tenant Information</h2>
+                    <p style={{
+                      fontSize: '0.875rem',
+                      color: '#6b7280',
+                      margin: 0
+                    }}>Contact details and personal information</p>
+                  </div>
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(4, 1fr)',
+                    gap: '1.5rem'
+                  }}>
                   <div>
-                    <h2 className="section-title">Tenant Information</h2>
-                    <p className="section-subtitle">Contact details and personal information</p>
+                      <div style={{
+                        fontSize: '0.875rem',
+                        fontWeight: '600',
+                        color: '#374151',
+                        marginBottom: '0.25rem'
+                      }}>Full Name</div>
+                      <div style={{
+                        fontSize: '1rem',
+                        color: '#111827'
+                      }}>{tenant?.full_name || 'Unknown Tenant'}</div>
                   </div>
+                    <div>
+                      <div style={{
+                        fontSize: '0.875rem',
+                        fontWeight: '600',
+                        color: '#374151',
+                        marginBottom: '0.25rem'
+                      }}>Email Address</div>
+                      <div style={{
+                        fontSize: '1rem',
+                        color: '#3b82f6'
+                      }}>
+                        <a href={`mailto:${tenant?.email}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                          {tenant?.email || 'Not available'}
+                        </a>
                 </div>
-                <div className="info-grid">
-                  <div className="info-item">
-                    <strong>Full Name</strong>
-                    <div className="info-value">{tenant?.full_name || 'Unknown Tenant'}</div>
                   </div>
-                  <div className="info-item">
-                    <strong>Email Address</strong>
-                    <div className="info-value">
-                      <a href={`mailto:${tenant?.email}`}>{tenant?.email || 'Not available'}</a>
+                    <div>
+                      <div style={{
+                        fontSize: '0.875rem',
+                        fontWeight: '600',
+                        color: '#374151',
+                        marginBottom: '0.25rem'
+                      }}>Phone Number</div>
+                      <div style={{
+                        fontSize: '1rem',
+                        color: '#3b82f6'
+                      }}>
+                        <a href={`tel:${tenant?.phone}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                          {tenant?.phone || 'Not available'}
+                        </a>
                     </div>
                   </div>
-                  <div className="info-item">
-                    <strong>Phone Number</strong>
-                    <div className="info-value">
-                      <a href={`tel:${tenant?.phone}`}>{tenant?.phone || 'Not available'}</a>
+                    <div>
+                      <div style={{
+                        fontSize: '0.875rem',
+                        fontWeight: '600',
+                        color: '#374151',
+                        marginBottom: '0.25rem'
+                      }}>Tenant ID</div>
+                      <div style={{
+                        fontSize: '1rem',
+                        color: '#111827'
+                      }}>#{tenant?.id}</div>
                     </div>
+                    <div>
+                      <div style={{
+                        fontSize: '0.875rem',
+                        fontWeight: '600',
+                        color: '#374151',
+                        marginBottom: '0.25rem'
+                      }}>Created Date</div>
+                      <div style={{
+                        fontSize: '1rem',
+                        color: '#111827'
+                      }}>{tenant?.created_at ? formatDate(tenant.created_at) : 'Not available'}</div>
                   </div>
-                  <div className="info-item">
-                    <strong>Tenant ID</strong>
-                    <div className="info-value">#{tenant?.id}</div>
+                    <div>
+                      <div style={{
+                        fontSize: '0.875rem',
+                        fontWeight: '600',
+                        color: '#374151',
+                        marginBottom: '0.25rem'
+                      }}>Emergency Contact</div>
+                      <div style={{
+                        fontSize: '1rem',
+                        color: '#111827'
+                      }}>{tenant?.emergency_contact_name || 'Not provided'}</div>
                   </div>
+                    <div>
+                      <div style={{
+                        fontSize: '0.875rem',
+                        fontWeight: '600',
+                        color: '#374151',
+                        marginBottom: '0.25rem'
+                      }}>Emergency Phone</div>
+                      <div style={{
+                        fontSize: '1rem',
+                        color: '#3b82f6'
+                      }}>
+                        <a href={`tel:${tenant?.emergency_contact_phone}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                          {tenant?.emergency_contact_phone || 'Not provided'}
+                        </a>
                 </div>
               </div>
-
-              {/* Lease Timeline */}
-              <div className="info-section">
-                <div className="section-header">
                   <div>
-                    <h2 className="section-title">Lease Timeline</h2>
-                    <p className="section-subtitle">Workflow progress and key dates</p>
+                      <div style={{
+                        fontSize: '0.875rem',
+                        fontWeight: '600',
+                        color: '#374151',
+                        marginBottom: '0.25rem'
+                      }}>Current Address</div>
+                      <div style={{
+                        fontSize: '1rem',
+                        color: '#111827'
+                      }}>{tenant?.current_address || 'Not provided'}</div>
                   </div>
                 </div>
-                <div className="timeline">
-                  <div className={`timeline-item ${lease.created_at ? 'completed' : 'pending'}`}>
-                    <div className="timeline-marker"></div>
-                    <div className="timeline-content">
-                      <h4 className="timeline-title">Lease Created</h4>
-                      <p className="timeline-date">
+                </div>
+
+                {/* Lease Timeline - Full Width */}
+                <div style={{
+                  backgroundColor: 'white',
+                  borderRadius: '12px',
+                  padding: '1.5rem',
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                  border: '1px solid #e5e7eb',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}>
+                  <div style={{
+                    borderBottom: '1px solid #e5e7eb',
+                    paddingBottom: '1rem',
+                    marginBottom: '1.5rem'
+                  }}>
+                    <h2 style={{
+                      fontSize: '1.25rem',
+                      fontWeight: '700',
+                      color: '#111827',
+                      margin: 0,
+                      marginBottom: '0.25rem'
+                    }}>Lease Timeline</h2>
+                    <p style={{
+                      fontSize: '0.875rem',
+                      color: '#6b7280',
+                      margin: 0
+                    }}>Workflow progress and key dates</p>
+                  </div>
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(4, 1fr)',
+                    gap: '2rem'
+                  }}>
+                    <div style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      textAlign: 'center',
+                      padding: '1rem',
+                      backgroundColor: lease.created_at ? '#f0fdf4' : '#f9fafb',
+                      borderRadius: '12px',
+                      border: lease.created_at ? '2px solid #bbf7d0' : '2px solid #e5e7eb'
+                    }}>
+                      <div style={{
+                        width: '3rem',
+                        height: '3rem',
+                        borderRadius: '50%',
+                        backgroundColor: lease.created_at ? '#10b981' : '#d1d5db',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginBottom: '1rem'
+                      }}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                          <polyline points="14,2 14,8 20,8"/>
+                          <line x1="16" y1="13" x2="8" y2="13"/>
+                          <line x1="16" y1="17" x2="8" y2="17"/>
+                          <polyline points="10,9 9,9 8,9"/>
+                        </svg>
+                      </div>
+                      <div style={{
+                        fontSize: '0.875rem',
+                        fontWeight: '700',
+                        color: '#111827',
+                        marginBottom: '0.25rem'
+                      }}>Lease Created</div>
+                      <div style={{
+                        fontSize: '0.75rem',
+                        color: '#6b7280'
+                      }}>
                         {lease.created_at ? formatDate(lease.created_at) : 'Pending'}
-                      </p>
-                      <p className="timeline-description">Draft lease generated and ready for review</p>
                     </div>
                   </div>
                   
-                  <div className={`timeline-item ${lease.sent_to_tenant_at ? 'completed' : lease.status === 'draft' ? 'current' : 'pending'}`}>
-                    <div className="timeline-marker"></div>
-                    <div className="timeline-content">
-                      <h4 className="timeline-title">Sent to Tenant</h4>
-                      <p className="timeline-date">
+                    <div style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      textAlign: 'center',
+                      padding: '1rem',
+                      backgroundColor: lease.sent_to_tenant_at ? '#f0fdf4' : 
+                        lease.status === 'draft' ? '#eff6ff' : '#f9fafb',
+                      borderRadius: '12px',
+                      border: lease.sent_to_tenant_at ? '2px solid #bbf7d0' : 
+                        lease.status === 'draft' ? '2px solid #dbeafe' : '2px solid #e5e7eb'
+                    }}>
+                      <div style={{
+                        width: '3rem',
+                        height: '3rem',
+                        borderRadius: '50%',
+                        backgroundColor: lease.sent_to_tenant_at ? '#10b981' : 
+                          lease.status === 'draft' ? '#3b82f6' : '#d1d5db',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginBottom: '1rem'
+                      }}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                          <polyline points="22,6 12,13 2,6"/>
+                        </svg>
+                      </div>
+                      <div style={{
+                        fontSize: '0.875rem',
+                        fontWeight: '700',
+                        color: '#111827',
+                        marginBottom: '0.25rem'
+                      }}>Sent to Tenant</div>
+                      <div style={{
+                        fontSize: '0.75rem',
+                        color: '#6b7280'
+                      }}>
                         {lease.sent_to_tenant_at ? formatDate(lease.sent_to_tenant_at) : 
                          lease.status === 'sent_to_tenant' ? 'Sent (date not recorded)' : 'Pending'}
-                      </p>
-                      <p className="timeline-description">Lease document sent to tenant for review and signing</p>
                     </div>
                   </div>
                   
-                  <div className={`timeline-item ${lease.signed_at ? 'completed' : lease.status === 'sent_to_tenant' ? 'current' : 'pending'}`}>
-                    <div className="timeline-marker"></div>
-                    <div className="timeline-content">
-                      <h4 className="timeline-title">Tenant Signed</h4>
-                      <p className="timeline-date">
+                    <div style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      textAlign: 'center',
+                      padding: '1rem',
+                      backgroundColor: lease.signed_at ? '#f0fdf4' : 
+                        lease.status === 'sent_to_tenant' ? '#eff6ff' : '#f9fafb',
+                      borderRadius: '12px',
+                      border: lease.signed_at ? '2px solid #bbf7d0' : 
+                        lease.status === 'sent_to_tenant' ? '2px solid #dbeafe' : '2px solid #e5e7eb'
+                    }}>
+                      <div style={{
+                        width: '3rem',
+                        height: '3rem',
+                        borderRadius: '50%',
+                        backgroundColor: lease.signed_at ? '#10b981' : 
+                          lease.status === 'sent_to_tenant' ? '#3b82f6' : '#d1d5db',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginBottom: '1rem'
+                      }}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                          <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
+                        </svg>
+                      </div>
+                      <div style={{
+                        fontSize: '0.875rem',
+                        fontWeight: '700',
+                        color: '#111827',
+                        marginBottom: '0.25rem'
+                      }}>Tenant Signed</div>
+                      <div style={{
+                        fontSize: '0.75rem',
+                        color: '#6b7280'
+                      }}>
                         {lease.signed_at ? formatDate(lease.signed_at) : 'Awaiting tenant signature'}
-                      </p>
-                      <p className="timeline-description">Tenant has reviewed and signed the lease agreement</p>
                     </div>
                   </div>
                   
-                  <div className={`timeline-item ${lease.activated_at ? 'completed' : lease.status === 'signed' ? 'current' : 'pending'}`}>
-                    <div className="timeline-marker"></div>
-                    <div className="timeline-content">
-                      <h4 className="timeline-title">Lease Activated</h4>
-                      <p className="timeline-date">
+                    <div style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      textAlign: 'center',
+                      padding: '1rem',
+                      backgroundColor: lease.activated_at ? '#f0fdf4' : 
+                        lease.status === 'signed' ? '#eff6ff' : '#f9fafb',
+                      borderRadius: '12px',
+                      border: lease.activated_at ? '2px solid #bbf7d0' : 
+                        lease.status === 'signed' ? '2px solid #dbeafe' : '2px solid #e5e7eb'
+                    }}>
+                      <div style={{
+                        width: '3rem',
+                        height: '3rem',
+                        borderRadius: '50%',
+                        backgroundColor: lease.activated_at ? '#10b981' : 
+                          lease.status === 'signed' ? '#3b82f6' : '#d1d5db',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginBottom: '1rem'
+                      }}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                          <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                      </div>
+                      <div style={{
+                        fontSize: '0.875rem',
+                        fontWeight: '700',
+                        color: '#111827',
+                        marginBottom: '0.25rem'
+                      }}>Lease Activated</div>
+                      <div style={{
+                        fontSize: '0.75rem',
+                        color: '#6b7280'
+                      }}>
                         {lease.activated_at ? formatDate(lease.activated_at) : 'Pending activation'}
-                      </p>
-                      <p className="timeline-description">Lease is now active and tenant can move in</p>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="right-column">
+            {/* Right Side - Property Info Column */}
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1.5rem'
+            }}>
               {/* Property Information */}
-              <div className="info-section">
-                <div className="section-header">
-                  <div>
-                    <h2 className="section-title">Property Information</h2>
-                    <p className="section-subtitle">Location and property details</p>
-                  </div>
+              <div style={{
+                backgroundColor: 'white',
+                borderRadius: '12px',
+                padding: '1.5rem',
+                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                border: '1px solid #e5e7eb',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+                e.currentTarget.style.transform = 'translateY(-1px)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+                e.currentTarget.style.transform = 'translateY(0)';
+              }}>
+                <div style={{
+                  borderBottom: '1px solid #e5e7eb',
+                  paddingBottom: '1rem',
+                  marginBottom: '1.5rem'
+                }}>
+                  <h2 style={{
+                    fontSize: '1.25rem',
+                    fontWeight: '700',
+                    color: '#111827',
+                    margin: 0,
+                    marginBottom: '0.25rem'
+                  }}>Property Information</h2>
+                  <p style={{
+                    fontSize: '0.875rem',
+                    color: '#6b7280',
+                    margin: 0
+                  }}>Location and property details</p>
                 </div>
-                <div className="info-grid single-column">
-                  <div className="info-item">
-                    <strong>Property Name</strong>
-                    <div className="info-value">{property?.name || 'Unknown Property'}</div>
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '1rem'
+                }}>
+                  <div>
+                    <div style={{
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: '#374151',
+                      marginBottom: '0.25rem'
+                    }}>Property Name</div>
+                    <div style={{
+                      fontSize: '1rem',
+                      color: '#111827'
+                    }}>{property?.name || 'Unknown Property'}</div>
                   </div>
-                  <div className="info-item">
-                    <strong>Address</strong>
-                    <div className="info-value">{property?.address || 'Not available'}</div>
+                  <div>
+                    <div style={{
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: '#374151',
+                      marginBottom: '0.25rem'
+                    }}>Address</div>
+                    <div style={{
+                      fontSize: '1rem',
+                      color: '#111827'
+                    }}>{property?.address || 'Not available'}</div>
+                </div>
+                  <div>
+                    <div style={{
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: '#374151',
+                      marginBottom: '0.25rem'
+                    }}>Room</div>
+                    <div style={{
+                      fontSize: '1rem',
+                      color: '#111827'
+                    }}>{room?.name || `Room ${lease.room}`}</div>
                   </div>
-                  <div className="info-item">
-                    <strong>Room</strong>
-                    <div className="info-value">{room?.name || `Room ${lease.room}`}</div>
-                  </div>
-                  <div className="info-item">
-                    <strong>Room Type</strong>
-                    <div className="info-value">{room?.room_type || 'Standard'}</div>
+                  <div>
+                    <div style={{
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: '#374151',
+                      marginBottom: '0.25rem'
+                    }}>Room Type</div>
+                    <div style={{
+                      fontSize: '1rem',
+                      color: '#111827'
+                    }}>{room?.room_type || 'Standard'}</div>
                   </div>
                 </div>
               </div>
 
               {/* Quick Actions */}
-              <div className="info-section">
-                <div className="section-header">
-                  <div>
-                    <h2 className="section-title">Quick Actions</h2>
-                    <p className="section-subtitle">Lease management options</p>
+              <div style={{
+                backgroundColor: 'white',
+                borderRadius: '12px',
+                padding: '1.5rem',
+                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                border: '1px solid #e5e7eb',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+                e.currentTarget.style.transform = 'translateY(-1px)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+                e.currentTarget.style.transform = 'translateY(0)';
+              }}>
+                <div style={{
+                  borderBottom: '1px solid #e5e7eb',
+                  paddingBottom: '1rem',
+                  marginBottom: '1.5rem'
+                }}>
+                  <h2 style={{
+                    fontSize: '1.25rem',
+                    fontWeight: '700',
+                    color: '#111827',
+                    margin: 0,
+                    marginBottom: '0.25rem'
+                  }}>Quick Actions</h2>
+                  <p style={{
+                    fontSize: '0.875rem',
+                    color: '#6b7280',
+                    margin: 0
+                  }}>Lease management options</p>
                   </div>
-                </div>
-                <div className="actions-grid">
-                  <div className="action-card green" onClick={() => setShowRenewalForm(true)}>
-                    <div className="action-icon">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.75rem'
+                }}>
+                  <button
+                    onClick={() => setShowRenewalForm(true)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.75rem',
+                      padding: '1rem',
+                      backgroundColor: '#f0fdf4',
+                      border: '1px solid #bbf7d0',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      textAlign: 'left'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = '#dcfce7';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = '#f0fdf4';
+                    }}
+                  >
+                    <div style={{
+                      width: '2rem',
+                      height: '2rem',
+                      backgroundColor: '#10b981',
+                      borderRadius: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0
+                    }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
                         <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                       </svg>
                     </div>
-                    <div className="action-content">
-                      <h4 className="action-title">Renew Lease</h4>
-                      <p className="action-subtitle">Extend lease duration</p>
+                    <div>
+                      <div style={{
+                        fontSize: '0.875rem',
+                        fontWeight: '600',
+                        color: '#111827',
+                        marginBottom: '0.125rem'
+                      }}>Renew Lease</div>
+                      <div style={{
+                        fontSize: '0.75rem',
+                        color: '#6b7280'
+                      }}>Extend lease duration</div>
                     </div>
-                  </div>
-                  <div className="action-card blue" onClick={() => setShowMoveOutForm(true)}>
-                    <div className="action-icon">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  </button>
+                  
+                  <button
+                    onClick={() => setShowMoveOutForm(true)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.75rem',
+                      padding: '1rem',
+                      backgroundColor: '#eff6ff',
+                      border: '1px solid #dbeafe',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      textAlign: 'left'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = '#dbeafe';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = '#eff6ff';
+                    }}
+                  >
+                    <div style={{
+                      width: '2rem',
+                      height: '2rem',
+                      backgroundColor: '#3b82f6',
+                      borderRadius: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0
+                    }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
                         <path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
                       </svg>
                     </div>
-                    <div className="action-content">
-                      <h4 className="action-title">Process Move-Out</h4>
-                      <p className="action-subtitle">End lease and return deposit</p>
+                    <div>
+                      <div style={{
+                        fontSize: '0.875rem',
+                        fontWeight: '600',
+                        color: '#111827',
+                        marginBottom: '0.125rem'
+                      }}>Process Move-Out</div>
+                      <div style={{
+                        fontSize: '0.75rem',
+                        color: '#6b7280'
+                      }}>End lease and return deposit</div>
                     </div>
-                  </div>
+                  </button>
                 </div>
               </div>
 
-              {/* Lease Signing Workflow */}
-              <div className="info-section">
-                <div className="section-header">
-                  <div>
-                    <h2 className="section-title">Lease Signing</h2>
-                    <p className="section-subtitle">Manage lease documents and signing workflow</p>
-                  </div>
+              {/* Lease Signing */}
+              <div style={{
+                backgroundColor: 'white',
+                borderRadius: '12px',
+                padding: '1.5rem',
+                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                border: '1px solid #e5e7eb',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+                e.currentTarget.style.transform = 'translateY(-1px)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+                e.currentTarget.style.transform = 'translateY(0)';
+              }}>
+                <div style={{
+                  borderBottom: '1px solid #e5e7eb',
+                  paddingBottom: '1rem',
+                  marginBottom: '1.5rem'
+                }}>
+                  <h2 style={{
+                    fontSize: '1.25rem',
+                    fontWeight: '700',
+                    color: '#111827',
+                    margin: 0,
+                    marginBottom: '0.25rem'
+                  }}>Lease Signing</h2>
+                  <p style={{
+                    fontSize: '0.875rem',
+                    color: '#6b7280',
+                    margin: 0
+                  }}>Manage lease documents and signing workflow</p>
                 </div>
                 <LeaseSigningActions 
                   lease={lease} 

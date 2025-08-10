@@ -1,560 +1,385 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  X, 
-  Phone, 
-  MessageSquare, 
-  Send,
-  Loader2,
-  CheckCircle,
-  AlertCircle,
-  User,
-  Clock,
-  Building
-} from 'lucide-react';
+import React, { useState } from 'react';
 import { apiClient } from '../lib/api';
 
 interface ContactLandlordModalProps {
   isOpen: boolean;
   onClose: () => void;
-  landlordInfo?: {
-    name: string;
-    phone?: string;
-    email?: string;
-    property_name?: string;
-  };
 }
 
-const ContactLandlordModal: React.FC<ContactLandlordModalProps> = ({ 
-  isOpen, 
-  onClose, 
-  landlordInfo 
-}) => {
-  const [contactMethod, setContactMethod] = useState<'sms' | 'call'>('sms');
+const ContactLandlordModal: React.FC<ContactLandlordModalProps> = ({ isOpen, onClose }) => {
   const [message, setMessage] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [subject, setSubject] = useState('');
+  const [sending, setSending] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  
-  // Predefined message templates
-  const messageTemplates = [
-    {
-      title: 'Maintenance Request',
-      message: 'Hi! I need to report a maintenance issue in my unit. Could you please contact me when convenient? Thank you!'
-    },
-    {
-      title: 'Payment Question',
-      message: 'Hello! I have a question about my rent payment. Could you please get in touch with me? Thanks!'
-    },
-    {
-      title: 'General Inquiry',
-      message: 'Hi! I have a question about my rental. Could you please contact me when you have a moment? Thank you!'
-    },
-    {
-      title: 'Emergency',
-      message: 'URGENT: I have an emergency situation in my unit that requires immediate attention. Please contact me as soon as possible!'
-    }
-  ];
+  const [error, setError] = useState('');
 
-  // Handle escape key
-  useEffect(() => {
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && isOpen) {
-        onClose();
-      }
-    };
-
-    document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
-  }, [isOpen, onClose]);
-
-  // Reset state when modal opens
-  useEffect(() => {
-    if (isOpen) {
-      setContactMethod('sms');
-      setMessage('');
-      setLoading(false);
-      setSuccess(false);
-      setError(null);
-    }
-  }, [isOpen]);
-
-  const handleTemplateSelect = (template: string) => {
-    setMessage(template);
-  };
-
-  const handleSendMessage = async () => {
-    if (!message.trim()) {
-      setError('Please enter a message');
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!message.trim() || !subject.trim()) {
+      setError('Please fill in both subject and message');
       return;
     }
 
-    if (!landlordInfo?.phone) {
-      setError('Landlord phone number not available');
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
+    setSending(true);
+    setError('');
+    
     try {
-      // Get current user info from localStorage
-      const userStr = localStorage.getItem('tenant_user');
-      const user = userStr ? JSON.parse(userStr) : null;
-      
-      const tenantName = user?.full_name || 'Tenant';
-      const propertyName = landlordInfo.property_name || 'your property';
-      
-      // Format message with tenant info
-      const fullMessage = `Message from ${tenantName} at ${propertyName}: ${message}`;
-
-      // Send SMS via API
-      const response = await fetch('/api/sms/send', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          to: landlordInfo.phone,
-          message: fullMessage,
-          from: 'tenant'
-        }),
+      // Send message via SMS to landlord
+      await apiClient.sendSMSToLandlord({
+        subject: subject.trim(),
+        message: message.trim()
       });
-
-      const result = await response.json();
-
-      if (result.success) {
-        setSuccess(true);
-        setTimeout(() => {
-          onClose();
-        }, 2000);
-      } else {
-        setError(result.error || 'Failed to send message');
-      }
-    } catch (err: any) {
-      console.error('Error sending message:', err);
+      
+      setSuccess(true);
+      setTimeout(() => {
+        onClose();
+        setMessage('');
+        setSubject('');
+        setSuccess(false);
+      }, 2000);
+    } catch (error: any) {
+      console.error('Error sending message:', error);
       setError('Failed to send message. Please try again.');
     } finally {
-      setLoading(false);
+      setSending(false);
     }
   };
 
-  const handlePhoneCall = () => {
-    if (landlordInfo?.phone) {
-      window.open(`tel:${landlordInfo.phone}`, '_self');
-    }
+  const handleClose = () => {
+    setMessage('');
+    setSubject('');
+    setError('');
+    setSuccess(false);
+    onClose();
   };
 
   if (!isOpen) return null;
 
   return (
-    <>
-      {/* Backdrop */}
-      <div 
-        style={{
-          position: 'fixed',
-          inset: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.6)',
-          backdropFilter: 'blur(4px)',
-          zIndex: 50,
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 1000,
+      padding: '1rem'
+    }}>
+      <div style={{
+        backgroundColor: 'white',
+        borderRadius: '16px',
+        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+        width: '100%',
+        maxWidth: '500px',
+        maxHeight: '90vh',
+        overflow: 'hidden'
+      }}>
+        {/* Header */}
+        <div style={{
+          padding: '1.5rem',
+          borderBottom: '1px solid #e5e7eb',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center',
-          padding: '1rem'
-        }}
-        onClick={onClose}
-      >
-        {/* Modal */}
-        <div 
-          style={{
-            backgroundColor: 'white',
-            borderRadius: '1rem',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-            width: '100%',
-            maxWidth: '32rem',
-            maxHeight: '90vh',
-            overflow: 'hidden',
-            position: 'relative',
-            display: 'flex',
-            flexDirection: 'column'
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* Header */}
+          justifyContent: 'space-between'
+        }}>
           <div style={{
-            background: 'linear-gradient(135deg, #2563eb, #1e40af)',
-            padding: '1.5rem 1.5rem 1rem 1.5rem',
-            color: 'white',
-            flexShrink: 0
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem'
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
-                  <div style={{
-                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                    borderRadius: '0.5rem',
-                    padding: '0.5rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}>
-                    <MessageSquare style={{ width: '1.5rem', height: '1.5rem' }} />
-                  </div>
-                  <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: 0 }}>Contact Landlord</h3>
-                </div>
-                <p style={{ fontSize: '0.875rem', opacity: 0.9, margin: 0 }}>
-                  Send a message or call your property manager
-                </p>
+            <div style={{
+              width: '2.5rem',
+              height: '2.5rem',
+              backgroundColor: '#3b82f6',
+              borderRadius: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                <polyline points="22,6 12,13 2,6"/>
+              </svg>
+            </div>
+            <div>
+              <h2 style={{
+                fontSize: '1.25rem',
+                fontWeight: '600',
+                color: '#111827',
+                margin: 0
+              }}>Contact Landlord</h2>
+              <p style={{
+                fontSize: '0.875rem',
+                color: '#6b7280',
+                margin: 0
+              }}>Send a message to your property manager</p>
+            </div>
+          </div>
+          <button
+            onClick={handleClose}
+            style={{
+              width: '2rem',
+              height: '2rem',
+              backgroundColor: '#f3f4f6',
+              border: 'none',
+              borderRadius: '6px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.backgroundColor = '#e5e7eb';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.backgroundColor = '#f3f4f6';
+            }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+
+        {/* Content */}
+        <div style={{
+          padding: '1.5rem',
+          maxHeight: '60vh',
+          overflowY: 'auto'
+        }}>
+          {success ? (
+            <div style={{
+              textAlign: 'center',
+              padding: '2rem'
+            }}>
+              <div style={{
+                width: '4rem',
+                height: '4rem',
+                backgroundColor: '#dcfce7',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 1rem'
+              }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                  <polyline points="22,4 12,14.01 9,11.01"/>
+                </svg>
               </div>
-              <button 
-                onClick={onClose}
-                style={{
-                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                  border: 'none',
-                  borderRadius: '0.5rem',
-                  padding: '0.5rem',
-                  color: 'white',
-                  cursor: 'pointer',
+              <h3 style={{
+                fontSize: '1.125rem',
+                fontWeight: '600',
+                color: '#111827',
+                margin: '0 0 0.5rem 0'
+              }}>Message Sent!</h3>
+              <p style={{
+                fontSize: '0.875rem',
+                color: '#6b7280',
+                margin: 0
+              }}>Your message has been sent to your landlord via SMS.</p>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit}>
+              {error && (
+                <div style={{
+                  backgroundColor: '#fef2f2',
+                  border: '1px solid #fecaca',
+                  borderRadius: '8px',
+                  padding: '0.75rem',
+                  marginBottom: '1rem',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'background-color 0.2s'
-                }}
-                onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'}
-                onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'}
-              >
-                <X style={{ width: '1.25rem', height: '1.25rem' }} />
-              </button>
-            </div>
-            
-            {/* Landlord Info */}
-            {landlordInfo && (
+                  gap: '0.5rem'
+                }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="15" y1="9" x2="9" y2="15"/>
+                    <line x1="9" y1="9" x2="15" y2="15"/>
+                  </svg>
+                  <span style={{
+                    fontSize: '0.875rem',
+                    color: '#dc2626'
+                  }}>{error}</span>
+                </div>
+              )}
+
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{
+                  display: 'block',
+                  fontSize: '0.875rem',
+                  fontWeight: '600',
+                  color: '#374151',
+                  marginBottom: '0.5rem'
+                }}>
+                  Subject *
+                </label>
+                <input
+                  type="text"
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                  placeholder="Brief description of your message"
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '8px',
+                    fontSize: '0.875rem',
+                    transition: 'all 0.2s ease',
+                    outline: 'none'
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#3b82f6';
+                    e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#d1d5db';
+                    e.target.style.boxShadow = 'none';
+                  }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label style={{
+                  display: 'block',
+                  fontSize: '0.875rem',
+                  fontWeight: '600',
+                  color: '#374151',
+                  marginBottom: '0.5rem'
+                }}>
+                  Message *
+                </label>
+                <textarea
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder="Describe your concern or request in detail..."
+                  rows={5}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '8px',
+                    fontSize: '0.875rem',
+                    transition: 'all 0.2s ease',
+                    outline: 'none',
+                    resize: 'vertical',
+                    minHeight: '120px'
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#3b82f6';
+                    e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#d1d5db';
+                    e.target.style.boxShadow = 'none';
+                  }}
+                />
+                <div style={{
+                  fontSize: '0.75rem',
+                  color: '#6b7280',
+                  marginTop: '0.25rem'
+                }}>
+                  {message.length}/500 characters
+                </div>
+              </div>
+
               <div style={{
-                backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                borderRadius: '0.75rem',
-                padding: '1rem',
-                marginTop: '1rem',
-                border: '1px solid rgba(255, 255, 255, 0.2)'
+                display: 'flex',
+                gap: '0.75rem',
+                justifyContent: 'flex-end'
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <div style={{
-                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                    borderRadius: '50%',
-                    padding: '0.5rem',
+                <button
+                  type="button"
+                  onClick={handleClose}
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    backgroundColor: '#f3f4f6',
+                    color: '#374151',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '8px',
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.backgroundColor = '#e5e7eb';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.backgroundColor = '#f3f4f6';
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={sending || !message.trim() || !subject.trim()}
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    backgroundColor: sending ? '#9ca3af' : '#3b82f6',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '0.875rem',
+                    fontWeight: '600',
+                    cursor: sending ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.2s ease',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center'
-                  }}>
-                    <User style={{ width: '1.25rem', height: '1.25rem' }} />
-                  </div>
-                  <div>
-                    <p style={{ fontSize: '1rem', fontWeight: '600', margin: '0 0 0.25rem 0' }}>
-                      {landlordInfo.name}
-                    </p>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <Building style={{ width: '0.875rem', height: '0.875rem', opacity: 0.8 }} />
-                      <span style={{ fontSize: '0.875rem', opacity: 0.8 }}>
-                        {landlordInfo.property_name || 'Property Manager'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Content */}
-          <div style={{ 
-            padding: '1.5rem', 
-            flex: 1, 
-            overflow: 'auto',
-            maxHeight: 'calc(90vh - 200px)'
-          }}>
-            {success ? (
-              <div style={{ textAlign: 'center', padding: '1rem 0' }}>
-                <div style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '4rem',
-                  height: '4rem',
-                  backgroundColor: '#f0fdf4',
-                  borderRadius: '50%',
-                  marginBottom: '1rem'
-                }}>
-                  <CheckCircle style={{ width: '2rem', height: '2rem', color: '#16a34a' }} />
-                </div>
-                <p style={{ fontSize: '1.125rem', fontWeight: '600', color: '#16a34a', margin: '0 0 0.5rem 0' }}>
-                  Message Sent Successfully!
-                </p>
-                <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>
-                  Your landlord will receive your message shortly.
-                </p>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                {/* Contact Method Selection */}
-                <div>
-                  <label style={{ 
-                    display: 'block', 
-                    fontSize: '0.875rem', 
-                    fontWeight: '600', 
-                    color: '#374151', 
-                    marginBottom: '0.75rem' 
-                  }}>
-                    Contact Method
-                  </label>
-                  <div style={{ display: 'flex', gap: '0.75rem' }}>
-                    <button
-                      onClick={() => setContactMethod('sms')}
-                      style={{
-                        flex: 1,
-                        padding: '0.75rem 1rem',
-                        border: `2px solid ${contactMethod === 'sms' ? '#2563eb' : '#e5e7eb'}`,
-                        borderRadius: '0.5rem',
-                        backgroundColor: contactMethod === 'sms' ? '#eff6ff' : 'white',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '0.5rem',
-                        transition: 'all 0.2s'
-                      }}
-                    >
-                      <MessageSquare style={{ width: '1.25rem', height: '1.25rem', color: contactMethod === 'sms' ? '#2563eb' : '#6b7280' }} />
-                      <span style={{ fontWeight: '500', color: contactMethod === 'sms' ? '#2563eb' : '#6b7280' }}>
-                        Send Message
-                      </span>
-                    </button>
-                    <button
-                      onClick={() => setContactMethod('call')}
-                      style={{
-                        flex: 1,
-                        padding: '0.75rem 1rem',
-                        border: `2px solid ${contactMethod === 'call' ? '#2563eb' : '#e5e7eb'}`,
-                        borderRadius: '0.5rem',
-                        backgroundColor: contactMethod === 'call' ? '#eff6ff' : 'white',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '0.5rem',
-                        transition: 'all 0.2s'
-                      }}
-                    >
-                      <Phone style={{ width: '1.25rem', height: '1.25rem', color: contactMethod === 'call' ? '#2563eb' : '#6b7280' }} />
-                      <span style={{ fontWeight: '500', color: contactMethod === 'call' ? '#2563eb' : '#6b7280' }}>
-                        Call Now
-                      </span>
-                    </button>
-                  </div>
-                </div>
-
-                {contactMethod === 'sms' ? (
-                  <>
-                    {/* Message Templates */}
-                    <div>
-                      <label style={{ 
-                        display: 'block', 
-                        fontSize: '0.875rem', 
-                        fontWeight: '600', 
-                        color: '#374151', 
-                        marginBottom: '0.75rem' 
-                      }}>
-                        Quick Templates
-                      </label>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem' }}>
-                        {messageTemplates.map((template, index) => (
-                          <button
-                            key={index}
-                            onClick={() => handleTemplateSelect(template.message)}
-                            style={{
-                              padding: '0.5rem 0.75rem',
-                              border: '1px solid #e5e7eb',
-                              borderRadius: '0.375rem',
-                              backgroundColor: 'white',
-                              cursor: 'pointer',
-                              fontSize: '0.75rem',
-                              fontWeight: '500',
-                              color: '#374151',
-                              transition: 'all 0.2s',
-                              textAlign: 'left'
-                            }}
-                            onMouseOver={(e) => {
-                              e.currentTarget.style.backgroundColor = '#f3f4f6';
-                              e.currentTarget.style.borderColor = '#9ca3af';
-                            }}
-                            onMouseOut={(e) => {
-                              e.currentTarget.style.backgroundColor = 'white';
-                              e.currentTarget.style.borderColor = '#e5e7eb';
-                            }}
-                          >
-                            {template.title}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Message Input */}
-                    <div>
-                      <label style={{ 
-                        display: 'block', 
-                        fontSize: '0.875rem', 
-                        fontWeight: '600', 
-                        color: '#374151', 
-                        marginBottom: '0.75rem' 
-                      }}>
-                        Your Message
-                      </label>
-                      <textarea
-                        value={message}
-                        onChange={(e) => setMessage(e.target.value)}
-                        placeholder="Type your message here..."
-                        rows={3}
-                        style={{
-                          width: '100%',
-                          padding: '0.75rem',
-                          border: `2px solid ${error ? '#ef4444' : '#e5e7eb'}`,
-                          borderRadius: '0.5rem',
-                          fontSize: '0.875rem',
-                          outline: 'none',
-                          resize: 'vertical',
-                          minHeight: '80px',
-                          maxHeight: '120px',
-                          transition: 'border-color 0.2s'
-                        }}
-                        onFocus={(e) => e.target.style.borderColor = '#2563eb'}
-                        onBlur={(e) => e.target.style.borderColor = error ? '#ef4444' : '#e5e7eb'}
-                      />
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem' }}>
-                        <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>
-                          {message.length}/500 characters
-                        </span>
-                        {landlordInfo?.phone && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                            <Phone style={{ width: '0.875rem', height: '0.875rem', color: '#9ca3af' }} />
-                            <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>
-                              {landlordInfo.phone}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Error Message */}
-                    {error && (
+                    gap: '0.5rem'
+                  }}
+                  onMouseOver={(e) => {
+                    if (!sending && message.trim() && subject.trim()) {
+                      e.currentTarget.style.backgroundColor = '#2563eb';
+                    }
+                  }}
+                  onMouseOut={(e) => {
+                    if (!sending) {
+                      e.currentTarget.style.backgroundColor = '#3b82f6';
+                    }
+                  }}
+                >
+                  {sending ? (
+                    <>
                       <div style={{
-                        backgroundColor: '#fef2f2',
-                        border: '1px solid #fca5a5',
-                        borderRadius: '0.5rem',
-                        padding: '0.75rem'
-                      }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <AlertCircle style={{ width: '1.25rem', height: '1.25rem', color: '#ef4444' }} />
-                          <p style={{ fontSize: '0.875rem', color: '#dc2626', margin: 0 }}>{error}</p>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Send Button */}
-                    <button
-                      onClick={handleSendMessage}
-                      disabled={!message.trim() || loading}
-                      style={{
-                        width: '100%',
-                        background: loading ? '#9ca3af' : 'linear-gradient(135deg, #2563eb, #1d4ed8)',
-                        color: 'white',
-                        padding: '0.75rem 1rem',
-                        borderRadius: '0.5rem',
-                        border: 'none',
-                        fontWeight: '600',
-                        cursor: (!message.trim() || loading) ? 'not-allowed' : 'pointer',
-                        opacity: (!message.trim() || loading) ? 0.6 : 1,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '0.5rem',
-                        transition: 'all 0.2s'
-                      }}
-                    >
-                      {loading ? (
-                        <>
-                          <Loader2 style={{ width: '1.25rem', height: '1.25rem', animation: 'spin 1s linear infinite' }} />
-                          <span>Sending...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Send style={{ width: '1.25rem', height: '1.25rem' }} />
-                          <span>Send Message</span>
-                        </>
-                      )}
-                    </button>
-                  </>
-                ) : (
-                                      /* Call Option */
-                  <div style={{ textAlign: 'center', padding: '1rem 0' }}>
-                    <div style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: '4rem',
-                      height: '4rem',
-                      backgroundColor: '#dbeafe',
-                      borderRadius: '50%',
-                      marginBottom: '1rem'
-                    }}>
-                      <Phone style={{ width: '2rem', height: '2rem', color: '#2563eb' }} />
-                    </div>
-                    <p style={{ fontSize: '1.125rem', fontWeight: '600', color: '#111827', margin: '0 0 0.5rem 0' }}>
-                      Call Your Landlord
-                    </p>
-                    <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 1rem 0' }}>
-                      Click the button below to call {landlordInfo?.name || 'your landlord'} directly
-                    </p>
-                    {landlordInfo?.phone ? (
-                      <button
-                        onClick={handlePhoneCall}
-                        style={{
-                          background: 'linear-gradient(135deg, #16a34a, #15803d)',
-                          color: 'white',
-                          padding: '0.75rem 2rem',
-                          borderRadius: '0.5rem',
-                          border: 'none',
-                          fontWeight: '600',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.5rem',
-                          margin: '0 auto',
-                          fontSize: '1rem',
-                          transition: 'all 0.2s'
-                        }}
-                        onMouseOver={(e) => e.currentTarget.style.background = 'linear-gradient(135deg, #15803d, #166534)'}
-                        onMouseOut={(e) => e.currentTarget.style.background = 'linear-gradient(135deg, #16a34a, #15803d)'}
-                      >
-                        <Phone style={{ width: '1.25rem', height: '1.25rem' }} />
-                        <span>Call {landlordInfo.phone}</span>
-                      </button>
-                    ) : (
-                      <p style={{ fontSize: '0.875rem', color: '#ef4444', margin: 0 }}>
-                        Phone number not available
-                      </p>
-                    )}
-                  </div>
-                )}
+                        width: '1rem',
+                        height: '1rem',
+                        border: '2px solid transparent',
+                        borderTop: '2px solid white',
+                        borderRadius: '50%',
+                        animation: 'spin 1s linear infinite'
+                      }}></div>
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <line x1="22" y1="2" x2="11" y2="13"/>
+                        <polygon points="22,2 15,22 11,13 2,9 22,2"/>
+                      </svg>
+                      Send Message
+                    </>
+                  )}
+                </button>
               </div>
-            )}
-          </div>
+            </form>
+          )}
         </div>
       </div>
 
-      {/* Add CSS animations */}
       <style jsx>{`
         @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
         }
       `}</style>
-    </>
+    </div>
   );
 };
 
