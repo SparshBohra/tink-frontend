@@ -26,41 +26,18 @@ import {
 // Icon Components (keeping for backward compatibility with existing code)
 
 // Custom hook for counter animation
-const useCounterAnimation = (targetValue: number, duration = 2000, isRevenue = false) => {
-  const [currentValue, setCurrentValue] = useState(0);
+const useCounterAnimation = (targetValue: number, _duration = 0, isRevenue = false) => {
+  // Animation removed: return the target value immediately and update on change
+  const [currentValue, setCurrentValue] = useState<number>(targetValue);
 
   useEffect(() => {
-    let startTime: number;
-    let animationId: number;
-
-    const animate = (timestamp: number) => {
-      if (!startTime) startTime = timestamp;
-      const progress = Math.min((timestamp - startTime) / duration, 1);
-      
-      // Use easeOutQuart for smooth deceleration
-      const easeOutQuart = 1 - Math.pow(1 - progress, 4);
-      const value = Math.floor(easeOutQuart * targetValue);
-      
-      setCurrentValue(value);
-
-      if (progress < 1) {
-        animationId = requestAnimationFrame(animate);
-      }
-    };
-
-    animationId = requestAnimationFrame(animate);
-
-    return () => {
-      if (animationId) {
-        cancelAnimationFrame(animationId);
-      }
-    };
-  }, [targetValue, duration]);
+    setCurrentValue(targetValue);
+  }, [targetValue]);
 
   if (isRevenue) {
-    return `$${currentValue.toLocaleString()}`;
+    return `$${(currentValue || 0).toLocaleString()}`;
   }
-  
+
   return currentValue;
 };
 
@@ -75,7 +52,8 @@ function LandlordDashboard() {
   const [rentHistoryPropertyFilter, setRentHistoryPropertyFilter] = useState('all');
   const [rentHistoryStatusFilter, setRentHistoryStatusFilter] = useState('all');
   const [rentHistoryTimeFilter, setRentHistoryTimeFilter] = useState('all');
-  const [isTyping, setIsTyping] = useState(true);
+  // Typing/rotation disabled per request
+  const [isTyping, setIsTyping] = useState(false);
   const [messageIndex, setMessageIndex] = useState(0);
   const [isFading, setIsFading] = useState(false);
   const [currentMessage, setCurrentMessage] = useState<{ text: string; icon: React.ReactElement | null }>({ text: '', icon: null });
@@ -207,13 +185,12 @@ function LandlordDashboard() {
   const welcomeMessage = `Welcome back, ${user?.full_name || 'User'}! Here's an overview of your business operations.`;
   
   // Memoize the welcome message component to prevent unnecessary re-renders
+  // Static message only; typing animation removed
   const WelcomeMessageComponent = useMemo(() => (
-    <p className={`welcome-message ${isFading ? 'fading' : ''} ${isTyping ? 'typing' : 'notification'}`}>
-      {currentMessage.icon && <span className="message-icon">{currentMessage.icon}</span>}
-      <span className="message-text">{currentMessage.text}</span>
-      {isTyping && <span className="typing-cursor"></span>}
+    <p className="welcome-message notification">
+      <span className="message-text">{welcomeMessage}</span>
     </p>
-  ), [currentMessage.text, currentMessage.icon, isFading, isTyping]);
+  ), [welcomeMessage]);
 
   // Update notification messages to use real data
   const notificationMessages = useMemo(() => {
@@ -261,73 +238,10 @@ function LandlordDashboard() {
     };
   }, []);
 
+  // Disable typing/rotation effects
   useEffect(() => {
-    // Pause animation when user is interacting
-    if (isUserInteracting) return;
-    
-    let animationId: number;
-    let rotationTimeout: NodeJS.Timeout;
-
-    if (isTyping) {
-      if (currentMessage.text.length < welcomeMessage.length) {
-        // Use requestAnimationFrame for smoother, non-blocking animation
-        let lastUpdate = 0;
-        const typeSpeed = 80; // Reduced from 120ms for faster typing
-        
-        const animateTyping = (timestamp: number) => {
-          if (timestamp - lastUpdate >= typeSpeed) {
-            setCurrentMessage(prev => {
-              if (prev.text.length >= welcomeMessage.length) {
-                return prev;
-              }
-              return { text: welcomeMessage.substring(0, prev.text.length + 1), icon: null };
-            });
-            lastUpdate = timestamp;
-          }
-          
-          if (currentMessage.text.length < welcomeMessage.length) {
-            animationId = requestAnimationFrame(animateTyping);
-          }
-        };
-        
-        animationId = requestAnimationFrame(animateTyping);
-        
-        return () => {
-          if (animationId) cancelAnimationFrame(animationId);
-        };
-      } else {
-        rotationTimeout = setTimeout(() => setIsTyping(false), 2000); // Reduced pause time
-      }
-    } else {
-      // Faster transition between messages
-      rotationTimeout = setTimeout(() => {
-        setIsFading(true);
-        setTimeout(() => {
-          const nextIndex = (messageIndex + 1) % notificationMessages.length;
-          setMessageIndex(nextIndex);
-          setCurrentMessage(notificationMessages[nextIndex]);
-          setIsFading(false);
-          if (nextIndex === notificationMessages.length - 1) {
-            // Restart the whole cycle
-            setTimeout(() => {
-              setIsFading(true);
-              setTimeout(() => {
-                setCurrentMessage({ text: '', icon: null });
-                setMessageIndex(0);
-                setIsTyping(true);
-                setIsFading(false);
-              }, 300); // Reduced fade time
-            }, 3000); // Reduced display time
-          }
-        }, 300); // Reduced fade time
-      }, 3000); // Reduced display time
-    }
-    
-    return () => {
-      clearTimeout(rotationTimeout);
-      if (animationId) cancelAnimationFrame(animationId);
-    };
-  }, [isTyping, messageIndex, notificationMessages, welcomeMessage, currentMessage.text.length, isUserInteracting]);
+    setIsTyping(false);
+  }, []);
   
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'N/A';
@@ -704,17 +618,16 @@ function LandlordDashboard() {
                 }}>
                   Landlord Dashboard
                 </h1>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  fontSize: '1rem',
-                  color: '#6b7280',
-                  margin: 0
-                }}>
-                  <Building style={{ width: '1rem', height: '1rem' }} />
-                  {WelcomeMessageComponent}
-                </div>
+                                <div style={{
+                   display: 'flex',
+                   alignItems: 'center',
+                   gap: '0.5rem',
+                   fontSize: '1rem',
+                   color: '#6b7280',
+                   margin: 0
+                 }}>
+                   <span className="welcome-message">{welcomeMessage}</span>
+                 </div>
               </div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center', minWidth: 180 }}>
@@ -897,37 +810,8 @@ function LandlordDashboard() {
               }}>
                 {metric.value}
               </div>
-              <div style={{
-                fontSize: '0.875rem',
-                color: '#6b7280',
-                marginBottom: '0.5rem'
-              }}>
-                {metric.subtitle}
-              </div>
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center'
-              }}>
-                <span style={{
-                  fontSize: '0.75rem',
-                  color: '#9ca3af'
-                }}>
-                  {metric.label}
-                </span>
-                <span style={{
-                  fontSize: '0.75rem',
-                  fontWeight: '500',
-                  padding: '0.125rem 0.5rem',
-                  borderRadius: '4px',
-                  backgroundColor: metric.changeType === 'positive' ? '#d1fae5' : 
-                                   metric.changeType === 'negative' ? '#fef2f2' : '#f3f4f6',
-                  color: metric.changeType === 'positive' ? '#065f46' : 
-                         metric.changeType === 'negative' ? '#dc2626' : '#6b7280'
-                }}>
-                  {metric.change}
-                </span>
-              </div>
+              <div style={{ height: '0.25rem' }}></div>
+
             </div>
           ))}
         </div>
@@ -1003,266 +887,114 @@ function LandlordDashboard() {
               </Link>
             </div>
             
-            {/* Enhanced Filter Controls */}
-            <div style={{
-              display: 'flex',
-              gap: '1rem',
-              alignItems: 'center',
-              marginBottom: '1.5rem',
-              flexWrap: 'wrap'
-            }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem'
-              }}>
-                <label style={{
-                  fontSize: '0.875rem',
-                  fontWeight: '500',
-                  color: '#374151'
-                }}>
-                  Status:
-                </label>
-                <select
-                  value={propertyFilter}
-                  onChange={e => setPropertyFilter(e.target.value)}
-                  style={{
-                    padding: '0.375rem 0.75rem',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '6px',
-                    backgroundColor: 'white',
-                    fontSize: '0.875rem',
-                    color: '#374151',
-                    cursor: 'pointer'
-                  }}
-                >
-                  <option value="All">All Status</option>
-                  <option value="Active">Active</option>
-                  <option value="Maintenance">Maintenance</option>
-                </select>
-              </div>
-              
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem'
-              }}>
-                <label style={{
-                  fontSize: '0.875rem',
-                  fontWeight: '500',
-                  color: '#374151'
-                }}>
-                  Occupancy:
-                </label>
-                <select style={{
-                  padding: '0.375rem 0.75rem',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '6px',
-                  backgroundColor: 'white',
-                  fontSize: '0.875rem',
-                  color: '#374151',
-                  cursor: 'pointer'
-                }}>
-                  <option value="all">All Occupancy</option>
-                  <option value="full">100% Occupied</option>
-                  <option value="high">90%+ Occupied</option>
-                  <option value="medium">70-89% Occupied</option>
-                  <option value="low">Below 70%</option>
-                </select>
-              </div>
-              
-              <button style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.375rem',
-                padding: '0.375rem 0.75rem',
-                backgroundColor: '#f3f4f6',
-                color: '#374151',
-                border: '1px solid #d1d5db',
-                borderRadius: '6px',
-                fontSize: '0.875rem',
-                fontWeight: '500',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#e5e7eb'}
-              onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-                  <path d="M3 3v5h5"/>
-                </svg>
-                Reset
-              </button>
-            </div>
+
             
             {/* Properties Table */}
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{
-                width: '100%',
-                borderCollapse: 'collapse',
-                fontSize: '0.875rem'
+            {properties.length === 0 ? (
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '3rem 1rem',
+                textAlign: 'center',
+                color: '#6b7280'
               }}>
-                 <thead>
-                   <tr style={{ backgroundColor: '#f9fafb' }}>
-                     <th style={{
-                       padding: '0.75rem',
-                       textAlign: 'center',
-                       fontWeight: '600',
-                       color: '#374151',
-                       borderBottom: '1px solid #e5e7eb'
-                     }}>
-                       Property
-                     </th>
-                     <th style={{
-                       padding: '0.75rem',
-                       textAlign: 'center',
-                       fontWeight: '600',
-                       color: '#374151',
-                       borderBottom: '1px solid #e5e7eb'
-                     }}>
-                       Status
-                     </th>
-                     <th style={{
-                       padding: '0.75rem',
-                       textAlign: 'center',
-                       fontWeight: '600',
-                       color: '#374151',
-                       borderBottom: '1px solid #e5e7eb'
-                     }}>
-                       Occupancy
-                     </th>
-                     <th style={{
-                       padding: '0.75rem',
-                       textAlign: 'center',
-                       fontWeight: '600',
-                       color: '#374151',
-                       borderBottom: '1px solid #e5e7eb'
-                     }}>
-                       Monthly Revenue
-                     </th>
-                     <th style={{
-                       padding: '0.75rem',
-                       textAlign: 'center',
-                       fontWeight: '600',
-                       color: '#374151',
-                       borderBottom: '1px solid #e5e7eb'
-                     }}>
-                       Tasks
-                     </th>
-                     <th style={{
-                       padding: '0.75rem',
-                       textAlign: 'center',
-                       fontWeight: '600',
-                       color: '#374151',
-                       borderBottom: '1px solid #e5e7eb'
-                     }}>
-                       Actions
-                     </th>
-                   </tr>
-                 </thead>
-                 <tbody>
-                   {filteredProperties.map((property) => {
-                     const occupancyData = getPropertyOccupancy(property);
-                     const revenueData = getPropertyRevenue(property);
-                     const status = getPropertyStatus(property);
-                     const tasks = getPropertyTasks(property);
-                     
-                     return (
-                       <tr key={property.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                         <td style={{ padding: '1rem 0.75rem', textAlign: 'center' }}>
-                           <div 
-                             style={{
-                               fontWeight: '600',
-                               color: '#2563eb',
-                               cursor: 'pointer'
-                             }}
-                             onClick={() => router.push(`/properties/${property.id}`)}
-                           >
-                             {property.name}
-                           </div>
-                         </td>
-                         <td style={{ padding: '1rem 0.75rem', textAlign: 'center' }}>
-                           <div style={{ display: 'flex', justifyContent: 'center' }}>
-                             <span style={{
-                               padding: '0.25rem 0.5rem',
-                               borderRadius: '4px',
-                               fontSize: '0.75rem',
-                               fontWeight: '600',
-                               backgroundColor: status.toLowerCase() === 'active' ? '#d1fae5' : '#fef2f2',
-                               color: status.toLowerCase() === 'active' ? '#065f46' : '#dc2626'
-                             }}>
-                               {status}
-                             </span>
-                           </div>
-                         </td>
-                         <td style={{ padding: '1rem 0.75rem', textAlign: 'center' }}>
-                           <div style={{
-                             display: 'flex',
-                             alignItems: 'center',
-                             justifyContent: 'center',
-                             gap: '0.375rem'
-                           }}>
-                             <Users style={{ width: '1rem', height: '1rem', color: '#6b7280' }} />
-                             <span style={{ fontWeight: '600' }}>{occupancyData.occupancy}</span>
-                             <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>
-                               ({occupancyData.occupancyPercent}%)
-                             </span>
-                           </div>
-                         </td>
-                         <td style={{ padding: '1rem 0.75rem', textAlign: 'center' }}>
-                           <div style={{ fontWeight: '600' }}>
-                             ${revenueData.revenue.toLocaleString()}
-                           </div>
-                         </td>
-                         <td style={{ padding: '1rem 0.75rem', textAlign: 'center' }}>
-                           <div style={{
-                             display: 'flex',
-                             alignItems: 'center',
-                             justifyContent: 'center',
-                             gap: '0.375rem'
-                           }}>
-                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2">
-                               <path d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                             </svg>
-                             <span style={{ fontWeight: '600' }}>{tasks} pending</span>
-                           </div>
-                         </td>
-                         <td style={{ padding: '1rem 0.75rem', textAlign: 'center' }}>
-                           <div style={{ display: 'flex', justifyContent: 'center' }}>
-                             <button 
-                               style={{
-                                 display: 'flex',
-                                 alignItems: 'center',
-                                 gap: '0.375rem',
-                                 padding: '0.5rem 0.75rem',
-                                 backgroundColor: '#2563eb',
-                                 color: 'white',
-                                 border: 'none',
-                                 borderRadius: '6px',
-                                 fontSize: '0.75rem',
-                                 fontWeight: '500',
-                                 cursor: 'pointer',
-                                 transition: 'all 0.2s ease'
-                               }}
-                               onClick={() => router.push(`/properties/${property.id}`)}
-                               onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
-                               onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
-                             >
-                               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                 <path d="M12 20h9"/>
-                                 <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
-                               </svg>
-                               Manage
-                             </button>
-                           </div>
-                         </td>
-                       </tr>
-                     );
-                   })}
-                 </tbody>
-               </table>
-             </div>
+                <h3 style={{ margin: '0 0 0.5rem 0', color: '#111827', fontWeight: 700, fontSize: '1.125rem' }}>
+                  Add your first property
+                </h3>
+                <p style={{ margin: '0 0 1rem 0' }}>Start by creating a property to manage rooms, leases, and payments.</p>
+                <Link href="/properties/add">
+                  <button
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      padding: '0.5rem 1rem',
+                      backgroundColor: '#2563eb',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '0.875rem',
+                      fontWeight: 500,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#1d4ed8')}
+                    onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#2563eb')}
+                  >
+                    + Add Property
+                  </button>
+                </Link>
+              </div>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{
+                  width: '100%',
+                  borderCollapse: 'collapse',
+                  fontSize: '0.875rem'
+                }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#f9fafb' }}>
+                      <th style={{ padding: '0.75rem', textAlign: 'center', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Property</th>
+                      <th style={{ padding: '0.75rem', textAlign: 'center', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Status</th>
+                      <th style={{ padding: '0.75rem', textAlign: 'center', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Occupancy</th>
+                      <th style={{ padding: '0.75rem', textAlign: 'center', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Monthly Revenue</th>
+                      <th style={{ padding: '0.75rem', textAlign: 'center', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Tasks</th>
+                      <th style={{ padding: '0.75rem', textAlign: 'center', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredProperties.map((property) => {
+                      const occupancyData = getPropertyOccupancy(property);
+                      const revenueData = getPropertyRevenue(property);
+                      const status = getPropertyStatus(property);
+                      const tasks = getPropertyTasks(property);
+                      return (
+                        <tr key={property.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                          <td style={{ padding: '1rem 0.75rem', textAlign: 'center' }}>
+                            <div style={{ fontWeight: '600', color: '#2563eb', cursor: 'pointer' }} onClick={() => router.push(`/properties/${property.id}`)}>
+                              {property.name}
+                            </div>
+                          </td>
+                          <td style={{ padding: '1rem 0.75rem', textAlign: 'center' }}>
+                            <div style={{ display: 'flex', justifyContent: 'center' }}>
+                              <span style={{ padding: '0.25rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '600', backgroundColor: status.toLowerCase() === 'active' ? '#d1fae5' : '#fef2f2', color: status.toLowerCase() === 'active' ? '#065f46' : '#dc2626' }}>{status}</span>
+                            </div>
+                          </td>
+                          <td style={{ padding: '1rem 0.75rem', textAlign: 'center' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem' }}>
+                              <Users style={{ width: '1rem', height: '1rem', color: '#6b7280' }} />
+                              <span style={{ fontWeight: '600' }}>{occupancyData.occupancy}</span>
+                              <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>({occupancyData.occupancyPercent}%)</span>
+                            </div>
+                          </td>
+                          <td style={{ padding: '1rem 0.75rem', textAlign: 'center' }}>
+                            <div style={{ fontWeight: '600' }}>
+                              ${revenueData.revenue.toLocaleString()}
+                            </div>
+                          </td>
+                          <td style={{ padding: '1rem 0.75rem', textAlign: 'center' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem' }}>
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2"><path d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                              <span style={{ fontWeight: '600' }}>{tasks} pending</span>
+                            </div>
+                          </td>
+                          <td style={{ padding: '1rem 0.75rem', textAlign: 'center' }}>
+                            <div style={{ display: 'flex', justifyContent: 'center' }}>
+                              <button style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.5rem 0.75rem', backgroundColor: '#2563eb', color: 'white', border: 'none', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '500', cursor: 'pointer', transition: 'all 0.2s ease' }} onClick={() => router.push(`/properties/${property.id}`)} onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#1d4ed8')} onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#2563eb')}>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                                Manage
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
            </div>
 
            {/* Quick Actions Section - Takes 1 column */}
@@ -1437,7 +1169,8 @@ function LandlordDashboard() {
                 transition: 'all 0.2s ease'
               }}
               onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
-              onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}>
+              onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+              onClick={() => router.push('/accounting?tab=rentroll')}>
                 View All
               </button>
             </Link>
@@ -1963,106 +1696,117 @@ function LandlordDashboard() {
               gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
               gap: '1rem'
             }}>
-              {applications.slice(0, 3).map((application) => (
-                <div key={application.id} style={{
-                  backgroundColor: '#f8fafc',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '8px',
-                  padding: '1rem',
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.backgroundColor = '#f1f5f9';
-                  e.currentTarget.style.borderColor = '#2563eb';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.backgroundColor = '#f8fafc';
-                  e.currentTarget.style.borderColor = '#e5e7eb';
+              {applications.length === 0 ? (
+                <div style={{
+                  gridColumn: '1 / -1',
+                  textAlign: 'center',
+                  color: '#6b7280',
+                  padding: '2rem 1rem'
                 }}>
-                  <div style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginBottom: '0.75rem'
+                  No recent applications to display.
+                </div>
+              ) : (
+                applications.slice(0, 3).map((application) => (
+                  <div key={application.id} style={{
+                    backgroundColor: '#f8fafc',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    padding: '1rem',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.backgroundColor = '#f1f5f9';
+                    e.currentTarget.style.borderColor = '#2563eb';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.backgroundColor = '#f8fafc';
+                    e.currentTarget.style.borderColor = '#e5e7eb';
                   }}>
                     <div style={{
-                      width: '2.5rem',
-                      height: '2.5rem',
-                      backgroundColor: '#2563eb',
-                      borderRadius: '50%',
                       display: 'flex',
+                      justifyContent: 'space-between',
                       alignItems: 'center',
-                      justifyContent: 'center',
-                      color: 'white',
-                      fontSize: '0.875rem',
-                      fontWeight: '600'
+                      marginBottom: '0.75rem'
                     }}>
-                      {getApplicantInitials(application)}
+                      <div style={{
+                        width: '2.5rem',
+                        height: '2.5rem',
+                        backgroundColor: '#2563eb',
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'white',
+                        fontSize: '0.875rem',
+                        fontWeight: '600'
+                      }}>
+                        {getApplicantInitials(application)}
+                      </div>
+                      <span style={{
+                        padding: '0.25rem 0.5rem',
+                        borderRadius: '4px',
+                        fontSize: '0.75rem',
+                        fontWeight: '600',
+                        backgroundColor: '#fef3c7',
+                        color: '#92400e'
+                      }}>
+                        PENDING REVIEW
+                      </span>
                     </div>
-                    <span style={{
-                      padding: '0.25rem 0.5rem',
-                      borderRadius: '4px',
-                      fontSize: '0.75rem',
-                      fontWeight: '600',
-                      backgroundColor: '#fef3c7',
-                      color: '#92400e'
-                    }}>
-                      PENDING REVIEW
-                    </span>
+                    
+                    <div style={{ marginBottom: '1rem' }}>
+                      <h3 style={{
+                        fontSize: '1rem',
+                        fontWeight: '600',
+                        color: '#111827',
+                        margin: '0 0 0.5rem 0'
+                      }}>
+                        {application.tenant_name}
+                      </h3>
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.375rem',
+                        fontSize: '0.75rem',
+                        color: '#6b7280',
+                        marginBottom: '0.25rem'
+                      }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <circle cx="12" cy="12" r="10"/>
+                          <polyline points="12,6 12,12 16,14"/>
+                        </svg>
+                        Applied {getTimeSinceApplication(application)}
+                      </div>
+                      <div style={{
+                        fontSize: '0.75rem',
+                        color: '#374151'
+                      }}>
+                        <span style={{ fontWeight: '500' }}>Property:</span> {getPropertyName(application)}
+                      </div>
+                    </div>
+  
+                    <button
+                      onClick={() => handleViewApplication(application)}
+                      style={{
+                        width: '100%',
+                        padding: '0.5rem',
+                        backgroundColor: '#2563eb',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '0.875rem',
+                        fontWeight: '500',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
+                      onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+                    >
+                      View Application
+                    </button>
                   </div>
-                  
-                  <div style={{ marginBottom: '1rem' }}>
-                    <h3 style={{
-                      fontSize: '1rem',
-                      fontWeight: '600',
-                      color: '#111827',
-                      margin: '0 0 0.5rem 0'
-                    }}>
-                      {application.tenant_name}
-                    </h3>
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.375rem',
-                      fontSize: '0.75rem',
-                      color: '#6b7280',
-                      marginBottom: '0.25rem'
-                    }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <circle cx="12" cy="12" r="10"/>
-                        <polyline points="12,6 12,12 16,14"/>
-                      </svg>
-                      Applied {getTimeSinceApplication(application)}
-                    </div>
-                    <div style={{
-                      fontSize: '0.75rem',
-                      color: '#374151'
-                    }}>
-                      <span style={{ fontWeight: '500' }}>Property:</span> {getPropertyName(application)}
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={() => handleViewApplication(application)}
-                    style={{
-                      width: '100%',
-                      padding: '0.5rem',
-                      backgroundColor: '#2563eb',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '6px',
-                      fontSize: '0.875rem',
-                      fontWeight: '500',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease'
-                    }}
-                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
-                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
-                  >
-                    View Application
-                  </button>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
 
@@ -2239,7 +1983,7 @@ function LandlordDashboard() {
             </div>
 
             <button
-              onClick={() => router.push('/tenants')}
+              onClick={() => router.push('/vendors')}
               style={{
                 width: '100%',
                 marginTop: '1rem',

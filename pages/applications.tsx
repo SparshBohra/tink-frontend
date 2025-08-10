@@ -868,7 +868,7 @@ function Applications() {
         app.tenant_email || 'N/A',
         getPropertyName(app.property_ref),
           app.status.toUpperCase(),
-        app.created_at.split('T')[0],
+        (((app as any).created_at || (app as any).applied_at) ? ((app as any).created_at || (app as any).applied_at).split('T')[0] : 'N/A'),
         (app.days_pending || 0).toString()
       ])
     ];
@@ -964,7 +964,7 @@ function Applications() {
       setIsViewingSchedulerOpen(true);
     } else if (app.status === 'viewing_scheduled') {
       // Complete existing viewing
-      const viewing = app.viewings?.[0]; // Get the latest viewing
+      const viewing = (app as any).viewings?.[0]; // Get the latest viewing
       if (viewing) {
         setSelectedApplicationForViewing(app);
         setSelectedViewingForCompletion(viewing);
@@ -1592,30 +1592,7 @@ function Applications() {
               }}>
                 {metric.subtitle}
               </div>
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center'
-              }}>
-                <span style={{
-                  fontSize: '0.75rem',
-                  color: '#9ca3af'
-                }}>
-                  {metric.label}
-                </span>
-                <span style={{
-                  fontSize: '0.75rem',
-                  fontWeight: '500',
-                  padding: '0.125rem 0.5rem',
-                  borderRadius: '4px',
-                  backgroundColor: metric.changeType === 'positive' ? '#d1fae5' : 
-                                   metric.changeType === 'negative' ? '#fef2f2' : '#f3f4f6',
-                  color: metric.changeType === 'positive' ? '#065f46' : 
-                         metric.changeType === 'negative' ? '#dc2626' : '#6b7280'
-                }}>
-                  {metric.change}
-                </span>
-            </div>
+                            <div style={{ height: '0.25rem' }}></div>
           </div>
           ))}
         </div>

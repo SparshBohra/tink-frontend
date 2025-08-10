@@ -535,7 +535,7 @@ export default function PropertyDetails() {
         color: 'orange',
         onClick: handleCreateListing,
         priority: hasVacantRooms ? 1 : 8,
-        condition: hasVacantRooms || (!hasActiveTenants && isPerProperty)
+        condition: false
       },
       viewListings: {
         title: 'View Listings',
@@ -656,15 +656,8 @@ export default function PropertyDetails() {
       }
     };
 
-    // Filter actions based on conditions and sort by priority
-    const filteredActions = Object.values(allActions)
-      .filter(action => {
-        // Existing condition filter
-        return (action as any).condition !== false;
-      })
-      .sort((a, b) => a.priority - b.priority);
-
-    return filteredActions.slice(0, 6); // Show top 6 relevant actions
+    // Only show three actions: View Listings, View Applications, Manage Tenants
+    return [allActions.viewListings, allActions.viewApplications, allActions.manageTenants];
   };
 
   // Dynamic header actions based on occupancy status
@@ -1571,6 +1564,18 @@ export default function PropertyDetails() {
 
       {isNewApplicationModalOpen && (
         <NewListingModal onClose={() => setIsNewApplicationModalOpen(false)} onSuccess={() => setIsNewApplicationModalOpen(false)} />
+      )}
+
+      {showListingModal && property && (
+        <NewListingModal
+          onClose={() => setShowListingModal(false)}
+          onSuccess={async () => {
+            setShowListingModal(false);
+            await fetchPropertyData();
+          }}
+          selectedPropertyId={property.id}
+          property_name={property.name}
+        />
       )}
 
       {/* Conversion Wizard */}

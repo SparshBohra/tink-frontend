@@ -74,7 +74,7 @@ function Accounting() {
   const [error, setError] = useState<string | null>(null);
   const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | 'quarter' | 'year'>('month');
   const [selectedProperty, setSelectedProperty] = useState<string>('all');
-  const [activeTab, setActiveTab] = useState<'overview' | 'rentroll' | 'expenses'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'rentroll' | 'expenses'>('rentroll');
 
   // Expense management state
   const [realExpenses, setRealExpenses] = useState<Expense[]>([]);
@@ -486,13 +486,16 @@ function Accounting() {
       setError(null);
       
       // Fetch real data from backend APIs
-      const [propertiesResponse, paymentSummary, paymentHistory] = await Promise.all([
+      const [propertiesResponse, paymentSummary, paymentHistory, roomsResponse, expensesResponse] = await Promise.all([
         apiClient.getProperties(),
         apiClient.getLandlordPaymentSummary(),
-        apiClient.getPaymentHistory({ page_size: 50 })
+        apiClient.getPaymentHistory({ page_size: 50 }),
+        apiClient.getRooms(),
+        expenseApi.getExpenses()
       ]);
 
       const properties = propertiesResponse.results || [];
+      const allRooms = roomsResponse.results || [];
       
       // Transform real data into PropertyFinancials format
       const realPropertyFinancials: PropertyFinancials[] = properties.map(property => {
@@ -507,25 +510,32 @@ function Accounting() {
         const avgRentPerUnit = monthlyRentValue && property.total_rooms ? 
           monthlyRentValue / property.total_rooms : monthlyRentValue;
         
-        // Calculate occupancy rate with estimation (we don't have current_occupancy in the Property type)
-        // Assume 90% occupancy as default
-        const occupancyRate = property.total_rooms > 0 ? 
-          ((property.total_rooms * 0.9) / property.total_rooms) * 100 : 0;
-        const occupiedUnits = Math.round((occupancyRate / 100) * property.total_rooms);
+        // Calculate occupancy rate from real rooms data
+        const propertyRooms = allRooms.filter((r:any) => r.property_ref === property.id);
+        const totalUnits = property.total_rooms || propertyRooms.length || 0;
+        const occupiedUnits = propertyRooms.filter((r:any) => !r.is_available).length;
+        const occupancyRate = totalUnits > 0 ? (occupiedUnits / totalUnits) * 100 : 0;
         
-        // Estimate expenses as 30% of gross rent (common property management ratio)
-        const estimatedExpenses = monthlyRentValue * 0.3;
-        const netIncome = totalCollected - estimatedExpenses;
+        // Compute expenses for this property from real expensesResponse
+        const propertyExpenses = (expensesResponse || []).filter((e:any) => {
+          if (e.property_ref) {
+            return e.property_ref === property.id;
+          }
+          // fallback by name if provided
+          return e.property_name && e.property_name === property.name;
+        });
+        const totalPropertyExpenses = propertyExpenses.reduce((sum:number, e:any) => sum + parseFloat(e.amount || 0), 0);
+        const netIncome = totalCollected - totalPropertyExpenses;
 
         return {
           id: property.id,
           name: property.name,
           address: `${property.address_line1}${property.address_line2 ? ', ' + property.address_line2 : ''}, ${property.city}, ${property.state}`,
-          totalUnits: property.total_rooms || 1,
+          totalUnits: totalUnits || 0,
           occupiedUnits: occupiedUnits,
           monthlyRent: monthlyRentValue,
           actualRent: totalCollected,
-          expenses: estimatedExpenses,
+          expenses: totalPropertyExpenses,
           netIncome: netIncome,
           occupancyRate: Math.round(occupancyRate * 10) / 10,
           avgRentPerUnit: Math.round(avgRentPerUnit)
@@ -603,7 +613,7 @@ function Accounting() {
       // Calculate totals from real data  
       const totalGrossRent = realPropertyFinancials.reduce((sum, p) => sum + p.monthlyRent, 0);
       const totalCollected = realPropertyFinancials.reduce((sum, p) => sum + p.actualRent, 0);
-      const totalExpenses = realPropertyFinancials.reduce((sum, p) => sum + p.expenses, 0);
+      const totalExpenses = (expensesResponse || []).reduce((sum: number, e: any) => sum + parseFloat(e.amount || 0), 0);
       const netCashFlow = totalCollected - totalExpenses;
       const collectionRate = (totalCollected / totalGrossRent) * 100;
       const vacancyLoss = totalGrossRent - totalCollected;
@@ -611,7 +621,16 @@ function Accounting() {
 
       setPropertyFinancials(realPropertyFinancials);
       setRentRoll(realRentRoll);
-      setExpenses(realExpenses);
+      setExpenses((expensesResponse || []).map((e:any, idx:number) => ({
+        id: e.id || idx,
+        date: e.expense_date || e.created_at || '',
+        propertyName: e.property_name || (properties.find(p => p.id === e.property_ref)?.name || 'All Properties'),
+        category: e.vendor_type || 'Other',
+        description: e.title || e.description || '',
+        amount: parseFloat(e.amount || 0),
+        vendor: e.effective_vendor_name || e.vendor_name || 'Vendor',
+        status: (e.status || 'pending') as 'pending' | 'paid' | 'approved'
+      })));
       setCashFlowSummary({
         totalGrossRent,
         totalCollected,
@@ -981,30 +1000,7 @@ function Accounting() {
               }}>
                 {metric.subtitle}
               </div>
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center'
-              }}>
-                <span style={{
-                  fontSize: '0.75rem',
-                  color: '#9ca3af'
-                }}>
-                  {metric.label}
-                </span>
-                <span style={{
-                  fontSize: '0.75rem',
-                  fontWeight: '500',
-                  padding: '0.125rem 0.5rem',
-                  borderRadius: '4px',
-                  backgroundColor: metric.changeType === 'positive' ? '#d1fae5' : 
-                                   metric.changeType === 'negative' ? '#fef2f2' : '#f3f4f6',
-                  color: metric.changeType === 'positive' ? '#065f46' : 
-                         metric.changeType === 'negative' ? '#dc2626' : '#6b7280'
-                }}>
-                  {metric.change}
-                </span>
-            </div>
+              <div style={{ height: '0.25rem' }}></div>
           </div>
           ))}
         </div>
@@ -1022,16 +1018,6 @@ function Accounting() {
         }}>
           {[
             {
-              key: 'overview',
-              label: 'Property Overview',
-              icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <rect x="3" y="3" width="7" height="7"/>
-              <rect x="14" y="3" width="7" height="7"/>
-              <rect x="14" y="14" width="7" height="7"/>
-              <rect x="3" y="14" width="7" height="7"/>
-            </svg>
-            },
-            {
               key: 'rentroll',
               label: 'Rent Roll',
               icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1047,6 +1033,16 @@ function Accounting() {
               icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
               <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
+            </svg>
+            },
+            {
+              key: 'overview',
+              label: 'Property Overview',
+              icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="3" width="7" height="7"/>
+              <rect x="14" y="3" width="7" height="7"/>
+              <rect x="14" y="14" width="7" height="7"/>
+              <rect x="3" y="14" width="7" height="7"/>
             </svg>
             }
           ].map((tab) => (
@@ -1226,7 +1222,7 @@ function Accounting() {
                         textTransform: 'uppercase',
                         letterSpacing: '0.05em'
                       }}>
-                        Gross Rent
+                        Monthly Rent
                       </th>
                       <th style={{
                         textAlign: 'center',
@@ -1237,7 +1233,7 @@ function Accounting() {
                         textTransform: 'uppercase',
                         letterSpacing: '0.05em'
                       }}>
-                        Actual Rent
+                        Rent Collected So Far
                       </th>
                       <th style={{
                         textAlign: 'center',
@@ -1248,18 +1244,7 @@ function Accounting() {
                         textTransform: 'uppercase',
                         letterSpacing: '0.05em'
                       }}>
-                        Expenses
-                      </th>
-                      <th style={{
-                        textAlign: 'center',
-                        padding: '0.75rem 1rem',
-                        fontWeight: '600',
-                        color: '#374151',
-                        fontSize: '0.75rem',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.05em'
-                      }}>
-                        Net Income
+                        Security Deposit
                       </th>
                     </tr>
                   </thead>
@@ -1339,40 +1324,8 @@ function Accounting() {
                           textAlign: 'center',
                           padding: '1rem'
                         }}>
-                          <div>
-                            <div style={{
-                              fontWeight: '600',
-                              color: '#dc2626',
-                              marginBottom: '0.25rem'
-                            }}>
-                              {formatCurrency(property.expenses)}
-                            </div>
-                            <div style={{
-                              fontSize: '0.75rem',
-                              color: '#6b7280'
-                            }}>
-                              {((property.expenses / property.monthlyRent) * 100).toFixed(1)}% of gross
-                            </div>
-                          </div>
-                        </td>
-                        <td style={{
-                          textAlign: 'center',
-                          padding: '1rem'
-                        }}>
-                          <div>
-                            <div style={{
-                              fontWeight: '600',
-                              color: property.netIncome >= 0 ? '#16a34a' : '#dc2626',
-                              marginBottom: '0.25rem'
-                            }}>
-                              {formatCurrency(property.netIncome)}
-                            </div>
-                            <div style={{
-                              fontSize: '0.75rem',
-                              color: '#6b7280'
-                            }}>
-                              {((property.netIncome / property.actualRent) * 100).toFixed(1)}% margin
-                            </div>
+                          <div style={{ fontWeight: '600', color: '#111827' }}>
+                            N/A
                           </div>
                         </td>
                       </tr>
@@ -1451,37 +1404,6 @@ function Accounting() {
                     </svg>
                     Collect Rent
                   </button> */}
-                  <button 
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      padding: '0.5rem 1rem',
-                      backgroundColor: '#f8fafc',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '8px',
-                      fontSize: '0.875rem',
-                      fontWeight: '500',
-                      color: '#475569',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease'
-                    }}
-                    onMouseOver={(e) => {
-                      e.currentTarget.style.backgroundColor = '#f1f5f9';
-                      e.currentTarget.style.borderColor = '#cbd5e1';
-                    }}
-                    onMouseOut={(e) => {
-                      e.currentTarget.style.backgroundColor = '#f8fafc';
-                      e.currentTarget.style.borderColor = '#e2e8f0';
-                    }}
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M3 16l4 4 4-4"/>
-                      <path d="M7 20V4"/>
-                      <path d="M11 4L21 4"/>
-                    </svg>
-                    Send Reminders
-                  </button>
                 </div>
               </div>
 
@@ -1577,7 +1499,13 @@ function Accounting() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredData.rentRoll.map((item, index) => (
+                    {filteredData.rentRoll.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} style={{ padding: '2rem', textAlign: 'center', color: '#6b7280' }}>
+                          No rent roll entries to display for the selected period.
+                        </td>
+                      </tr>
+                    ) : filteredData.rentRoll.map((item, index) => (
                       <tr key={item.id} style={{
                         borderBottom: index < filteredData.rentRoll.length - 1 ? '1px solid #f1f5f9' : 'none',
                         transition: 'background-color 0.2s ease'
@@ -2012,7 +1940,13 @@ function Accounting() {
                     </tr>
                   </thead>
                   <tbody>
-                    {realExpenses.map((expense, index) => (
+                    {realExpenses.length === 0 ? (
+                      <tr>
+                        <td colSpan={9} style={{ padding: '2rem', textAlign: 'center', color: '#6b7280' }}>
+                          No expenses recorded for the selected period.
+                        </td>
+                      </tr>
+                    ) : realExpenses.map((expense, index) => (
                       <tr key={expense.id} style={{
                         borderBottom: index < realExpenses.length - 1 ? '1px solid #f1f5f9' : 'none',
                         transition: 'background-color 0.2s ease'
@@ -2036,7 +1970,7 @@ function Accounting() {
                             color: '#374151',
                             display: 'inline-block'
                           }}>
-                            {formatDate(expense.expense_date)}
+                            {formatDate((expense as any).date)}
                           </div>
                         </td>
                         <td style={{

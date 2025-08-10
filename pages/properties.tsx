@@ -230,7 +230,7 @@ function Properties() {
     const totalRooms = rooms.length;
     const occupiedRooms = rooms.reduce((sum, room) => sum + (room.current_occupancy || 0), 0);
     const vacantRooms = Math.max(0, totalRooms - occupiedRooms);
-    const activeLeases = leases.filter(lease => lease.is_active || lease.status === 'active').length;
+    const activeLeases = leases.filter(lease => lease.status === 'active').length;
     const occupancyRate = totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0;
     
     return {
@@ -1035,69 +1035,28 @@ function Properties() {
                               alignItems: 'center',
                               gap: '0.5rem'
                             }}>
-                                <div className="dropdown-container">
+                                <div>
                                   <button 
-                                    onClick={(e) => handleManageClick(e, property.id)} 
-                                  style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '0.5rem',
-                                    padding: '0.5rem 0.75rem',
-                                    backgroundColor: '#2563eb',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '6px',
-                                    fontSize: '0.875rem',
-                                    fontWeight: '500',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s ease'
-                                  }}
-                                  onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
-                                  onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
-                                >
-                                  <MoreHorizontal style={{ width: '1rem', height: '1rem' }} />
+                                    onClick={() => router.push(`/properties/${property.id}`)} 
+                                    style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '0.5rem',
+                                      padding: '0.5rem 0.75rem',
+                                      backgroundColor: '#2563eb',
+                                      color: 'white',
+                                      border: 'none',
+                                      borderRadius: '6px',
+                                      fontSize: '0.875rem',
+                                      fontWeight: '500',
+                                      cursor: 'pointer',
+                                      transition: 'all 0.2s ease'
+                                    }}
+                                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
+                                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+                                  >
                                     Manage
                                   </button>
-                                  
-                                  {activeDropdown === property.id && (
-                                    <div className="dropdown-menu">
-                                      <button 
-                                        onClick={() => handleManageProperty(property.id)}
-                                        className="dropdown-item"
-                                      >
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                          <path d="M3 21h18"/>
-                                          <path d="M5 21V7l8-4v18"/>
-                                          <path d="M19 21V11l-6-4"/>
-                                        </svg>
-                                        View Rooms
-                                      </button>
-                                      
-                                      {canAssignTenant(property) && (
-                                      <button 
-                                        onClick={() => handleAssignTenant(property)}
-                                        className="dropdown-item"
-                                      >
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                                          <circle cx="12" cy="7" r="4"/>
-                                        </svg>
-                                        Assign Tenant
-                                      </button>
-                                      )}
-                                      
-                                      <button 
-                                        onClick={() => router.push(`/properties/${property.id}/edit`)}
-                                        className="dropdown-item"
-                                      >
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                                        </svg>
-                                        Edit Property
-                                      </button>
-                                    </div>
-                                  )}
                                 </div>
                                 
                                 <button 
