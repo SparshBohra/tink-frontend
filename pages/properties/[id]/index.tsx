@@ -1076,7 +1076,8 @@ export default function PropertyDetails() {
               ))}
         </div>
         
-            {/* Room Management */}
+            {/* Room Management - only for per_room properties */}
+            {property?.rent_type === 'per_room' && (
             <div style={{
               backgroundColor: 'white',
               borderRadius: '12px',
@@ -1196,6 +1197,8 @@ export default function PropertyDetails() {
                     </div>
                   )}
                 </div>
+
+            )}
 
             {/* Property History */}
             <div style={{

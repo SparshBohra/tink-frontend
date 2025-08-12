@@ -279,26 +279,20 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
     }
   }, [formData.property_ref]);
 
+   // Auto-detect listing type based on selected property's rent_type
+  useEffect(() => {
+    if (!formData.property_ref) return;
+    const prop = properties.find(p => p.id === parseInt(formData.property_ref));
+    if (!prop || !prop.rent_type) return;
+    const nextType = prop.rent_type === 'per_property' ? 'whole_property' : 'rooms';
+    if (formData.listing_type !== nextType) {
+      setFormData(prev => ({ ...prev, listing_type: nextType }));
+    }
+  }, [formData.property_ref, properties]);
+
   // Add room loading state
   const [roomsLoading, setRoomsLoading] = useState(false);
-
-  // Auto-adjust listing type based on available rooms (only on initial load, not after user selection)
-  useEffect(() => {
-    if (formData.property_ref && rooms.length === 0 && !roomsLoading && !editMode) {
-      // Only auto-adjust if we've finished loading and there are truly no rooms
-      // And only if user hasn't explicitly selected a listing type
-      if (formData.listing_type === 'rooms') {
-        // Don't auto-adjust if user explicitly chose rooms - let them see the "no rooms" message
-        return;
-      }
-      
-      setFormData(prev => ({
-        ...prev,
-        listing_type: 'whole_property'
-      }));
-    }
-  }, [formData.property_ref, rooms.length, roomsLoading, editMode]);
-
+  
   const fetchProperties = async () => {
     try {
       const response = await apiClient.getProperties();
@@ -707,27 +701,8 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
           )}
               </div>
 
-              {selectedProperty && (
-                <div className={styles.formGroup}>
-            <label>Listing Type <span className={styles.required}>*</span></label>
-                  <div className={styles.radioGroup}>
-                <label className={`${styles.radioOption} ${formData.listing_type === 'rooms' ? styles.selected : ''}`}>
-                    <input type="radio" name="listing_type" value="rooms" checked={formData.listing_type === 'rooms'} onChange={(e) => handleInputChange('listing_type', e.target.value)} />
-                    <div className="radio-content">
-                        <span className={styles.radioTitle}>Individual Rooms</span>
-                        <small className={styles.radioDescription}>Rent out specific rooms in the property</small>
-                    </div>
-                    </label>
-                <label className={`${styles.radioOption} ${formData.listing_type === 'whole_property' ? styles.selected : ''}`}>
-                    <input type="radio" name="listing_type" value="whole_property" checked={formData.listing_type === 'whole_property'} onChange={(e) => handleInputChange('listing_type', e.target.value)} />
-                    <div className="radio-content">
-                        <span className={styles.radioTitle}>Whole Property</span>
-                        <small className={styles.radioDescription}>Rent the entire property as one unit</small>
-                    </div>
-                    </label>
-                  </div>
-            </div>
-          )}
+              {/* Listing type is auto-detected from the selected property's rent_type; no manual toggle shown */}
+ 
               
               <div className={styles.formGroup}>
           <label htmlFor="title">Listing Title <span className={styles.required}>*</span></label>
