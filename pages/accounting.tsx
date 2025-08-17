@@ -1001,7 +1001,7 @@ function Accounting() {
                 {metric.subtitle}
               </div>
               <div style={{ height: '0.25rem' }}></div>
-          </div>
+            </div>
           ))}
         </div>
 
@@ -1271,7 +1271,7 @@ function Accounting() {
                               marginBottom: '0.25rem'
                             }}>
                               {property.name}
-                            </div>
+                          </div>
                             <div style={{
                               fontSize: '0.75rem',
                               color: '#6b7280'

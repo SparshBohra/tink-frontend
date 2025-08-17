@@ -958,6 +958,50 @@ class ApiClient {
     }
   }
 
+  async generateLeaseWithCustomDocument(applicationId: number, roomId: number, leaseTerms: any, customLeaseFile?: File | null): Promise<Application> {
+    try {
+      console.log(`Generating lease for application ${applicationId} and room ${roomId}`, leaseTerms);
+      
+      const formData = new FormData();
+      formData.append('room_id', roomId.toString());
+      
+      // Add lease terms to form data
+      Object.keys(leaseTerms).forEach(key => {
+        if (leaseTerms[key] !== undefined && leaseTerms[key] !== null) {
+          formData.append(key, leaseTerms[key].toString());
+        }
+      });
+      
+      // Add custom lease file if provided
+      if (customLeaseFile) {
+        formData.append('custom_lease_document', customLeaseFile);
+      }
+      
+      const response = await this.api.post(`/tenants/applications/${applicationId}/generate-lease/`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      
+      console.log('Lease generation successful:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Lease generation failed for application ${applicationId}:`, error);
+      
+      if (error.response?.status === 400) {
+        const details = error.response?.data?.error || error.response?.data?.detail || error.response?.data?.message || JSON.stringify(error.response?.data);
+        throw new Error(details);
+      }
+      if (error.response?.status === 404) {
+        throw new Error(`Application with ID ${applicationId} not found`);
+      }
+      if (error.response?.status === 500) {
+        throw new Error('Server error occurred while generating lease. Please try again or contact support.');
+      }
+      throw new Error(error.message || 'Failed to generate lease');
+    }
+  }
+
   // Lease Signing Workflow API Methods
   async sendLeaseToTenant(leaseId: number): Promise<{ message: string; lease_status: string; sent_at: string; draft_lease_url: string }> {
     try {
@@ -1154,6 +1198,41 @@ class ApiClient {
     }
     
     const response = await this.api.post('/tenants/leases/', data);
+    return response.data;
+  }
+
+  async createLeaseWithCustomDocument(data: LeaseFormData, customLeaseFile?: File | null): Promise<Lease> {
+    // Ensure tenant is provided
+    if (!data.tenant) {
+      throw new Error("Tenant is required to create a lease.");
+    }
+    
+    // For property-level leases, room is not required
+    // For room-specific leases, room is required
+    if (!data.room && !data.property_ref) {
+      throw new Error("Either Room or Property reference is required to create a lease.");
+    }
+    
+    const formData = new FormData();
+    
+    // Add all lease data to form data
+    Object.keys(data).forEach(key => {
+      if (data[key] !== undefined && data[key] !== null) {
+        formData.append(key, data[key].toString());
+      }
+    });
+    
+    // Add custom lease file if provided
+    if (customLeaseFile) {
+      formData.append('custom_lease_document', customLeaseFile);
+      formData.append('is_custom_lease', 'true');
+    }
+    
+    const response = await this.api.post('/tenants/leases/', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return response.data;
   }
 
@@ -1434,7 +1513,37 @@ class ApiClient {
     damage_charges?: number;
     deposit_returned?: number;
   }): Promise<Lease> {
+    try {
+      console.log(`Processing move-out for lease ${leaseId} with data:`, moveOutData);
     const response = await this.api.post(`/tenants/leases/${leaseId}/move_out/`, moveOutData);
+      console.log('Move-out successful:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error('Move-out failed:', error);
+      console.error('Error response:', error.response?.data);
+      
+      if (error.response?.status === 400) {
+        const details = error.response?.data?.detail || error.response?.data?.message || JSON.stringify(error.response?.data);
+        throw new Error(`Invalid move-out data: ${details}`);
+      }
+      if (error.response?.status === 404) {
+        throw new Error(`Lease with ID ${leaseId} not found`);
+      }
+      if (error.response?.status === 500) {
+        throw new Error('Server error occurred while processing move-out. Please try again or contact support.');
+      }
+      throw new Error(error.message || 'Failed to process move-out');
+    }
+  }
+
+  async requestTenantMoveout(leaseId: number, moveOutData: {
+    move_out_date: string;
+    move_out_condition?: string;
+    cleaning_charges?: number;
+    damage_charges?: number;
+    deposit_returned?: number;
+  }): Promise<Lease> {
+    const response = await this.api.post(`/tenants/tenant-leases/${leaseId}/request_move_out/`, moveOutData);
     return response.data;
   }
 

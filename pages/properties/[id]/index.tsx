@@ -1113,7 +1113,7 @@ export default function PropertyDetails() {
                     color: '#6b7280',
                     margin: 0
                   }}>{rooms.length} rooms in this property</p>
-                </div>
+                  </div>
                 <Link href={`/properties/${id}/add-room`} 
                   style={{
                     display: 'flex',
@@ -1131,14 +1131,14 @@ export default function PropertyDetails() {
                   onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
                   onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <line x1="12" y1="5" x2="12" y2="19"/>
-                    <line x1="5" y1="12" x2="19" y2="12"/>
-                  </svg>
-                  Add New Room
-                </Link>
-              </div>
-              {rooms.length > 0 ? (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <line x1="12" y1="5" x2="12" y2="19"/>
+                      <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+                    Add New Room
+          </Link>
+                  </div>
+                  {rooms.length > 0 ? (
                   <div className="rooms-table-container">
                             <DataTable
                                 columns={[
@@ -1234,7 +1234,7 @@ export default function PropertyDetails() {
                     color: '#6b7280',
                     margin: 0
                   }}>Tenant and rent collection history</p>
-                </div>
+                      </div>
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -1246,8 +1246,8 @@ export default function PropertyDetails() {
                     borderRadius: '6px',
                     padding: '0.25rem'
                   }}>
-                    <button 
-                      onClick={() => setActiveHistoryTab('tenant')}
+                              <button 
+                                  onClick={() => setActiveHistoryTab('tenant')}
                       style={{
                         padding: '0.5rem 0.75rem',
                         fontSize: '0.875rem',
@@ -1259,11 +1259,11 @@ export default function PropertyDetails() {
                         backgroundColor: activeHistoryTab === 'tenant' ? '#2563eb' : 'transparent',
                         color: activeHistoryTab === 'tenant' ? 'white' : '#6b7280'
                       }}
-                    >
-                      Tenant History
-                    </button>
-                    <button 
-                      onClick={() => setActiveHistoryTab('rent')}
+                              >
+                                  Tenant History
+                              </button>
+                              <button 
+                                  onClick={() => setActiveHistoryTab('rent')}
                       style={{
                         padding: '0.5rem 0.75rem',
                         fontSize: '0.875rem',
@@ -1275,20 +1275,20 @@ export default function PropertyDetails() {
                         backgroundColor: activeHistoryTab === 'rent' ? '#2563eb' : 'transparent',
                         color: activeHistoryTab === 'rent' ? 'white' : '#6b7280'
                       }}
-                    >
-                      Rent Collection
-                    </button>
-                  </div>
+                              >
+                                  Rent Collection
+                              </button>
+                          </div>
                   <div style={{
                     display: 'flex',
                     alignItems: 'center',
                     gap: '0.5rem'
                   }}>
-                    <input 
-                      id="history-toggle"
-                      type="checkbox" 
-                      checked={showAllHistory} 
-                      onChange={(e) => setShowAllHistory(e.target.checked)}
+                            <input 
+                              id="history-toggle"
+                              type="checkbox" 
+                              checked={showAllHistory} 
+                              onChange={(e) => setShowAllHistory(e.target.checked)} 
                       style={{
                         width: '1rem',
                         height: '1rem',
@@ -1300,10 +1300,10 @@ export default function PropertyDetails() {
                       color: '#6b7280',
                       cursor: 'pointer'
                     }}>Show all properties</label>
-                  </div>
-                </div>
-              </div>
-              {activeHistoryTab === 'tenant' && (
+                          </div>
+                        </div>
+                    </div>
+                    {activeHistoryTab === 'tenant' && (
                   <div className="history-table-container">
                   <DataTable
                     columns={[
@@ -1317,37 +1317,37 @@ export default function PropertyDetails() {
                                 renderRow={renderTenantHistoryRow}
                             />
                   </div>
-              )}
-              {activeHistoryTab === 'rent' && (
+                    )}
+                    {activeHistoryTab === 'rent' && (
                   <div className="history-table-container">
                     {paymentLoading ? (
-                        <div className="loading-container">
-                            <div className="loading-spinner"></div>
-                            <p>Loading payment history...</p>
-                        </div>
-                    ) : paymentHistory.length > 0 ? (
-                        <DataTable
-                            columns={[
-                                { header: 'Tenant', key: 'tenant' },
-                                { header: 'Amount', key: 'amount' },
-                                { header: 'Payment Date', key: 'payment_date' },
-                                { header: 'Rent Period', key: 'rent_period' },
-                                { header: 'Status', key: 'status' },
-                                { header: 'Description', key: 'description' },
-                            ]}
-                            data={paymentHistory}
-                            renderRow={renderPaymentHistoryRow}
-                        />
-                    ) : (
-                        <EmptyState
-                            title="No Payment History"
-                            description="No rent payments have been recorded for this property yet."
-                        />
+                            <div className="loading-container">
+                                <div className="loading-spinner"></div>
+                                <p>Loading payment history...</p>
+                            </div>
+                        ) : paymentHistory.length > 0 ? (
+                                <DataTable
+                                    columns={[
+                                        { header: 'Tenant', key: 'tenant' },
+                                        { header: 'Amount', key: 'amount' },
+                                        { header: 'Payment Date', key: 'payment_date' },
+                                        { header: 'Rent Period', key: 'rent_period' },
+                                        { header: 'Status', key: 'status' },
+                                        { header: 'Description', key: 'description' },
+                                    ]}
+                                    data={paymentHistory}
+                                    renderRow={renderPaymentHistoryRow}
+                                />
+                        ) : (
+                            <EmptyState
+                                title="No Payment History"
+                                description="No rent payments have been recorded for this property yet."
+                            />
                     )}
                   </div>
-              )}
-            </div>
-          </div>
+                    )}
+                </div>
+              </div>
 
           {/* Right Column (1 part): Quick Actions + Lease Details */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -1427,7 +1427,7 @@ export default function PropertyDetails() {
                   
                   return (
                     <div key={index}
-                      onClick={action.onClick}
+                    onClick={action.onClick}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -1458,8 +1458,8 @@ export default function PropertyDetails() {
                         justifyContent: 'center',
                         flexShrink: 0
                       }}>
-                        {action.icon}
-                      </div>
+                      {action.icon}
+                    </div>
                       <div style={{ flex: 1 }}>
                         <h3 style={{
                           fontSize: '0.875rem',
@@ -1473,8 +1473,8 @@ export default function PropertyDetails() {
                           color: '#6b7280',
                           margin: 0
                         }}>{action.subtitle}</p>
+                        </div>
                       </div>
-                    </div>
                   );
                 })}
                     </div>

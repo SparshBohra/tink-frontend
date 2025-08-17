@@ -37,7 +37,7 @@ const useCounterAnimation = (targetValue: number, _duration = 0, isRevenue = fal
   if (isRevenue) {
     return `$${(currentValue || 0).toLocaleString()}`;
   }
-
+  
   return currentValue;
 };
 
@@ -627,17 +627,17 @@ function LandlordDashboard() {
                    margin: 0
                  }}>
                    <span className="welcome-message">{welcomeMessage}</span>
-                 </div>
+            </div>
               </div>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center', minWidth: 180 }}>
-              <span style={{ display: 'flex', alignItems: 'center', fontSize: '13px', color: '#94a3b8', fontWeight: 500, letterSpacing: 0.2, marginBottom: 2 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center', minWidth: 180 }}>
+                <span style={{ display: 'flex', alignItems: 'center', fontSize: '13px', color: '#94a3b8', fontWeight: 500, letterSpacing: 0.2, marginBottom: 2 }}>
                 <Calendar style={{ width: '1rem', height: '1rem', marginRight: '0.375rem' }} />
-                {weekday}
-              </span>
-              <span style={{ fontSize: '17px', color: '#334155', fontWeight: 600, letterSpacing: 0.1, lineHeight: 1.3, textAlign: 'right', width: '100%' }}>
-                {dateString}
-              </span>
+                  {weekday}
+                </span>
+                <span style={{ fontSize: '17px', color: '#334155', fontWeight: 600, letterSpacing: 0.1, lineHeight: 1.3, textAlign: 'right', width: '100%' }}>
+                  {dateString}
+                </span>
             </div>
           </div>
         </div>
@@ -809,13 +809,13 @@ function LandlordDashboard() {
                 lineHeight: 1
               }}>
                 {metric.value}
-              </div>
+            </div>
               <div style={{ height: '0.25rem' }}></div>
 
-            </div>
+                </div>
           ))}
-        </div>
-
+          </div>
+          
         {/* Properties & Quick Actions Grid */}
         <div style={{
           display: 'grid',
@@ -885,8 +885,8 @@ function LandlordDashboard() {
                   View All
                 </button>
               </Link>
-            </div>
-            
+                </div>
+                
 
             
             {/* Properties Table */}
@@ -924,7 +924,7 @@ function LandlordDashboard() {
                     onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#2563eb')}
                   >
                     + Add Property
-                  </button>
+                </button>
                 </Link>
               </div>
             ) : (
@@ -945,57 +945,57 @@ function LandlordDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredProperties.map((property) => {
-                      const occupancyData = getPropertyOccupancy(property);
-                      const revenueData = getPropertyRevenue(property);
-                      const status = getPropertyStatus(property);
-                      const tasks = getPropertyTasks(property);
-                      return (
+                      {filteredProperties.map((property) => {
+                        const occupancyData = getPropertyOccupancy(property);
+                        const revenueData = getPropertyRevenue(property);
+                        const status = getPropertyStatus(property);
+                        const tasks = getPropertyTasks(property);
+                        return (
                         <tr key={property.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
                           <td style={{ padding: '1rem 0.75rem', textAlign: 'center' }}>
                             <div style={{ fontWeight: '600', color: '#2563eb', cursor: 'pointer' }} onClick={() => router.push(`/properties/${property.id}`)}>
-                              {property.name}
-                            </div>
-                          </td>
+                            {property.name}
+                          </div>
+                        </td>
                           <td style={{ padding: '1rem 0.75rem', textAlign: 'center' }}>
                             <div style={{ display: 'flex', justifyContent: 'center' }}>
                               <span style={{ padding: '0.25rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '600', backgroundColor: status.toLowerCase() === 'active' ? '#d1fae5' : '#fef2f2', color: status.toLowerCase() === 'active' ? '#065f46' : '#dc2626' }}>{status}</span>
                             </div>
-                          </td>
+                        </td>
                           <td style={{ padding: '1rem 0.75rem', textAlign: 'center' }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem' }}>
                               <Users style={{ width: '1rem', height: '1rem', color: '#6b7280' }} />
                               <span style={{ fontWeight: '600' }}>{occupancyData.occupancy}</span>
                               <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>({occupancyData.occupancyPercent}%)</span>
-                            </div>
-                          </td>
+                          </div>
+                        </td>
                           <td style={{ padding: '1rem 0.75rem', textAlign: 'center' }}>
                             <div style={{ fontWeight: '600' }}>
                               ${revenueData.revenue.toLocaleString()}
-                            </div>
-                          </td>
+                          </div>
+                        </td>
                           <td style={{ padding: '1rem 0.75rem', textAlign: 'center' }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem' }}>
                               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2"><path d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                               <span style={{ fontWeight: '600' }}>{tasks} pending</span>
-                            </div>
-                          </td>
+                          </div>
+                        </td>
                           <td style={{ padding: '1rem 0.75rem', textAlign: 'center' }}>
                             <div style={{ display: 'flex', justifyContent: 'center' }}>
                               <button style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.5rem 0.75rem', backgroundColor: '#2563eb', color: 'white', border: 'none', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '500', cursor: 'pointer', transition: 'all 0.2s ease' }} onClick={() => router.push(`/properties/${property.id}`)} onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#1d4ed8')} onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#2563eb')}>
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-                                Manage
-                              </button>
+                            Manage
+                          </button>
                             </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
+                        </td>
+                      </tr>
+                        );
+                      })}
                   </tbody>
                 </table>
-              </div>
+                </div>
             )}
-           </div>
+          </div>
 
            {/* Quick Actions Section - Takes 1 column */}
            <div style={{
@@ -1034,16 +1034,16 @@ function LandlordDashboard() {
                }}>
                  Frequently used actions
                </p>
-             </div>
-             
+            </div>
+            
              <div style={{
                display: 'flex',
                flexDirection: 'column',
                gap: '0.75rem'
              }}>
-               {quickActions.map((action, index) => (
-                 <div 
-                   key={index} 
+              {quickActions.map((action, index) => (
+                <div 
+                  key={index} 
                    style={{
                      display: 'flex',
                      alignItems: 'center',
@@ -1057,7 +1057,7 @@ function LandlordDashboard() {
                      cursor: 'pointer',
                      transition: 'all 0.2s ease'
                    }}
-                   onClick={() => router.push(action.link)}
+                  onClick={() => router.push(action.link)}
                    onMouseOver={(e) => {
                      e.currentTarget.style.backgroundColor = action.color === 'blue' ? '#dbeafe' : 
                                                             action.color === 'green' ? '#dcfce7' : 
@@ -1088,7 +1088,7 @@ function LandlordDashboard() {
                      {action.color === 'blue' ? <Home style={{ width: '1.25rem', height: '1.25rem' }} /> :
                       action.color === 'green' ? <DollarSign style={{ width: '1.25rem', height: '1.25rem' }} /> :
                       <Building style={{ width: '1.25rem', height: '1.25rem' }} />}
-                   </div>
+                  </div>
                    <div style={{ flex: 1 }}>
                      <h3 style={{
                        fontSize: '0.875rem',
@@ -1105,12 +1105,12 @@ function LandlordDashboard() {
                      }}>
                        {action.subtitle}
                      </p>
-                   </div>
-                 </div>
-               ))}
-             </div>
-           </div>
-         </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
 
         {/* Rent History Section */}
         <div style={{
@@ -1202,17 +1202,17 @@ function LandlordDashboard() {
                 justifyContent: 'center',
                 color: 'white'
               }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                </svg>
-              </div>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                  </svg>
+                </div>
               <div>
                 <div style={{ fontSize: '1.25rem', fontWeight: '700', color: '#111827', marginBottom: '0.25rem' }}>
-                  {paymentLoading ? '...' : `$${paymentSummary?.summary.current_month_total_dollars?.toLocaleString() || '0'}`}
-                </div>
+                    {paymentLoading ? '...' : `$${paymentSummary?.summary.current_month_total_dollars?.toLocaleString() || '0'}`}
+                  </div>
                 <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>Collected This Month</div>
+                </div>
               </div>
-            </div>
 
             <div style={{
               backgroundColor: '#fef3c7',
@@ -1233,18 +1233,18 @@ function LandlordDashboard() {
                 justifyContent: 'center',
                 color: 'white'
               }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="12" cy="12" r="10"/>
-                  <polyline points="12,6 12,12 16,14"/>
-                </svg>
-              </div>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <polyline points="12,6 12,12 16,14"/>
+                  </svg>
+                </div>
               <div>
                 <div style={{ fontSize: '1.25rem', fontWeight: '700', color: '#111827', marginBottom: '0.25rem' }}>
-                  {paymentLoading ? '...' : `${paymentSummary?.summary.pending_payments || 0} payments`}
-                </div>
+                    {paymentLoading ? '...' : `${paymentSummary?.summary.pending_payments || 0} payments`}
+                  </div>
                 <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>Pending Collection</div>
+                </div>
               </div>
-            </div>
 
             <div style={{
               backgroundColor: '#fef2f2',
@@ -1265,20 +1265,20 @@ function LandlordDashboard() {
                 justifyContent: 'center',
                 color: 'white'
               }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="12" cy="12" r="10"/>
-                  <line x1="15" y1="9" x2="9" y2="15"/>
-                  <line x1="9" y1="9" x2="15" y2="15"/>
-                </svg>
-              </div>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="15" y1="9" x2="9" y2="15"/>
+                    <line x1="9" y1="9" x2="15" y2="15"/>
+                  </svg>
+                </div>
               <div>
                 <div style={{ fontSize: '1.25rem', fontWeight: '700', color: '#111827', marginBottom: '0.25rem' }}>
-                  {paymentLoading ? '...' : `${paymentSummary?.summary.failed_payments || 0} failed`}
-                </div>
+                    {paymentLoading ? '...' : `${paymentSummary?.summary.failed_payments || 0} failed`}
+                  </div>
                 <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>Failed Payments</div>
+                </div>
               </div>
             </div>
-          </div>
 
           {/* Table Section */}
           <div>
@@ -1314,9 +1314,9 @@ function LandlordDashboard() {
                   }}>
                     Property:
                   </label>
-                  <select
-                    value={rentHistoryPropertyFilter}
-                    onChange={(e) => setRentHistoryPropertyFilter(e.target.value)}
+                    <select 
+                      value={rentHistoryPropertyFilter}
+                      onChange={(e) => setRentHistoryPropertyFilter(e.target.value)}
                     style={{
                       padding: '0.375rem 0.75rem',
                       border: '1px solid #d1d5db',
@@ -1326,16 +1326,16 @@ function LandlordDashboard() {
                       color: '#374151',
                       cursor: 'pointer'
                     }}
-                  >
-                    <option value="all">All Properties</option>
-                    {properties?.map((property) => (
-                      <option key={property.id} value={property.id}>
-                        {property.address}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                
+                    >
+                      <option value="all">All Properties</option>
+                      {properties?.map((property) => (
+                        <option key={property.id} value={property.id}>
+                          {property.address}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -1348,9 +1348,9 @@ function LandlordDashboard() {
                   }}>
                     Status:
                   </label>
-                  <select
-                    value={rentHistoryStatusFilter}
-                    onChange={(e) => setRentHistoryStatusFilter(e.target.value)}
+                    <select 
+                      value={rentHistoryStatusFilter}
+                      onChange={(e) => setRentHistoryStatusFilter(e.target.value)}
                     style={{
                       padding: '0.375rem 0.75rem',
                       border: '1px solid #d1d5db',
@@ -1360,14 +1360,14 @@ function LandlordDashboard() {
                       color: '#374151',
                       cursor: 'pointer'
                     }}
-                  >
-                    <option value="all">All Status</option>
-                    <option value="collected">Collected</option>
-                    <option value="pending">Pending</option>
-                    <option value="overdue">Overdue</option>
-                  </select>
-                </div>
-                
+                    >
+                      <option value="all">All Status</option>
+                      <option value="collected">Collected</option>
+                      <option value="pending">Pending</option>
+                      <option value="overdue">Overdue</option>
+                    </select>
+                  </div>
+                  
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -1380,9 +1380,9 @@ function LandlordDashboard() {
                   }}>
                     Time Period:
                   </label>
-                  <select
-                    value={rentHistoryTimeFilter}
-                    onChange={(e) => setRentHistoryTimeFilter(e.target.value)}
+                    <select 
+                      value={rentHistoryTimeFilter}
+                      onChange={(e) => setRentHistoryTimeFilter(e.target.value)}
                     style={{
                       padding: '0.375rem 0.75rem',
                       border: '1px solid #d1d5db',
@@ -1392,21 +1392,21 @@ function LandlordDashboard() {
                       color: '#374151',
                       cursor: 'pointer'
                     }}
-                  >
-                    <option value="all">All Time</option>
-                    <option value="this-month">This Month</option>
-                    <option value="last-month">Last Month</option>
-                    <option value="last-3-months">Last 3 Months</option>
-                    <option value="this-year">This Year</option>
-                  </select>
-                </div>
-                
-                <button
-                  onClick={() => {
-                    setRentHistoryPropertyFilter('all');
-                    setRentHistoryStatusFilter('all');
-                    setRentHistoryTimeFilter('all');
-                  }}
+                    >
+                      <option value="all">All Time</option>
+                      <option value="this-month">This Month</option>
+                      <option value="last-month">Last Month</option>
+                      <option value="last-3-months">Last 3 Months</option>
+                      <option value="this-year">This Year</option>
+                    </select>
+                  </div>
+                  
+                  <button 
+                    onClick={() => {
+                      setRentHistoryPropertyFilter('all');
+                      setRentHistoryStatusFilter('all');
+                      setRentHistoryTimeFilter('all');
+                    }}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -1423,15 +1423,15 @@ function LandlordDashboard() {
                   }}
                   onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#e5e7eb'}
                   onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-                    <path d="M3 3v5h5"/>
-                  </svg>
-                  Reset
-                </button>
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                      <path d="M3 3v5h5"/>
+                    </svg>
+                    Reset
+                  </button>
+                </div>
               </div>
-            </div>
 
             {/* Table */}
             <div style={{ overflowX: 'auto' }}>
@@ -1440,7 +1440,7 @@ function LandlordDashboard() {
                 borderCollapse: 'collapse',
                 fontSize: '0.875rem'
               }}>
-                <thead>
+                  <thead>
                   <tr style={{ backgroundColor: '#f9fafb' }}>
                     <th style={{
                       padding: '0.75rem',
@@ -1505,11 +1505,11 @@ function LandlordDashboard() {
                     }}>
                       Method
                     </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paymentLoading ? (
-                    <tr>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paymentLoading ? (
+                      <tr>
                       <td colSpan={7} style={{
                         padding: '2rem',
                         textAlign: 'center',
@@ -1518,9 +1518,9 @@ function LandlordDashboard() {
                       }}>
                         Loading payment history...
                       </td>
-                    </tr>
-                  ) : paymentError ? (
-                    <tr>
+                      </tr>
+                    ) : paymentError ? (
+                      <tr>
                       <td colSpan={7} style={{
                         padding: '2rem',
                         textAlign: 'center',
@@ -1529,18 +1529,18 @@ function LandlordDashboard() {
                       }}>
                         Failed to load payments
                       </td>
-                    </tr>
-                  ) : filteredPaymentHistory?.length ? (
-                    filteredPaymentHistory.map((payment) => {
-                      const paymentDate = new Date(payment.payment_date);
-                      const tenantName = payment.tenant_name || 'Unknown Tenant';
-                      const initials = tenantName.split(' ').map(n => n[0]).join('').toUpperCase();
-                      const statusClass = payment.status === 'succeeded' ? 'collected' : 
-                                        payment.status === 'pending' ? 'pending' : 'overdue';
-                      const statusText = payment.status === 'succeeded' ? 'Collected' :
-                                       payment.status === 'pending' ? 'Pending' : 'Failed';
-                      
-                      return (
+                      </tr>
+                    ) : filteredPaymentHistory?.length ? (
+                      filteredPaymentHistory.map((payment) => {
+                        const paymentDate = new Date(payment.payment_date);
+                        const tenantName = payment.tenant_name || 'Unknown Tenant';
+                        const initials = tenantName.split(' ').map(n => n[0]).join('').toUpperCase();
+                        const statusClass = payment.status === 'succeeded' ? 'collected' : 
+                                          payment.status === 'pending' ? 'pending' : 'overdue';
+                        const statusText = payment.status === 'succeeded' ? 'Collected' :
+                                         payment.status === 'pending' ? 'Pending' : 'Failed';
+                        
+                        return (
                         <tr key={payment.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
                           <td style={{ padding: '1rem 0.75rem', textAlign: 'center' }}>
                             {paymentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
@@ -1566,9 +1566,9 @@ function LandlordDashboard() {
                               }}>
                                 {initials}
                               </div>
-                              <span>{tenantName}</span>
-                            </div>
-                          </td>
+                                <span>{tenantName}</span>
+                              </div>
+                            </td>
                           <td style={{ padding: '1rem 0.75rem', textAlign: 'center' }}>
                             {payment.property_name || 'Property'}
                           </td>
@@ -1593,17 +1593,17 @@ function LandlordDashboard() {
                           </td>
                           <td style={{ padding: '1rem 0.75rem', textAlign: 'center' }}>
                             {payment.rent_period_start ? 
-                             `${new Date(payment.rent_period_start).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}` : 
+                                 `${new Date(payment.rent_period_start).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}` : 
                              'N/A'}
                           </td>
                           <td style={{ padding: '1rem 0.75rem', textAlign: 'center' }}>
                             Stripe
                           </td>
-                        </tr>
-                      );
-                    })
-                  ) : (
-                    <tr>
+                          </tr>
+                        );
+                      })
+                    ) : (
+                      <tr>
                       <td colSpan={7} style={{
                         padding: '2rem',
                         textAlign: 'center',
@@ -1612,10 +1612,10 @@ function LandlordDashboard() {
                       }}>
                         No payments found
                       </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
             </div>
           </div>
         </div>
@@ -1668,7 +1668,7 @@ function LandlordDashboard() {
                   Latest tenant applications requiring review
                 </p>
               </div>
-              <button
+              <button 
                 onClick={() => router.push('/applications')}
                 style={{
                   display: 'flex',
@@ -1784,8 +1784,8 @@ function LandlordDashboard() {
                         <span style={{ fontWeight: '500' }}>Property:</span> {getPropertyName(application)}
                       </div>
                     </div>
-  
-                    <button
+
+                    <button 
                       onClick={() => handleViewApplication(application)}
                       style={{
                         width: '100%',
@@ -1854,7 +1854,7 @@ function LandlordDashboard() {
               flexDirection: 'column',
               gap: '0.75rem'
             }}>
-              {vendors.length > 0 ? vendors.slice(0, 5).map((vendor) => (
+                {vendors.length > 0 ? vendors.slice(0, 5).map((vendor) => (
                 <div key={vendor.id} style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -1885,10 +1885,10 @@ function LandlordDashboard() {
                     flexShrink: 0
                   }}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <circle cx="12" cy="12" r="3"/>
-                      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-                    </svg>
-                  </div>
+                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                      </svg>
+                    </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{
                       fontSize: '0.875rem',
@@ -1900,14 +1900,14 @@ function LandlordDashboard() {
                       whiteSpace: 'nowrap'
                     }}>
                       {vendor.name}
-                    </div>
+                      </div>
                     <div style={{
                       fontSize: '0.75rem',
                       color: '#6b7280',
                       marginBottom: '0.125rem'
                     }}>
                       {vendor.vendor_type_display}
-                    </div>
+                      </div>
                     <div style={{
                       fontSize: '0.75rem',
                       color: '#374151',
@@ -1946,22 +1946,22 @@ function LandlordDashboard() {
                           }}
                         >
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
-                          </svg>
-                        </button>
+                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                      </svg>
+                    </button>
                       )}
                     </div>
                   </div>
-                </div>
-              )) : (
+                  </div>
+                )) : (
                 <div style={{
                   textAlign: 'center',
                   padding: '2rem 1rem',
                   color: '#6b7280'
                 }}>
                   <p style={{ margin: '0 0 1rem 0' }}>No vendors added yet</p>
-                  <button
-                    onClick={() => router.push('/tenants')}
+                    <button 
+                      onClick={() => router.push('/tenants')}
                     style={{
                       padding: '0.5rem 1rem',
                       backgroundColor: '#2563eb',
@@ -1975,12 +1975,12 @@ function LandlordDashboard() {
                     }}
                     onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
                     onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
-                  >
-                    Add First Vendor
-                  </button>
-                </div>
-              )}
-            </div>
+                    >
+                      Add First Vendor
+                    </button>
+                  </div>
+                )}
+              </div>
 
             <button
               onClick={() => router.push('/vendors')}

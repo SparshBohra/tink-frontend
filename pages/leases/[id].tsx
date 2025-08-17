@@ -1358,39 +1358,52 @@ function LeaseDetail() {
                   </button>
                   
                   <button
-                    onClick={() => setShowMoveOutForm(true)}
+                    onClick={lease.status === 'expired' ? undefined : () => setShowMoveOutForm(true)}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
                       gap: '0.75rem',
                       padding: '1rem',
-                      backgroundColor: '#eff6ff',
-                      border: '1px solid #dbeafe',
+                      backgroundColor: lease.status === 'expired' ? '#fef2f2' : '#eff6ff',
+                      border: lease.status === 'expired' ? '1px solid #fecaca' : '1px solid #dbeafe',
                       borderRadius: '8px',
-                      cursor: 'pointer',
+                      cursor: lease.status === 'expired' ? 'not-allowed' : 'pointer',
                       transition: 'all 0.2s ease',
-                      textAlign: 'left'
+                      textAlign: 'left',
+                      opacity: lease.status === 'expired' ? 0.7 : 1
                     }}
                     onMouseOver={(e) => {
-                      e.currentTarget.style.backgroundColor = '#dbeafe';
+                      if (lease.status !== 'expired') {
+                        e.currentTarget.style.backgroundColor = '#dbeafe';
+                      }
                     }}
                     onMouseOut={(e) => {
-                      e.currentTarget.style.backgroundColor = '#eff6ff';
+                      if (lease.status !== 'expired') {
+                        e.currentTarget.style.backgroundColor = '#eff6ff';
+                      }
                     }}
                   >
                     <div style={{
                       width: '2rem',
                       height: '2rem',
-                      backgroundColor: '#3b82f6',
+                      backgroundColor: lease.status === 'expired' ? '#ef4444' : '#3b82f6',
                       borderRadius: '8px',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       flexShrink: 0
                     }}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
-                        <path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
-                      </svg>
+                      {lease.status === 'expired' ? (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                          <circle cx="12" cy="12" r="10"/>
+                          <line x1="15" y1="9" x2="9" y2="15"/>
+                          <line x1="9" y1="9" x2="15" y2="15"/>
+                        </svg>
+                      ) : (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                          <path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                        </svg>
+                      )}
                     </div>
                     <div>
                       <div style={{
@@ -1398,11 +1411,11 @@ function LeaseDetail() {
                         fontWeight: '600',
                         color: '#111827',
                         marginBottom: '0.125rem'
-                      }}>Process Move-Out</div>
+                      }}>{lease.status === 'expired' ? 'Lease Already Expired' : 'Process Move-Out'}</div>
                       <div style={{
                         fontSize: '0.75rem',
                         color: '#6b7280'
-                      }}>End lease and return deposit</div>
+                      }}>{lease.status === 'expired' ? 'Tenant has already moved out' : 'End lease and return deposit'}</div>
                     </div>
                   </button>
                 </div>

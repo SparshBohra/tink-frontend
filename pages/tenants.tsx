@@ -660,7 +660,7 @@ function Tenants() {
                     {metric.subtitle}
                   </div>
                   <div style={{ height: '0.25rem' }}></div>
-              </div>
+                </div>
               ))}
             </div>
             {/* Tenants Section */}

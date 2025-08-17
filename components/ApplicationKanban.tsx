@@ -19,7 +19,8 @@ import {
   Edit, 
   Send, 
   Download, 
-  Trash2 
+  Trash2,
+  LogOut
 } from 'lucide-react';
 
 interface ApplicationKanbanProps {
@@ -39,6 +40,7 @@ interface ApplicationKanbanProps {
   onSendToTenant?: (application: Application) => void;
   onEditLease?: (application: Application) => void;
   onDownloadLease?: (application: Application) => void;
+  onMoveOut?: (application: Application) => void; /* New prop for move-out functionality */
   getPropertyName: (propertyId: number) => string;
   formatDate: (date: string | null) => string;
   extraActions?: React.ReactNode;
@@ -129,6 +131,7 @@ export default function ApplicationKanban({
   onSendToTenant,
   onEditLease,
   onDownloadLease,
+  onMoveOut,
   getPropertyName,
   formatDate,
   extraActions,
@@ -708,9 +711,17 @@ export default function ApplicationKanban({
 
                       {/* Active Tenants actions */}
                       {(app.status === 'moved_in' || app.status === 'active') && (
+                        <>
                         <button className="btn-sm primary" onClick={() => onReview(app)}>
                           View Details
+                          </button>
+                          {app.status === 'moved_in' && onMoveOut && (
+                            <button className="btn-sm btn-error" onClick={() => onMoveOut(app)}>
+                              <LogOut size={12} />
+                              Move Out
                         </button>
+                          )}
+                        </>
                       )}
 
                       {/* Message button - available on all cards except rejected */}
