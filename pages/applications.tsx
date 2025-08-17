@@ -13,7 +13,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import { useAuth, withAuth } from '../lib/auth-context';
 import { Application, Property, Room } from '../lib/types';
 import { apiClient } from '../lib/api';
-import { FileText, Clock, CheckCircle, TrendingUp, Calendar } from 'lucide-react';
+import { FileText, Clock, CheckCircle, TrendingUp, Calendar, LogOut, Calculator } from 'lucide-react';
 
 interface ConflictResolution {
   applicationId: number;
@@ -70,6 +70,19 @@ function Applications() {
   // Add state for viewing management modal
   const [isViewingManagementOpen, setIsViewingManagementOpen] = useState(false);
   const [viewingsCount, setViewingsCount] = useState<number>(0);
+  
+  // Add state for move-out modal
+  const [isMoveOutModalOpen, setIsMoveOutModalOpen] = useState(false);
+  const [selectedApplicationForMoveOut, setSelectedApplicationForMoveOut] = useState<Application | null>(null);
+  const [moveOutDate, setMoveOutDate] = useState('');
+  const [depositReturn, setDepositReturn] = useState('');
+  const [moveOutCalculations, setMoveOutCalculations] = useState<{
+    monthsRemaining: number;
+    daysRemaining: number;
+    rentForgo: number;
+    depositReturned: number;
+    totalForgo: number;
+  } | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -781,6 +794,75 @@ function Applications() {
       
       const fullMessage = `${errorTitle}\n\n${errorDetails}\n\n💡 Suggestions:\n${suggestions}`;
       alert(fullMessage);
+    }
+  };
+
+  const calculateMoveOutImpact = (application: Application, moveOutDate: string) => {
+    if (!application.lease || !application.lease.end_date) return null;
+    
+    const moveOut = new Date(moveOutDate);
+    const leaseEnd = new Date(application.lease.end_date);
+    
+    // Calculate time remaining from move-out date to lease end
+    const timeDiff = leaseEnd.getTime() - moveOut.getTime();
+    const daysRemaining = Math.max(0, Math.ceil(timeDiff / (1000 * 60 * 60 * 24)));
+    
+    // Calculate months and remaining days
+    const monthsRemaining = Math.floor(daysRemaining / 30);
+    const extraDays = daysRemaining % 30;
+    
+    // Calculate rent forgo (prorated)
+    const dailyRent = parseFloat(application.lease.monthly_rent.toString()) / 30;
+    const rentForgo = dailyRent * daysRemaining;
+    
+    return {
+      monthsRemaining,
+      daysRemaining: extraDays,
+      totalDaysRemaining: daysRemaining,
+      rentForgo: Math.round(rentForgo * 100) / 100,
+      totalForgo: Math.round(rentForgo * 100) / 100
+    };
+  };
+
+  const handleMoveOut = (application: Application) => {
+    setSelectedApplicationForMoveOut(application);
+    setIsMoveOutModalOpen(true);
+    setMoveOutDate(new Date().toISOString().split('T')[0]); // Default to today
+    const calculations = calculateMoveOutImpact(application, new Date().toISOString().split('T')[0]);
+    setMoveOutCalculations(calculations);
+  };
+
+  const handleMoveOutDateChange = (date: string) => {
+    if (!selectedApplicationForMoveOut) return;
+    setMoveOutDate(date);
+    const calculations = calculateMoveOutImpact(selectedApplicationForMoveOut, date);
+    setMoveOutCalculations(calculations);
+  };
+
+  const handleConfirmMoveOut = async () => {
+    if (!selectedApplicationForMoveOut || !selectedApplicationForMoveOut.lease) return;
+    
+    try {
+      await apiClient.processMoveout(selectedApplicationForMoveOut.lease.id, {
+        move_out_date: moveOutDate,
+        move_out_condition: 'Manager-processed move-out from applications',
+        cleaning_charges: 0,
+        damage_charges: 0,
+        deposit_returned: parseFloat(selectedApplicationForMoveOut.lease.security_deposit.toString())
+      });
+      
+      // Refresh data to show updated status
+      await fetchData();
+      
+      // Close modal
+      setIsMoveOutModalOpen(false);
+      setSelectedApplicationForMoveOut(null);
+      setMoveOutCalculations(null);
+      
+      alert('Move-out processed successfully!');
+    } catch (error: any) {
+      console.error('Failed to process move-out:', error);
+      alert(`Failed to process move-out: ${error.message}`);
     }
   };
 
@@ -1593,7 +1675,7 @@ function Applications() {
                 {metric.subtitle}
               </div>
                             <div style={{ height: '0.25rem' }}></div>
-          </div>
+            </div>
           ))}
         </div>
 
@@ -1615,6 +1697,7 @@ function Applications() {
             onSendToTenant={handleSendToTenant}
             onEditLease={handleEditLease}
             onDownloadLease={handleDownloadLease}
+            onMoveOut={handleMoveOut}
             getPropertyName={getPropertyName}
             formatDate={formatDate}
             extraActions={(
@@ -1815,6 +1898,220 @@ function Applications() {
           }}
           onGenerateLease={handleNewLeaseGeneration}
         />
+      )}
+
+      {/* Move-out Confirmation Modal */}
+      {isMoveOutModalOpen && selectedApplicationForMoveOut && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            padding: '2rem',
+            maxWidth: '500px',
+            width: '90%',
+            maxHeight: '90vh',
+            overflow: 'auto',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '1rem',
+              marginBottom: '1.5rem'
+            }}>
+              <div style={{
+                width: '3rem',
+                height: '3rem',
+                backgroundColor: '#fef2f2',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <LogOut style={{ width: '1.5rem', height: '1.5rem', color: '#dc2626' }} />
+              </div>
+              <div>
+                <h2 style={{
+                  fontSize: '1.5rem',
+                  fontWeight: '700',
+                  color: '#111827',
+                  margin: 0
+                }}>
+                  Process Move-Out
+                </h2>
+                <p style={{
+                  fontSize: '0.875rem',
+                  color: '#6b7280',
+                  margin: '0.25rem 0 0 0'
+                }}>
+                  {selectedApplicationForMoveOut.tenant_name} - {selectedApplicationForMoveOut.property_name}
+                </p>
+              </div>
+            </div>
+
+            <div style={{
+              backgroundColor: '#f9fafb',
+              borderRadius: '8px',
+              padding: '1rem',
+              marginBottom: '1.5rem'
+            }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                marginBottom: '0.75rem'
+              }}>
+                <Calendar style={{ width: '1rem', height: '1rem', color: '#6b7280' }} />
+                <span style={{
+                  fontSize: '0.875rem',
+                  fontWeight: '600',
+                  color: '#374151'
+                }}>
+                  Move-out Date
+                </span>
+              </div>
+              <input
+                type="date"
+                value={moveOutDate}
+                onChange={(e) => handleMoveOutDateChange(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  fontSize: '0.875rem'
+                }}
+              />
+            </div>
+
+            {moveOutCalculations && (
+              <div style={{
+                backgroundColor: '#fef3c7',
+                borderRadius: '8px',
+                padding: '1rem',
+                marginBottom: '1.5rem',
+                border: '1px solid #fbbf24'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  marginBottom: '0.75rem'
+                }}>
+                  <Calculator style={{ width: '1rem', height: '1rem', color: '#d97706' }} />
+                  <span style={{
+                    fontSize: '0.875rem',
+                    fontWeight: '600',
+                    color: '#92400e'
+                  }}>
+                    Financial Impact
+                  </span>
+                </div>
+                
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: '1rem',
+                  fontSize: '0.875rem'
+                }}>
+                  <div>
+                    <div style={{ color: '#6b7280', marginBottom: '0.25rem' }}>
+                      Time Remaining
+                    </div>
+                    <div style={{ fontWeight: '600', color: '#374151' }}>
+                      {moveOutCalculations.monthsRemaining} months, {moveOutCalculations.daysRemaining} days
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ color: '#6b7280', marginBottom: '0.25rem' }}>
+                      Rent Forgo
+                    </div>
+                    <div style={{ fontWeight: '600', color: '#dc2626' }}>
+                      ${moveOutCalculations.rentForgo.toFixed(2)}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{
+                  marginTop: '0.75rem',
+                  paddingTop: '0.75rem',
+                  borderTop: '1px solid #fbbf24'
+                }}>
+                  <div style={{ color: '#6b7280', marginBottom: '0.25rem', fontSize: '0.875rem' }}>
+                    Total Days Lost: {moveOutCalculations.totalDaysRemaining}
+                  </div>
+                  <div style={{ color: '#6b7280', fontSize: '0.75rem' }}>
+                    Lease ends on: {selectedApplicationForMoveOut.lease?.end_date ? formatDate(selectedApplicationForMoveOut.lease.end_date) : 'N/A'}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div style={{
+              display: 'flex',
+              gap: '0.75rem',
+              justifyContent: 'flex-end'
+            }}>
+              <button
+                onClick={() => {
+                  setIsMoveOutModalOpen(false);
+                  setSelectedApplicationForMoveOut(null);
+                  setMoveOutCalculations(null);
+                }}
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  backgroundColor: '#f8fafc',
+                  color: '#374151',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '6px',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f1f5f9';
+                  e.currentTarget.style.borderColor = '#94a3b8';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f8fafc';
+                  e.currentTarget.style.borderColor = '#cbd5e1';
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmMoveOut}
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  backgroundColor: '#dc2626',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#b91c1c'}
+                onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
+              >
+                Confirm Move-Out
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       <style jsx>{`

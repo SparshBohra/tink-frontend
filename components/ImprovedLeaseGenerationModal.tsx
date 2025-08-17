@@ -43,6 +43,10 @@ export default function ImprovedLeaseGenerationModal({
     end_date: ''
   });
 
+  // Custom lease upload state
+  const [leaseGenerationType, setLeaseGenerationType] = useState<'auto' | 'upload'>('auto');
+  const [customLeaseFile, setCustomLeaseFile] = useState<File | null>(null);
+
   // Consolidated useEffect for initializing and updating modal state
   useEffect(() => {
     if (isOpen) {
@@ -69,6 +73,8 @@ export default function ImprovedLeaseGenerationModal({
       setCurrentStep('room_assignment');
       setConfirmedPropertyId(0);
       setConfirmedRoomId(0);
+      setLeaseGenerationType('auto');
+      setCustomLeaseFile(null);
       setError(null);
     }
   }, [isOpen, application, rooms, properties]);
@@ -153,6 +159,18 @@ export default function ImprovedLeaseGenerationModal({
       return;
     }
 
+    // Validate custom lease upload if selected
+    if (leaseGenerationType === 'upload' && !customLeaseFile) {
+      setError('Please upload a lease document or switch to auto-generate.');
+      return;
+    }
+
+    // Validate file size (10MB limit)
+    if (customLeaseFile && customLeaseFile.size > 10 * 1024 * 1024) {
+      setError('File size must be less than 10MB.');
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -163,10 +181,16 @@ export default function ImprovedLeaseGenerationModal({
         monthly_rent: parseFloat(leaseTerms.monthly_rent),
         security_deposit: parseFloat(leaseTerms.security_deposit) || parseFloat(leaseTerms.monthly_rent),
         start_date: leaseTerms.start_date,
-        end_date: leaseTerms.end_date
+        end_date: leaseTerms.end_date,
+        is_custom_lease: leaseGenerationType === 'upload'
       };
       
-      const response = await apiClient.generateLease(application.id, confirmedRoomId || 0, leaseData);
+      const response = await apiClient.generateLeaseWithCustomDocument(
+        application.id, 
+        confirmedRoomId || 0, 
+        leaseData,
+        customLeaseFile
+      );
       onLeaseGenerated(response);
     onClose();
     } catch (error: any) {
@@ -379,6 +403,71 @@ export default function ImprovedLeaseGenerationModal({
                   )}
                     </div>
                   </div>
+
+              <div className="lease-document-section">
+                <h3>📄 Lease Document</h3>
+                <p className="section-description">Choose how to create the lease document for this tenant.</p>
+                
+                <div className="lease-type-toggle">
+                  <div className="toggle-options">
+                    <label className={`toggle-option ${leaseGenerationType === 'auto' ? 'active' : ''}`}>
+                      <input
+                        type="radio"
+                        name="leaseType"
+                        value="auto"
+                        checked={leaseGenerationType === 'auto'}
+                        onChange={(e) => setLeaseGenerationType(e.target.value as 'auto' | 'upload')}
+                      />
+                      <div className="option-content">
+                        <div className="option-icon">🤖</div>
+                        <div className="option-text">
+                          <strong>Auto Generate</strong>
+                          <span>Generate lease document automatically using our template</span>
+                        </div>
+                      </div>
+                    </label>
+                    
+                    <label className={`toggle-option ${leaseGenerationType === 'upload' ? 'active' : ''}`}>
+                      <input
+                        type="radio"
+                        name="leaseType"
+                        value="upload"
+                        checked={leaseGenerationType === 'upload'}
+                        onChange={(e) => setLeaseGenerationType(e.target.value as 'auto' | 'upload')}
+                      />
+                      <div className="option-content">
+                        <div className="option-icon">📤</div>
+                        <div className="option-text">
+                          <strong>Upload Custom Lease</strong>
+                          <span>Upload your own lease document (PDF format)</span>
+                        </div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                {leaseGenerationType === 'upload' && (
+                  <div className="custom-lease-upload">
+                    <div className="form-group">
+                      <label htmlFor="custom_lease_file">Upload Lease Document *</label>
+                      <input
+                        id="custom_lease_file"
+                        type="file"
+                        accept=".pdf,.doc,.docx"
+                        onChange={(e) => setCustomLeaseFile(e.target.files?.[0] || null)}
+                        className="form-input file-input"
+                      />
+                      {customLeaseFile && (
+                        <div className="file-info">
+                          <span className="file-name">📄 {customLeaseFile.name}</span>
+                          <span className="file-size">({(customLeaseFile.size / 1024 / 1024).toFixed(2)} MB)</span>
+                        </div>
+                      )}
+                      <p className="input-help">Supported formats: PDF, DOC, DOCX (Max 10MB)</p>
+                    </div>
+                  </div>
+                )}
+              </div>
             </>
           )}
         </div>
@@ -796,6 +885,122 @@ export default function ImprovedLeaseGenerationModal({
 
         .cancel-btn:hover {
           background: #4b5563;
+        }
+
+        .lease-document-section {
+          background: white;
+          border-radius: 8px;
+          padding: 20px;
+          margin-bottom: 20px;
+          border: 1px solid #e5e7eb;
+        }
+
+        .lease-type-toggle {
+          margin: 16px 0;
+        }
+
+        .toggle-options {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 12px;
+        }
+
+        .toggle-option {
+          border: 2px solid #e5e7eb;
+          border-radius: 8px;
+          padding: 16px;
+          cursor: pointer;
+          transition: all 0.2s;
+          display: block;
+        }
+
+        .toggle-option:hover {
+          border-color: #d1d5db;
+        }
+
+        .toggle-option.active {
+          border-color: #3b82f6;
+          background: #eff6ff;
+        }
+
+        .toggle-option input[type="radio"] {
+          display: none;
+        }
+
+        .option-content {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .option-icon {
+          font-size: 24px;
+          flex-shrink: 0;
+        }
+
+        .option-text {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+
+        .option-text strong {
+          font-size: 14px;
+          font-weight: 600;
+          color: #111827;
+        }
+
+        .option-text span {
+          font-size: 12px;
+          color: #6b7280;
+        }
+
+        .custom-lease-upload {
+          margin-top: 16px;
+          padding: 16px;
+          background: #f9fafb;
+          border-radius: 8px;
+          border: 1px solid #e5e7eb;
+        }
+
+        .file-input {
+          border: 2px dashed #d1d5db;
+          border-radius: 8px;
+          padding: 12px;
+          background: white;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .file-input:hover {
+          border-color: #9ca3af;
+        }
+
+        .file-info {
+          margin-top: 8px;
+          padding: 8px 12px;
+          background: #f0f9ff;
+          border: 1px solid #bae6fd;
+          border-radius: 6px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .file-name {
+          font-weight: 500;
+          color: #0891b2;
+        }
+
+        .file-size {
+          color: #6b7280;
+          font-size: 12px;
+        }
+
+        .input-help {
+          margin-top: 4px;
+          font-size: 12px;
+          color: #6b7280;
         }
       `}</style>
     </div>

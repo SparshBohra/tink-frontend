@@ -80,15 +80,15 @@ const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
 
     // Priority calculated - using a placeholder since priority_score doesn't exist
     const priorityScore = 75; // Default priority score
-    events.push({
-      id: 'priority',
-      type: 'priority_calculated',
-      title: 'Priority Score Calculated',
+      events.push({
+        id: 'priority',
+        type: 'priority_calculated',
+        title: 'Priority Score Calculated',
       description: `Assigned priority score of ${priorityScore}/100 based on application criteria`,
       timestamp: app.application_date || new Date().toISOString(),
       icon: <BarChart3 size={16} />,
-      color: '#8b5cf6'
-    });
+        color: '#8b5cf6'
+      });
 
     // Conflicts detected - using a placeholder since has_conflicts doesn't exist
     const hasConflicts = false; // Default no conflicts
@@ -306,7 +306,7 @@ const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
               border: '1px solid #e5e7eb'
             }}>
               <User size={18} color="#6b7280" />
-            </div>
+              </div>
             <div>
               <h2 style={{
                 fontSize: '1.5rem',
@@ -325,12 +325,12 @@ const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
                   <User size={12} />
                   <span>{application.tenant_name}</span>
-                </div>
+            </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
                   <Mail size={12} />
                   <span>{application.tenant_email}</span>
-                </div>
-              </div>
+            </div>
+          </div>
             </div>
           </div>
           <div style={{
@@ -367,7 +367,7 @@ const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
               e.currentTarget.style.borderColor = '#e2e8f0';
             }}>
               <X size={18} />
-            </button>
+          </button>
           </div>
         </div>
 
@@ -382,7 +382,7 @@ const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
             { key: 'timeline', label: 'Timeline', icon: <Clock size={14} /> },
             { key: 'documents', label: 'Documents', icon: <Download size={14} /> }
           ].map((tab) => (
-            <button
+          <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key as any)}
               style={{
@@ -414,7 +414,7 @@ const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
             >
               {tab.icon}
               {tab.label}
-            </button>
+          </button>
           ))}
         </div>
 
@@ -458,27 +458,27 @@ const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
                       justifyContent: 'center'
                     }}>
                       <FileText size={14} color="#2563eb" />
-                    </div>
+                      </div>
                     <h3 style={{
                       fontSize: '1rem',
                       fontWeight: '600',
                       color: '#111827',
                       margin: 0
                     }}>Application Info</h3>
-                  </div>
+                      </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span style={{ color: '#6b7280', fontSize: '0.875rem' }}>Property:</span>
                       <span style={{ fontWeight: '500', color: '#111827', fontSize: '0.875rem' }}>{property?.name || 'Unknown'}</span>
-                    </div>
+                      </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span style={{ color: '#6b7280', fontSize: '0.875rem' }}>Applied:</span>
                       <span style={{ fontWeight: '500', color: '#111827', fontSize: '0.875rem' }}>{formatDate(application.application_date)}</span>
-                    </div>
+                      </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span style={{ color: '#6b7280', fontSize: '0.875rem' }}>Move-in:</span>
                       <span style={{ fontWeight: '500', color: '#111827', fontSize: '0.875rem' }}>{formatDate(application.desired_move_in_date || null)}</span>
-                    </div>
+                      </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span style={{ color: '#6b7280', fontSize: '0.875rem' }}>Budget:</span>
                       <span style={{ fontWeight: '500', color: '#16a34a', fontSize: '0.875rem' }}>${application.rent_budget || 'N/A'}</span>
@@ -510,14 +510,14 @@ const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
                       justifyContent: 'center'
                     }}>
                       <BarChart3 size={14} color="#8b5cf6" />
-                    </div>
+                                </div>
                     <h3 style={{
                       fontSize: '1rem',
                       fontWeight: '600',
                       color: '#111827',
                       margin: 0
                     }}>Priority Score</h3>
-                  </div>
+                              </div>
                   <div style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -531,7 +531,7 @@ const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
                       color: priorityLevel.color
                     }}>
                       {priorityScore}
-                    </div>
+                              </div>
                     <div style={{
                       fontSize: '0.75rem',
                       color: '#6b7280'
@@ -545,10 +545,10 @@ const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
                       color: priorityLevel.color
                     }}>
                       {priorityLevel.level} Priority
+                            </div>
+                        </div>
                     </div>
                   </div>
-                </div>
-              </div>
 
               {/* Room Recommendations and Conflicts */}
               <div style={{
@@ -580,14 +580,14 @@ const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
                       justifyContent: 'center'
                     }}>
                       <Home size={14} color="#16a34a" />
-                    </div>
+                            </div>
                     <h3 style={{
                       fontSize: '1rem',
                       fontWeight: '600',
                       color: '#111827',
                       margin: 0
                     }}>Room Recommendations</h3>
-                  </div>
+                          </div>
                   <div style={{
                     textAlign: 'center',
                     padding: '2rem 1rem',
@@ -595,8 +595,8 @@ const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
                   }}>
                     <Lightbulb size={20} style={{ marginBottom: '0.5rem' }} />
                     <p style={{ fontSize: '0.875rem', margin: 0 }}>No room recommendations available</p>
-                  </div>
-                </div>
+                        </div>
+                        </div>
 
                 {/* Conflicts */}
                 <div style={{
@@ -819,7 +819,7 @@ const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
                 }}>Documents & Attachments</h3>
               </div>
               
-              {application.lease && application.lease.status ? (
+                {application.lease && application.lease.status ? (
                 <div style={{
                   display: 'flex',
                   justifyContent: 'space-between',
@@ -844,7 +844,7 @@ const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
                       justifyContent: 'center'
                     }}>
                       <FileText size={16} color="#2563eb" />
-                    </div>
+                      </div>
                     <div style={{ flex: 1 }}>
                       <h4 style={{
                         fontSize: '1rem',
@@ -869,22 +869,22 @@ const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
                         fontSize: '0.8125rem',
                         color: '#6b7280'
                       }}>
-                        <span>Monthly Rent: ${application.lease.monthly_rent}</span>
-                        <span>Security Deposit: ${application.lease.security_deposit}</span>
-                        <span>Start Date: {new Date(application.lease.start_date).toLocaleDateString()}</span>
-                        <span>End Date: {new Date(application.lease.end_date).toLocaleDateString()}</span>
+                            <span>Monthly Rent: ${application.lease.monthly_rent}</span>
+                            <span>Security Deposit: ${application.lease.security_deposit}</span>
+                            <span>Start Date: {new Date(application.lease.start_date).toLocaleDateString()}</span>
+                            <span>End Date: {new Date(application.lease.end_date).toLocaleDateString()}</span>
                       </div>
                     </div>
-                  </div>
+                      </div>
                   <div style={{
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '0.5rem',
                     alignItems: 'flex-end'
                   }}>
-                    {application.lease.status === 'draft' && (
-                      <>
-                        <button 
+                        {application.lease.status === 'draft' && (
+                          <>
+                            <button 
                           onClick={() => application.lease_id && handleDownloadLease(application.lease_id)}
                           disabled={!application.lease_id}
                           style={{
@@ -914,8 +914,8 @@ const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
                         >
                           <Download size={12} />
                           Download
-                        </button>
-                        <button 
+                            </button>
+                            <button 
                           onClick={() => application.lease_id && handleEditLease(application.lease_id)}
                           disabled={!application.lease_id}
                           style={{
@@ -945,11 +945,11 @@ const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
                         >
                           <Edit size={12} />
                           Edit
-                        </button>
-                      </>
-                    )}
-                    {application.lease.status === 'active' && (
-                      <button 
+                            </button>
+                          </>
+                        )}
+                        {application.lease.status === 'active' && (
+                            <button 
                         onClick={() => application.lease_id && handleViewLease(application.lease_id)}
                         disabled={!application.lease_id}
                         style={{
@@ -976,14 +976,14 @@ const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
                             e.currentTarget.style.backgroundColor = '#6b7280';
                           }
                         }}
-                      >
+                            >
                         <Eye size={12} />
                         View Details
-                      </button>
+                            </button>
                     )}
-                  </div>
                 </div>
-              ) : (
+              </div>
+                ) : (
                 <div style={{
                   display: 'flex',
                   flexDirection: 'column',
@@ -1002,7 +1002,7 @@ const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
                   }}>No Documents Available</h4>
                   <p style={{ margin: 0, fontSize: '0.875rem' }}>Generate a lease for this application to see documents here.</p>
                 </div>
-              )}
+                )}
             </div>
           )}
         </div>

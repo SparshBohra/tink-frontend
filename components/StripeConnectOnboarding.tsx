@@ -4,26 +4,12 @@ import { loadConnectAndInitialize } from '@stripe/connect-js';
 import { useAuth } from '../lib/auth-context';
 import { apiClient } from '../lib/api';
 import { StripeConnectAccountStatus, StripeConnectAccountData } from '../lib/types';
-import { Button } from './ui/button';
-import { Card } from './ui/card';
 import { AlertCircle, CheckCircle, CreditCard, Shield, Users, ArrowRight, Zap } from 'lucide-react';
 
 interface StripeConnectOnboardingProps {
   onComplete?: (accountId: string) => void;
   onError?: (error: string) => void;
 }
-
-const FeatureCard = ({ icon, title, description }: { icon: React.ReactNode, title: string, description: string }) => (
-  <div className="flex items-start p-4 bg-gray-50 rounded-lg">
-    <div className="flex-shrink-0 mr-4">
-      {icon}
-    </div>
-    <div>
-      <h4 className="font-semibold text-gray-800">{title}</h4>
-      <p className="text-sm text-gray-600">{description}</p>
-    </div>
-  </div>
-);
 
 const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({ 
   onComplete, 
@@ -138,22 +124,65 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
 
   if (loading) {
     return (
-      <Card className="p-8">
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div style={{
+        padding: '3rem',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '300px'
+      }}>
+        <div style={{
+          width: '3rem',
+          height: '3rem',
+          border: '3px solid #f3f4f6',
+          borderTop: '3px solid #2563eb',
+          borderRadius: '50%',
+          animation: 'spin 1s linear infinite'
+        }} />
+        <style jsx>{`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}</style>
         </div>
-      </Card>
     );
   }
 
   if (error) {
     return (
-      <Card className="p-8">
-        <div className="flex flex-col items-center justify-center text-center">
-          <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
-          <h3 className="text-lg font-semibold text-gray-800">An Error Occurred</h3>
-          <p className="text-gray-600 mt-2">{error}</p>
-          <Button 
+      <div style={{
+        padding: '3rem',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        textAlign: 'center',
+        minHeight: '300px'
+      }}>
+        <div style={{
+          width: '4rem',
+          height: '4rem',
+          backgroundColor: '#fef2f2',
+          borderRadius: '50%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginBottom: '1.5rem'
+        }}>
+          <AlertCircle size={24} color="#dc2626" />
+        </div>
+        <h3 style={{
+          fontSize: '1.125rem',
+          fontWeight: '600',
+          color: '#111827',
+          margin: '0 0 0.5rem 0'
+        }}>An Error Occurred</h3>
+        <p style={{
+          color: '#6b7280',
+          margin: '0 0 1.5rem 0'
+        }}>{error}</p>
+        <button
             onClick={() => {
               setError(null);
               setShowEmbedded(false);
@@ -165,20 +194,31 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
               };
               fetchStatus();
             }}
-            className="mt-6"
+          style={{
+            padding: '0.75rem 1.5rem',
+            backgroundColor: '#2563eb',
+            color: 'white',
+            border: 'none',
+            borderRadius: '8px',
+            fontSize: '0.875rem',
+            fontWeight: '500',
+            cursor: 'pointer',
+            transition: 'background-color 0.2s ease'
+          }}
+          onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
+          onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
           >
             Try Again
-          </Button>
+        </button>
         </div>
-      </Card>
     );
   }
   
   if (showEmbedded && stripeConnectInstance) {
     return (
-      <div className="connect-onboarding-wrapper">
+      <div style={{ width: '100%' }}>
         <ConnectComponentsProvider connectInstance={stripeConnectInstance}>
-          <div className="connect-onboarding">
+          <div style={{ width: '100%' }}>
             <ConnectAccountOnboarding
               onExit={() => {
                 setShowEmbedded(false);
@@ -205,124 +245,358 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
   }
 
   return (
-    <Card className="p-8 space-y-6">
+    <div style={{
+      padding: '2rem',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '1.5rem'
+    }}>
       {/* Header with Stripe Logo */}
-      <div className="text-center pb-4 border-b border-gray-100">
-        <div className="flex items-center justify-center mb-3">
-          <div className="bg-[#6772E5] p-3 rounded-lg mr-4">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
+      <div style={{
+        textAlign: 'center',
+        paddingBottom: '1.5rem',
+        borderBottom: '1px solid #e5e7eb'
+      }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginBottom: '1rem'
+        }}>
+          <div style={{
+            width: '3rem',
+            height: '3rem',
+            backgroundColor: '#635bff',
+            borderRadius: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginRight: '1rem'
+          }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
               <path d="M13.976 9.15c-2.172-.806-3.596-1.191-3.596-2.705 0-1.091.7-1.852 2.161-1.852 1.495 0 2.91.694 2.91 1.727 0 .694-.652 1.183-1.452 1.183-.437 0-.833-.194-.833-.548 0-.194.194-.337.388-.337.194 0 .388.143.388.337 0 .194-.194.337-.388.337-.194 0-.388-.143-.388-.337 0-.194.194-.337.388-.337.194 0 .388.143.388.337 0 .548-.652.91-1.452.91-.833 0-1.452-.4-1.452-1.183 0 1.033 1.415 1.727 2.91 1.727 1.461 0 2.161-.761 2.161-1.852 0-1.514-1.424-1.899-3.596-2.705z"/>
             </svg>
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Stripe Connect Setup</h2>
-            <p className="text-gray-500 text-sm mt-1">Powered by Stripe</p>
+            <h2 style={{
+              fontSize: '1.5rem',
+              fontWeight: '700',
+              color: '#111827',
+              margin: 0
+            }}>Stripe Connect Setup</h2>
+            <p style={{
+              fontSize: '0.875rem',
+              color: '#6b7280',
+              margin: '0.25rem 0 0 0'
+            }}>Powered by Stripe</p>
           </div>
         </div>
-        <p className="text-gray-600 text-base max-w-md mx-auto">
+        <p style={{
+          color: '#6b7280',
+          fontSize: '1rem',
+          margin: 0,
+          maxWidth: '400px',
+          marginLeft: 'auto',
+          marginRight: 'auto'
+        }}>
           Set up your Stripe account to accept payments from tenants securely and efficiently
         </p>
       </div>
 
       {/* Features Grid */}
-      <div className="grid grid-cols-1 gap-4">
-        <div className="flex items-start space-x-4 p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg border border-blue-200">
-          <div className="bg-blue-500 p-2 rounded-lg flex-shrink-0">
-            <CreditCard className="text-white w-5 h-5" />
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '1rem'
+      }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: '1rem',
+          padding: '1rem',
+          backgroundColor: '#eff6ff',
+          borderRadius: '8px',
+          border: '1px solid #bfdbfe'
+        }}>
+          <div style={{
+            width: '2.5rem',
+            height: '2.5rem',
+            backgroundColor: '#2563eb',
+            borderRadius: '8px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0
+          }}>
+            <CreditCard size={16} color="white" />
           </div>
           <div>
-            <h4 className="font-semibold text-gray-900">Accept Payments</h4>
-            <p className="text-sm text-gray-600 mt-1">Credit cards, bank transfers, and digital wallets</p>
+            <h4 style={{
+              fontSize: '1rem',
+              fontWeight: '600',
+              color: '#111827',
+              margin: '0 0 0.25rem 0'
+            }}>Accept Payments</h4>
+            <p style={{
+              fontSize: '0.875rem',
+              color: '#6b7280',
+              margin: 0
+            }}>Credit cards, bank transfers, and digital wallets</p>
           </div>
         </div>
         
-        <div className="flex items-start space-x-4 p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-lg border border-green-200">
-          <div className="bg-green-500 p-2 rounded-lg flex-shrink-0">
-            <Shield className="text-white w-5 h-5" />
+        <div style={{
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: '1rem',
+          padding: '1rem',
+          backgroundColor: '#f0fdf4',
+          borderRadius: '8px',
+          border: '1px solid #bbf7d0'
+        }}>
+          <div style={{
+            width: '2.5rem',
+            height: '2.5rem',
+            backgroundColor: '#16a34a',
+            borderRadius: '8px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0
+          }}>
+            <Shield size={16} color="white" />
           </div>
           <div>
-            <h4 className="font-semibold text-gray-900">Secure & Compliant</h4>
-            <p className="text-sm text-gray-600 mt-1">PCI DSS compliant with advanced fraud protection</p>
+            <h4 style={{
+              fontSize: '1rem',
+              fontWeight: '600',
+              color: '#111827',
+              margin: '0 0 0.25rem 0'
+            }}>Secure & Compliant</h4>
+            <p style={{
+              fontSize: '0.875rem',
+              color: '#6b7280',
+              margin: 0
+            }}>PCI DSS compliant with advanced fraud protection</p>
           </div>
         </div>
         
-        <div className="flex items-start space-x-4 p-4 bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg border border-purple-200">
-          <div className="bg-purple-500 p-2 rounded-lg flex-shrink-0">
-            <Users className="text-white w-5 h-5" />
+        <div style={{
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: '1rem',
+          padding: '1rem',
+          backgroundColor: '#faf5ff',
+          borderRadius: '8px',
+          border: '1px solid #e9d5ff'
+        }}>
+          <div style={{
+            width: '2.5rem',
+            height: '2.5rem',
+            backgroundColor: '#7c3aed',
+            borderRadius: '8px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0
+          }}>
+            <Users size={16} color="white" />
           </div>
           <div>
-            <h4 className="font-semibold text-gray-900">Multi-tenant Support</h4>
-            <p className="text-sm text-gray-600 mt-1">Manage payments across multiple properties</p>
+            <h4 style={{
+              fontSize: '1rem',
+              fontWeight: '600',
+              color: '#111827',
+              margin: '0 0 0.25rem 0'
+            }}>Multi-tenant Support</h4>
+            <p style={{
+              fontSize: '0.875rem',
+              color: '#6b7280',
+              margin: 0
+            }}>Manage payments across multiple properties</p>
           </div>
         </div>
       </div>
 
       {/* Action Section */}
-      <div className="pt-6 border-t border-gray-100">
+      <div style={{
+        paddingTop: '1.5rem',
+        borderTop: '1px solid #e5e7eb'
+      }}>
         {accountStatus?.status === 'not_created' && (
-          <div className="text-center">
-            <Button 
+          <div style={{ textAlign: 'center' }}>
+            <button
               onClick={handleCreateAccount}
-              className="w-full h-12 text-base font-semibold bg-[#6772E5] hover:bg-[#5b66d9] text-white rounded-lg transition-colors"
               disabled={loading}
+              style={{
+                width: '100%',
+                height: '3rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem',
+                fontSize: '1rem',
+                fontWeight: '600',
+                backgroundColor: '#635bff',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                transition: 'background-color 0.2s ease',
+                opacity: loading ? 0.7 : 1
+              }}
+              onMouseOver={(e) => {
+                if (!loading) e.currentTarget.style.backgroundColor = '#5b56f0';
+              }}
+              onMouseOut={(e) => {
+                if (!loading) e.currentTarget.style.backgroundColor = '#635bff';
+              }}
             >
               {loading ? (
-                <div className="flex items-center justify-center">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
+                <>
+                  <div style={{
+                    width: '1.25rem',
+                    height: '1.25rem',
+                    border: '2px solid #ffffff40',
+                    borderTop: '2px solid #ffffff',
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite'
+                  }} />
                   Creating Account...
-                </div>
+                </>
               ) : (
-                <div className="flex items-center justify-center">
-                  <Zap className="w-5 h-5 mr-2" />
+                <>
+                  <Zap size={20} />
                   Create Stripe Account
-                </div>
+                </>
               )}
-            </Button>
+            </button>
           </div>
         )}
 
         {accountStatus?.status === 'onboarding_pending' && (
-          <div className="flex justify-between items-center">
-            <div className="flex-1">
-              <p className="text-sm text-gray-600 mb-1">Ready to complete your setup</p>
-              <p className="text-xs text-gray-500">This will take about 2-3 minutes</p>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: '1rem'
+          }}>
+            <div style={{ flex: 1 }}>
+              <p style={{
+                fontSize: '0.875rem',
+                color: '#6b7280',
+                margin: '0 0 0.25rem 0'
+              }}>Ready to complete your setup</p>
+              <p style={{
+                fontSize: '0.75rem',
+                color: '#9ca3af',
+                margin: 0
+              }}>This will take about 2-3 minutes</p>
             </div>
-            <Button 
+            <button
               onClick={handleStartEmbeddedOnboarding}
-              className="h-12 text-base font-semibold bg-gradient-to-r from-[#6772E5] to-[#5b66d9] hover:from-[#5b66d9] hover:to-[#4f5bd8] text-white shadow-lg px-6 rounded-lg transition-all"
               disabled={embeddedLoading}
+              style={{
+                height: '3rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                fontSize: '1rem',
+                fontWeight: '600',
+                backgroundColor: '#635bff',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '0 1.5rem',
+                cursor: embeddedLoading ? 'not-allowed' : 'pointer',
+                transition: 'all 0.2s ease',
+                opacity: embeddedLoading ? 0.7 : 1,
+                boxShadow: '0 4px 12px rgba(99, 91, 255, 0.3)'
+              }}
+              onMouseOver={(e) => {
+                if (!embeddedLoading) {
+                  e.currentTarget.style.backgroundColor = '#5b56f0';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(99, 91, 255, 0.4)';
+                }
+              }}
+              onMouseOut={(e) => {
+                if (!embeddedLoading) {
+                  e.currentTarget.style.backgroundColor = '#635bff';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(99, 91, 255, 0.3)';
+                }
+              }}
             >
               {embeddedLoading ? (
-                <div className="flex items-center">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                <>
+                  <div style={{
+                    width: '1.25rem',
+                    height: '1.25rem',
+                    border: '2px solid #ffffff40',
+                    borderTop: '2px solid #ffffff',
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite'
+                  }} />
                   Loading...
-                </div>
+                </>
               ) : (
-                <div className="flex items-center">
-                  <Zap className="w-5 h-5 mr-2" />
+                <>
+                  <Zap size={20} />
                   Complete Setup
-                  <ArrowRight className="w-5 h-5 ml-2" />
-                </div>
+                  <ArrowRight size={20} />
+                </>
               )}
-            </Button>
+            </button>
           </div>
         )}
 
         {accountStatus?.status === 'active' && (
-          <div className="text-center p-6 bg-gradient-to-r from-green-50 to-green-100 rounded-lg border border-green-200">
-            <div className="bg-green-500 p-3 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-              <CheckCircle className="w-8 h-8 text-white" />
+          <div style={{
+            textAlign: 'center',
+            padding: '2rem',
+            backgroundColor: '#f0fdf4',
+            borderRadius: '12px',
+            border: '1px solid #bbf7d0'
+          }}>
+            <div style={{
+              width: '4rem',
+              height: '4rem',
+              backgroundColor: '#16a34a',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 1rem auto'
+            }}>
+              <CheckCircle size={24} color="white" />
             </div>
-            <h3 className="text-xl font-bold text-green-800 mb-2">
+            <h3 style={{
+              fontSize: '1.25rem',
+              fontWeight: '700',
+              color: '#15803d',
+              margin: '0 0 0.5rem 0'
+            }}>
               Setup Complete!
             </h3>
-            <p className="text-green-700 text-sm">
+            <p style={{
+              color: '#166534',
+              fontSize: '0.875rem',
+              margin: 0
+            }}>
               Your Stripe account is ready to accept payments from tenants
             </p>
           </div>
         )}
       </div>
-    </Card>
+
+      <style jsx>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
+    </div>
   );
 };
 

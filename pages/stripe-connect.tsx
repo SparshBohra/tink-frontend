@@ -3,6 +3,16 @@ import { useRouter } from 'next/router';
 import { useAuth } from '../lib/auth-context';
 import DashboardLayout from '../components/DashboardLayout';
 import StripeConnectOnboarding from '../components/StripeConnectOnboarding';
+import { 
+  ArrowLeft, 
+  DollarSign, 
+  Shield, 
+  CreditCard, 
+  Mail,
+  CheckCircle,
+  Building,
+  Users
+} from 'lucide-react';
 
 const StripeConnectPage: React.FC = () => {
   const router = useRouter();
@@ -18,12 +28,42 @@ const StripeConnectPage: React.FC = () => {
   if (!user || !isLandlord()) {
     return (
       <DashboardLayout title="Payment Setup">
-        <div className="dashboard-container">
-          <div className="section-header">
-            <div>
-              <h2 className="section-title">Access Denied</h2>
-              <p className="section-subtitle">Only landlords can access this page.</p>
+        <div style={{
+          padding: '2rem',
+          minHeight: 'calc(100vh - 72px)',
+          backgroundColor: '#f8fafc'
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            border: '1px solid #e5e7eb',
+            borderRadius: '12px',
+            padding: '3rem',
+            textAlign: 'center',
+            boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
+          }}>
+            <div style={{
+              width: '4rem',
+              height: '4rem',
+              backgroundColor: '#fef2f2',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 1.5rem auto'
+            }}>
+              <Shield size={24} color="#dc2626" />
             </div>
+            <h2 style={{
+              fontSize: '1.5rem',
+              fontWeight: '600',
+              color: '#111827',
+              margin: '0 0 0.5rem 0'
+            }}>Access Denied</h2>
+            <p style={{
+              fontSize: '1rem',
+              color: '#6b7280',
+              margin: 0
+            }}>Only landlords can access this page.</p>
           </div>
         </div>
       </DashboardLayout>
@@ -40,131 +80,420 @@ const StripeConnectPage: React.FC = () => {
 
   return (
     <DashboardLayout title="">
-      <div className="dashboard-container">
-        {/* Top Bar with Back Button */}
-        <div className="stripe-top-bar">
-          <div className="stripe-top-content">
-            <div className="stripe-title-section">
-              <h1 className="stripe-main-title">Payment Setup</h1>
-              <p className="stripe-main-subtitle">Connect Stripe to accept payments from tenants</p>
-            </div>
+      <div style={{
+        padding: '16px 20px 20px 20px',
+        minHeight: 'calc(100vh - 72px)',
+        backgroundColor: '#f8fafc'
+      }}>
+        {/* Title Section */}
+        <div style={{
+          backgroundColor: 'white',
+          border: '1px solid #e5e7eb',
+          borderRadius: '12px',
+          padding: '2rem',
+          marginBottom: '2rem',
+          boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+          transition: 'all 0.2s ease',
+          cursor: 'default'
+        }}
+        onMouseOver={(e) => {
+          e.currentTarget.style.transform = 'translateY(-2px)';
+          e.currentTarget.style.boxShadow = '0 4px 12px 0 rgba(0, 0, 0, 0.15)';
+        }}
+        onMouseOut={(e) => {
+          e.currentTarget.style.transform = 'translateY(0)';
+          e.currentTarget.style.boxShadow = '0 1px 3px 0 rgba(0, 0, 0, 0.1)';
+        }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '1rem'
+            }}>
             <button 
-              className="stripe-back-btn"
               onClick={() => router.back()}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M19 12H5"/>
-                <path d="M12 19l-7-7 7-7"/>
-              </svg>
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.5rem 1rem',
+                  backgroundColor: '#f3f4f6',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '8px',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  color: '#374151',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = '#e5e7eb';
+                  e.currentTarget.style.borderColor = '#9ca3af';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f3f4f6';
+                  e.currentTarget.style.borderColor = '#d1d5db';
+                }}
+              >
+                <ArrowLeft size={16} />
               Back
             </button>
+              
+              <div style={{
+                width: '3rem',
+                height: '3rem',
+                backgroundColor: '#dbeafe',
+                borderRadius: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <CreditCard size={20} color="#2563eb" />
+              </div>
+              
+              <div>
+                <h1 style={{
+                  fontSize: '1.875rem',
+                  fontWeight: '700',
+                  color: '#111827',
+                  margin: '0 0 0.25rem 0'
+                }}>Payment Setup</h1>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  fontSize: '1rem',
+                  color: '#6b7280'
+                }}>
+                  <Building size={16} />
+                  Connect Stripe to accept payments from tenants
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Main Content Grid */}
-        <div className="stripe-main-grid">
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 400px',
+          gap: '2rem',
+          alignItems: 'start'
+        }}>
           {/* Left Column - Stripe Connect Component */}
-          <div className="stripe-left-column">
-            <div className="stripe-onboarding-section">
-              <div className="onboarding-container">
+          <div style={{
+            backgroundColor: 'white',
+            border: '1px solid #e5e7eb',
+            borderRadius: '12px',
+            padding: '2rem',
+            boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
+          }}>
                 <StripeConnectOnboarding 
                   onComplete={handleComplete}
                   onError={handleError}
                 />
-              </div>
-            </div>
           </div>
 
           {/* Right Column - Benefits, Setup Process & Support */}
-          <div className="stripe-right-column">
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '2rem'
+          }}>
             {/* Benefits Section */}
-            <div className="stripe-benefits-section" style={{ marginBottom: '3rem' }}>
-              <h2 className="section-title">Why Set Up Stripe Connect?</h2>
-              <div className="benefits-grid">
-                <div className="benefit-item">
-                  <div className="benefit-icon blue">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <line x1="12" y1="1" x2="12" y2="23"/>
-                      <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-                    </svg>
+            <div style={{
+              backgroundColor: 'white',
+              border: '1px solid #e5e7eb',
+              borderRadius: '12px',
+              padding: '2rem',
+              boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
+            }}>
+              <h2 style={{
+                fontSize: '1.25rem',
+                fontWeight: '600',
+                color: '#111827',
+                margin: '0 0 1.5rem 0'
+              }}>Why Set Up Stripe Connect?</h2>
+              
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '1rem'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '1rem',
+                  padding: '1rem',
+                  backgroundColor: '#eff6ff',
+                  borderRadius: '8px',
+                  border: '1px solid #bfdbfe'
+                }}>
+                  <div style={{
+                    width: '2rem',
+                    height: '2rem',
+                    backgroundColor: '#2563eb',
+                    borderRadius: '6px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
+                  }}>
+                    <DollarSign size={16} color="white" />
                   </div>
-                  <div className="benefit-content">
-                    <h3>Automatic Payments</h3>
-                    <p>Tenants pay rent directly through the platform</p>
+                  <div>
+                    <h3 style={{
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: '#111827',
+                      margin: '0 0 0.25rem 0'
+                    }}>Automatic Payments</h3>
+                    <p style={{
+                      fontSize: '0.75rem',
+                      color: '#6b7280',
+                      margin: 0
+                    }}>Tenants pay rent directly through the platform</p>
                   </div>
                 </div>
                 
-                <div className="benefit-item">
-                  <div className="benefit-icon green">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M9 12l2 2 4-4"/>
-                      <path d="M21 12c-1 0-3-1-3-3s2-3 3-3 3 1 3 3-2 3-3 3"/>
-                    </svg>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '1rem',
+                  padding: '1rem',
+                  backgroundColor: '#f0fdf4',
+                  borderRadius: '8px',
+                  border: '1px solid #bbf7d0'
+                }}>
+                  <div style={{
+                    width: '2rem',
+                    height: '2rem',
+                    backgroundColor: '#16a34a',
+                    borderRadius: '6px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
+                  }}>
+                    <Shield size={16} color="white" />
                   </div>
-                  <div className="benefit-content">
-                    <h3>Secure & Compliant</h3>
-                    <p>PCI DSS compliant with fraud protection</p>
+                  <div>
+                    <h3 style={{
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: '#111827',
+                      margin: '0 0 0.25rem 0'
+                    }}>Secure & Compliant</h3>
+                    <p style={{
+                      fontSize: '0.75rem',
+                      color: '#6b7280',
+                      margin: 0
+                    }}>PCI DSS compliant with fraud protection</p>
                   </div>
                 </div>
                 
-                <div className="benefit-item">
-                  <div className="benefit-icon purple">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
-                      <line x1="1" y1="10" x2="23" y2="10"/>
-                    </svg>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '1rem',
+                  padding: '1rem',
+                  backgroundColor: '#faf5ff',
+                  borderRadius: '8px',
+                  border: '1px solid #e9d5ff'
+                }}>
+                  <div style={{
+                    width: '2rem',
+                    height: '2rem',
+                    backgroundColor: '#7c3aed',
+                    borderRadius: '6px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
+                  }}>
+                    <CreditCard size={16} color="white" />
                   </div>
-                  <div className="benefit-content">
-                    <h3>Multiple Payment Methods</h3>
-                    <p>Cards, bank transfers, and digital wallets</p>
+                  <div>
+                    <h3 style={{
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: '#111827',
+                      margin: '0 0 0.25rem 0'
+                    }}>Multiple Payment Methods</h3>
+                    <p style={{
+                      fontSize: '0.75rem',
+                      color: '#6b7280',
+                      margin: 0
+                    }}>Cards, bank transfers, and digital wallets</p>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Setup Process */}
-            <div className="stripe-process-section" style={{ marginBottom: '3rem' }}>
-              <h2 className="section-title">Setup Process</h2>
-              <div className="process-steps">
-                <div className="process-step">
-                  <div className="step-number">1</div>
-                  <div className="step-info">
-                    <h4>Create Account</h4>
-                    <p>Link your Stripe Connect account</p>
+            <div style={{
+              backgroundColor: 'white',
+              border: '1px solid #e5e7eb',
+              borderRadius: '12px',
+              padding: '2rem',
+              boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
+            }}>
+              <h2 style={{
+                fontSize: '1.25rem',
+                fontWeight: '600',
+                color: '#111827',
+                margin: '0 0 1.5rem 0'
+              }}>Setup Process</h2>
+              
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '1rem'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '1rem'
+                }}>
+                  <div style={{
+                    width: '1.5rem',
+                    height: '1.5rem',
+                    backgroundColor: '#2563eb',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '0.75rem',
+                    fontWeight: '600',
+                    color: 'white',
+                    flexShrink: 0
+                  }}>1</div>
+                  <div>
+                    <h4 style={{
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: '#111827',
+                      margin: '0 0 0.25rem 0'
+                    }}>Create Account</h4>
+                    <p style={{
+                      fontSize: '0.75rem',
+                      color: '#6b7280',
+                      margin: 0
+                    }}>Link your Stripe Connect account</p>
                   </div>
                 </div>
-                <div className="process-step">
-                  <div className="step-number">2</div>
-                  <div className="step-info">
-                    <h4>Complete Onboarding</h4>
-                    <p>Provide business and banking details</p>
+                
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '1rem'
+                }}>
+                  <div style={{
+                    width: '1.5rem',
+                    height: '1.5rem',
+                    backgroundColor: '#2563eb',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '0.75rem',
+                    fontWeight: '600',
+                    color: 'white',
+                    flexShrink: 0
+                  }}>2</div>
+                  <div>
+                    <h4 style={{
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: '#111827',
+                      margin: '0 0 0.25rem 0'
+                    }}>Complete Onboarding</h4>
+                    <p style={{
+                      fontSize: '0.75rem',
+                      color: '#6b7280',
+                      margin: 0
+                    }}>Provide business and banking details</p>
                   </div>
                 </div>
-                <div className="process-step">
-                  <div className="step-number">3</div>
-                  <div className="step-info">
-                    <h4>Start Accepting Payments</h4>
-                    <p>Begin collecting rent payments</p>
+                
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '1rem'
+                }}>
+                  <div style={{
+                    width: '1.5rem',
+                    height: '1.5rem',
+                    backgroundColor: '#16a34a',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '0.75rem',
+                    fontWeight: '600',
+                    color: 'white',
+                    flexShrink: 0
+                  }}>3</div>
+                  <div>
+                    <h4 style={{
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: '#111827',
+                      margin: '0 0 0.25rem 0'
+                    }}>Start Accepting Payments</h4>
+                    <p style={{
+                      fontSize: '0.75rem',
+                      color: '#6b7280',
+                      margin: 0
+                    }}>Begin collecting rent payments</p>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Support Section */}
-            <div className="stripe-support-section">
-              <h2 className="section-title">Need Help?</h2>
-              <div className="support-actions">
+            <div style={{
+              backgroundColor: 'white',
+              border: '1px solid #e5e7eb',
+              borderRadius: '12px',
+              padding: '2rem',
+              boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
+            }}>
+              <h2 style={{
+                fontSize: '1.25rem',
+                fontWeight: '600',
+                color: '#111827',
+                margin: '0 0 1.5rem 0'
+              }}>Need Help?</h2>
+              
                 <button 
-                  className="support-btn primary"
                   onClick={() => window.open('mailto:support@tink.global', '_blank')}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-                    <polyline points="22,6 12,13 2,6"/>
-                  </svg>
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem',
+                  padding: '0.75rem 1rem',
+                  backgroundColor: '#2563eb',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'background-color 0.2s ease'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
+                onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+              >
+                <Mail size={16} />
                   Email Support
                 </button>
-              </div>
             </div>
           </div>
         </div>

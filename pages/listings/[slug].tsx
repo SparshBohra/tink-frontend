@@ -278,12 +278,12 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
                   marginLeft: '1.75rem'
                 }}>
                   {listing.property_address}
-                </div>
-              </div>
-              
-              <button 
-                onClick={handleStartApplication}
-                disabled={!canApply}
+            </div>
+          </div>
+          
+            <button 
+              onClick={handleStartApplication}
+              disabled={!canApply}
                 style={{
                   backgroundColor: canApply ? '#2563eb' : '#9ca3af',
                   color: 'white',
@@ -303,8 +303,8 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
                 onMouseOut={(e) => canApply && (e.currentTarget.style.backgroundColor = '#2563eb')}
               >
                 <Home style={{ width: '1rem', height: '1rem' }} />
-                {canApply ? 'Apply Now' : 'Applications Closed'}
-              </button>
+              {canApply ? 'Apply Now' : 'Applications Closed'}
+            </button>
             </div>
             
             <div style={{
@@ -497,7 +497,7 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
                 }}>
                   {currentImageIndex + 1} / {listing.media.length}
                 </div>
-              )}
+            )}
           </div>
           
           {listing.media.length > 1 && (

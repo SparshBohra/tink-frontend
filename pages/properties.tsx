@@ -1056,7 +1056,7 @@ function Properties() {
                                     onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
                                   >
                                     Manage
-                                  </button>
+                                      </button>
                                 </div>
                                 
                                 <button 
