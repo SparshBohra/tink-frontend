@@ -43,8 +43,7 @@ const TenantDashboard: React.FC = () => {
     const userStr = localStorage.getItem('tenant_user');
 
     if (!accessToken || !userStr) {
-      // Redirect to portal subdomain for tenant login
-      window.location.href = 'https://portal.squareft.ai/tenant-login';
+      router.push('/tenant-login');
       return;
     }
 
@@ -56,7 +55,7 @@ const TenantDashboard: React.FC = () => {
     } catch (error) {
       console.error('Error parsing user data:', error);
       setLoading(false);
-      window.location.href = 'https://portal.squareft.ai/tenant-login';
+      router.push('/tenant-login');
     }
   }, [router]);
 
@@ -91,7 +90,7 @@ const TenantDashboard: React.FC = () => {
   const handleLogout = () => {
     localStorage.removeItem('tenant_access_token');
     localStorage.removeItem('tenant_user');
-    window.location.href = 'https://portal.squareft.ai/tenant-login';
+    router.push('/tenant-login');
   };
 
   const primaryLease = 
