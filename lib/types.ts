@@ -246,6 +246,10 @@ export interface Lease {
   auto_generated: boolean;
   draft_lease_s3_url?: string;
   signed_lease_s3_url?: string;
+  custom_lease_s3_url?: string;
+  custom_lease_s3_key?: string;
+  custom_lease_filename?: string;
+  is_custom_lease: boolean;
   sent_to_tenant_at?: string;
   signed_at?: string;
   activated_at?: string;

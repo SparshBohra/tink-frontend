@@ -42,7 +42,7 @@ function TenantPayments() {
     const userStr = localStorage.getItem('tenant_user');
 
     if (!accessToken || !userStr) {
-      router.push('/tenant-login');
+      window.location.href = 'https://portal.squareft.ai/tenant-login';
       return;
     }
 
@@ -54,7 +54,7 @@ function TenantPayments() {
       loadTenantData();
     } catch (error) {
       console.error('Error parsing user data:', error);
-      router.push('/tenant-login');
+      window.location.href = 'https://portal.squareft.ai/tenant-login';
     }
   }, [router]);
 
@@ -195,7 +195,7 @@ function TenantPayments() {
         {/* Header */}
         <div className="mb-8">
           <Button 
-            onClick={() => router.push('/tenant-dashboard')}
+            onClick={() => window.location.href = 'https://portal.squareft.ai/tenant-dashboard'}
             className="mb-4 bg-gray-100 text-gray-700 hover:bg-gray-200"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />

@@ -17,9 +17,7 @@ import {
   MessageSquare,
   History,
   LogOut,
-  Bell,
-  Calendar,
-  Calculator
+  Bell
 } from 'lucide-react';
 
 interface TenantUser {
@@ -39,23 +37,14 @@ const TenantDashboard: React.FC = () => {
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isPaymentHistoryModalOpen, setIsPaymentHistoryModalOpen] = useState(false);
   const [isContactLandlordModalOpen, setIsContactLandlordModalOpen] = useState(false);
-  const [isMoveOutModalOpen, setIsMoveOutModalOpen] = useState(false);
-  const [moveOutDate, setMoveOutDate] = useState('');
-  const [depositReturn, setDepositReturn] = useState('');
-  const [moveOutCalculations, setMoveOutCalculations] = useState<{
-    monthsRemaining: number;
-    daysRemaining: number;
-    rentForgo: number;
-    depositReturned: number;
-    totalForgo: number;
-  } | null>(null);
 
   useEffect(() => {
     const accessToken = localStorage.getItem('tenant_access_token');
     const userStr = localStorage.getItem('tenant_user');
 
     if (!accessToken || !userStr) {
-      router.push('/tenant-login');
+      // Redirect to portal subdomain for tenant login
+      window.location.href = 'https://portal.squareft.ai/tenant-login';
       return;
     }
 
@@ -67,7 +56,7 @@ const TenantDashboard: React.FC = () => {
     } catch (error) {
       console.error('Error parsing user data:', error);
       setLoading(false);
-      router.push('/tenant-login');
+      window.location.href = 'https://portal.squareft.ai/tenant-login';
     }
   }, [router]);
 
@@ -102,73 +91,7 @@ const TenantDashboard: React.FC = () => {
   const handleLogout = () => {
     localStorage.removeItem('tenant_access_token');
     localStorage.removeItem('tenant_user');
-    router.push('/tenant-login');
-  };
-
-  const calculateMoveOutImpact = (lease: Lease, moveOutDate: string) => {
-    const moveOut = new Date(moveOutDate);
-    const leaseEnd = new Date(lease.end_date);
-    
-    // Calculate time remaining from move-out date to lease end
-    const timeDiff = leaseEnd.getTime() - moveOut.getTime();
-    const daysRemaining = Math.max(0, Math.ceil(timeDiff / (1000 * 60 * 60 * 24)));
-    
-    // Calculate months and remaining days
-    const monthsRemaining = Math.floor(daysRemaining / 30);
-    const extraDays = daysRemaining % 30;
-    
-    // Calculate rent forgo (prorated)
-    const dailyRent = parseFloat(lease.monthly_rent.toString()) / 30;
-    const rentForgo = dailyRent * daysRemaining;
-    
-    return {
-      monthsRemaining,
-      daysRemaining: extraDays,
-      totalDaysRemaining: daysRemaining,
-      rentForgo: Math.round(rentForgo * 100) / 100,
-      totalForgo: Math.round(rentForgo * 100) / 100
-    };
-  };
-
-  const handleMoveOutClick = () => {
-    if (!primaryLease) return;
-    setIsMoveOutModalOpen(true);
-    setMoveOutDate(new Date().toISOString().split('T')[0]); // Default to today
-    const calculations = calculateMoveOutImpact(primaryLease, new Date().toISOString().split('T')[0]);
-    setMoveOutCalculations(calculations);
-  };
-
-  const handleMoveOutDateChange = (date: string) => {
-    if (!primaryLease) return;
-    setMoveOutDate(date);
-    const calculations = calculateMoveOutImpact(primaryLease, date);
-    setMoveOutCalculations(calculations);
-  };
-
-  const handleConfirmMoveOut = async () => {
-    if (!primaryLease) return;
-    
-    try {
-      await apiClient.requestTenantMoveout(primaryLease.id, {
-        move_out_date: moveOutDate,
-        move_out_condition: 'Tenant-initiated move-out',
-        cleaning_charges: 0,
-        damage_charges: 0,
-        deposit_returned: parseFloat(primaryLease.security_deposit.toString())
-      });
-      
-      // Refresh lease data
-      await loadTenantLeases();
-      
-      // Close modal
-      setIsMoveOutModalOpen(false);
-      setMoveOutCalculations(null);
-      
-      alert('Move-out request processed successfully!');
-    } catch (error: any) {
-      console.error('Failed to process move-out:', error);
-      alert(`Failed to process move-out: ${error.message}`);
-    }
+    window.location.href = 'https://portal.squareft.ai/tenant-login';
   };
 
   const primaryLease = 
@@ -185,8 +108,8 @@ const TenantDashboard: React.FC = () => {
       'signed': { label: 'Awaiting Activation', color: '#d97706', bgColor: '#fef3c7' },
       'active': { label: 'Lease Active', color: '#16a34a', bgColor: '#f0fdf4' },
       'expired': { label: 'Expired', color: '#dc2626', bgColor: '#fef2f2' }
-  };
-
+    };
+    
     const config = statusConfig[status] || statusConfig['draft'];
     
         return (
@@ -507,56 +430,28 @@ const TenantDashboard: React.FC = () => {
 
                     {/* Lease Actions */}
                     {primaryLease.status === 'active' && (
-                      <div style={{
-                        display: 'flex',
-                        gap: '0.75rem',
-                        flexWrap: 'wrap'
-                      }}>
-                        <button
-                          onClick={() => handleDownloadLease(primaryLease.id)}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.5rem',
-                            padding: '0.75rem 1rem',
-                            backgroundColor: '#2563eb',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '8px',
-                            fontSize: '0.875rem',
-                            fontWeight: '500',
-                            cursor: 'pointer',
-                            transition: 'background-color 0.2s ease'
-                          }}
-                          onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
-                          onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
-                        >
-                          <Download size={16} />
-                          Download Lease Copy
-                        </button>
-                        <button
-                          onClick={handleMoveOutClick}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.5rem',
-                            padding: '0.75rem 1rem',
-                            backgroundColor: '#dc2626',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '8px',
-                            fontSize: '0.875rem',
-                            fontWeight: '500',
-                            cursor: 'pointer',
-                            transition: 'background-color 0.2s ease'
-                          }}
-                          onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#b91c1c'}
-                          onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
-                        >
-                          <LogOut size={16} />
-                          Request Move-Out
-                        </button>
-                      </div>
+                      <button
+                        onClick={() => handleDownloadLease(primaryLease.id)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          padding: '0.75rem 1rem',
+                          backgroundColor: '#2563eb',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '8px',
+                          fontSize: '0.875rem',
+                          fontWeight: '500',
+                          cursor: 'pointer',
+                          transition: 'background-color 0.2s ease'
+                        }}
+                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
+                        onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+                      >
+                        <Download size={16} />
+                        Download Lease Copy
+                      </button>
                     )}
                   </div>
                 ) : (
@@ -888,238 +783,6 @@ const TenantDashboard: React.FC = () => {
           isOpen={isContactLandlordModalOpen}
           onClose={() => setIsContactLandlordModalOpen(false)}
         />
-
-        {/* Move-out Confirmation Modal */}
-        {isMoveOutModalOpen && primaryLease && (
-          <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000
-          }}>
-            <div style={{
-              backgroundColor: 'white',
-              borderRadius: '12px',
-              padding: '2rem',
-              maxWidth: '500px',
-              width: '90%',
-              maxHeight: '90vh',
-              overflow: 'auto',
-              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
-            }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '1rem',
-                marginBottom: '1.5rem'
-              }}>
-                <div style={{
-                  width: '3rem',
-                  height: '3rem',
-                  backgroundColor: '#fef2f2',
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}>
-                  <LogOut style={{ width: '1.5rem', height: '1.5rem', color: '#dc2626' }} />
-                </div>
-                <div>
-                  <h2 style={{
-                    fontSize: '1.5rem',
-                    fontWeight: '700',
-                    color: '#111827',
-                    margin: 0
-                  }}>
-                    Request Move-Out
-                  </h2>
-                  <p style={{
-                    fontSize: '0.875rem',
-                    color: '#6b7280',
-                    margin: '0.25rem 0 0 0'
-                  }}>
-                    {(primaryLease.property_ref as any)?.name || 'Property'} - {(primaryLease.room as any)?.name || 'Room'}
-                  </p>
-                </div>
-              </div>
-
-              <div style={{
-                backgroundColor: '#f9fafb',
-                borderRadius: '8px',
-                padding: '1rem',
-                marginBottom: '1.5rem'
-              }}>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  marginBottom: '0.75rem'
-                }}>
-                  <Calendar style={{ width: '1rem', height: '1rem', color: '#6b7280' }} />
-                  <span style={{
-                    fontSize: '0.875rem',
-                    fontWeight: '600',
-                    color: '#374151'
-                  }}>
-                    Preferred Move-out Date
-                  </span>
-                </div>
-                <input
-                  type="date"
-                  value={moveOutDate}
-                  onChange={(e) => handleMoveOutDateChange(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '6px',
-                    fontSize: '0.875rem'
-                  }}
-                />
-              </div>
-
-              {moveOutCalculations && (
-                <div style={{
-                  backgroundColor: '#fef3c7',
-                  borderRadius: '8px',
-                  padding: '1rem',
-                  marginBottom: '1.5rem',
-                  border: '1px solid #fbbf24'
-                }}>
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    marginBottom: '0.75rem'
-                  }}>
-                    <Calculator style={{ width: '1rem', height: '1rem', color: '#d97706' }} />
-                    <span style={{
-                      fontSize: '0.875rem',
-                      fontWeight: '600',
-                      color: '#92400e'
-                    }}>
-                      Financial Impact
-                    </span>
-                  </div>
-                  
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1fr 1fr',
-                    gap: '1rem',
-                    fontSize: '0.875rem'
-                  }}>
-                    <div>
-                      <div style={{ color: '#6b7280', marginBottom: '0.25rem' }}>
-                        Time Remaining
-                      </div>
-                      <div style={{ fontWeight: '600', color: '#374151' }}>
-                        {moveOutCalculations.monthsRemaining} months, {moveOutCalculations.daysRemaining} days
-                      </div>
-                    </div>
-                    <div>
-                      <div style={{ color: '#6b7280', marginBottom: '0.25rem' }}>
-                        Rent Forgo
-                      </div>
-                      <div style={{ fontWeight: '600', color: '#dc2626' }}>
-                        ${moveOutCalculations.rentForgo.toFixed(2)}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div style={{
-                    marginTop: '0.75rem',
-                    paddingTop: '0.75rem',
-                    borderTop: '1px solid #fbbf24'
-                  }}>
-                    <div style={{ color: '#6b7280', marginBottom: '0.25rem', fontSize: '0.875rem' }}>
-                      Total Days Lost: {moveOutCalculations.totalDaysRemaining}
-                    </div>
-                    <div style={{ color: '#6b7280', fontSize: '0.75rem' }}>
-                      Lease ends on: {new Date(primaryLease.end_date).toLocaleDateString()}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div style={{
-                backgroundColor: '#f0f9ff',
-                borderRadius: '8px',
-                padding: '1rem',
-                marginBottom: '1.5rem',
-                border: '1px solid #0ea5e9'
-              }}>
-                <p style={{
-                  fontSize: '0.875rem',
-                  color: '#0c4a6e',
-                  margin: 0,
-                  lineHeight: '1.5'
-                }}>
-                  <strong>Note:</strong> This will submit a move-out request to your landlord. 
-                  They will review and process your request. You may be responsible for rent 
-                  until the move-out date or lease end date, whichever comes first.
-                </p>
-              </div>
-
-              <div style={{
-                display: 'flex',
-                gap: '0.75rem',
-                justifyContent: 'flex-end'
-              }}>
-                <button
-                  onClick={() => {
-                    setIsMoveOutModalOpen(false);
-                    setMoveOutCalculations(null);
-                  }}
-                  style={{
-                    padding: '0.75rem 1.5rem',
-                    backgroundColor: '#f8fafc',
-                    color: '#374151',
-                    border: '1px solid #cbd5e1',
-                    borderRadius: '6px',
-                    fontSize: '0.875rem',
-                    fontWeight: '500',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease'
-                  }}
-                  onMouseOver={(e) => {
-                    e.currentTarget.style.backgroundColor = '#f1f5f9';
-                    e.currentTarget.style.borderColor = '#94a3b8';
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.backgroundColor = '#f8fafc';
-                    e.currentTarget.style.borderColor = '#cbd5e1';
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleConfirmMoveOut}
-                  style={{
-                    padding: '0.75rem 1.5rem',
-                    backgroundColor: '#dc2626',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    fontSize: '0.875rem',
-                    fontWeight: '500',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease'
-                  }}
-                  onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#b91c1c'}
-                  onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
-                >
-                  Submit Move-Out Request
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </>
   );
