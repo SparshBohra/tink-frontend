@@ -30,8 +30,11 @@ export default function ListingPage() {
         return `${window.location.protocol}//app.${hostname}`;
       }
     }
-    return 'http://app.localhost:3000';
+    // Default to production app domain during SSR to avoid localhost leakage
+    return 'https://app.squareft.ai';
   };
+
+  const [appUrl, setAppUrl] = useState('');
 
   // Scroll detection
   useEffect(() => {
@@ -40,6 +43,11 @@ export default function ListingPage() {
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Resolve appUrl on client
+  useEffect(() => {
+    setAppUrl(getAppUrl());
   }, []);
 
   // Load listing data from sessionStorage (populated by API)
@@ -177,8 +185,20 @@ export default function ListingPage() {
             <a href="/#how" className="menu-link">About</a>
             <a href="/#agents" className="menu-link">AI Agents</a>
             <a href="/#browse" className="menu-link">FAQ</a>
-            <a href={`${getAppUrl()}/login`} className="menu-link login">Login</a>
-            <a href={`${getAppUrl()}/landlord-signup`} className="menu-link signup">Sign up</a>
+            <a
+              href={appUrl ? `${appUrl}/login` : '#'}
+              onClick={(e) => { e.preventDefault(); if (appUrl) window.location.href = `${appUrl}/login`; }}
+              className="menu-link login"
+            >
+              Login
+            </a>
+            <a
+              href={appUrl ? `${appUrl}/landlord-signup` : '#'}
+              onClick={(e) => { e.preventDefault(); if (appUrl) window.location.href = `${appUrl}/landlord-signup`; }}
+              className="menu-link signup"
+            >
+              Sign up
+            </a>
           </div>
         </nav>
 
