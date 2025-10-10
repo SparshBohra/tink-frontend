@@ -137,7 +137,7 @@ export default function EditTenant() {
     return (
       <>
         <Head>
-          <title>Edit Tenant - Tink Property Management</title>
+          <title>Edit Tenant - SquareFt</title>
         </Head>
         <DashboardLayout title="">
           <div className="dashboard-container">
@@ -162,7 +162,7 @@ export default function EditTenant() {
     return (
       <>
         <Head>
-          <title>Tenant Not Found - Tink Property Management</title>
+          <title>Tenant Not Found - SquareFt</title>
         </Head>
         <DashboardLayout title="">
           <div className="dashboard-container">
@@ -198,7 +198,7 @@ export default function EditTenant() {
   return (
     <>
       <Head>
-        <title>Edit Tenant: {tenant?.full_name} - Tink Property Management</title>
+        <title>Edit Tenant: {tenant?.full_name} - SquareFt</title>
       </Head>
       <DashboardLayout title="">
         <div className="dashboard-container" style={{ padding: '16px 20px 20px 20px' }}>

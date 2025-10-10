@@ -380,7 +380,7 @@ export default function AddProperty() {
   return (
     <>
       <Head>
-          <title>Add Property - Loading - Tink</title>
+          <title>Add Property - Loading - SquareFt</title>
       </Head>
       <DashboardLayout title="">
         <div className="dashboard-container">
@@ -407,7 +407,7 @@ export default function AddProperty() {
   return (
     <>
       <Head>
-        <title>Add New Property - Tink Property Management</title>
+        <title>Add New Property - SquareFt</title>
       </Head>
       <DashboardLayout title="">
         <div className="dashboard-container">

@@ -103,7 +103,7 @@ export default function AddInventoryItem() {
     return (
       <>
         <Head>
-          <title>Add Inventory Item - Tink</title>
+          <title>Add Inventory Item - SquareFt</title>
         </Head>
         <DashboardLayout title="">
           <div className="dashboard-container">
@@ -131,7 +131,7 @@ export default function AddInventoryItem() {
   return (
     <>
       <Head>
-        <title>Add Inventory Item - Tink</title>
+        <title>Add Inventory Item - SquareFt</title>
       </Head>
       <DashboardLayout title="">
         <div className="dashboard-container">

@@ -228,7 +228,7 @@ export default function EditRoom() {
     return (
       <>
         <Head>
-          <title>Edit Room - Invalid Parameters - Tink Property Management</title>
+          <title>Edit Room - Invalid Parameters - SquareFt</title>
         </Head>
         <DashboardLayout title="Invalid Parameters">
           <div className="dashboard-container">
@@ -261,7 +261,7 @@ export default function EditRoom() {
     return (
       <>
         <Head>
-          <title>Edit Room - Loading - Tink Property Management</title>
+          <title>Edit Room - Loading - SquareFt</title>
         </Head>
         <DashboardLayout title="">
           <div className="dashboard-container">
@@ -289,7 +289,7 @@ export default function EditRoom() {
   return (
     <DashboardLayout>
       <Head>
-        <title>Edit Room - {room?.name || 'Loading...'} | Tink</title>
+        <title>Edit Room - {room?.name || 'Loading...'} | SquareFt</title>
       </Head>
       <div className="dashboard-container">
         {/* Custom Header */}

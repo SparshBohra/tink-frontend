@@ -1402,7 +1402,7 @@ function Applications() {
   return (
     <DashboardLayout title="">
       <Head>
-        <title>Applications Review - Tink Property Management</title>
+        <title>Applications Review - SquareFt</title>
       </Head>
       
       <div className="dashboard-container">

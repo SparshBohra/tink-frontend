@@ -291,7 +291,7 @@ const TenantLogin: React.FC = () => {
   return (
     <>
       <Head>
-        <title>Tenant Login - Tink</title>
+        <title>Tenant Login - SquareFt</title>
         <meta name="description" content="Login to your tenant portal" />
         <style>{`
           @keyframes spin {
@@ -313,20 +313,13 @@ const TenantLogin: React.FC = () => {
             {/* Header */}
           <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
             <div style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '4rem',
-              height: '4rem',
-              background: 'linear-gradient(135deg, #2563eb, #1e40af)',
-              borderRadius: '1rem',
-              marginBottom: '1rem',
-              boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
+              display: 'inline-block',
+              marginBottom: '1rem'
             }}>
-              <Home style={{ width: '2rem', height: '2rem', color: 'white' }} />
+              <img src="/logo1.png" alt="SquareFt" style={{ height: '80px', width: 'auto' }} />
               </div>
             <h1 style={{ fontSize: '1.875rem', fontWeight: 'bold', color: '#111827', marginBottom: '0.5rem' }}>
-                Tink Tenant Portal
+                SquareFt Tenant Portal
               </h1>
             <p style={{ color: '#6b7280', margin: 0 }}>
               {step === 'phone' && 'Enter your phone number to get started'}
@@ -398,19 +391,34 @@ const TenantLogin: React.FC = () => {
                   disabled={!validatePhone(formData.phoneNumber) || loading}
                   style={{
                     width: '100%',
-                    background: loading ? '#9ca3af' : 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+                    background: loading ? '#94a3b8' : '#1877F2',
                     color: 'white',
                     padding: '0.75rem 1rem',
-                    borderRadius: '0.5rem',
+                    borderRadius: '0.75rem',
                     border: 'none',
-                    fontWeight: '500',
+                    fontWeight: '700',
                     cursor: (!validatePhone(formData.phoneNumber) || loading) ? 'not-allowed' : 'pointer',
                     opacity: (!validatePhone(formData.phoneNumber) || loading) ? 0.6 : 1,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: '0.5rem',
-                    transition: 'all 0.2s'
+                    transition: 'all 0.2s',
+                    boxShadow: loading ? 'none' : '0 4px 14px rgba(24, 119, 242, 0.25)'
+                  }}
+                  onMouseOver={(e) => {
+                    if (!loading && validatePhone(formData.phoneNumber)) {
+                      e.currentTarget.style.background = '#166FE5';
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = '0 6px 20px rgba(24, 119, 242, 0.35)';
+                    }
+                  }}
+                  onMouseOut={(e) => {
+                    if (!loading && validatePhone(formData.phoneNumber)) {
+                      e.currentTarget.style.background = '#1877F2';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 4px 14px rgba(24, 119, 242, 0.25)';
+                    }
                   }}
                 >
                   {loading ? (
@@ -550,19 +558,34 @@ const TenantLogin: React.FC = () => {
                   disabled={formData.otpCode.join('').length !== 6 || loading}
                   style={{
                     width: '100%',
-                    background: loading ? '#9ca3af' : 'linear-gradient(135deg, #16a34a, #15803d)',
+                    background: loading ? '#94a3b8' : '#1877F2',
                     color: 'white',
                     padding: '0.75rem 1rem',
-                    borderRadius: '0.5rem',
+                    borderRadius: '0.75rem',
                     border: 'none',
-                    fontWeight: '500',
+                    fontWeight: '700',
                     cursor: (formData.otpCode.join('').length !== 6 || loading) ? 'not-allowed' : 'pointer',
                     opacity: (formData.otpCode.join('').length !== 6 || loading) ? 0.6 : 1,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: '0.5rem',
-                    transition: 'all 0.2s'
+                    transition: 'all 0.2s',
+                    boxShadow: loading ? 'none' : '0 4px 14px rgba(24, 119, 242, 0.25)'
+                  }}
+                  onMouseOver={(e) => {
+                    if (!loading && formData.otpCode.join('').length === 6) {
+                      e.currentTarget.style.background = '#166FE5';
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = '0 6px 20px rgba(24, 119, 242, 0.35)';
+                    }
+                  }}
+                  onMouseOut={(e) => {
+                    if (!loading && formData.otpCode.join('').length === 6) {
+                      e.currentTarget.style.background = '#1877F2';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 4px 14px rgba(24, 119, 242, 0.25)';
+                    }
                   }}
                 >
                   {loading ? (
@@ -589,14 +612,14 @@ const TenantLogin: React.FC = () => {
                       disabled={loading}
                       style={{
                         fontSize: '0.875rem',
-                        color: '#2563eb',
+                        color: '#1877F2',
                         backgroundColor: 'transparent',
                         border: 'none',
                         cursor: loading ? 'not-allowed' : 'pointer',
                         opacity: loading ? 0.5 : 1
                       }}
-                      onMouseOver={(e) => !loading && (e.currentTarget.style.color = '#1d4ed8')}
-                      onMouseOut={(e) => !loading && (e.currentTarget.style.color = '#2563eb')}
+                      onMouseOver={(e) => !loading && (e.currentTarget.style.color = '#166FE5')}
+                      onMouseOut={(e) => !loading && (e.currentTarget.style.color = '#1877F2')}
                     >
                       Didn't receive the code? Resend
                     </button>

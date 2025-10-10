@@ -9,7 +9,7 @@ export default function ViewingsPage() {
   return (
     <DashboardLayout>
       <Head>
-        <title>Viewings - Tink Property Management</title>
+        <title>Viewings - SquareFt</title>
       </Head>
 
       <div className="viewings-page">

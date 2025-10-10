@@ -740,7 +740,7 @@ function Accounting() {
   return (
     <DashboardLayout title="">
       <Head>
-        <title>Property Accounting - Tink Property Management</title>
+        <title>Property Accounting - SquareFt</title>
       </Head>
       
       <div className="dashboard-container">

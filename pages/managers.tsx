@@ -521,7 +521,7 @@ function ManagersPage() {
   return (
     <>
       <Head>
-        <title>Manage Team - Tink</title>
+        <title>Manage Team - SquareFt</title>
       </Head>
       <DashboardLayout title="">
         <div className="dashboard-container">

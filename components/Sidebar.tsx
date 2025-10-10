@@ -473,7 +473,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
             <button className="menu-toggle" onClick={handleMenuToggle}>
               <MenuIcon />
             </button>
-            {shouldShowExpanded && <span className="logo-text">Tink</span>}
+            {shouldShowExpanded && <span className="logo-text">SquareFt</span>}
           </div>
         </div>
 

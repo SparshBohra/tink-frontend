@@ -515,7 +515,7 @@ function Properties() {
   return (
     <DashboardLayout title="">
       <Head>
-        <title>Property Management - Tink Property Management</title>
+        <title>Property Management - SquareFt</title>
       </Head>
       
       <div className="dashboard-container">

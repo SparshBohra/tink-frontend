@@ -373,7 +373,7 @@ function Tenants() {
   return (
     <DashboardLayout title="">
       <Head>
-        <title>People Management - Tink Property Management</title>
+        <title>People Management - SquareFt</title>
       </Head>
       
       <div className="dashboard-container">

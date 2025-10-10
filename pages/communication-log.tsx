@@ -285,7 +285,7 @@ function CommunicationLogPage() {
   return (
     <DashboardLayout title="Communication Log">
       <Head>
-        <title>Communication Log - Tink</title>
+        <title>Communication Log - SquareFt</title>
         <meta name="description" content="View comprehensive communication history" />
       </Head>
 

@@ -259,7 +259,7 @@ function LandlordsPage() {
     return (
       <>
         <Head>
-          <title>All Landlords - Tink Property Management</title>
+          <title>All Landlords - SquareFt</title>
         </Head>
         <DashboardLayout
           title="All Landlords"
@@ -274,7 +274,7 @@ function LandlordsPage() {
   return (
     <>
       <Head>
-        <title>All Landlords - Tink Property Management</title>
+        <title>All Landlords - SquareFt</title>
       </Head>
       <DashboardLayout
         title="All Landlords"

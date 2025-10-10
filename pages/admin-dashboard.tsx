@@ -100,7 +100,7 @@ function AdminDashboard() {
   return (
     <DashboardLayout title="">
       <Head>
-        <title>Admin Dashboard - Tink</title>
+        <title>Admin Dashboard - SquareFt</title>
       </Head>
       
       <div className="dashboard-container">

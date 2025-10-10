@@ -560,7 +560,7 @@ function CommunicationPage() {
   return (
     <DashboardLayout title="">
       <Head>
-        <title>Communication - Tink Property Management</title>
+        <title>Communication - SquareFt</title>
       </Head>
       
       <div className="dashboard-container">

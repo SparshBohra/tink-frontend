@@ -86,7 +86,7 @@ function LandlordDetailsPage() {
     return (
       <>
         <Head>
-          <title>Landlord Details - Tink Property Management</title>
+          <title>Landlord Details - SquareFt</title>
         </Head>
         <DashboardLayout
           title="Landlord Details"
@@ -105,7 +105,7 @@ function LandlordDetailsPage() {
     return (
       <>
         <Head>
-          <title>Landlord Not Found - Tink Property Management</title>
+          <title>Landlord Not Found - SquareFt</title>
         </Head>
         <DashboardLayout
           title="Landlord Not Found"

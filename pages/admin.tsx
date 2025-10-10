@@ -113,7 +113,7 @@ function AdminPanel() {
             🛡️ Admin Panel - Platform Management
           </h1>
           <p style={{ color: '#666', fontSize: '16px' }}>
-            Welcome, {user?.full_name || user?.username}! You have full administrative access to the Tink platform.
+            Welcome, {user?.full_name || user?.username}! You have full administrative access to the SquareFt platform.
           </p>
           <p style={{ color: '#e74c3c', fontSize: '14px', fontStyle: 'italic' }}>
             Manage landlords, oversee all properties, and monitor platform health.

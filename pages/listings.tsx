@@ -7,7 +7,7 @@ export default function ListingsPage() {
   return (
     <DashboardLayout title="">
       <Head>
-        <title>Property Listings - Tink Property Management</title>
+        <title>Property Listings - SquareFt</title>
         <meta name="description" content="Manage your property listings and tenant applications" />
       </Head>
       

@@ -147,7 +147,7 @@ const TenantDashboard: React.FC = () => {
   return (
     <>
       <Head>
-        <title>Tenant Dashboard - Tink</title>
+        <title>Tenant Dashboard - SquareFt</title>
         <meta name="description" content="Manage your rental, payments, and communicate with your landlord" />
       </Head>
 
@@ -194,7 +194,7 @@ const TenantDashboard: React.FC = () => {
                   fontWeight: '700',
                   color: '#111827',
                   margin: 0
-                }}>Tink</h1>
+                }}>SquareFt</h1>
                 <p style={{
                   fontSize: '0.875rem',
                   color: '#6b7280',

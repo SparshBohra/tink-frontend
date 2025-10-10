@@ -203,7 +203,7 @@ export default function EditProperty() {
     return (
       <>
         <Head>
-          <title>Edit Property - Loading - Tink</title>
+          <title>Edit Property - Loading - SquareFt</title>
         </Head>
         <DashboardLayout title="">
           <div className="dashboard-container">
@@ -230,7 +230,7 @@ export default function EditProperty() {
   return (
     <DashboardLayout>
       <Head>
-        <title>Edit Property - {property?.name || ''} - Tink</title>
+        <title>Edit Property - {property?.name || ''} - SquareFt</title>
       </Head>
       <div className="dashboard-container">
         {/* Custom Header */}

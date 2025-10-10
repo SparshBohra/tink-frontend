@@ -133,7 +133,7 @@ export default function EditInventoryItem() {
     return (
       <>
         <Head>
-          <title>Edit Inventory Item - Tink</title>
+          <title>Edit Inventory Item - SquareFt</title>
         </Head>
         <DashboardLayout
           title="Edit Inventory Item"
@@ -152,7 +152,7 @@ export default function EditInventoryItem() {
     return (
       <>
         <Head>
-          <title>Edit Inventory Item - Tink</title>
+          <title>Edit Inventory Item - SquareFt</title>
         </Head>
         <DashboardLayout
           title="Edit Inventory Item"
@@ -172,7 +172,7 @@ export default function EditInventoryItem() {
   return (
     <>
       <Head>
-        <title>Edit Inventory Item - Tink</title>
+        <title>Edit Inventory Item - SquareFt</title>
       </Head>
       <DashboardLayout
         title="✏️ Edit Inventory Item"

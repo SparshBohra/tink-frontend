@@ -716,7 +716,7 @@ export default function PropertyDetails() {
   return (
     <DashboardLayout title="">
       <Head>
-        <title>{property?.name || 'Property Details'} - Property Details | Tink</title>
+        <title>{property?.name || 'Property Details'} - Property Details | SquareFt</title>
       </Head>
       
       <div style={{ padding: '2rem' }}>

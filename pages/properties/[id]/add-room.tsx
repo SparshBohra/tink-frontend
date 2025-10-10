@@ -208,7 +208,7 @@ function AddRoom() {
     return (
       <>
         <Head>
-          <title>Add Room - Property ID Missing - Tink Property Management</title>
+          <title>Add Room - Property ID Missing - SquareFt</title>
         </Head>
         <DashboardLayout title="">
           <div className="dashboard-container">
@@ -240,7 +240,7 @@ function AddRoom() {
   return (
     <>
       <Head>
-        <title>Add New Room - {property?.name || 'Property'} - Tink Property Management</title>
+        <title>Add New Room - {property?.name || 'Property'} - SquareFt</title>
       </Head>
       <DashboardLayout title="">
         <div className="dashboard-container">

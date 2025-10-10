@@ -575,7 +575,7 @@ function LandlordDashboard() {
   return (
     <DashboardLayout title="">
       <Head>
-        <title>Landlord Dashboard - Tink</title>
+        <title>Landlord Dashboard - SquareFt</title>
       </Head>
       
       <div className="dashboard-container">

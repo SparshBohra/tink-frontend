@@ -209,7 +209,7 @@ export default function Inventory() {
     return (
       <>
         <Head>
-          <title>Inventory - Tink</title>
+          <title>Inventory - SquareFt</title>
         </Head>
         <DashboardLayout title="">
           <div className="dashboard-container">
@@ -236,7 +236,7 @@ export default function Inventory() {
   return (
     <>
       <Head>
-        <title>Inventory Management - Tink</title>
+        <title>Inventory Management - SquareFt</title>
       </Head>
       <DashboardLayout title="">
         <div className="dashboard-container">

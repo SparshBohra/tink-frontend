@@ -117,7 +117,7 @@ export default function TenantDetails() {
     return (
       <>
         <Head>
-          <title>Loading Tenant - Tink Property Management</title>
+          <title>Loading Tenant - SquareFt</title>
         </Head>
         <DashboardLayout title="">
           <div className="dashboard-container">
@@ -149,7 +149,7 @@ export default function TenantDetails() {
     return (
       <>
         <Head>
-          <title>Tenant Not Found - Tink Property Management</title>
+          <title>Tenant Not Found - SquareFt</title>
         </Head>
         <DashboardLayout title="">
           <div className="dashboard-container">
@@ -232,7 +232,7 @@ export default function TenantDetails() {
   return (
     <>
       <Head>
-        <title>{tenant.full_name} - Tenant Details - Tink Property Management</title>
+        <title>{tenant.full_name} - Tenant Details - SquareFt</title>
       </Head>
       <DashboardLayout title="">
         <div className="dashboard-container">

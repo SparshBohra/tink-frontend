@@ -162,7 +162,7 @@ export default function TenantLeasePortal() {
     return (
       <>
         <Head>
-          <title>Tenant Lease Portal - Tink Property Management</title>
+          <title>Tenant Lease Portal - SquareFt</title>
         </Head>
         
         <div className="tenant-portal-container">

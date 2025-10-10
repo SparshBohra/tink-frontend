@@ -49,7 +49,7 @@ export default function DashboardLayout({
     return (
       <>
         <Head>
-          <title>{title} - Tink Property Management</title>
+          <title>{title} - SquareFt</title>
         </Head>
         
         <div className="dashboard-layout">
@@ -205,7 +205,7 @@ export default function DashboardLayout({
   return (
     <>
       <Head>
-        <title>{title} - Tink Property Management</title>
+        <title>{title} - SquareFt</title>
       </Head>
       
       <div className="dashboard-layout">

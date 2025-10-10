@@ -25,7 +25,7 @@ const testimonials: Testimonial[] = [
   },
   {
     quote:
-      'Before Tink, I was drowning in spreadsheets and WhatsApp group chats. Now everything is automated and organized. Our tenant satisfaction scores improved by 45% and we\'ve reduced vacancy periods to just 3 days on average.',
+      'Before SquareFt, I was drowning in spreadsheets and WhatsApp group chats. Now everything is automated and organized. Our tenant satisfaction scores improved by 45% and we\'ve reduced vacancy periods to just 3 days on average.',
     authorInitials: 'MR',
     authorName: 'Michael Rodriguez',
     authorTitle: 'Property Manager, Urban Nest',

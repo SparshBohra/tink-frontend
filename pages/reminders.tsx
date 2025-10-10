@@ -73,7 +73,7 @@ function Reminders() {
     return (
       <DashboardLayout title="Reminders & Tasks">
         <Head>
-          <title>Reminders & Tasks - Tink</title>
+          <title>Reminders & Tasks - SquareFt</title>
         </Head>
         <LoadingSpinner />
       </DashboardLayout>
@@ -83,7 +83,7 @@ function Reminders() {
   return (
     <>
       <Head>
-        <title>Tasks & Reminders - Tink</title>
+        <title>Tasks & Reminders - SquareFt</title>
       </Head>
       <DashboardLayout
         title="Tasks & Reminders"

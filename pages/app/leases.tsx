@@ -684,7 +684,7 @@ function Leases() {
   return (
     <DashboardLayout title="">
       <Head>
-        <title>Lease Management - Tink Property Management</title>
+        <title>Lease Management - SquareFt</title>
       </Head>
       
       <div style={{ padding: '2rem' }}>

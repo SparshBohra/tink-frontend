@@ -902,7 +902,7 @@ function Dashboard() {
   return (
     <DashboardLayout title="">
       <Head>
-        <title>Dashboard - Tink Property Management</title>
+        <title>Dashboard - SquareFt</title>
       </Head>
       
       <div className="dashboard-container">

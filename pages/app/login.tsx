@@ -85,7 +85,7 @@ export default function Login() {
     return (
       <>
         <Head>
-          <title>Login - Tink Property Management</title>
+          <title>Login - SquareFt</title>
         </Head>
         <div className="login-container">
           <div className="login-card">
@@ -102,17 +102,16 @@ export default function Login() {
   return (
     <>
       <Head>
-        <title>Login - Tink Property Management</title>
+        <title>Login - SquareFt</title>
       </Head>
       <div className="login-container">
         <div className="login-card">
           {/* Header */}
           <div className="login-header">
             <div className="logo">
-              <span>T</span>
+              <img src="/logo1.png" alt="SquareFt" className="logo-img" />
             </div>
-            <h1 className="brand-title">Tink Property Management</h1>
-            <h2 className="login-title">Welcome Back!</h2>
+            <h2 className="login-title">Welcome</h2>
             <p className="login-subtitle">Sign in to your account to continue</p>
           </div>
 
@@ -173,39 +172,6 @@ export default function Login() {
             </button>
           </form>
 
-          {/* Demo Access Section */}
-          <div className="demo-section">
-            <div className="section-divider">
-              <span>Or try a demo account</span>
-            </div>
-            
-            <div className="demo-buttons">
-              <button 
-                onClick={() => handleDemoLogin('admin')}
-                disabled={isLoading || loading}
-                className="btn btn-error btn-sm demo-btn"
-              >
-                Platform Admin Demo
-              </button>
-              
-              <button 
-                onClick={() => handleDemoLogin('owner')}
-                disabled={isLoading || loading}
-                className="btn btn-warning btn-sm demo-btn"
-              >
-                Landlord Demo
-              </button>
-              
-              <button 
-                onClick={() => handleDemoLogin('tenant')}
-                disabled={isLoading || loading}
-                className="btn btn-primary btn-sm demo-btn"
-              >
-                Tenant Portal Demo
-              </button>
-            </div>
-          </div>
-
           {/* Footer */}
           <div className="login-footer">
             <p className="text-small text-secondary">
@@ -221,179 +187,201 @@ export default function Login() {
       <style jsx>{`
         .login-container {
           min-height: 100vh;
-          background: linear-gradient(135deg, var(--gray-50) 0%, var(--gray-100) 100%);
+          background: #fafbfc;
           display: flex;
           align-items: center;
           justify-content: center;
-          padding: var(--spacing-lg);
-          font-family: var(--font-sans);
+          padding: 40px 24px;
+          position: relative;
+        }
+
+        .login-container::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          z-index: 0;
+          background: radial-gradient(circle at 50% 50%, rgba(24, 119, 242, 0.08) 0%, rgba(24, 119, 242, 0.03) 40%, transparent 70%);
+          pointer-events: none;
         }
 
         .login-card {
-          background: white;
-          border-radius: var(--radius-lg);
-          box-shadow: var(--shadow-lg);
-          padding: var(--spacing-2xl);
+          background: rgba(255, 255, 255, 0.7);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+          border-radius: 24px;
+          box-shadow: 0 25px 70px rgba(0, 0, 0, 0.08);
+          padding: 60px 50px;
           width: 100%;
-          max-width: 450px;
-          border: 1px solid var(--gray-200);
+          max-width: 520px;
+          border: 1px solid rgba(255, 255, 255, 0.5);
+          position: relative;
+          z-index: 1;
         }
 
         .login-header {
           text-align: center;
-          margin-bottom: var(--spacing-xl);
+          margin-bottom: 40px;
         }
 
         .logo {
-          width: 56px;
-          height: 56px;
-          background: var(--primary-blue);
-          border-radius: var(--radius-md);
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          font-weight: 700;
-          font-size: 24px;
-          color: white;
-          margin-bottom: var(--spacing-md);
+          display: inline-block;
+          margin-bottom: 32px;
         }
 
-        .brand-title {
-          font-size: var(--text-h2);
-          font-weight: 600;
-          color: var(--gray-900);
-          margin: 0 0 var(--spacing-md) 0;
-          line-height: var(--line-height-tight);
+        .logo-img {
+          height: 80px;
+          width: auto;
         }
 
         .login-title {
-          font-size: var(--text-h1);
-          font-weight: 700;
-          color: var(--gray-900);
-          margin: 0 0 var(--spacing-sm) 0;
-          line-height: var(--line-height-tight);
+          font-size: 36px;
+          font-weight: 800;
+          color: #0f172a;
+          margin: 0 0 12px 0;
+          letter-spacing: -0.5px;
+          line-height: 1.1;
         }
 
         .login-subtitle {
-          font-size: var(--text-body);
-          color: var(--gray-600);
+          font-size: 17px;
+          color: #64748b;
           margin: 0;
+          line-height: 1.5;
         }
 
         .login-form {
-          margin-bottom: var(--spacing-xl);
+          margin-bottom: 32px;
         }
 
         .form-group {
-          margin-bottom: var(--spacing-lg);
+          margin-bottom: 24px;
         }
 
         .form-label {
           display: block;
-          margin-bottom: var(--spacing-sm);
-          font-weight: var(--font-weight-medium);
-          color: var(--gray-700);
+          margin-bottom: 8px;
+          font-weight: 600;
+          color: #334155;
+          font-size: 15px;
+        }
+
+        .form-input {
+          width: 100%;
+          padding: 14px 18px;
+          border: 2px solid #e5e7eb;
+          border-radius: 12px;
+          font-size: 16px;
+          transition: all 0.2s;
+          background: rgba(255, 255, 255, 0.8);
+        }
+
+        .form-input:focus {
+          border-color: #1877F2;
+          outline: none;
+          box-shadow: 0 0 0 3px rgba(24, 119, 242, 0.1);
+          background: white;
+        }
+
+        .form-input:disabled {
+          background: #f1f5f9;
+          cursor: not-allowed;
         }
 
         .login-button {
           width: 100%;
-          padding: var(--spacing-md);
-          font-size: var(--text-body);
-          font-weight: var(--font-weight-medium);
+          padding: 16px 32px;
+          font-size: 17px;
+          font-weight: 700;
+          background: #1877F2;
+          color: white;
+          border: none;
+          border-radius: 12px;
+          cursor: pointer;
+          transition: all 0.2s;
+          box-shadow: 0 4px 14px rgba(24, 119, 242, 0.25);
         }
 
-        .demo-section {
-          margin-bottom: var(--spacing-xl);
+        .login-button:hover:not(:disabled) {
+          background: #166FE5;
+          transform: translateY(-2px);
+          box-shadow: 0 6px 20px rgba(24, 119, 242, 0.35);
         }
 
-        .section-divider {
-          position: relative;
-          text-align: center;
-          margin-bottom: var(--spacing-lg);
-        }
-
-        .section-divider::before {
-          content: '';
-          position: absolute;
-          top: 50%;
-          left: 0;
-          right: 0;
-          height: 1px;
-          background: var(--gray-200);
-          z-index: 1;
-        }
-
-        .section-divider span {
-          background: white;
-          padding: 0 var(--spacing-md);
-          color: var(--gray-500);
-          font-size: var(--text-small);
-          position: relative;
-          z-index: 2;
-        }
-
-        .demo-buttons {
-          display: flex;
-          flex-direction: column;
-          gap: var(--spacing-sm);
-        }
-
-        .demo-btn {
-          width: 100%;
-          justify-content: center;
-          padding: var(--spacing-sm) var(--spacing-md);
+        .login-button:disabled {
+          background: #94a3b8;
+          cursor: not-allowed;
+          transform: none;
+          box-shadow: none;
         }
 
         .login-footer {
           text-align: center;
-          padding-top: var(--spacing-lg);
-          border-top: 1px solid var(--gray-100);
+          padding-top: 28px;
+          border-top: 1px solid rgba(226, 232, 240, 0.6);
         }
 
-        .signup-button {
-          width: 100%;
-          margin-top: var(--spacing-md);
-          font-weight: var(--font-weight-medium);
+        .text-small {
+          font-size: 15px;
         }
 
-        .text-link {
-          color: var(--primary-blue);
-          text-decoration: none;
-          font-weight: var(--font-weight-medium);
-          transition: color var(--transition-fast);
-        }
-
-        .text-link:hover {
-          color: var(--primary-blue-dark);
-          text-decoration: underline;
+        .text-secondary {
+          color: #64748b;
         }
 
         .signup-link {
-          color: var(--gray-900);
-          text-decoration: underline;
-          font-weight: var(--font-weight-semibold);
-          transition: color var(--transition-fast);
+          color: #1877F2;
+          text-decoration: none;
+          font-weight: 600;
+          transition: color 0.2s;
         }
 
         .signup-link:hover {
-          color: var(--gray-700);
+          color: #166FE5;
+          text-decoration: underline;
         }
 
-        @media (max-width: 480px) {
+        .alert {
+          padding: 14px 18px;
+          border-radius: 12px;
+          margin-bottom: 24px;
+          font-size: 15px;
+        }
+
+        .alert-error {
+          background: #fef2f2;
+          border: 1px solid #fecaca;
+          color: #991b1b;
+        }
+
+        .alert-success {
+          background: #f0fdf4;
+          border: 1px solid #bbf7d0;
+          color: #166534;
+        }
+
+        .alert strong {
+          font-weight: 700;
+        }
+
+        @media (max-width: 640px) {
           .login-container {
-            padding: var(--spacing-md);
+            padding: 24px 16px;
           }
 
           .login-card {
-            padding: var(--spacing-xl);
+            padding: 40px 28px;
           }
 
-          .brand-title {
-            font-size: var(--text-h3);
+          .logo-img {
+            height: 65px;
           }
 
           .login-title {
-            font-size: var(--text-h2);
+            font-size: 30px;
+          }
+
+          .login-subtitle {
+            font-size: 16px;
           }
         }
       `}</style>

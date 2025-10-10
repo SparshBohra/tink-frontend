@@ -73,7 +73,7 @@ export default function Navigation() {
               <span>T</span>
             </div>
             <div>
-              <h1 className="brand-title">Tink Property Management</h1>
+              <h1 className="brand-title">SquareFt</h1>
               <div className="role-title">{getDashboardTitle()}</div>
             </div>
           </div>

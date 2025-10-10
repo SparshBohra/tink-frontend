@@ -161,7 +161,7 @@ function Vendors() {
   return (
     <DashboardLayout title="">
       <Head>
-        <title>Vendors - Tink</title>
+        <title>Vendors - SquareFt</title>
       </Head>
 
       <div className="dashboard-container">
