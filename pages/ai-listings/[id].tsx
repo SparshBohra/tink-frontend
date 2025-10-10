@@ -8,7 +8,7 @@ import {
   Home, Car, Zap, Droplet, WashingMachine, PawPrint
 } from 'lucide-react';
 import Link from 'next/link';
-import { apiClient } from '@/lib/api';
+import { apiClient } from '../../lib/api';
 
 interface Listing {
   listing_id: string;

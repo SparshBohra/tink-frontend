@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
-import DashboardLayout from '../components/DashboardLayout';
+import DashboardLayout from '../../components/DashboardLayout';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { withAuth } from '../lib/auth-context';
-import { apiClient } from '../lib/api';
-import { Lease, Tenant, Property, Room } from '../lib/types';
-import { formatCurrency } from '../lib/utils';
-import LoadingSpinner from '../components/LoadingSpinner';
+import { withAuth } from '../../lib/auth-context';
+import { apiClient } from '../../lib/api';
+import { Lease, Tenant, Property, Room } from '../../lib/types';
+import { formatCurrency } from '../../lib/utils';
+import LoadingSpinner from '../../components/LoadingSpinner';
 import { 
   FileText, 
   Clock, 

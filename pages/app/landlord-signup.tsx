@@ -2,10 +2,10 @@ import { useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import { useAuth } from '../lib/auth-context';
-import { phoneUtils } from '../lib/utils';
-import USPhoneInput, { validateUSPhone, getUSPhoneError, toE164Format } from '../components/USPhoneInput';
-import MapboxAddressAutocomplete from '../components/MapboxAddressAutocomplete';
+import { useAuth } from '../../lib/auth-context';
+import { phoneUtils } from '../../lib/utils';
+import USPhoneInput, { validateUSPhone, getUSPhoneError, toE164Format } from '../../components/USPhoneInput';
+import MapboxAddressAutocomplete from '../../components/MapboxAddressAutocomplete';
 
 export default function LandlordSignup() {
   const router = useRouter();

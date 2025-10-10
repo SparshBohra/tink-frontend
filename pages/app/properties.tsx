@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
-import DashboardLayout from '../components/DashboardLayout';
-import LoadingSpinner from '../components/LoadingSpinner';
-import PropertyDeletionModal from '../components/PropertyDeletionModal';
-import PropertyTenantAssignmentModal from '../components/PropertyTenantAssignmentModal';
+import DashboardLayout from '../../components/DashboardLayout';
+import LoadingSpinner from '../../components/LoadingSpinner';
+import PropertyDeletionModal from '../../components/PropertyDeletionModal';
+import PropertyTenantAssignmentModal from '../../components/PropertyTenantAssignmentModal';
 import { useRouter } from 'next/router';
-import { withAuth } from '../lib/auth-context';
-import { apiClient } from '../lib/api';
-import { Property, Room, Lease } from '../lib/types';
+import { withAuth } from '../../lib/auth-context';
+import { apiClient } from '../../lib/api';
+import { Property, Room, Lease } from '../../lib/types';
 import { Building, Users, Home, BarChart3, Calendar, Plus, FileText, RefreshCw, MoreHorizontal, Eye, Edit, Trash2, Download, Zap } from 'lucide-react';
 
 function Properties() {

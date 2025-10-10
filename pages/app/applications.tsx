@@ -2,17 +2,17 @@
 import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
-import DashboardLayout from '../components/DashboardLayout';
-import ApplicationKanban from '../components/ApplicationKanban';
+import DashboardLayout from '../../components/DashboardLayout';
+import ApplicationKanban from '../../components/ApplicationKanban';
 // Modal removed - applications are now created through listings
-import ViewingSchedulerModal from '../components/ViewingSchedulerModal';
-import ViewingCompletionModal from '../components/ViewingCompletionModal';
-import LeaseGenerationModal from '../components/LeaseGenerationModal';
-import ApplicationApprovalModal from '../components/ApplicationApprovalModal';
-import LoadingSpinner from '../components/LoadingSpinner';
-import { useAuth, withAuth } from '../lib/auth-context';
-import { Application, Property, Room } from '../lib/types';
-import { apiClient } from '../lib/api';
+import ViewingSchedulerModal from '../../components/ViewingSchedulerModal';
+import ViewingCompletionModal from '../../components/ViewingCompletionModal';
+import LeaseGenerationModal from '../../components/LeaseGenerationModal';
+import ApplicationApprovalModal from '../../components/ApplicationApprovalModal';
+import LoadingSpinner from '../../components/LoadingSpinner';
+import { useAuth, withAuth } from '../../lib/auth-context';
+import { Application, Property, Room } from '../../lib/types';
+import { apiClient } from '../../lib/api';
 import { FileText, Clock, CheckCircle, TrendingUp, Calendar, LogOut, Calculator } from 'lucide-react';
 
 interface ConflictResolution {
@@ -21,12 +21,12 @@ interface ConflictResolution {
   roomId?: number;
   reason?: string;
 }
-import ConflictResolutionModal from '../components/ConflictResolutionModal';
-import RoomAssignmentModal from '../components/RoomAssignmentModal';
-import PropertyRoomManagement from '../components/PropertyRoomManagement';
-import ApplicationDetailModal from '../components/ApplicationDetailModal';
-import ImprovedLeaseGenerationModal from '../components/ImprovedLeaseGenerationModal';
-import ViewingManagementModal from '../components/ViewingManagementModal';
+import ConflictResolutionModal from '../../components/ConflictResolutionModal';
+import RoomAssignmentModal from '../../components/RoomAssignmentModal';
+import PropertyRoomManagement from '../../components/PropertyRoomManagement';
+import ApplicationDetailModal from '../../components/ApplicationDetailModal';
+import ImprovedLeaseGenerationModal from '../../components/ImprovedLeaseGenerationModal';
+import ViewingManagementModal from '../../components/ViewingManagementModal';
 
 function Applications() {
   const router = useRouter();
