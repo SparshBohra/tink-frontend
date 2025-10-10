@@ -74,7 +74,7 @@ const TenantDashboard: React.FC = () => {
 
   const handleDownloadLease = async (leaseId: number) => {
     try {
-      const downloadData = await apiClient.downloadDraftLease(leaseId);
+      const downloadData = await apiClient.downloadTenantLeaseDraft(leaseId);
       window.open(downloadData.download_url, '_blank');
     } catch (error: any) {
       alert(`Failed to download lease: ${error.message}`);

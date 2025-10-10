@@ -222,7 +222,7 @@ const TenantLogin: React.FC = () => {
     localStorage.setItem('tenant_access_token', tokens.access);
     localStorage.setItem('tenant_refresh_token', tokens.refresh);
     localStorage.setItem('tenant_user', JSON.stringify(tenant));
-    window.location.href = 'https://portal.squareft.ai/tenant-dashboard';
+    router.push('/tenant-dashboard');
   };
 
   // Handle property selection

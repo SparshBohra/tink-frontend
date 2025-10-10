@@ -68,7 +68,7 @@ export default function TenantLeasePortal() {
   const handleDownloadLease = async (lease: Lease) => {
     try {
       setError(null);
-      const downloadData = await apiClient.downloadTenantLeaseDraft(lease.id, phoneNumber);
+      const downloadData = await apiClient.downloadTenantLeaseDraft(lease.id);
       
       // Open download URL in new tab
       window.open(downloadData.download_url, '_blank');
