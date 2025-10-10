@@ -99,9 +99,9 @@ export default function LoadingOverlay({ onClose, onComplete }: LoadingOverlayPr
           display: flex;
           align-items: center;
           justify-content: center;
-          background: radial-gradient(circle at center, rgba(15, 23, 42, 0.55) 0%, rgba(15, 23, 42, 0.65) 50%, rgba(0, 0, 0, 0.75) 100%);
-          backdrop-filter: blur(16px);
-          -webkit-backdrop-filter: blur(16px);
+          background: radial-gradient(circle at center, rgba(15, 23, 42, 0.25) 0%, rgba(15, 23, 42, 0.35) 50%, rgba(0, 0, 0, 0.45) 100%);
+          backdrop-filter: blur(24px);
+          -webkit-backdrop-filter: blur(24px);
           animation: fadeIn 0.4s ease-out;
         }
 
@@ -119,7 +119,7 @@ export default function LoadingOverlay({ onClose, onComplete }: LoadingOverlayPr
           top: 32px;
           right: 32px;
           z-index: 10000;
-          background: rgba(255, 255, 255, 0.15);
+          background: rgba(30, 41, 59, 20);
           border: 2px solid rgba(255, 255, 255, 0.3);
           border-radius: 50%;
           width: 52px;
@@ -135,7 +135,7 @@ export default function LoadingOverlay({ onClose, onComplete }: LoadingOverlayPr
         }
 
         .close-button:hover {
-          background: rgba(255, 255, 255, 0.25);
+          background: rgba(30, 41, 59, 0.95);
           border-color: rgba(255, 255, 255, 0.5);
           color: white;
           transform: scale(1.08);
@@ -214,17 +214,17 @@ export default function LoadingOverlay({ onClose, onComplete }: LoadingOverlayPr
           z-index: 10;
           width: 64px;
           height: 64px;
-          background: rgba(24, 119, 242, 0.35);
+          background: rgba(24, 119, 242, 0.9);
           border-radius: 16px;
           display: flex;
           align-items: center;
           justify-content: center;
-          color: #3b9eff;
+          color: white;
           animation: pulse 2s ease-in-out infinite;
           backdrop-filter: blur(8px);
           -webkit-backdrop-filter: blur(8px);
-          border: 2px solid rgba(24, 119, 242, 0.5);
-          box-shadow: 0 8px 32px rgba(24, 119, 242, 0.4);
+          border: 2px solid rgba(24, 119, 242, 1);
+          box-shadow: 0 8px 32px rgba(24, 119, 242, 0.6);
         }
 
         @keyframes pulse {
@@ -252,10 +252,10 @@ export default function LoadingOverlay({ onClose, onComplete }: LoadingOverlayPr
           gap: 14px;
           padding: 14px 18px;
           border-radius: 12px;
-          background: rgba(255, 255, 255, 0.1);
+          background: rgba(30, 41, 59, 0.75);
           backdrop-filter: blur(8px);
           -webkit-backdrop-filter: blur(8px);
-          border: 1px solid rgba(255, 255, 255, 0.15);
+          border: 1px solid rgba(255, 255, 255, 0.2);
           transition: all 0.3s ease;
           animation: slideInStep 0.4s ease-out backwards;
         }
@@ -278,14 +278,14 @@ export default function LoadingOverlay({ onClose, onComplete }: LoadingOverlayPr
         }
 
         .step-item.active {
-          background: rgba(24, 119, 242, 0.25);
-          border-color: rgba(24, 119, 242, 0.5);
-          box-shadow: 0 0 0 2px rgba(24, 119, 242, 0.2);
+          background: rgba(24, 119, 242, 0.85);
+          border-color: rgba(24, 119, 242, 1);
+          box-shadow: 0 0 0 2px rgba(24, 119, 242, 0.4);
         }
 
         .step-item.complete {
-          background: rgba(16, 185, 129, 0.2);
-          border-color: rgba(16, 185, 129, 0.4);
+          background: rgba(16, 185, 129, 0.85);
+          border-color: rgba(16, 185, 129, 1);
         }
 
         .step-icon {
