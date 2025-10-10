@@ -17,6 +17,22 @@ export default function ListingPage() {
     facebook: false,
   });
 
+  // Get base URL for app subdomain based on environment
+  const getAppUrl = () => {
+    if (typeof window !== 'undefined') {
+      const hostname = window.location.hostname;
+      if (hostname === 'localhost') {
+        return 'http://app.localhost:3000';
+      } else if (hostname === 'squareft.ai' || hostname.endsWith('.squareft.ai')) {
+        return 'https://app.squareft.ai';
+      } else {
+        // For Vercel preview deployments
+        return `${window.location.protocol}//app.${hostname}`;
+      }
+    }
+    return 'http://app.localhost:3000';
+  };
+
   // Scroll detection
   useEffect(() => {
     const handleScroll = () => {
@@ -49,10 +65,11 @@ export default function ListingPage() {
   };
 
   const handleAuthRedirect = (mode: 'login' | 'signup') => {
+    const appUrl = getAppUrl();
     if (mode === 'login') {
-      window.location.href = 'http://app.localhost:3000/login';
+      window.location.href = `${appUrl}/login`;
     } else {
-      window.location.href = 'http://app.localhost:3000/landlord-signup';
+      window.location.href = `${appUrl}/landlord-signup`;
     }
   };
 
@@ -85,8 +102,8 @@ export default function ListingPage() {
             <a href="/#how" className="menu-link">How it works</a>
             <a href="/#browse" className="menu-link">Browse homes</a>
             <a href="/#agents" className="menu-link">Agents</a>
-            <a href="http://app.localhost:3000/login" className="menu-link login">Login</a>
-            <a href="http://app.localhost:3000/landlord-signup" className="menu-link signup">Sign up</a>
+            <a href={`${getAppUrl()}/login`} className="menu-link login">Login</a>
+            <a href={`${getAppUrl()}/landlord-signup`} className="menu-link signup">Sign up</a>
           </div>
         </nav>
 

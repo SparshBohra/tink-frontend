@@ -31,6 +31,22 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
   const [showLoading, setShowLoading] = useState(false);
   const [loadedPhotos, setLoadedPhotos] = useState<Map<number, Set<number>>>(new Map());
 
+  // Get base URL for app subdomain based on environment
+  const getAppUrl = () => {
+    if (typeof window !== 'undefined') {
+      const hostname = window.location.hostname;
+      if (hostname === 'localhost') {
+        return 'http://app.localhost:3000';
+      } else if (hostname === 'squareft.ai' || hostname.endsWith('.squareft.ai')) {
+        return 'https://app.squareft.ai';
+      } else {
+        // For Vercel preview deployments
+        return `${window.location.protocol}//app.${hostname}`;
+      }
+    }
+    return 'http://app.localhost:3000';
+  };
+
   const propertyListings: PropertyListing[] = [
     {
       type: 'For Rent',
@@ -316,14 +332,17 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
         {/* Top Navigation */}
         <nav className={`topnav ${isScrolled ? 'scrolled' : ''}`}>
         <div className="brand">
-          <img src="/logo1.png" alt="SquareFt" className="brand-logo" />
+          <div className="brand-content">
+            <img src="/logo1.png" alt="SquareFt" className="brand-logo" />
+            <span className="brand-tagline">Your AI Property Assistant</span>
+          </div>
         </div>
           <div className="menu">
             <a href="#how" className="menu-link">About</a>
             <a href="#agents" className="menu-link">AI Agents</a>
             <a href="#browse" className="menu-link">FAQ</a>
-            <a href="http://app.localhost:3000/login" className="menu-link login">Login</a>
-            <a href="http://app.localhost:3000/landlord-signup" className="menu-link signup">Sign up</a>
+            <a href={`${getAppUrl()}/login`} className="menu-link login">Login</a>
+            <a href={`${getAppUrl()}/landlord-signup`} className="menu-link signup">Sign up</a>
           </div>
       </nav>
 
@@ -335,11 +354,7 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
               <span className="hero-title-line1" dangerouslySetInnerHTML={{ __html: titleLine1.replace(/\bAI\b/g, '<span class="ai-text-highlight">AI</span>') }} />
               <span className="hero-title-line2" dangerouslySetInnerHTML={{ __html: titleLine2.replace(/\bAI\b/g, '<span class="ai-text-highlight">AI</span>') }} />
             </h1>
-            <p className="hero-caption">Just enter your address and we'll handle the rest</p>
-            <p className="hero-subtitle">
-              Post to Zillow, Apartments.com, and more in minutes. Let <span className="ai-highlight">AI</span> handle tenant screening, 
-              rent collection, and maintenance requests while you stay hands-free.
-            </p>
+            <p className="hero-caption">Enter your address to get started</p>
             
             <form onSubmit={handleSubmit} className="hero-input-wrap">
               <div className="hero-input-icon">
@@ -715,45 +730,32 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 20px 0;
-          max-width: 1200px;
-          margin: 0 auto;
+          padding: 20px 60px;
           background: transparent;
           transition: all 0.3s ease;
         }
 
-        .topnav.scrolled .brand::before,
-        .topnav.scrolled .menu::before {
+        .topnav::before {
           content: '';
           position: absolute;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          width: 200%;
-          height: 300%;
-          background: radial-gradient(ellipse at center, 
-            rgba(255, 255, 255, 0.8) 0%, 
-            rgba(255, 255, 255, 0.6) 30%,
-            transparent 70%
-          );
-          backdrop-filter: blur(10px);
-          -webkit-backdrop-filter: blur(10px);
-          z-index: -1;
-          pointer-events: none;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(255, 255, 255, 0.85);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
           opacity: 0;
-          animation: fadeInSmoke 0.3s ease-out forwards;
+          transition: opacity 0.3s ease;
+          z-index: -1;
         }
 
-        @keyframes fadeInSmoke {
-          to {
-            opacity: 1;
-          }
+        .topnav.scrolled::before {
+          opacity: 1;
         }
 
         .brand {
           position: relative;
-          display: flex;
-          align-items: center;
           cursor: pointer;
           transition: transform 0.2s;
         }
@@ -762,10 +764,27 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
           transform: scale(1.02);
         }
 
+        .brand-content {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 2px;
+        }
+
         .brand-logo {
-          height: 65px;
+          height: 60px;
           width: auto;
           display: block;
+        }
+
+        .brand-tagline {
+          font-size: 11px;
+          color: #0f172a;
+          font-weight: 400;
+          letter-spacing: 0.5px;
+          white-space: nowrap;
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+          padding-left: 2px;
         }
 
         .menu {
@@ -875,7 +894,7 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
         .hero-title-big {
           font-size: 54px;
           line-height: 1.2;
-          margin: 0 0 20px;
+          margin: 0 0 34px;
           font-weight: 800;
           color: #0f172a;
           letter-spacing: -1.5px;
@@ -904,20 +923,13 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
         }
 
         .hero-caption {
-          font-size: 18px;
-          color: #0F4C75;
-          margin: 0 0 18px;
-          font-weight: 700;
-          letter-spacing: -0.2px;
-        }
-
-        .hero-subtitle {
-          font-size: 18px;
+          font-size: 19px;
           color: #475569;
-          margin: 0 0 36px;
-          line-height: 1.7;
+          margin: 0 0 15px;
           font-weight: 400;
-          letter-spacing: -0.1px;
+          letter-spacing: 0.2px;
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+          line-height: 1.5;
         }
 
         .ai-highlight {
