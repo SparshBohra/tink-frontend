@@ -96,12 +96,15 @@ export default function ListingPage() {
         {/* Top Navigation */}
         <nav className={`topnav ${isScrolled ? 'scrolled' : ''}`}>
           <div className="brand" onClick={() => router.push('/')}>
-            <img src="/logo1.png" alt="SquareFt" className="brand-logo" />
+            <div className="brand-content">
+              <img src="/logo1.png" alt="SquareFt" className="brand-logo" />
+              <span className="brand-tagline">Your AI Property Assistant</span>
+            </div>
           </div>
           <div className="menu">
-            <a href="/#how" className="menu-link">How it works</a>
-            <a href="/#browse" className="menu-link">Browse homes</a>
-            <a href="/#agents" className="menu-link">Agents</a>
+            <a href="/#how" className="menu-link">About</a>
+            <a href="/#agents" className="menu-link">AI Agents</a>
+            <a href="/#browse" className="menu-link">FAQ</a>
             <a href={`${getAppUrl()}/login`} className="menu-link login">Login</a>
             <a href={`${getAppUrl()}/landlord-signup`} className="menu-link signup">Sign up</a>
           </div>
@@ -446,38 +449,27 @@ export default function ListingPage() {
           transition: all 0.3s ease;
         }
 
-        .topnav.scrolled .brand::before,
-        .topnav.scrolled .menu::before {
+        .topnav::before {
           content: '';
           position: absolute;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          width: 200%;
-          height: 300%;
-          background: radial-gradient(ellipse at center, 
-            rgba(255, 255, 255, 0.8) 0%, 
-            rgba(255, 255, 255, 0.6) 30%,
-            transparent 70%
-          );
-          backdrop-filter: blur(10px);
-          -webkit-backdrop-filter: blur(10px);
-          z-index: -1;
-          pointer-events: none;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(255, 255, 255, 0.85);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
           opacity: 0;
-          animation: fadeInSmoke 0.3s ease-out forwards;
+          transition: opacity 0.3s ease;
+          z-index: -1;
         }
 
-        @keyframes fadeInSmoke {
-          to {
-            opacity: 1;
-          }
+        .topnav.scrolled::before {
+          opacity: 1;
         }
 
         .brand {
           position: relative;
-          display: flex;
-          align-items: center;
           cursor: pointer;
           transition: transform 0.2s;
         }
@@ -486,9 +478,27 @@ export default function ListingPage() {
           transform: scale(1.02);
         }
 
+        .brand-content {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 2px;
+        }
+
         .brand-logo {
-          height: 65px;
+          height: 60px;
           width: auto;
+          display: block;
+        }
+
+        .brand-tagline {
+          font-size: 11px;
+          color: #0f172a;
+          font-weight: 400;
+          letter-spacing: 0.5px;
+          white-space: nowrap;
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+          padding-left: 2px;
         }
 
         .menu {

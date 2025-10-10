@@ -185,9 +185,14 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
 
   // Typing animation for two-line hero titles
   useEffect(() => {
+    // Initialize with first title already displayed
+    const firstTitle = splitTitle(heroTitles[0]);
+    setTitleLine1(firstTitle.line1);
+    setTitleLine2(firstTitle.line2);
+
     let currentIndex = 0;
     let timeout: NodeJS.Timeout;
-    let phase: 'typing-line1' | 'typing-line2' | 'pausing' | 'deleting-line2' | 'deleting-line1' = 'typing-line1';
+    let phase: 'initial-pause' | 'typing-line1' | 'typing-line2' | 'pausing' | 'deleting-line2' | 'deleting-line1' = 'initial-pause';
     let charIndex = 0;
 
     const getTypingSpeed = () => {
@@ -196,17 +201,21 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
       return baseSpeed + variation;
     };
 
-    const splitTitle = (title: string) => {
+    function splitTitle(title: string) {
       const words = title.split(' ');
       const line1 = words.slice(0, 2).join(' ');
       const line2 = words.slice(2).join(' ');
       return { line1, line2 };
-    };
+    }
 
     const type = () => {
       const { line1, line2 } = splitTitle(heroTitles[currentIndex]);
 
-      if (phase === 'typing-line1') {
+      if (phase === 'initial-pause') {
+        // Pause with first title displayed, then start deleting
+        phase = 'pausing';
+        timeout = setTimeout(type, 2500);
+      } else if (phase === 'typing-line1') {
         if (charIndex < line1.length) {
           setTitleLine1(line1.substring(0, charIndex + 1));
           charIndex++;
@@ -730,7 +739,9 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 20px 60px;
+          padding: 20px 0;
+          max-width: 1200px;
+          margin: 0 auto;
           background: transparent;
           transition: all 0.3s ease;
         }
