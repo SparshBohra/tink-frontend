@@ -4,6 +4,7 @@ import { X } from 'lucide-react';
 interface LoadingOverlayProps {
   onClose: () => void;
   onComplete: () => void;
+  isLoading?: boolean;
 }
 
 interface ThinkingStep {
@@ -12,7 +13,7 @@ interface ThinkingStep {
   status: 'pending' | 'active' | 'complete';
 }
 
-export default function LoadingOverlay({ onClose, onComplete }: LoadingOverlayProps) {
+export default function LoadingOverlay({ onClose, onComplete, isLoading = true }: LoadingOverlayProps) {
   const [steps, setSteps] = useState<ThinkingStep[]>([
     { id: 1, text: 'Analyzing property address...', status: 'pending' },
     { id: 2, text: 'Scraping property details...', status: 'pending' },
@@ -23,33 +24,63 @@ export default function LoadingOverlay({ onClose, onComplete }: LoadingOverlayPr
 
   const [currentStep, setCurrentStep] = useState(0);
   const [currentMessage, setCurrentMessage] = useState('Analyzing property address...');
+  const [startTime] = useState(Date.now());
+  const [estimatedDuration] = useState(30000); // Estimate 30 seconds for API call
 
   useEffect(() => {
-    if (currentStep < steps.length) {
-      const timer = setTimeout(() => {
+    if (!isLoading && currentStep < steps.length) {
+      // API call completed, quickly finish remaining steps
+      const completeAllSteps = () => {
+        setSteps(prev => prev.map(step => ({ ...step, status: 'complete' })));
+        setCurrentStep(steps.length);
+        setTimeout(() => {
+          onComplete();
+        }, 800);
+      };
+      completeAllSteps();
+      return;
+    }
+
+    if (currentStep < steps.length && isLoading) {
+      // Calculate dynamic timing based on elapsed time and remaining steps
+      const elapsed = Date.now() - startTime;
+      const remainingTime = Math.max(0, estimatedDuration - elapsed);
+      const remainingSteps = steps.length - currentStep;
+      
+      // Distribute remaining time across remaining steps
+      // Each step should take at least 7 seconds, but adjust if API is taking longer
+      const baseStepDuration = 7000; // 7 seconds per step
+      const calculatedDuration = remainingSteps > 0 ? remainingTime / remainingSteps : baseStepDuration;
+      const stepDuration = Math.max(baseStepDuration, Math.min(10000, calculatedDuration));
+      
+      // First, set step to active immediately
+      const activateTimer = setTimeout(() => {
         setSteps(prev => prev.map((step, idx) => {
           if (idx === currentStep) return { ...step, status: 'active' };
           if (idx < currentStep) return { ...step, status: 'complete' };
           return step;
         }));
         setCurrentMessage(steps[currentStep].text);
-
-        setTimeout(() => {
+        
+        // Then, after the step duration, complete it and move to next
+        const completeTimer = setTimeout(() => {
           setSteps(prev => prev.map((step, idx) => {
             if (idx === currentStep) return { ...step, status: 'complete' };
             return step;
           }));
           setCurrentStep(currentStep + 1);
-        }, 2000);
-      }, 500);
+        }, stepDuration);
+        
+        return () => clearTimeout(completeTimer);
+      }, 300); // Small delay before activating
 
-      return () => clearTimeout(timer);
-    } else if (currentStep === steps.length) {
+      return () => clearTimeout(activateTimer);
+    } else if (currentStep === steps.length && !isLoading) {
       setTimeout(() => {
         onComplete();
       }, 1000);
     }
-  }, [currentStep, steps.length, onComplete]);
+  }, [currentStep, steps.length, onComplete, isLoading, startTime, estimatedDuration, steps]);
 
   return (
     <div className="loading-overlay">
@@ -99,7 +130,7 @@ export default function LoadingOverlay({ onClose, onComplete }: LoadingOverlayPr
           display: flex;
           align-items: center;
           justify-content: center;
-          background: radial-gradient(circle at center, rgba(15, 23, 42, 0.25) 0%, rgba(15, 23, 42, 0.35) 50%, rgba(0, 0, 0, 0.45) 100%);
+          background: radial-gradient(circle at center, rgba(15, 23, 42, 0.45) 0%, rgba(15, 23, 42, 0.55) 50%, rgba(0, 0, 0, 0.65) 100%);
           backdrop-filter: blur(24px);
           -webkit-backdrop-filter: blur(24px);
           animation: fadeIn 0.4s ease-out;
@@ -298,7 +329,7 @@ export default function LoadingOverlay({ onClose, onComplete }: LoadingOverlayPr
         }
 
         .step-item.complete .step-icon {
-          color: #10b981;
+          color: #ffffff;
           animation: checkPop 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
         }
 
@@ -317,21 +348,21 @@ export default function LoadingOverlay({ onClose, onComplete }: LoadingOverlayPr
         }
 
         .step-item.active .step-icon {
-          color: #1877F2;
+          color: #ffffff;
         }
 
         .pending-dot {
           width: 8px;
           height: 8px;
           border-radius: 50%;
-          background: rgba(255, 255, 255, 0.3);
+          background: rgba(255, 255, 255, 0.6);
         }
 
         .spinner {
           width: 18px;
           height: 18px;
-          border: 2px solid rgba(24, 119, 242, 0.3);
-          border-top-color: #1877F2;
+          border: 2px solid rgba(255, 255, 255, 0.3);
+          border-top-color: #ffffff;
           border-radius: 50%;
           animation: spin 0.8s linear infinite;
         }

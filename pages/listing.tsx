@@ -42,22 +42,94 @@ export default function ListingPage() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Mock listing data - in production, this would come from API/backend
-  const listing = {
-    address: '350 Rhode Island St, San Francisco, CA 94103',
-    price: 3200,
-    beds: 4,
-    baths: 3,
-    sqft: 2400,
-    type: 'For Rent',
-    description: 'Beautiful modern home in the heart of San Francisco. Features include hardwood floors, updated kitchen with stainless steel appliances, spacious bedrooms, and a private backyard perfect for entertaining. Close to public transportation, restaurants, and shopping.',
-    amenities: ['Hardwood Floors', 'Updated Kitchen', 'Private Backyard', 'Near Transit', 'Washer/Dryer', 'Parking'],
-    images: [
-      'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1200&h=800&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=1200&h=800&fit=crop&q=80',
-      'https://images.unsplash.com/photo-600566753190-17f0baa2a6c3?w=1200&h=800&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1600585154526-990dced4db0d?w=1200&h=800&fit=crop&q=80',
-    ]
+  // Load listing data from sessionStorage (populated by API)
+  const [listing, setListing] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Load listing data from sessionStorage
+    const storedListing = sessionStorage.getItem('currentListing');
+    const storedError = sessionStorage.getItem('listingError');
+
+    if (storedError) {
+      setError(storedError);
+      sessionStorage.removeItem('listingError');
+    } else if (storedListing) {
+      try {
+        const parsedListing = JSON.parse(storedListing);
+        setListing(parsedListing);
+      } catch (e) {
+        setError('Failed to parse listing data');
+      }
+    } else {
+      // No data found, redirect back to home
+      router.push('/');
+    }
+  }, [router]);
+
+  // Show loading state while data is being loaded
+  if (!listing && !error) {
+    return <div style={{ padding: '100px', textAlign: 'center' }}>Loading...</div>;
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div style={{ padding: '100px', textAlign: 'center' }}>
+        <h2>Error Loading Listing</h2>
+        <p>{error}</p>
+        <button onClick={() => router.push('/')} style={{ marginTop: '20px', padding: '10px 20px' }}>
+          Go Back Home
+        </button>
+      </div>
+    );
+  }
+
+  // Transform API data to match the component's expected format
+  // Filter out placeholder/invalid image URLs
+  const filterValidImages = (photos: string[] | undefined) => {
+    if (!photos || photos.length === 0) return [];
+    
+    const validImages = photos.filter(url => {
+      // Filter out placeholder domains and invalid URLs
+      const invalidDomains = ['photos.domain.com', 'example.com', 'placeholder.com'];
+      try {
+        const urlObj = new URL(url);
+        return !invalidDomains.some(domain => urlObj.hostname.includes(domain));
+      } catch {
+        return false;
+      }
+    });
+    
+    return validImages;
+  };
+
+  const apiImages = filterValidImages(listing.media?.photos);
+  const fallbackImages = [
+    'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1200&h=800&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=1200&h=800&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=1200&h=800&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1600585154526-990dced4db0d?w=1200&h=800&fit=crop&q=80',
+  ];
+
+  const displayListing = {
+    address: listing.address?.full_address || listing.address?.street || 'Address not available',
+    price: listing.pricing?.price || 0,
+    beds: listing.property_details?.bedrooms || 0,
+    baths: listing.property_details?.bathrooms || 0,
+    sqft: listing.property_details?.living_area_sqft || 0,
+    type: listing.pricing?.status === 'FOR_RENT' ? 'For Rent' : listing.pricing?.status === 'FOR_SALE' ? 'For Sale' : 'Property',
+    description: listing.description || listing.ai_description || 'No description available',
+    amenities: listing.property_details?.amenities || [],
+    images: apiImages.length > 0 ? apiImages : fallbackImages,
+    agents: listing.agents || [],
+    schools: listing.schools || [],
+    nearby: listing.nearby || {},
+    parking: listing.property_details?.parking || {},
+    pets: listing.property_details?.pets_allowed || [],
+    heating: listing.property_details?.heating || [],
+    cooling: listing.property_details?.cooling || [],
+    laundry: listing.property_details?.laundry || [],
   };
 
   const handlePublishClick = () => {
@@ -115,29 +187,29 @@ export default function ListingPage() {
           {/* Image Gallery */}
           <div className="image-section">
             <div className="main-image">
-              <img src={listing.images[currentImageIndex]} alt="Property" />
+              <img src={displayListing.images[currentImageIndex]} alt="Property" />
               <div className="image-controls">
                 <button 
                   className="image-nav prev"
-                  onClick={() => setCurrentImageIndex((prev) => prev === 0 ? listing.images.length - 1 : prev - 1)}
+                  onClick={() => setCurrentImageIndex((prev) => prev === 0 ? displayListing.images.length - 1 : prev - 1)}
                   disabled={currentImageIndex === 0}
                 >
                   ‹
                 </button>
                 <button 
                   className="image-nav next"
-                  onClick={() => setCurrentImageIndex((prev) => prev === listing.images.length - 1 ? 0 : prev + 1)}
-                  disabled={currentImageIndex === listing.images.length - 1}
+                  onClick={() => setCurrentImageIndex((prev) => prev === displayListing.images.length - 1 ? 0 : prev + 1)}
+                  disabled={currentImageIndex === displayListing.images.length - 1}
                 >
                   ›
                 </button>
               </div>
               <div className="image-counter">
-                {currentImageIndex + 1} / {listing.images.length}
+                {currentImageIndex + 1} / {displayListing.images.length}
               </div>
             </div>
             <div className="thumbnail-grid">
-              {listing.images.map((image, idx) => (
+              {displayListing.images.map((image, idx) => (
                 <div 
                   key={idx} 
                   className={`thumbnail ${idx === currentImageIndex ? 'active' : ''}`}
@@ -152,7 +224,7 @@ export default function ListingPage() {
           {/* Listing Details */}
           <div className="details-section">
             <div className="listing-header">
-              <div className="listing-type-badge">{listing.type}</div>
+              <div className="listing-type-badge">{displayListing.type}</div>
               <div className="listing-actions">
                 <button className="action-btn" onClick={handleHeartOrShareClick}>
                   <Heart size={20} />
@@ -163,43 +235,241 @@ export default function ListingPage() {
               </div>
             </div>
 
-            <div className="listing-price">${listing.price.toLocaleString()}/mo</div>
+            <div className="listing-price">${displayListing.price.toLocaleString()}/mo</div>
             <div className="listing-address">
               <MapPin size={20} />
-              {listing.address}
+              {displayListing.address}
             </div>
 
             <div className="listing-stats">
               <div className="stat">
                 <Bed size={22} />
-                <span>{listing.beds} Beds</span>
+                <span>{displayListing.beds} Beds</span>
               </div>
               <div className="stat">
                 <Bath size={22} />
-                <span>{listing.baths} Baths</span>
+                <span>{displayListing.baths} Baths</span>
               </div>
               <div className="stat">
                 <Maximize size={22} />
-                <span>{listing.sqft.toLocaleString()} sqft</span>
+                <span>{displayListing.sqft.toLocaleString()} sqft</span>
               </div>
             </div>
 
             <div className="section">
               <h3>Description</h3>
-              <p className="description">{listing.description}</p>
+              <p className="description">{displayListing.description}</p>
             </div>
 
-            <div className="section">
-              <h3>Amenities</h3>
-              <div className="amenities-grid">
-                {listing.amenities.map((amenity, idx) => (
-                  <div key={idx} className="amenity-item">
-                    <Zap size={16} />
-                    {amenity}
-                  </div>
-                ))}
+            {displayListing.amenities && displayListing.amenities.length > 0 && (
+              <div className="section">
+                <h3>Amenities</h3>
+                <div className="amenities-grid">
+                  {displayListing.amenities.map((amenity, idx) => (
+                    <div key={idx} className="amenity-item">
+                      <Zap size={16} />
+                      {amenity}
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
+
+            {/* Additional Property Details - Only show section if any detail is available */}
+            {(() => {
+              const hasPropertyDetails = 
+                listing.property_details?.year_built ||
+                listing.property_details?.lot_size_sqft ||
+                listing.property_details?.stories ||
+                displayListing.parking?.type ||
+                (displayListing.pets && displayListing.pets.length > 0 && !displayListing.pets.includes('None')) ||
+                (displayListing.heating && displayListing.heating.length > 0 && !displayListing.heating.includes('None')) ||
+                (displayListing.cooling && displayListing.cooling.length > 0 && !displayListing.cooling.includes('None')) ||
+                (displayListing.laundry && displayListing.laundry.length > 0 && !displayListing.laundry.includes('None')) ||
+                listing.pricing?.deposit ||
+                listing.pricing?.application_fee ||
+                listing.pricing?.lease_term ||
+                listing.pricing?.availability_date;
+
+              if (!hasPropertyDetails) return null;
+
+              return (
+                <div className="section">
+                  <h3>Property Details</h3>
+                  <div className="details-grid">
+                    {listing.property_details?.year_built && (
+                      <div className="detail-item">
+                        <strong>Year Built</strong>
+                        <span>{listing.property_details.year_built}</span>
+                      </div>
+                    )}
+                    {listing.property_details?.lot_size_sqft && (
+                      <div className="detail-item">
+                        <strong>Lot Size</strong>
+                        <span>{listing.property_details.lot_size_sqft.toLocaleString()} sqft</span>
+                      </div>
+                    )}
+                    {listing.property_details?.stories && listing.property_details.stories > 0 && (
+                      <div className="detail-item">
+                        <strong>Stories</strong>
+                        <span>{listing.property_details.stories}</span>
+                      </div>
+                    )}
+                    {displayListing.parking?.type && (
+                      <div className="detail-item">
+                        <strong>Parking</strong>
+                        <span>{displayListing.parking.type}{displayListing.parking.spaces ? ` (${displayListing.parking.spaces} spaces)` : ''}</span>
+                      </div>
+                    )}
+                    {displayListing.pets && displayListing.pets.length > 0 && !displayListing.pets.includes('None') && (
+                      <div className="detail-item">
+                        <strong>Pets Allowed</strong>
+                        <span>{displayListing.pets.join(', ')}</span>
+                      </div>
+                    )}
+                    {displayListing.heating && displayListing.heating.length > 0 && !displayListing.heating.includes('None') && (
+                      <div className="detail-item">
+                        <strong>Heating</strong>
+                        <span>{displayListing.heating.join(', ')}</span>
+                      </div>
+                    )}
+                    {displayListing.cooling && displayListing.cooling.length > 0 && !displayListing.cooling.includes('None') && (
+                      <div className="detail-item">
+                        <strong>Cooling</strong>
+                        <span>{displayListing.cooling.join(', ')}</span>
+                      </div>
+                    )}
+                    {displayListing.laundry && displayListing.laundry.length > 0 && !displayListing.laundry.includes('None') && (
+                      <div className="detail-item">
+                        <strong>Laundry</strong>
+                        <span>{displayListing.laundry.join(', ')}</span>
+                      </div>
+                    )}
+                    {listing.pricing?.deposit && listing.pricing.deposit > 0 && (
+                      <div className="detail-item">
+                        <strong>Security Deposit</strong>
+                        <span>${listing.pricing.deposit.toLocaleString()}</span>
+                      </div>
+                    )}
+                    {listing.pricing?.application_fee && listing.pricing.application_fee > 0 && (
+                      <div className="detail-item">
+                        <strong>Application Fee</strong>
+                        <span>${listing.pricing.application_fee}</span>
+                      </div>
+                    )}
+                    {listing.pricing?.lease_term && (
+                      <div className="detail-item">
+                        <strong>Lease Term</strong>
+                        <span>{listing.pricing.lease_term}</span>
+                      </div>
+                    )}
+                    {listing.pricing?.availability_date && (
+                      <div className="detail-item">
+                        <strong>Available From</strong>
+                        <span>{new Date(listing.pricing.availability_date).toLocaleDateString()}</span>
+                      </div>
+                    )}
+                    {listing.pricing?.price_per_sqft && listing.pricing.price_per_sqft > 0 && (
+                      <div className="detail-item">
+                        <strong>Price per sqft</strong>
+                        <span>${listing.pricing.price_per_sqft.toFixed(2)}</span>
+                      </div>
+                    )}
+                    {listing.pricing?.other_fees && listing.pricing.other_fees.length > 0 && 
+                      listing.pricing.other_fees.map((fee: any, idx: number) => (
+                        <div key={idx} className="detail-item">
+                          <strong>{fee.type}</strong>
+                          <span>${fee.amount.toLocaleString()}</span>
+                        </div>
+                      ))
+                    }
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Agent Information */}
+            {displayListing.agents && displayListing.agents.length > 0 && (
+              <div className="section">
+                <h3>Contact Agent</h3>
+                <div className="agents-list">
+                  {displayListing.agents.map((agent, idx) => (
+                    <div key={idx} className="agent-card">
+                      <div className="agent-info">
+                        <h4>{agent.name}</h4>
+                        <p className="agent-company">{agent.company} • {agent.role}</p>
+                      </div>
+                      <div className="agent-contact">
+                        {agent.phone && (
+                          <div className="contact-item">
+                            <strong>Phone:</strong> {agent.phone}
+                          </div>
+                        )}
+                        {agent.email && (
+                          <div className="contact-item">
+                            <strong>Email:</strong> {agent.email}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Schools */}
+            {displayListing.schools && displayListing.schools.length > 0 && (
+              <div className="section">
+                <h3>Nearby Schools</h3>
+                <div className="schools-list">
+                  {displayListing.schools.map((school, idx) => (
+                    <div key={idx} className="school-card">
+                      <div className="school-header">
+                        <h4>{school.name}</h4>
+                        {school.rating && (
+                          <div className="school-rating">
+                            ⭐ {school.rating}/10
+                          </div>
+                        )}
+                      </div>
+                      <div className="school-details">
+                        <span className="school-level">{school.level}</span>
+                        {school.grades && <span>• Grades {school.grades}</span>}
+                        {school.distance_miles && <span>• {school.distance_miles} mi away</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Price History */}
+            {listing.history?.price_history && listing.history.price_history.length > 0 && (
+              <div className="section">
+                <h3>Price History</h3>
+                <div className="price-history-list">
+                  {listing.history.price_history.map((entry: any, idx: number) => (
+                    <div key={idx} className="price-history-item">
+                      <div className="price-history-date">
+                        {new Date(entry.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </div>
+                      <div className="price-history-details">
+                        <span className="price-history-event">{entry.event}</span>
+                        <span className="price-history-price">${entry.price.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Neighborhood */}
+            {displayListing.nearby?.neighborhood && (
+              <div className="section">
+                <h3>Neighborhood</h3>
+                <p className="neighborhood-name">{displayListing.nearby.neighborhood}</p>
+              </div>
+            )}
 
             <div className="cta-section">
               <button className="publish-btn" onClick={handlePublishClick}>
@@ -389,11 +659,11 @@ export default function ListingPage() {
           <div className="auth-modal" onClick={(e) => e.stopPropagation()}>
             <button className="modal-close" onClick={() => setShowAuthModal(false)}>×</button>
             
-            <div className="modal-icon">
+            {/* <div className="modal-icon">
               <Shield size={48} />
-            </div>
+            </div> */}
             
-            <h2 className="modal-title">Access SquareFt Dashboard</h2>
+            <h2 className="modal-title">Access Dashboard</h2>
             <p className="modal-description">
               To publish and manage your listings, please sign in or create a free account.
             </p>
@@ -794,6 +1064,177 @@ export default function ListingPage() {
           flex-shrink: 0;
         }
 
+        .details-grid {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 16px;
+        }
+
+        .detail-item {
+          padding: 14px 16px;
+          background: #f8fafc;
+          border-radius: 10px;
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+
+        .detail-item strong {
+          color: #64748b;
+          font-weight: 600;
+          font-size: 12px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        .detail-item span {
+          color: #1e293b;
+          font-size: 15px;
+          font-weight: 500;
+        }
+
+        .agents-list {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+
+        .agent-card {
+          padding: 20px;
+          background: #f8fafc;
+          border-radius: 12px;
+          border: 1px solid #e2e8f0;
+        }
+
+        .agent-info h4 {
+          margin: 0 0 4px 0;
+          color: #1e293b;
+          font-size: 18px;
+        }
+
+        .agent-company {
+          color: #64748b;
+          font-size: 14px;
+          margin: 0 0 12px 0;
+        }
+
+        .agent-contact {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .contact-item {
+          font-size: 14px;
+          color: #475569;
+        }
+
+        .contact-item strong {
+          color: #64748b;
+          font-weight: 500;
+          margin-right: 8px;
+        }
+
+        .schools-list {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        .school-card {
+          padding: 16px;
+          background: #f8fafc;
+          border-radius: 10px;
+          border: 1px solid #e2e8f0;
+        }
+
+        .school-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 8px;
+        }
+
+        .school-header h4 {
+          margin: 0;
+          color: #1e293b;
+          font-size: 16px;
+          font-weight: 600;
+        }
+
+        .school-rating {
+          background: #fbbf24;
+          color: #78350f;
+          padding: 4px 12px;
+          border-radius: 20px;
+          font-size: 13px;
+          font-weight: 600;
+        }
+
+        .school-details {
+          display: flex;
+          gap: 8px;
+          font-size: 14px;
+          color: #64748b;
+          flex-wrap: wrap;
+        }
+
+        .school-level {
+          color: #1877F2;
+          font-weight: 500;
+        }
+
+        .price-history-list {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        .price-history-item {
+          padding: 14px 16px;
+          background: #f8fafc;
+          border-radius: 10px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          border-left: 3px solid #1877F2;
+        }
+
+        .price-history-date {
+          font-size: 14px;
+          color: #64748b;
+          font-weight: 500;
+        }
+
+        .price-history-details {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+        }
+
+        .price-history-event {
+          font-size: 14px;
+          color: #475569;
+          padding: 4px 10px;
+          background: #e2e8f0;
+          border-radius: 6px;
+        }
+
+        .price-history-price {
+          font-size: 16px;
+          color: #1e293b;
+          font-weight: 600;
+        }
+
+        .neighborhood-name {
+          font-size: 16px;
+          color: #475569;
+          padding: 16px;
+          background: #f8fafc;
+          border-radius: 10px;
+          margin: 0;
+        }
+
         .cta-section {
           display: flex;
           flex-direction: column;
@@ -957,17 +1398,47 @@ export default function ListingPage() {
           max-width: 480px;
           width: 90%;
           box-shadow: 0 25px 70px rgba(0, 0, 0, 0.3);
-          animation: scaleIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+          animation: shakePopIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
           text-align: center;
         }
 
-        @keyframes scaleIn {
-          from {
-            transform: scale(0.9);
+        @keyframes shakePopIn {
+          0% {
+            transform: scale(0.7) rotate(0deg);
             opacity: 0;
           }
-          to {
-            transform: scale(1);
+          10% {
+            transform: scale(0.8) rotate(-2deg);
+            opacity: 0.5;
+          }
+          20% {
+            transform: scale(0.9) rotate(2deg);
+            opacity: 0.8;
+          }
+          30% {
+            transform: scale(1.05) rotate(-3deg);
+            opacity: 1;
+          }
+          40% {
+            transform: scale(1.1) rotate(3deg);
+          }
+          50% {
+            transform: scale(1.05) rotate(-2deg);
+          }
+          60% {
+            transform: scale(1.02) rotate(2deg);
+          }
+          70% {
+            transform: scale(1.01) rotate(-1deg);
+          }
+          80% {
+            transform: scale(1.005) rotate(1deg);
+          }
+          90% {
+            transform: scale(1) rotate(-0.5deg);
+          }
+          100% {
+            transform: scale(1) rotate(0deg);
             opacity: 1;
           }
         }
@@ -1080,7 +1551,18 @@ export default function ListingPage() {
           max-height: 90vh;
           overflow-y: auto;
           box-shadow: 0 25px 70px rgba(0, 0, 0, 0.3);
-          animation: scaleIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+          animation: smoothScaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        @keyframes smoothScaleIn {
+          from {
+            transform: scale(0.95);
+            opacity: 0;
+          }
+          to {
+            transform: scale(1);
+            opacity: 1;
+          }
         }
 
         .integrations-list {
@@ -1238,6 +1720,27 @@ export default function ListingPage() {
 
           .menu-link:not(.login):not(.signup) {
             display: none;
+          }
+
+          .details-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .school-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+          }
+
+          .price-history-item {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+          }
+
+          .price-history-details {
+            width: 100%;
+            justify-content: space-between;
           }
 
           .listing-price {

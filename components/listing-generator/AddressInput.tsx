@@ -29,6 +29,7 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [loadedLogos, setLoadedLogos] = useState<Set<string>>(new Set());
   const [showLoading, setShowLoading] = useState(false);
+  const [isApiLoading, setIsApiLoading] = useState(true);
   const [loadedPhotos, setLoadedPhotos] = useState<Map<number, Set<number>>>(new Map());
 
   // Get base URL for app subdomain based on environment
@@ -109,10 +110,55 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
     { name: 'Zillow', imgSrc: '/media/zillow.png', text: 'Zillow', color: '#006AFF', width: 105, fontSize: 24, maxHeight: 32 },
   ];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Get API URL based on environment
+  const getApiUrl = () => {
+    if (typeof window !== 'undefined') {
+      const hostname = window.location.hostname;
+      if (hostname === 'localhost') {
+        return 'http://localhost:8000';
+      } else {
+        // For production (squareft.ai) or Vercel previews
+        return 'https://api.squareft.ai';
+      }
+    }
+    return 'http://localhost:8000';
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (address.trim()) {
       setShowLoading(true);
+      setIsApiLoading(true);
+      
+      try {
+        const apiUrl = getApiUrl();
+        // Call the backend API to ingest the property
+        const response = await fetch(`${apiUrl}/api/listings/ingest/`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ address: address.trim() }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          // Store the listing data in sessionStorage to pass to the listing page
+          if (data.listing) {
+            sessionStorage.setItem('currentListing', JSON.stringify(data.listing));
+          }
+        } else {
+          console.error('Failed to fetch listing data');
+          // Store error state
+          sessionStorage.setItem('listingError', 'Failed to fetch property data');
+        }
+      } catch (error) {
+        console.error('Error calling API:', error);
+        sessionStorage.setItem('listingError', 'Network error occurred');
+      } finally {
+        // Mark API loading as complete
+        setIsApiLoading(false);
+      }
     }
   };
 
@@ -334,6 +380,7 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
         <LoadingOverlay 
           onClose={handleCloseLoading}
           onComplete={handleLoadingComplete}
+          isLoading={isApiLoading}
         />
       )}
       
