@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { MapPin, Bed, Bath, Maximize, DollarSign, Heart, Share2, Calendar, Shield, Zap } from 'lucide-react';
+import { MapPin, Bed, Bath, Maximize, DollarSign, Heart, Share2, Calendar, Shield, Zap, Wand2 } from 'lucide-react';
+import StagedImage from '../components/StagedImage';
 
 export default function ListingPage() {
   const router = useRouter();
@@ -16,6 +17,9 @@ export default function ListingPage() {
     trulia: false,
     facebook: false,
   });
+  
+  // Staging state - store staged URLs for each image index
+  const [stagedImages, setStagedImages] = useState<{[key: number]: string}>({});
 
   // Get base URL for app subdomain based on environment
   const getAppUrl = () => {
@@ -35,6 +39,87 @@ export default function ListingPage() {
   };
 
   const [appUrl, setAppUrl] = useState('');
+
+  // Get API URL based on environment
+  const getApiUrl = () => {
+    if (typeof window !== 'undefined') {
+      const hostname = window.location.hostname;
+      if (hostname === 'localhost') {
+        return 'http://localhost:8000';
+      } else {
+        return 'https://tink.global';
+      }
+    }
+    return 'http://localhost:8000';
+  };
+
+  // Staging API functions
+  const handleStageImage = async (imageIndex: number) => {
+    try {
+      const imageUrl = displayListing.images[imageIndex];
+      
+      console.log('🎨 Staging image:', imageUrl);
+      
+      // Send property context to help AI make better staging decisions
+      const propertyContext = {
+        type: displayListing.type || 'residential',
+        bedrooms: displayListing.bedrooms,
+        bathrooms: displayListing.bathrooms,
+        sqft: displayListing.sqft,
+        price: displayListing.price,
+        description: displayListing.description || '',
+      };
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+      
+      const response = await fetch(`${getApiUrl()}/api/listings/stage-image-demo/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          image_url: imageUrl,
+          property_context: propertyContext,
+        }),
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Staging failed');
+      }
+      
+      const data = await response.json();
+      console.log('✅ Staging complete, received data URL of length:', data.staged_url?.length);
+      
+      // Store the staged URL (base64 data URL)
+      setStagedImages(prev => ({
+        ...prev,
+        [imageIndex]: data.staged_url,
+      }));
+    } catch (error: any) {
+      console.error('❌ Staging error:', error);
+      
+      // Better error messages
+      if (error.name === 'AbortError') {
+        throw new Error('Staging timed out. Please try again with a smaller image.');
+      } else if (error.message === 'Failed to fetch') {
+        throw new Error('Network error. Please check your connection and try again.');
+      } else {
+        throw error;
+      }
+    }
+  };
+
+  const handleUnstageImage = async (imageIndex: number) => {
+    // Remove staged version
+    setStagedImages(prev => {
+      const newStaged = { ...prev };
+      delete newStaged[imageIndex];
+      return newStaged;
+    });
+  };
 
   // Scroll detection
   useEffect(() => {
@@ -207,7 +292,15 @@ export default function ListingPage() {
           {/* Image Gallery */}
           <div className="image-section">
             <div className="main-image">
-              <img src={displayListing.images[currentImageIndex]} alt="Property" />
+              <StagedImage
+                originalUrl={displayListing.images[currentImageIndex]}
+                stagedUrl={stagedImages[currentImageIndex] || null}
+                mediaId={`image-${currentImageIndex}`}
+                alt={`Property - ${currentImageIndex + 1}`}
+                onStage={async () => await handleStageImage(currentImageIndex)}
+                onUnstage={async () => await handleUnstageImage(currentImageIndex)}
+                className="property-main-image"
+              />
               <div className="image-controls">
                 <button 
                   className="image-nav prev"
@@ -872,6 +965,15 @@ export default function ListingPage() {
           width: 100%;
           height: 100%;
           object-fit: cover;
+        }
+
+        .property-main-image {
+          width: 100%;
+          height: 100%;
+        }
+
+        .property-main-image .staged-image {
+          border-radius: 0;
         }
 
         .image-controls {
