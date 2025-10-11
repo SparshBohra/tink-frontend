@@ -119,8 +119,8 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
       if (hostname === 'localhost') {
         return 'http://localhost:8000';
       } else {
-        // For production (squareft.ai) or Vercel previews
-        return 'https://api.squareft.ai';
+        // For production: use tink.global backend
+        return 'https://tink.global';
       }
     }
     return 'http://localhost:8000';
