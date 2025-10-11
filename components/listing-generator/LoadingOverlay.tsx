@@ -28,8 +28,8 @@ export default function LoadingOverlay({ onClose, onComplete, isLoading = true }
   const [estimatedDuration] = useState(30000); // Estimate 30 seconds for API call
 
   useEffect(() => {
-    if (!isLoading && currentStep < steps.length) {
-      // API call completed, quickly finish remaining steps
+    // API call completed - finish all steps and transition
+    if (!isLoading) {
       const completeAllSteps = () => {
         setSteps(prev => prev.map(step => ({ ...step, status: 'complete' })));
         setCurrentStep(steps.length);
@@ -41,6 +41,7 @@ export default function LoadingOverlay({ onClose, onComplete, isLoading = true }
       return;
     }
 
+    // API still loading - animate through steps
     if (currentStep < steps.length && isLoading) {
       // Calculate dynamic timing based on elapsed time and remaining steps
       const elapsed = Date.now() - startTime;
@@ -62,6 +63,12 @@ export default function LoadingOverlay({ onClose, onComplete, isLoading = true }
         }));
         setCurrentMessage(steps[currentStep].text);
         
+        // For the last step, don't auto-complete - wait for API
+        if (currentStep === steps.length - 1) {
+          // Keep last step active until API completes
+          return;
+        }
+        
         // Then, after the step duration, complete it and move to next
         const completeTimer = setTimeout(() => {
           setSteps(prev => prev.map((step, idx) => {
@@ -75,10 +82,6 @@ export default function LoadingOverlay({ onClose, onComplete, isLoading = true }
       }, 300); // Small delay before activating
 
       return () => clearTimeout(activateTimer);
-    } else if (currentStep === steps.length && !isLoading) {
-      setTimeout(() => {
-        onComplete();
-      }, 1000);
     }
   }, [currentStep, steps.length, onComplete, isLoading, startTime, estimatedDuration, steps]);
 
