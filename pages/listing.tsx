@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { MapPin, Bed, Bath, Maximize, DollarSign, Heart, Share2, Calendar, Shield, Zap, Wand2, RotateCcw } from 'lucide-react';
 import StagedImage from '../components/StagedImage';
+import Walkthrough from '../components/Walkthrough';
 
 export default function ListingPage() {
   const router = useRouter();
@@ -25,6 +26,9 @@ export default function ListingPage() {
   const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
   const [generatedDescription, setGeneratedDescription] = useState<string>('');
   const [showOriginalDescription, setShowOriginalDescription] = useState(true);
+  
+  // Walkthrough state
+  const [showWalkthrough, setShowWalkthrough] = useState(false);
 
   // Get base URL for app subdomain based on environment
   const getAppUrl = () => {
@@ -194,6 +198,20 @@ export default function ListingPage() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Show walkthrough on first visit
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const forceWalkthrough = urlParams.get('walkthrough') === 'true';
+    const hasSeenWalkthrough = localStorage.getItem('hasSeenWalkthrough');
+    
+    if (forceWalkthrough || !hasSeenWalkthrough) {
+      // Delay to let the page render first
+      setTimeout(() => {
+        setShowWalkthrough(true);
+      }, 1000);
+    }
+  }, []);
+
   // Resolve appUrl on client
   useEffect(() => {
     setAppUrl(getAppUrl());
@@ -321,6 +339,11 @@ export default function ListingPage() {
 
   return (
     <>
+      {/* Walkthrough Tutorial */}
+      {showWalkthrough && (
+        <Walkthrough onComplete={() => setShowWalkthrough(false)} />
+      )}
+      
       <div className="listing-page">
         {/* Top Navigation */}
         <nav className={`topnav ${isScrolled ? 'scrolled' : ''}`}>
