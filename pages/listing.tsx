@@ -32,6 +32,10 @@ export default function ListingPage() {
   
   // Image management state
   const [removedImageIndices, setRemovedImageIndices] = useState<Set<number>>(new Set());
+  
+  // Price editing state
+  const [isEditingPrice, setIsEditingPrice] = useState(false);
+  const [editedPrice, setEditedPrice] = useState<number>(0);
 
   // Get base URL for app subdomain based on environment
   const getAppUrl = () => {
@@ -365,6 +369,21 @@ export default function ListingPage() {
     }
   };
 
+  const handlePriceEdit = () => {
+    setEditedPrice(displayListing.price);
+    setIsEditingPrice(true);
+  };
+
+  const handlePriceSave = () => {
+    setIsEditingPrice(false);
+    // In a real app, this would save to backend
+  };
+
+  const handlePriceCancel = () => {
+    setIsEditingPrice(false);
+    setEditedPrice(displayListing.price);
+  };
+
   return (
     <>
       {/* Walkthrough Tutorial */}
@@ -472,7 +491,32 @@ export default function ListingPage() {
               </div>
             </div>
 
-            <div className="listing-price">${displayListing.price.toLocaleString()}/mo</div>
+            <div className="listing-price-container">
+              {isEditingPrice ? (
+                <div className="price-edit-mode">
+                  <span className="price-symbol">$</span>
+                  <input
+                    type="number"
+                    value={editedPrice}
+                    onChange={(e) => setEditedPrice(Number(e.target.value))}
+                    className="price-input"
+                    autoFocus
+                  />
+                  <span className="price-period">/mo</span>
+                  <button onClick={handlePriceSave} className="price-save-btn" title="Save">✓</button>
+                  <button onClick={handlePriceCancel} className="price-cancel-btn" title="Cancel">✕</button>
+                </div>
+              ) : (
+                <div className="listing-price">
+                  ${(editedPrice || displayListing.price).toLocaleString()}/mo
+                  <button onClick={handlePriceEdit} className="price-edit-btn" title="Edit price">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path>
+                    </svg>
+                  </button>
+                </div>
+              )}
+            </div>
             <div className="listing-address">
               <MapPin size={20} />
               {displayListing.address}
@@ -1329,11 +1373,117 @@ export default function ListingPage() {
           transform: scale(1.05);
         }
 
+        .listing-price-container {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
         .listing-price {
           font-size: 44px;
           font-weight: 900;
           color: #0f172a;
           letter-spacing: -1px;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .price-edit-btn {
+          width: 32px;
+          height: 32px;
+          border-radius: 8px;
+          background: rgba(15, 23, 42, 0.04);
+          border: 1px solid rgba(15, 23, 42, 0.08);
+          color: #64748b;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.2s;
+          padding: 0;
+        }
+
+        .price-edit-btn:hover {
+          background: rgba(24, 119, 242, 0.08);
+          border-color: rgba(24, 119, 242, 0.2);
+          color: #1877F2;
+          transform: scale(1.05);
+        }
+
+        .price-edit-btn svg {
+          flex-shrink: 0;
+        }
+
+        .price-edit-mode {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .price-symbol,
+        .price-period {
+          font-size: 44px;
+          font-weight: 900;
+          color: #0f172a;
+          letter-spacing: -1px;
+        }
+
+        .price-input {
+          font-size: 44px;
+          font-weight: 900;
+          color: #0f172a;
+          letter-spacing: -1px;
+          border: 2px solid #1877F2;
+          border-radius: 8px;
+          padding: 4px 12px;
+          width: 200px;
+          background: white;
+          outline: none;
+        }
+
+        .price-input:focus {
+          border-color: #166FE5;
+          box-shadow: 0 0 0 3px rgba(24, 119, 242, 0.1);
+        }
+
+        .price-save-btn,
+        .price-cancel-btn {
+          width: 32px;
+          height: 32px;
+          border-radius: 8px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 16px;
+          font-weight: 600;
+          transition: all 0.2s;
+          border: 1px solid transparent;
+        }
+
+        .price-save-btn {
+          background: rgba(16, 185, 129, 0.1);
+          color: #10b981;
+          border-color: rgba(16, 185, 129, 0.2);
+        }
+
+        .price-save-btn:hover {
+          background: rgba(16, 185, 129, 0.15);
+          border-color: #10b981;
+          transform: scale(1.05);
+        }
+
+        .price-cancel-btn {
+          background: rgba(239, 68, 68, 0.1);
+          color: #ef4444;
+          border-color: rgba(239, 68, 68, 0.2);
+        }
+
+        .price-cancel-btn:hover {
+          background: rgba(239, 68, 68, 0.15);
+          border-color: #ef4444;
+          transform: scale(1.05);
         }
 
         .listing-address {
