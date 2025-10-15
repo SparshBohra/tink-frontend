@@ -87,40 +87,29 @@ export default function StagedImage({
 
         {/* Action Buttons */}
         <div className="staged-actions">
-          {!isStaged && (
+          {isStaged && (
             <button
-              onClick={handleStage}
-              disabled={isStaging}
-              className="stage-btn"
-              aria-label="Stage with AI"
-              title="Stage with AI — adds furniture/lighting without changing layout"
+              onClick={toggleView}
+              className="toggle-btn"
+              aria-label={showStaged ? "View original photo" : "View staged photo"}
+              title={showStaged ? "View original photo" : "View staged photo"}
             >
-              {isStaging ? (
-                <RefreshCw size={18} className="spin" />
-              ) : (
-                <Wand2 size={18} />
-              )}
+              <RefreshCw size={18} />
             </button>
           )}
-
-          {isStaged && (
-            <>
-              <button
-                onClick={toggleView}
-                className="toggle-btn"
-                title={showStaged ? 'View original photo' : 'View staged photo'}
-              >
-                <RefreshCw size={16} />
-              </button>
-              <button
-                onClick={handleUnstage}
-                className="remove-btn"
-                title="Remove AI staging"
-              >
-                <X size={16} />
-              </button>
-            </>
-          )}
+          <button
+            onClick={handleStage}
+            disabled={isStaging}
+            className="stage-btn"
+            aria-label={isStaged ? "Regenerate staging" : "Stage with AI"}
+            title={isStaged ? "Regenerate with AI — creates a new staged version" : "Stage with AI — adds furniture/lighting without changing layout"}
+          >
+            {isStaging ? (
+              <RefreshCw size={18} className="spin" />
+            ) : (
+              <Wand2 size={18} />
+            )}
+          </button>
         </div>
 
         {/* Loading Overlay */}

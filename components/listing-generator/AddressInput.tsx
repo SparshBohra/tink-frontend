@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { MapPin, Building2 } from 'lucide-react';
 import LoadingOverlay from './LoadingOverlay';
@@ -18,6 +18,18 @@ interface PropertyListing {
   loadedPhotos?: Set<number>; // Track which photos have been loaded
 }
 
+interface MapboxFeature {
+  place_name: string;
+  properties: {
+    address?: string;
+  };
+  context: Array<{
+    id: string;
+    text: string;
+    short_code?: string;
+  }>;
+}
+
 export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProps) {
   const router = useRouter();
   const [address, setAddress] = useState('');
@@ -32,6 +44,14 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
   const [isApiLoading, setIsApiLoading] = useState(true);
   const [loadedPhotos, setLoadedPhotos] = useState<Map<number, Set<number>>>(new Map());
   const [appUrl, setAppUrl] = useState('');
+  
+  // Mapbox autocomplete state
+  const [suggestions, setSuggestions] = useState<MapboxFeature[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(-1);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const debounceRef = useRef<NodeJS.Timeout | undefined>(undefined);
+  const MAPBOX_ACCESS_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
 
   // Get base URL for app subdomain based on environment
   const getAppUrl = () => {
@@ -126,6 +146,100 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
     return 'http://localhost:8000';
   };
 
+  // Mapbox address search function
+  const searchAddresses = async (query: string) => {
+    if (!query.trim() || !MAPBOX_ACCESS_TOKEN) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?` +
+        `access_token=${MAPBOX_ACCESS_TOKEN}&` +
+        `country=US&` +
+        `types=address&` +
+        `limit=5&` +
+        `autocomplete=true`
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setSuggestions(data.features || []);
+        setShowSuggestions(data.features && data.features.length > 0);
+        setSelectedIndex(-1);
+      } else {
+        console.error('Mapbox API error:', response.statusText);
+        setSuggestions([]);
+        setShowSuggestions(false);
+      }
+    } catch (error) {
+      console.error('Address search error:', error);
+      setSuggestions([]);
+      setShowSuggestions(false);
+    }
+  };
+
+  // Handle input change with debouncing
+  const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    setAddress(newValue);
+
+    // Clear existing debounce
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+
+    // Debounce the search
+    if (MAPBOX_ACCESS_TOKEN) {
+      debounceRef.current = setTimeout(() => {
+        searchAddresses(newValue);
+      }, 300);
+    }
+  };
+
+  // Handle suggestion selection
+  const handleSuggestionSelect = (feature: MapboxFeature) => {
+    setAddress(feature.place_name);
+    setShowSuggestions(false);
+    setSuggestions([]);
+    setSelectedIndex(-1);
+  };
+
+  // Handle keyboard navigation
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!showSuggestions || suggestions.length === 0) return;
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setSelectedIndex(prev => 
+          prev < suggestions.length - 1 ? prev + 1 : prev
+        );
+        break;
+      
+      case 'ArrowUp':
+        e.preventDefault();
+        setSelectedIndex(prev => prev > 0 ? prev - 1 : -1);
+        break;
+      
+      case 'Enter':
+        e.preventDefault();
+        if (selectedIndex >= 0 && selectedIndex < suggestions.length) {
+          handleSuggestionSelect(suggestions[selectedIndex]);
+        } else if (address.trim()) {
+          handleSubmit(e);
+        }
+        break;
+      
+      case 'Escape':
+        setShowSuggestions(false);
+        setSelectedIndex(-1);
+        break;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (address.trim()) {
@@ -195,6 +309,21 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
   // Resolve appUrl on client to ensure correct domain (prevents SSR localhost)
   useEffect(() => {
     setAppUrl(getAppUrl());
+  }, []);
+
+  // Handle click outside to close suggestions
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (inputRef.current && !inputRef.current.contains(event.target as Node)) {
+        const target = event.target as Element;
+        if (!target.closest('.address-suggestions')) {
+          setShowSuggestions(false);
+        }
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   // Preload logo images
@@ -435,14 +564,37 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
               <div className="hero-input-icon">
                 <MapPin className="w-5 h-5" />
               </div>
-              <input
-                type="text"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                placeholder="Eg: 2401 Saint St, #5A, San Francisco, CA"
-                className="hero-input"
-                required
-              />
+              <div className="address-input-container">
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={address}
+                  onChange={handleAddressChange}
+                  onKeyDown={handleKeyDown}
+                  onFocus={() => address && suggestions.length > 0 && setShowSuggestions(true)}
+                  placeholder="Eg: 2401 Saint St, #5A, San Francisco, CA"
+                  className="hero-input"
+                  autoComplete="off"
+                  required
+                />
+                
+                {/* Mapbox Suggestions Dropdown */}
+                {showSuggestions && suggestions.length > 0 && (
+                  <div className="address-suggestions">
+                    {suggestions.map((suggestion, index) => (
+                      <div
+                        key={suggestion.place_name}
+                        className={`address-suggestion-item ${index === selectedIndex ? 'selected' : ''}`}
+                        onClick={() => handleSuggestionSelect(suggestion)}
+                        onMouseEnter={() => setSelectedIndex(index)}
+                      >
+                        <MapPin className="suggestion-icon" size={16} />
+                        <span>{suggestion.place_name}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
               <button type="submit" className="primary-btn" aria-label="Submit">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -1042,6 +1194,11 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
           color: #1877F2;
         }
 
+        .address-input-container {
+          position: relative;
+          flex: 1;
+        }
+
         .hero-input {
           width: 100%;
           padding: 20px 70px 20px 58px;
@@ -1052,6 +1209,64 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
           transition: all 0.25s ease;
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
           font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+        }
+
+        .address-suggestions {
+          position: absolute;
+          top: calc(100% + 8px);
+          left: 0;
+          right: 70px;
+          background: white;
+          border: 1px solid #e5e7eb;
+          border-radius: 12px;
+          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
+          z-index: 1000;
+          max-height: 300px;
+          overflow-y: auto;
+          animation: slideDown 0.2s ease-out;
+        }
+
+        @keyframes slideDown {
+          from {
+            opacity: 0;
+            transform: translateY(-8px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        .address-suggestion-item {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 14px 18px;
+          cursor: pointer;
+          transition: all 0.15s ease;
+          border-bottom: 1px solid #f1f5f9;
+          font-size: 15px;
+          color: #334155;
+        }
+
+        .address-suggestion-item:last-child {
+          border-bottom: none;
+        }
+
+        .address-suggestion-item:hover,
+        .address-suggestion-item.selected {
+          background: #f8fafc;
+          color: #1877F2;
+        }
+
+        .suggestion-icon {
+          color: #94a3b8;
+          flex-shrink: 0;
+        }
+
+        .address-suggestion-item:hover .suggestion-icon,
+        .address-suggestion-item.selected .suggestion-icon {
+          color: #1877F2;
         }
 
         .hero-input::placeholder {

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { MapPin, Bed, Bath, Maximize, DollarSign, Heart, Share2, Calendar, Shield, Zap, Wand2 } from 'lucide-react';
+import { MapPin, Bed, Bath, Maximize, DollarSign, Heart, Share2, Calendar, Shield, Zap, Wand2, RotateCcw } from 'lucide-react';
 import StagedImage from '../components/StagedImage';
 
 export default function ListingPage() {
@@ -20,6 +20,11 @@ export default function ListingPage() {
   
   // Staging state - store staged URLs for each image index
   const [stagedImages, setStagedImages] = useState<{[key: number]: string}>({});
+  
+  // AI Description generation state
+  const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
+  const [generatedDescription, setGeneratedDescription] = useState<string>('');
+  const [showOriginalDescription, setShowOriginalDescription] = useState(true);
 
   // Get base URL for app subdomain based on environment
   const getAppUrl = () => {
@@ -63,8 +68,8 @@ export default function ListingPage() {
       // Send property context to help AI make better staging decisions
       const propertyContext = {
         type: displayListing.type || 'residential',
-        bedrooms: displayListing.bedrooms,
-        bathrooms: displayListing.bathrooms,
+        bedrooms: displayListing.beds,
+        bathrooms: displayListing.baths,
         sqft: displayListing.sqft,
         price: displayListing.price,
         description: displayListing.description || '',
@@ -119,6 +124,65 @@ export default function ListingPage() {
       delete newStaged[imageIndex];
       return newStaged;
     });
+  };
+
+  const handleGenerateDescription = async () => {
+    try {
+      setIsGeneratingDescription(true);
+      
+      console.log('🎨 Generating AI description...');
+      
+      // Prepare property data for AI
+      const propertyData = {
+        address: displayListing.address || '',
+        type: displayListing.type || 'residential',
+        bedrooms: displayListing.beds,
+        bathrooms: displayListing.baths,
+        sqft: displayListing.sqft?.toString() || '',
+        price: displayListing.price || '',
+        amenities: displayListing.amenities || [],
+        features: listing.property_details || {},
+        neighborhood: listing.neighborhood || {},
+      };
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+      
+      const response = await fetch(`${getApiUrl()}/api/listings/generate-description/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(propertyData),
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate description');
+      }
+      
+      const data = await response.json();
+      console.log('✅ Description generated:', data.description);
+      
+      // Update the generated description state and switch to AI version
+      setGeneratedDescription(data.description);
+      setShowOriginalDescription(false);
+      
+    } catch (error: any) {
+      console.error('❌ Description generation error:', error);
+      
+      // Better error messages
+      if (error.name === 'AbortError') {
+        alert('Description generation timed out. Please try again.');
+      } else if (error.message === 'Failed to fetch') {
+        alert('Network error. Please check your connection and try again.');
+      } else {
+        alert(`Failed to generate description: ${error.message}`);
+      }
+    } finally {
+      setIsGeneratingDescription(false);
+    }
   };
 
   // Scroll detection
@@ -370,8 +434,37 @@ export default function ListingPage() {
             </div>
 
             <div className="section">
-              <h3>Description</h3>
-              <p className="description">{displayListing.description}</p>
+              <div className="section-header-with-action">
+                <h3>Description</h3>
+                <div className="button-group">
+                  {generatedDescription && (
+                    <button
+                      onClick={() => setShowOriginalDescription(!showOriginalDescription)}
+                      className="toggle-btn"
+                      title={showOriginalDescription ? "View AI-generated description" : "View original description"}
+                      aria-label="Toggle description"
+                    >
+                      <RotateCcw size={18} />
+                    </button>
+                  )}
+                  <button
+                    onClick={handleGenerateDescription}
+                    disabled={isGeneratingDescription}
+                    className="generate-description-btn"
+                    title={isGeneratingDescription ? "Generating AI description..." : "Generate AI description — creates compelling copy using property details"}
+                    aria-label="Generate AI description"
+                  >
+                    {isGeneratingDescription ? (
+                      <div className="spinner-small" />
+                    ) : (
+                      <Wand2 size={18} />
+                    )}
+                  </button>
+                </div>
+              </div>
+              <p className="description">
+                {!showOriginalDescription && generatedDescription ? generatedDescription : displayListing.description}
+              </p>
             </div>
 
             {displayListing.amenities && displayListing.amenities.length > 0 && (
@@ -959,12 +1052,20 @@ export default function ListingPage() {
           border-radius: 20px;
           overflow: hidden;
           background: #f1f5f9;
+          will-change: transform;
         }
 
         .main-image img {
           width: 100%;
           height: 100%;
           object-fit: cover;
+          object-position: center;
+          image-rendering: -webkit-optimize-contrast;
+          image-rendering: crisp-edges;
+          backface-visibility: hidden;
+          -webkit-backface-visibility: hidden;
+          transform: translateZ(0);
+          -webkit-transform: translateZ(0);
         }
 
         .property-main-image {
@@ -1154,6 +1255,110 @@ export default function ListingPage() {
           font-weight: 800;
           color: #0f172a;
           margin: 0;
+        }
+
+        .section-header-with-action {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 16px;
+        }
+
+        .button-group {
+          display: flex;
+          gap: 8px;
+          align-items: center;
+        }
+
+        .section-header-with-action .toggle-btn {
+          background: rgba(17, 24, 39, 0.9);
+          border: 1px solid rgba(0, 0, 0, 0.65);
+          border-radius: 10px;
+          width: 42px;
+          height: 42px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+          color: #ffffff;
+          backdrop-filter: blur(5px);
+          -webkit-backdrop-filter: blur(5px);
+        }
+
+        .section-header-with-action .toggle-btn:hover {
+          background: rgba(17, 24, 39, 0.4);
+          color: #ffffff;
+          transform: scale(1.05);
+        }
+
+        .section-header-with-action .toggle-btn:active {
+          transform: scale(0.95);
+        }
+
+        .generate-description-btn {
+          background: rgba(17, 24, 39, 0.9);
+          border: 1px solid rgba(0, 0, 0, 0.65);
+          border-radius: 10px;
+          width: 42px;
+          height: 42px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+          color: #ffffff;
+          position: relative;
+          backdrop-filter: blur(5px);
+          -webkit-backdrop-filter: blur(5px);
+        }
+
+        .generate-description-btn:hover:not(:disabled) {
+          background: rgba(17, 24, 39, 0.4);
+          color: #ffffff;
+          transform: scale(1.05);
+        }
+
+        .generate-description-btn:active:not(:disabled) {
+          transform: scale(0.95);
+        }
+
+        .generate-description-btn:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
+        .generate-description-btn svg {
+          animation: sparkle 2s ease-in-out infinite;
+        }
+
+        @keyframes sparkle {
+          0%, 100% {
+            transform: rotate(0deg) scale(1);
+          }
+          25% {
+            transform: rotate(-10deg) scale(1.1);
+          }
+          75% {
+            transform: rotate(10deg) scale(1.1);
+          }
+        }
+
+        .spinner-small {
+          width: 18px;
+          height: 18px;
+          border: 2px solid rgba(24, 119, 242, 0.2);
+          border-top-color: #1877F2;
+          border-radius: 50%;
+          animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+          to {
+            transform: rotate(360deg);
+          }
         }
 
         .description {

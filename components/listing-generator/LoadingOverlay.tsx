@@ -25,7 +25,7 @@ export default function LoadingOverlay({ onClose, onComplete, isLoading = true }
   const [currentStep, setCurrentStep] = useState(0);
   const [currentMessage, setCurrentMessage] = useState('Analyzing property address...');
   const [startTime] = useState(Date.now());
-  const [estimatedDuration] = useState(30000); // Estimate 30 seconds for API call
+  const [estimatedDuration] = useState(25000); // Estimate 25 seconds for API call (5 steps × 5 seconds)
 
   useEffect(() => {
     // API call completed - finish all steps and transition
@@ -49,10 +49,10 @@ export default function LoadingOverlay({ onClose, onComplete, isLoading = true }
       const remainingSteps = steps.length - currentStep;
       
       // Distribute remaining time across remaining steps
-      // Each step should take at least 7 seconds, but adjust if API is taking longer
-      const baseStepDuration = 7000; // 7 seconds per step
+      // Each step should take at least 5 seconds, but adjust if API is taking longer
+      const baseStepDuration = 5000; // 5 seconds per step
       const calculatedDuration = remainingSteps > 0 ? remainingTime / remainingSteps : baseStepDuration;
-      const stepDuration = Math.max(baseStepDuration, Math.min(10000, calculatedDuration));
+      const stepDuration = Math.max(baseStepDuration, Math.min(8000, calculatedDuration));
       
       // First, set step to active immediately
       const activateTimer = setTimeout(() => {
