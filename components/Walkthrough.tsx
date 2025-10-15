@@ -125,20 +125,29 @@ export default function Walkthrough({ onComplete }: WalkthroughProps) {
       setCurrentStep(currentStep + 1);
     } else {
       // Scroll back to top before closing (robust)
-      scrollToTopSmooth();
-      setTimeout(() => { handleClose(); }, 600);
+      handleClose(true);
     }
   };
 
   const handleSkip = () => {
-    scrollToTopSmooth();
-    setTimeout(() => { handleClose(); }, 400);
+    handleClose(true);
   };
 
-  const handleClose = () => {
-    setIsVisible(false);
-    localStorage.setItem('hasSeenWalkthrough', 'true');
-    onComplete();
+  const handleClose = (scrollToTop: boolean = false) => {
+    if (scrollToTop) {
+      // Scroll to top first, then close
+      scrollToTopSmooth();
+      // Wait for scroll animation to complete
+      setTimeout(() => {
+        setIsVisible(false);
+        localStorage.setItem('hasSeenWalkthrough', 'true');
+        onComplete();
+      }, 800);
+    } else {
+      setIsVisible(false);
+      localStorage.setItem('hasSeenWalkthrough', 'true');
+      onComplete();
+    }
   };
 
   if (!isVisible || !targetRect) return null;

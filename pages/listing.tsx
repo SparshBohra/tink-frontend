@@ -29,6 +29,9 @@ export default function ListingPage() {
   
   // Walkthrough state
   const [showWalkthrough, setShowWalkthrough] = useState(false);
+  
+  // Image management state
+  const [removedImageIndices, setRemovedImageIndices] = useState<Set<number>>(new Set());
 
   // Get base URL for app subdomain based on environment
   const getAppUrl = () => {
@@ -287,6 +290,10 @@ export default function ListingPage() {
     'https://images.unsplash.com/photo-1600585154526-990dced4db0d?w=1200&h=800&fit=crop&q=80',
   ];
 
+  const allImages = apiImages.length > 0 ? apiImages : fallbackImages;
+  // Filter out removed images
+  const activeImages = allImages.filter((_, idx) => !removedImageIndices.has(idx));
+
   const displayListing = {
     address: listing.address?.full_address || listing.address?.street || 'Address not available',
     price: listing.pricing?.price || 0,
@@ -296,7 +303,7 @@ export default function ListingPage() {
     type: listing.pricing?.status === 'FOR_RENT' ? 'For Rent' : listing.pricing?.status === 'FOR_SALE' ? 'For Sale' : 'Property',
     description: listing.description || listing.ai_description || 'No description available',
     amenities: listing.property_details?.amenities || [],
-    images: apiImages.length > 0 ? apiImages : fallbackImages,
+    images: activeImages,
     agents: listing.agents || [],
     schools: listing.schools || [],
     nearby: listing.nearby || {},
@@ -335,6 +342,27 @@ export default function ListingPage() {
       ...prev,
       [platform]: !prev[platform as keyof typeof prev]
     }));
+  };
+
+  const handleRemoveImage = (indexToRemove: number) => {
+    // Add to removed set
+    setRemovedImageIndices(prev => new Set([...prev, indexToRemove]));
+    
+    // Adjust current index if needed
+    if (currentImageIndex === indexToRemove) {
+      // Move to next image or previous if this was the last
+      const newLength = allImages.length - removedImageIndices.size - 1;
+      if (newLength > 0) {
+        if (currentImageIndex >= newLength) {
+          setCurrentImageIndex(newLength - 1);
+        }
+      } else {
+        setCurrentImageIndex(0);
+      }
+    } else if (currentImageIndex > indexToRemove) {
+      // Adjust index if we're viewing an image after the removed one
+      setCurrentImageIndex(prev => Math.max(0, prev - 1));
+    }
   };
 
   return (
@@ -416,6 +444,15 @@ export default function ListingPage() {
                   onClick={() => setCurrentImageIndex(idx)}
                 >
                   <img src={image} alt={`View ${idx + 1}`} />
+                  <button
+                    className="thumbnail-remove-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRemoveImage(idx);
+                    }}
+                    aria-label="Remove image"
+                  >
+                  </button>
                 </div>
               ))}
             </div>
@@ -1166,10 +1203,15 @@ export default function ListingPage() {
           cursor: pointer;
           border: 3px solid transparent;
           transition: all 0.2s;
+          position: relative;
         }
 
         .thumbnail:hover {
           border-color: #cbd5e1;
+        }
+
+        .thumbnail:hover .thumbnail-remove-btn {
+          opacity: 1;
         }
 
         .thumbnail.active {
@@ -1180,6 +1222,63 @@ export default function ListingPage() {
           width: 100%;
           height: 100%;
           object-fit: cover;
+        }
+
+        .thumbnail-remove-btn {
+          position: absolute;
+          top: 8px;
+          right: 8px;
+          width: 24px;
+          height: 24px;
+          min-width: 24px;
+          min-height: 24px;
+          max-width: 24px;
+          max-height: 24px;
+          border-radius: 50%;
+          background: rgba(15, 23, 42, 0.7);
+          backdrop-filter: blur(4px);
+          -webkit-backdrop-filter: blur(4px);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 0;
+          opacity: 0;
+          transition: all 0.2s ease-in-out;
+          z-index: 10;
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+          flex-shrink: 0;
+        }
+
+        /* Create the 'X' with pseudo-elements for a thinner look */
+        .thumbnail-remove-btn::before,
+        .thumbnail-remove-btn::after {
+          content: '';
+          position: absolute;
+          width: 12px;
+          height: 2px;
+          background-color: #f87171; /* Softer red */
+          border-radius: 1px;
+          transition: all 0.2s ease-in-out;
+        }
+
+        .thumbnail-remove-btn::before {
+          transform: rotate(45deg);
+        }
+
+        .thumbnail-remove-btn::after {
+          transform: rotate(-45deg);
+        }
+
+        .thumbnail-remove-btn:hover {
+          background: rgba(15, 23, 42, 0.9);
+          border-color: rgba(255, 255, 255, 0.25);
+          transform: scale(1.1);
+        }
+
+        .thumbnail-remove-btn:active {
+          transform: scale(0.95);
         }
 
         /* Details Section */
