@@ -116,8 +116,21 @@ export default function StagedImage({
         {isStaging && (
           <div className="staging-overlay">
             <div className="staging-spinner">
-              <Wand2 size={32} className="pulse" />
-              <p>Staging with AI...</p>
+              <div className="wand-animation">
+                <Wand2 size={48} className="wand-icon" />
+                <div className="sparkles">
+                  <div className="sparkle sparkle-1"></div>
+                  <div className="sparkle sparkle-2"></div>
+                  <div className="sparkle sparkle-3"></div>
+                  <div className="sparkle sparkle-4"></div>
+                </div>
+              </div>
+              <p className="staging-text">Staging with AI...</p>
+              <div className="progress-dots">
+                <span className="dot"></span>
+                <span className="dot"></span>
+                <span className="dot"></span>
+              </div>
             </div>
           </div>
         )}
@@ -125,7 +138,27 @@ export default function StagedImage({
         {/* Error Message */}
         {error && (
           <div className="staging-error">
-            {error}
+            <div className="error-icon">⚠</div>
+            <div className="error-content">
+              <div className="error-title">Staging Failed</div>
+              <div className="error-message">{error}</div>
+              <button 
+                className="error-retry-btn"
+                onClick={() => {
+                  setError(null);
+                  handleStage();
+                }}
+              >
+                Try Again
+              </button>
+            </div>
+            <button 
+              className="error-close-btn"
+              onClick={() => setError(null)}
+              aria-label="Close error"
+            >
+              <X size={16} />
+            </button>
           </div>
         )}
       </div>
@@ -239,23 +272,166 @@ export default function StagedImage({
         .staging-overlay {
           position: absolute;
           inset: 0;
-          background: rgba(0, 0, 0, 0.7);
-          backdrop-filter: blur(4px);
+          background: rgba(0, 0, 0, 0.75);
+          backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(8px);
           display: flex;
           align-items: center;
           justify-content: center;
           z-index: 3;
+          animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
         }
 
         .staging-spinner {
           text-align: center;
           color: white;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 16px;
         }
 
-        .staging-spinner p {
-          margin-top: 12px;
-          font-size: 14px;
-          font-weight: 500;
+        .wand-animation {
+          position: relative;
+          width: 80px;
+          height: 80px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .wand-icon {
+          position: relative;
+          z-index: 2;
+          color: #ffffff;
+          filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.6));
+          animation: wandFloat 2s ease-in-out infinite;
+        }
+
+        @keyframes wandFloat {
+          0%, 100% {
+            transform: translateY(0px) rotate(-5deg);
+          }
+          50% {
+            transform: translateY(-10px) rotate(5deg);
+          }
+        }
+
+        .sparkles {
+          position: absolute;
+          inset: 0;
+        }
+
+        .sparkle {
+          position: absolute;
+          width: 8px;
+          height: 8px;
+          background: linear-gradient(135deg, #60a5fa, #a78bfa);
+          border-radius: 50%;
+          box-shadow: 0 0 8px rgba(96, 165, 250, 0.8);
+          animation: sparkleFloat 2s ease-in-out infinite;
+        }
+
+        .sparkle-1 {
+          top: 10%;
+          right: 15%;
+          animation-delay: 0s;
+        }
+
+        .sparkle-2 {
+          top: 25%;
+          left: 10%;
+          animation-delay: 0.5s;
+          width: 6px;
+          height: 6px;
+        }
+
+        .sparkle-3 {
+          bottom: 20%;
+          right: 20%;
+          animation-delay: 1s;
+          width: 10px;
+          height: 10px;
+        }
+
+        .sparkle-4 {
+          bottom: 15%;
+          left: 15%;
+          animation-delay: 1.5s;
+        }
+
+        @keyframes sparkleFloat {
+          0%, 100% {
+            transform: translateY(0px) scale(1);
+            opacity: 1;
+          }
+          25% {
+            transform: translateY(-15px) scale(1.2);
+            opacity: 0.8;
+          }
+          50% {
+            transform: translateY(-20px) scale(0.8);
+            opacity: 0.6;
+          }
+          75% {
+            transform: translateY(-10px) scale(1.1);
+            opacity: 0.9;
+          }
+        }
+
+        .staging-text {
+          margin: 0;
+          font-size: 16px;
+          font-weight: 600;
+          letter-spacing: 0.3px;
+          color: white;
+          text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .progress-dots {
+          display: flex;
+          gap: 8px;
+          align-items: center;
+        }
+
+        .dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: rgba(255, 255, 255, 0.6);
+          animation: dotPulse 1.4s ease-in-out infinite;
+        }
+
+        .dot:nth-child(1) {
+          animation-delay: 0s;
+        }
+
+        .dot:nth-child(2) {
+          animation-delay: 0.2s;
+        }
+
+        .dot:nth-child(3) {
+          animation-delay: 0.4s;
+        }
+
+        @keyframes dotPulse {
+          0%, 80%, 100% {
+            transform: scale(1);
+            background: rgba(255, 255, 255, 0.4);
+          }
+          40% {
+            transform: scale(1.3);
+            background: rgba(255, 255, 255, 1);
+          }
         }
 
         .staging-error {
@@ -263,20 +439,101 @@ export default function StagedImage({
           bottom: 12px;
           left: 12px;
           right: 12px;
-          background: #ef4444;
+          background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
           color: white;
-          padding: 8px 12px;
-          border-radius: 6px;
+          padding: 16px;
+          border-radius: 12px;
           font-size: 13px;
           z-index: 4;
+          display: flex;
+          align-items: flex-start;
+          gap: 12px;
+          box-shadow: 0 8px 16px rgba(220, 38, 38, 0.4);
+          animation: errorSlideIn 0.3s ease-out;
+        }
+
+        @keyframes errorSlideIn {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        .error-icon {
+          font-size: 24px;
+          line-height: 1;
+          flex-shrink: 0;
+          animation: errorPulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes errorPulse {
+          0%, 100% {
+            opacity: 1;
+            transform: scale(1);
+          }
+          50% {
+            opacity: 0.8;
+            transform: scale(1.1);
+          }
+        }
+
+        .error-content {
+          flex: 1;
+        }
+
+        .error-title {
+          font-weight: 700;
+          font-size: 14px;
+          margin-bottom: 4px;
+        }
+
+        .error-message {
+          font-size: 12px;
+          line-height: 1.5;
+          opacity: 0.95;
+          margin-bottom: 10px;
+        }
+
+        .error-retry-btn {
+          background: rgba(255, 255, 255, 0.2);
+          border: 1px solid rgba(255, 255, 255, 0.3);
+          color: white;
+          padding: 6px 14px;
+          border-radius: 6px;
+          font-size: 12px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .error-retry-btn:hover {
+          background: rgba(255, 255, 255, 0.3);
+          border-color: rgba(255, 255, 255, 0.5);
+          transform: translateY(-1px);
+        }
+
+        .error-close-btn {
+          background: none;
+          border: none;
+          color: white;
+          cursor: pointer;
+          padding: 4px;
+          opacity: 0.8;
+          transition: all 0.2s;
+          flex-shrink: 0;
+        }
+
+        .error-close-btn:hover {
+          opacity: 1;
+          transform: scale(1.1);
         }
 
         .spin {
           animation: spin 1s linear infinite;
-        }
-
-        .pulse {
-          animation: pulse 1.5s ease-in-out infinite;
         }
 
         @keyframes spin {
@@ -285,17 +542,6 @@ export default function StagedImage({
           }
           to {
             transform: rotate(360deg);
-          }
-        }
-
-        @keyframes pulse {
-          0%, 100% {
-            opacity: 1;
-            transform: scale(1);
-          }
-          50% {
-            opacity: 0.5;
-            transform: scale(1.1);
           }
         }
       `}</style>

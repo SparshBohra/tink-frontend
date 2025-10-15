@@ -87,7 +87,7 @@ export default function ListingPage() {
       };
       
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 90000); // 90 second timeout for AI processing
       
       const response = await fetch(`${getApiUrl()}/api/listings/stage-image-demo/`, {
         method: 'POST',
@@ -102,14 +102,22 @@ export default function ListingPage() {
       clearTimeout(timeoutId);
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Staging failed');
+        const errorData = await response.json().catch(() => ({}));
+        const errorMsg = errorData.error || errorData.message || `Server error (${response.status})`;
+        throw new Error(errorMsg);
       }
       
       const data = await response.json();
-      console.log('✅ Staging complete, received data URL of length:', data.staged_url?.length);
       
-      // Store the staged URL (base64 data URL)
+      // Validate that we received a staged image
+      if (!data.staged_url) {
+        console.error('❌ Invalid response from staging API:', data);
+        throw new Error('AI staging service returned an incomplete response. The image may be too complex or the service may be busy. Please try again.');
+      }
+      
+      console.log('✅ Staging complete, received staged image');
+      
+      // Store the staged URL (S3 URL or base64 data URL)
       setStagedImages(prev => ({
         ...prev,
         [imageIndex]: data.staged_url,
@@ -117,14 +125,24 @@ export default function ListingPage() {
     } catch (error: any) {
       console.error('❌ Staging error:', error);
       
-      // Better error messages
+      // Provide user-friendly error messages
+      let userMessage = 'AI staging failed. ';
+      
       if (error.name === 'AbortError') {
-        throw new Error('Staging timed out. Please try again with a smaller image.');
+        userMessage += 'The staging process took too long and timed out. This usually happens with very large or complex images. Try using a smaller image or try again.';
       } else if (error.message === 'Failed to fetch') {
-        throw new Error('Network error. Please check your connection and try again.');
+        userMessage += 'Could not connect to the AI service. Please check your internet connection and try again.';
+      } else if (error.message.includes('AI staging service')) {
+        // Use the detailed message we created above
+        userMessage = error.message;
+      } else if (error.message.includes('Server error')) {
+        userMessage += 'The AI service is temporarily unavailable. Please try again in a moment.';
       } else {
-        throw error;
+        userMessage += error.message || 'An unexpected error occurred. Please try again.';
       }
+      
+      // Show user-friendly error
+      throw new Error(userMessage);
     }
   };
 
@@ -318,16 +336,94 @@ export default function ListingPage() {
     laundry: listing.property_details?.laundry || [],
   };
 
+  // Helper: Build the cross-app pending property payload
+  const buildPendingPropertyData = () => {
+    return {
+      // Original listing JSON data
+      originalData: listing,
+      
+      // Final edited images (staged or original)
+      finalImages: activeImages.map((imageUrl, idx) => ({
+        url: stagedImages[idx] || imageUrl,
+        isStaged: !!stagedImages[idx],
+        originalUrl: imageUrl
+      })),
+      
+      // Final description (AI-generated or original)
+      finalDescription: showOriginalDescription 
+        ? displayListing.description 
+        : generatedDescription || displayListing.description,
+      isAIDescription: !showOriginalDescription && !!generatedDescription,
+      
+      // Final price (edited or original)
+      finalPrice: editedPrice || displayListing.price,
+      
+      // Property details for creating Property in backend
+      propertyData: {
+        name: displayListing.address,
+        address: listing.address?.street || '',
+        city: listing.address?.city || '',
+        state: listing.address?.state || '',
+        zip_code: listing.address?.zip_code || '',
+        country: listing.address?.country || 'USA',
+        property_type: listing.property_details?.type || 'apartment',
+        total_rooms: listing.property_details?.bedrooms || 1,
+        rent_type: 'per_property',
+        monthly_rent: editedPrice || displayListing.price,
+        security_deposit: listing.pricing?.deposit || 0,
+        bedrooms: listing.property_details?.bedrooms || 0,
+        bathrooms: listing.property_details?.bathrooms || 0,
+        square_footage: listing.property_details?.living_area_sqft || 0,
+        description: showOriginalDescription 
+          ? displayListing.description 
+          : generatedDescription || displayListing.description,
+        amenities: displayListing.amenities || [],
+        features: listing.property_details || {},
+      },
+      
+      // Metadata
+      generatedAt: new Date().toISOString(),
+      source: 'squareft_ai_generator'
+    };
+  };
+
+  // Helper: Persist pending data to localStorage and window.name (for cross-subdomain)
+  const savePendingPropertyData = () => {
+    const guestListingData = buildPendingPropertyData();
+    try {
+      const dataString = JSON.stringify(guestListingData);
+      localStorage.setItem('pendingPropertyData', dataString);
+      (window as any).name = `SF_PENDING_PROPERTY|${dataString}`;
+      console.log('✅ Stored pending property data (pre-auth):', {
+        size: dataString.length,
+        images: guestListingData.finalImages.length,
+        price: guestListingData.finalPrice,
+        address: guestListingData.propertyData.name
+      });
+    } catch (error) {
+      console.error('❌ Failed to store pending property data (pre-auth):', error);
+    }
+    return guestListingData;
+  };
+
   const handlePublishClick = () => {
+    // Pre-save pending data so it exists even if the user navigates away
+    savePendingPropertyData();
     setShowIntegrationModal(true);
   };
 
   const handleAuthRedirect = (mode: 'login' | 'signup') => {
+    // Ensure data is saved right before redirect as well
+    savePendingPropertyData();
+    
     const appUrl = getAppUrl();
+    const redirectUrl = `${appUrl}/landlord-signup?redirect=import-property`;
+    console.log('🔗 Redirecting to:', redirectUrl);
+    
     if (mode === 'login') {
-      window.location.href = `${appUrl}/login`;
+      window.location.href = `${appUrl}/login?redirect=import-property`;
     } else {
-      window.location.href = `${appUrl}/landlord-signup`;
+      window.location.href = redirectUrl;
     }
   };
 
@@ -456,24 +552,35 @@ export default function ListingPage() {
               </div>
             </div>
             <div className="thumbnail-grid">
-              {displayListing.images.map((image, idx) => (
-                <div 
-                  key={idx} 
-                  className={`thumbnail ${idx === currentImageIndex ? 'active' : ''}`}
-                  onClick={() => setCurrentImageIndex(idx)}
-                >
-                  <img src={image} alt={`View ${idx + 1}`} />
-                  <button
-                    className="thumbnail-remove-btn"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleRemoveImage(idx);
-                    }}
-                    aria-label="Remove image"
+              {allImages.map((image, originalIdx) => {
+                // Skip if this image has been removed
+                if (removedImageIndices.has(originalIdx)) return null;
+                
+                // Calculate the display index (position in filtered array)
+                const displayIdx = allImages
+                  .slice(0, originalIdx)
+                  .filter((_, idx) => !removedImageIndices.has(idx))
+                  .length;
+                
+                return (
+                  <div 
+                    key={originalIdx} 
+                    className={`thumbnail ${displayIdx === currentImageIndex ? 'active' : ''}`}
+                    onClick={() => setCurrentImageIndex(displayIdx)}
                   >
-                  </button>
-                </div>
-              ))}
+                    <img src={image} alt={`View ${displayIdx + 1}`} />
+                    <button
+                      className="thumbnail-remove-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRemoveImage(originalIdx);
+                      }}
+                      aria-label="Remove image"
+                    >
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -559,7 +666,14 @@ export default function ListingPage() {
                     aria-label="Generate AI description"
                   >
                     {isGeneratingDescription ? (
-                      <div className="spinner-small" />
+                      <div className="wand-loader">
+                        <Wand2 size={18} className="wand-generating" />
+                        <div className="mini-sparkles">
+                          <span className="mini-sparkle"></span>
+                          <span className="mini-sparkle"></span>
+                          <span className="mini-sparkle"></span>
+                        </div>
+                      </div>
                     ) : (
                       <Wand2 size={18} />
                     )}
@@ -1618,18 +1732,73 @@ export default function ListingPage() {
           }
         }
 
-        .spinner-small {
+        .wand-loader {
+          position: relative;
           width: 18px;
           height: 18px;
-          border: 2px solid rgba(24, 119, 242, 0.2);
-          border-top-color: #1877F2;
-          border-radius: 50%;
-          animation: spin 0.8s linear infinite;
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
 
-        @keyframes spin {
-          to {
-            transform: rotate(360deg);
+        .wand-generating {
+          position: relative;
+          z-index: 2;
+          animation: wandBounce 0.8s ease-in-out infinite;
+          filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.8));
+        }
+
+        @keyframes wandBounce {
+          0%, 100% {
+            transform: translateY(0px) rotate(-8deg);
+          }
+          50% {
+            transform: translateY(-3px) rotate(8deg);
+          }
+        }
+
+        .mini-sparkles {
+          position: absolute;
+          inset: -8px;
+          pointer-events: none;
+        }
+
+        .mini-sparkle {
+          position: absolute;
+          width: 3px;
+          height: 3px;
+          background: linear-gradient(135deg, #60a5fa, #ffffff);
+          border-radius: 50%;
+          box-shadow: 0 0 4px rgba(96, 165, 250, 0.8);
+          animation: miniSparkle 1.2s ease-in-out infinite;
+        }
+
+        .mini-sparkle:nth-child(1) {
+          top: 0;
+          right: 2px;
+          animation-delay: 0s;
+        }
+
+        .mini-sparkle:nth-child(2) {
+          bottom: 0;
+          left: 2px;
+          animation-delay: 0.4s;
+        }
+
+        .mini-sparkle:nth-child(3) {
+          top: 50%;
+          left: -2px;
+          animation-delay: 0.8s;
+        }
+
+        @keyframes miniSparkle {
+          0%, 100% {
+            transform: scale(0) translateY(0px);
+            opacity: 0;
+          }
+          50% {
+            transform: scale(1.5) translateY(-4px);
+            opacity: 1;
           }
         }
 

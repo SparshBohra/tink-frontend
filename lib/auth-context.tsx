@@ -66,6 +66,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   // Role-based routing function
   const redirectBasedOnRole = (role: string) => {
+    // If signup/login included redirect=import-property, go straight to import page
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const redirect = urlParams.get('redirect');
+      if (role === 'owner' && redirect === 'import-property') {
+        router.push('/app/import-property');
+        return;
+      }
+    }
+    
     switch (role) {
       case 'admin':
         router.push('/admin-dashboard');
@@ -141,6 +151,29 @@ export function AuthProvider({ children }: AuthProviderProps) {
         localStorage.setItem('userId', response.user.id?.toString() || '');
         localStorage.setItem('userName', response.user.full_name || response.user.username || '');
         localStorage.setItem('userEmail', response.user.email || '');
+        
+        // Check if there's a pending property import (same logic as signup)
+        const urlParams = new URLSearchParams(window.location.search);
+        const redirect = urlParams.get('redirect');
+        
+        // Check both localStorage AND window.name for cross-subdomain data
+        const hasPendingData = localStorage.getItem('pendingPropertyData') || 
+                               ((window as any).name?.startsWith?.('SF_PENDING_PROPERTY|'));
+        
+        console.log('🔍 Login redirect check:', { 
+          redirect, 
+          hasPendingData: !!hasPendingData,
+          hasLocalStorage: !!localStorage.getItem('pendingPropertyData'),
+          hasWindowName: !!((window as any).name?.startsWith?.('SF_PENDING_PROPERTY|')),
+          url: window.location.href 
+        });
+        
+        if (actualRole === 'owner' && redirect === 'import-property' && hasPendingData) {
+          console.log('✅ Redirecting to import-property page');
+          // Redirect to import property page
+          router.push('/app/import-property');
+          return;
+        }
       }
       
       // Navigate based on role
@@ -239,8 +272,32 @@ export function AuthProvider({ children }: AuthProviderProps) {
           localStorage.setItem('userId', response.user.id.toString());
           localStorage.setItem('userName', response.user.full_name || response.user.username);
           localStorage.setItem('userEmail', response.user.email || '');
+          
+          // Check if there's a pending property import
+          const urlParams = new URLSearchParams(window.location.search);
+          const redirect = urlParams.get('redirect');
+          
+          // Check both localStorage AND window.name for cross-subdomain data
+          const hasPendingData = localStorage.getItem('pendingPropertyData') || 
+                                 ((window as any).name?.startsWith?.('SF_PENDING_PROPERTY|'));
+          
+          console.log('🔍 Signup redirect check:', { 
+            redirect, 
+            hasPendingData: !!hasPendingData,
+            hasLocalStorage: !!localStorage.getItem('pendingPropertyData'),
+            hasWindowName: !!((window as any).name?.startsWith?.('SF_PENDING_PROPERTY|')),
+            url: window.location.href 
+          });
+          
+          if (redirect === 'import-property' && hasPendingData) {
+            console.log('✅ Redirecting to import-property page');
+            // Redirect to import property page
+            router.push('/app/import-property');
+            return;
+          }
         }
         
+        console.log('➡️ Redirecting to landlord-dashboard');
         router.push('/landlord-dashboard');
       } else {
         // Redirect to login if no auto-login

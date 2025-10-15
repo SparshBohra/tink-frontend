@@ -44,6 +44,8 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
   const [isApiLoading, setIsApiLoading] = useState(true);
   const [loadedPhotos, setLoadedPhotos] = useState<Map<number, Set<number>>>(new Map());
   const [appUrl, setAppUrl] = useState('');
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   
   // Mapbox autocomplete state
   const [suggestions, setSuggestions] = useState<MapboxFeature[]>([]);
@@ -262,17 +264,33 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
           // Store the listing data in sessionStorage to pass to the listing page
           if (data.listing) {
             sessionStorage.setItem('currentListing', JSON.stringify(data.listing));
+          } else {
+            // No listing data returned
+            setShowLoading(false);
+            setIsApiLoading(false);
+            setErrorMessage('Sorry, property not found. Please check the address and try again.');
+            setShowErrorModal(true);
+            return;
           }
         } else {
-          console.error('Failed to fetch listing data');
-          // Store error state
-          sessionStorage.setItem('listingError', 'Failed to fetch property data');
+          // API returned an error status
+          const errorData = await response.json().catch(() => ({}));
+          console.error('Failed to fetch listing data', errorData);
+          setShowLoading(false);
+          setIsApiLoading(false);
+          setErrorMessage('Sorry, property not found. Please check the address and try again.');
+          setShowErrorModal(true);
+          return;
         }
       } catch (error) {
         console.error('Error calling API:', error);
-        sessionStorage.setItem('listingError', 'Network error occurred');
+        setShowLoading(false);
+        setIsApiLoading(false);
+        setErrorMessage('Network error occurred. Please check your connection and try again.');
+        setShowErrorModal(true);
+        return;
       } finally {
-        // Mark API loading as complete
+        // Mark API loading as complete (only if we didn't error out)
         setIsApiLoading(false);
       }
     }
@@ -518,6 +536,29 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
           onComplete={handleLoadingComplete}
           isLoading={isApiLoading}
         />
+      )}
+
+      {/* Error Modal */}
+      {showErrorModal && (
+        <div className="error-modal-overlay" onClick={() => setShowErrorModal(false)}>
+          <div className="error-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="error-icon-circle">
+              <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+              </svg>
+            </div>
+            <h2 className="error-title">Property Not Found</h2>
+            <p className="error-message">{errorMessage}</p>
+            <button 
+              className="error-close-btn"
+              onClick={() => setShowErrorModal(false)}
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
       )}
       
       <div className="landing-container">
@@ -2406,6 +2447,108 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
             gap: 16px;
             text-align: center;
           }
+        }
+
+        /* Error Modal */
+        .error-modal-overlay {
+          position: fixed;
+          inset: 0;
+          background: rgba(0, 0, 0, 0.5);
+          backdrop-filter: blur(4px);
+          -webkit-backdrop-filter: blur(4px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 10000;
+          animation: fadeIn 0.2s ease-out;
+        }
+
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+
+        .error-modal {
+          background: white;
+          border-radius: 24px;
+          padding: 48px 40px;
+          max-width: 480px;
+          width: 90%;
+          text-align: center;
+          box-shadow: 0 24px 60px rgba(0, 0, 0, 0.2);
+          animation: slideUp 0.3s ease-out;
+        }
+
+        @keyframes slideUp {
+          from {
+            transform: translateY(30px);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
+
+        .error-icon-circle {
+          width: 100px;
+          height: 100px;
+          margin: 0 auto 24px;
+          background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          animation: errorPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes errorPulse {
+          0%, 100% {
+            transform: scale(1);
+            box-shadow: 0 8px 16px rgba(239, 68, 68, 0.3);
+          }
+          50% {
+            transform: scale(1.05);
+            box-shadow: 0 12px 24px rgba(239, 68, 68, 0.4);
+          }
+        }
+
+        .error-title {
+          font-size: 28px;
+          font-weight: 800;
+          color: #0f172a;
+          margin: 0 0 16px;
+          letter-spacing: -0.02em;
+        }
+
+        .error-message {
+          font-size: 16px;
+          color: #64748b;
+          margin: 0 0 32px;
+          line-height: 1.6;
+        }
+
+        .error-close-btn {
+          width: 100%;
+          padding: 16px 32px;
+          background: linear-gradient(135deg, #1877F2 0%, #0056D2 100%);
+          color: white;
+          border: none;
+          border-radius: 12px;
+          font-size: 16px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.3s;
+        }
+
+        .error-close-btn:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 24px rgba(24, 119, 242, 0.3);
         }
       `}</style>
       </div>
