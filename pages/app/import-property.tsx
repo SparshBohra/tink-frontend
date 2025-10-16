@@ -75,7 +75,7 @@ export default function ImportProperty() {
         setStep('error');
         setMessage('No property data found. Please generate a listing first.');
         setTimeout(() => {
-          router.push('/properties');
+          router.push('/landlord-dashboard');
         }, 3000);
         return;
       }
@@ -172,6 +172,7 @@ export default function ImportProperty() {
       pendingData.propertyData.rent_type = rentType;
       
       console.log('📦 Importing property data with rent type:', rentType);
+      console.log('📦 Full propertyData being sent:', pendingData.propertyData);
 
       // Get auth token from cookies (where APIClient stores it)
       const authToken = Cookies.get('access_token');
@@ -185,6 +186,7 @@ export default function ImportProperty() {
       // Send data to backend
       const apiUrl = `${getApiUrl()}/api/properties/import-guest-property/`;
       console.log('🌐 POST request to:', apiUrl);
+      console.log('📤 Request payload:', JSON.stringify(pendingData, null, 2));
 
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -206,6 +208,8 @@ export default function ImportProperty() {
       const result = await response.json();
       
       console.log('✅ Property imported successfully:', result);
+      console.log('✅ Property rent_type in response:', result.property.rent_type);
+      console.log('✅ Property total_rooms in response:', result.property.total_rooms);
       
       // Clear the pending data
       localStorage.removeItem('pendingPropertyData');
@@ -214,9 +218,9 @@ export default function ImportProperty() {
       setMessage(`Property "${result.property.name}" imported successfully!`);
       setPropertyId(result.property.id);
       
-      // Redirect to properties page after 2 seconds
+      // Redirect to dashboard after 2 seconds
       setTimeout(() => {
-        router.push('/properties');
+        router.push('/landlord-dashboard');
       }, 2000);
       
     } catch (error: any) {
@@ -224,9 +228,9 @@ export default function ImportProperty() {
       setStep('error');
       setMessage(error.message || 'Failed to import property. Please try again.');
       
-      // Redirect to properties page after 5 seconds
+      // Redirect to dashboard after 5 seconds
       setTimeout(() => {
-        router.push('/properties');
+        router.push('/landlord-dashboard');
       }, 5000);
     }
   };
@@ -278,7 +282,7 @@ export default function ImportProperty() {
               
               <div className="duplicate-actions">
                 <button 
-                  onClick={() => router.push('/properties')}
+                  onClick={() => router.push('/landlord-dashboard')}
                   className="btn-cancel"
                 >
                   Cancel Import
@@ -357,7 +361,7 @@ export default function ImportProperty() {
                 <Check size={64} />
               </div>
               <h2 className="page-title">Property Imported!</h2>
-              <p className="page-subtitle">Redirecting to your properties...</p>
+              <p className="page-subtitle">Redirecting to your dashboard...</p>
             </div>
           </div>
         )}
@@ -372,8 +376,8 @@ export default function ImportProperty() {
               </div>
               <h2 className="page-title">Import Failed</h2>
               <p className="page-subtitle">{message}</p>
-              <button onClick={() => router.push('/properties')} className="btn-primary">
-                Go to Properties
+              <button onClick={() => router.push('/landlord-dashboard')} className="btn-primary">
+                Go to Dashboard
               </button>
             </div>
           </div>

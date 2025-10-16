@@ -37,6 +37,14 @@ import {
   MoreHorizontal
 } from 'lucide-react';
 
+// Small helper component for labeled values in the Property Details section
+const DetailItem = ({ label, value }: { label: string; value: any }) => (
+  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+    <div style={{ fontSize: '0.875rem', fontWeight: 500, color: '#6b7280' }}>{label}</div>
+    <div style={{ fontSize: '1rem', fontWeight: 600, color: '#111827' }}>{value ?? '—'}</div>
+  </div>
+);
+
 export default function PropertyDetails() {
   const router = useRouter();
   const { id } = router.query;
@@ -56,7 +64,7 @@ export default function PropertyDetails() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [roomToDelete, setRoomToDelete] = useState<{ id: number; name: string } | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
-  const [activeHistoryTab, setActiveHistoryTab] = useState<'tenant' | 'rent'>('tenant');
+  const [activeHistoryTab, setActiveHistoryTab] = useState<'tenant' | 'rent' | 'price'>('tenant');
   const [propertyAssignmentModalOpen, setPropertyAssignmentModalOpen] = useState(false);
   const [isNewApplicationModalOpen, setIsNewApplicationModalOpen] = useState(false);
   const [conversionWizardOpen, setConversionWizardOpen] = useState(false);
@@ -986,216 +994,341 @@ export default function PropertyDetails() {
           alignItems: 'start',
           marginBottom: '2rem'
         }}>
-          {/* Left Column (3 parts): Metrics + Room Management */}
+          {/* Left Column (2 parts): Property Details + Unit/Room Management */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            {/* Modern Metrics Grid */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(3, 1fr)',
-              gap: '1.5rem'
-            }}>
-              {[
-                {
-                  title: property.rent_type === 'per_property' ? 'Property Status' : 'Total Rooms',
-                  value: property.rent_type === 'per_property' ? (occupiedRooms > 0 ? 'Occupied' : 'Vacant') : totalRooms,
-                  subtitle: property.rent_type === 'per_property' ? 'entire property' : 'in this property',
-                  icon: Home,
-                  bgColor: '#eff6ff',
-                  iconColor: '#2563eb'
-                },
-                {
-                  title: 'Occupancy Rate',
-                  value: `${occupancyRate}%`,
-                  subtitle: 'current occupancy',
-                  icon: Users,
-                  bgColor: '#f0fdf4',
-                  iconColor: '#16a34a'
-                },
-                {
-                  title: 'Monthly Revenue',
-                  value: formatRevenue(totalRevenue),
-                  subtitle: 'from all rooms',
-                  icon: DollarSign,
-                  bgColor: '#fff7ed',
-                  iconColor: '#ea580c'
-                }
-              ].map((metric, index) => (
-                <div key={index} style={{
-                  backgroundColor: 'white',
-                  borderRadius: '12px',
-                  border: '1px solid #e5e7eb',
-                  padding: '1.5rem',
-                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-                  transition: 'all 0.2s ease',
-                  cursor: 'pointer'
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
-                  e.currentTarget.style.transform = 'translateY(0)';
-                }}>
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    marginBottom: '1rem'
-                  }}>
-                    <h3 style={{
-                      fontSize: '0.875rem',
-                      fontWeight: '600',
-                      color: '#374151',
-                      margin: 0
-                    }}>{metric.title}</h3>
-                    <div style={{
-                      width: '2.5rem',
-                      height: '2.5rem',
-                      backgroundColor: metric.bgColor,
-                      borderRadius: '8px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}>
-                      <metric.icon style={{ width: '1.25rem', height: '1.25rem', color: metric.iconColor }} />
-              </div>
-                </div>
-                  <div style={{
-                    fontSize: '2rem',
-                    fontWeight: '700',
-                    color: '#111827',
-                    lineHeight: 1,
-                    marginBottom: '0.5rem'
-                  }}>{metric.value}</div>
-                  <div style={{
-                    fontSize: '0.875rem',
-                    color: '#6b7280'
-                  }}>{metric.subtitle}</div>
-              </div>
-              ))}
-        </div>
-        
-            {/* Room Management */}
+
+            {/* Property Details Section */}
             <div style={{
               backgroundColor: 'white',
               borderRadius: '12px',
               border: '1px solid #e5e7eb',
-              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-              transition: 'all 0.2s ease',
-              overflow: 'hidden'
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-              e.currentTarget.style.transform = 'translateY(-1px)';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
-              e.currentTarget.style.transform = 'translateY(0)';
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
             }}>
               <div style={{
                 padding: '1.5rem',
-                borderBottom: '1px solid #e5e7eb',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between'
+                borderBottom: '1px solid #e5e7eb'
               }}>
-                <div>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0, color: '#111827' }}>Property Details</h2>
+              </div>
+
+              <div style={{ padding: '1.25rem', display: 'grid', gridTemplateColumns: '1fr', gap: '1.25rem' }}>
+                {/* Images grid - only show if images exist */}
+                {Array.isArray((property as any).images) && (property as any).images.length > 0 && (
+                  <div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr', gap: '8px' }}>
+                      {/* Large primary image - wider with less height */}
+                      <div style={{ position: 'relative', width: '100%', paddingBottom: '30%', borderRadius: '12px', overflow: 'hidden', border: '1px solid #e5e7eb', background: '#f8fafc' }}>
+                        {(() => {
+                          const img = (property as any).images[0];
+                          const imgUrl = typeof img === 'string' ? img : img?.url;
+                          return <img src={imgUrl} alt="Primary" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />;
+                        })()}
+                      </div>
+                      {/* Thumbnails - scrollable if more than 4 */}
+                      <div style={{ 
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '8px',
+                        maxHeight: '600px', // Fixed height for consistent thumbnail column
+                        overflowY: (property as any).images.length > 5 ? 'auto' : 'visible',
+                        paddingRight: (property as any).images.length > 5 ? '4px' : '0'
+                      }}>
+                        {((property as any).images.slice(1)).map((img: any, idx: number) => {
+                          const imgUrl = typeof img === 'string' ? img : img?.url;
+                          return (
+                            <div key={idx} style={{ 
+                              position: 'relative', 
+                              width: '100%', 
+                              paddingBottom: '70%', 
+                              borderRadius: '8px', 
+                              overflow: 'hidden', 
+                              border: '1px solid #e5e7eb', 
+                              background: '#f8fafc',
+                              flexShrink: 0
+                            }}>
+                              <img src={imgUrl} alt={`Property image ${idx + 2}`} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    {/* Image count indicator if more than 5 */}
+                    {(property as any).images.length > 5 && (
+                      <div style={{ 
+                        marginTop: '0.5rem', 
+                        fontSize: '0.75rem', 
+                        color: '#6b7280',
+                        textAlign: 'right'
+                      }}>
+                        {(property as any).images.length} photos total
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Facts and amenities */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.25rem' }}>
+                    <DetailItem label="Bedrooms" value={`${(property as any).bedrooms ?? '—'}`} />
+                    <DetailItem label="Bathrooms" value={`${(property as any).bathrooms ?? '—'}`} />
+                    <DetailItem label="Square Footage" value={`${(property as any).square_footage ?? '—'}`} />
+                    <DetailItem label="Year Built" value={`${(property as any).year_built ?? '—'}`} />
+                    <DetailItem label="Lot Size (sqft)" value={`${(property as any).lot_size_sqft ?? '—'}`} />
+                  </div>
+
+                  {/* Amenities list */}
+                  <div>
+                    <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#111827', marginBottom: '0.75rem' }}>Amenities</div>
+                    {Array.isArray((property as any).amenities) && (property as any).amenities.length > 0 ? (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                        {(property as any).amenities.slice(0, 20).map((a: string, i: number) => (
+                          <span key={i} style={{
+                            fontSize: '0.875rem',
+                            fontWeight: 500,
+                            color: '#0f172a',
+                            background: '#f1f5f9',
+                            border: '1px solid #e2e8f0',
+                            padding: '0.5rem 0.875rem',
+                            borderRadius: '9999px',
+                            lineHeight: '1'
+                          }}>{a}</span>
+                        ))}
+                      </div>
+                    ) : (
+                      <div style={{ color: '#6b7280', fontSize: '0.875rem' }}>No amenities provided</div>
+                    )}
+                  </div>
+
+                  {/* Virtual tour */}
+                  {(property as any).virtual_tour_url ? (
+                    <div>
+                      <a href={(property as any).virtual_tour_url} target="_blank" rel="noreferrer" style={{ 
+                        color: '#2563eb', 
+                        textDecoration: 'none', 
+                        fontSize: '0.875rem',
+                        fontWeight: 500,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.25rem'
+                      }}>
+                        View virtual tour →
+                      </a>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+
+            {/* Property Management - Conditional based on rent_type */}
+            {property.rent_type === 'per_room' ? (
+              // Room Management for per-room properties
+              <div style={{
+                backgroundColor: 'white',
+                borderRadius: '12px',
+                border: '1px solid #e5e7eb',
+                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                transition: 'all 0.2s ease',
+                overflow: 'hidden'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+                e.currentTarget.style.transform = 'translateY(-1px)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+                e.currentTarget.style.transform = 'translateY(0)';
+              }}>
+                <div style={{
+                  padding: '1.5rem',
+                  borderBottom: '1px solid #e5e7eb',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between'
+                }}>
+                  <div>
+                    <h2 style={{
+                      fontSize: '1.25rem',
+                      fontWeight: '700',
+                      color: '#111827',
+                      margin: 0,
+                      marginBottom: '0.25rem'
+                    }}>Room Management</h2>
+                    <p style={{
+                      fontSize: '0.875rem',
+                      color: '#6b7280',
+                      margin: 0
+                    }}>{rooms.length} rooms in this property</p>
+                  </div>
+                  <Link href={`/properties/${id}/add-room`} 
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      padding: '0.5rem 0.75rem',
+                      backgroundColor: '#2563eb',
+                      color: 'white',
+                      textDecoration: 'none',
+                      borderRadius: '6px',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
+                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <line x1="12" y1="5" x2="12" y2="19"/>
+                      <line x1="5" y1="12" x2="19" y2="12"/>
+                    </svg>
+                    Add New Room
+                  </Link>
+                </div>
+                {rooms.length > 0 ? (
+                  <div className="rooms-table-container">
+                    <DataTable
+                      columns={[
+                        { header: 'Room Name', key: 'name', align: 'left' },
+                        { header: 'Status', key: 'status', align: 'center' },
+                        { header: 'Tenant', key: 'tenant', align: 'center' },
+                        { header: 'Rent', key: 'rent', align: 'center' },
+                        { header: 'Actions', key: 'actions', align: 'center' },
+                      ]}
+                      data={rooms}
+                      renderRow={renderRoomRow}
+                    />
+                  </div>
+                ) : (
+                  <div className="empty-rooms-state">
+                    <div className="empty-state-content">
+                      <div className="empty-state-icon">
+                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                          <polyline points="9 22 9 12 15 12 15 22"/>
+                        </svg>
+                      </div>
+                      <h3 className="empty-state-title">No Rooms Found</h3>
+                      <p className="empty-state-description">
+                        This property is configured for per-room renting, but no rooms have been added yet.
+                        <br />
+                        Get started by adding rooms to enable tenant assignments and rent collection.
+                      </p>
+                      <div className="empty-state-actions">
+                        <button 
+                          onClick={() => router.push(`/properties/${property.id}/add-room`)} 
+                          className="btn btn-primary"
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M12 5v14m-7-7h14"/>
+                          </svg>
+                          Add Single Room
+                        </button>
+                        <button 
+                          onClick={() => setRoomCountEditorOpen(true)} 
+                          className="btn btn-secondary"
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+                          </svg>
+                          Add Multiple Rooms
+                        </button>
+                      </div>
+                      <div className="empty-state-help">
+                        <p className="help-text">
+                          💡 <strong>Tip:</strong> Use "Add Multiple Rooms" to quickly create several rooms at once with different types and rent amounts.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              // Unit Management for whole-property rentals
+              <div style={{
+                backgroundColor: 'white',
+                borderRadius: '12px',
+                border: '1px solid #e5e7eb',
+                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                transition: 'all 0.2s ease',
+                overflow: 'hidden'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+                e.currentTarget.style.transform = 'translateY(-1px)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+                e.currentTarget.style.transform = 'translateY(0)';
+              }}>
+                <div style={{
+                  padding: '1.5rem',
+                  borderBottom: '1px solid #e5e7eb',
+                }}>
                   <h2 style={{
                     fontSize: '1.25rem',
                     fontWeight: '700',
                     color: '#111827',
                     margin: 0,
                     marginBottom: '0.25rem'
-                  }}>Room Management</h2>
+                  }}>Unit Management</h2>
                   <p style={{
                     fontSize: '0.875rem',
                     color: '#6b7280',
                     margin: 0
-                  }}>{rooms.length} rooms in this property</p>
-                  </div>
-                <Link href={`/properties/${id}/add-room`} 
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    padding: '0.5rem 0.75rem',
-                    backgroundColor: '#2563eb',
-                    color: 'white',
-                    textDecoration: 'none',
-                    borderRadius: '6px',
-                    fontSize: '0.875rem',
-                    fontWeight: '500',
-                    transition: 'all 0.2s ease'
-                  }}
-                  onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
-                  onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
-                >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <line x1="12" y1="5" x2="12" y2="19"/>
-                      <line x1="5" y1="12" x2="19" y2="12"/>
-            </svg>
-                    Add New Room
-          </Link>
-                  </div>
-                  {rooms.length > 0 ? (
-                  <div className="rooms-table-container">
-                            <DataTable
-                                columns={[
-                      { header: 'Room Name', key: 'name', align: 'left' },
+                  }}>This property is managed as a single unit</p>
+                </div>
+                <div className="rooms-table-container">
+                  <DataTable
+                    columns={[
+                      { header: 'Unit', key: 'unit', align: 'left' },
                       { header: 'Status', key: 'status', align: 'center' },
                       { header: 'Tenant', key: 'tenant', align: 'center' },
                       { header: 'Rent', key: 'rent', align: 'center' },
-                      { header: 'Actions', key: 'actions', align: 'center' },
-                                ]}
-                                data={rooms}
-                                renderRow={renderRoomRow}
-                            />
-                  </div>
-                  ) : (
-                    <div className="empty-rooms-state">
-                      <div className="empty-state-content">
-                        <div className="empty-state-icon">
-                          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-                            <polyline points="9 22 9 12 15 12 15 22"/>
-                          </svg>
-                        </div>
-                        <h3 className="empty-state-title">No Rooms Found</h3>
-                        <p className="empty-state-description">
-                          This property is configured for per-room renting, but no rooms have been added yet.
-                          <br />
-                          Get started by adding rooms to enable tenant assignments and rent collection.
-                        </p>
-                        <div className="empty-state-actions">
-                          <button 
-                            onClick={() => router.push(`/properties/${property.id}/add-room`)} 
-                            className="btn btn-primary"
-                          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <path d="M12 5v14m-7-7h14"/>
-            </svg>
-                            Add Single Room
-                        </button>
-                          <button 
-                            onClick={() => setRoomCountEditorOpen(true)} 
-                            className="btn btn-secondary"
-                          >
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
-                            </svg>
-                            Add Multiple Rooms
-                          </button>
-                        </div>
-                        <div className="empty-state-help">
-                          <p className="help-text">
-                            💡 <strong>Tip:</strong> Use "Add Multiple Rooms" to quickly create several rooms at once with different types and rent amounts.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                      { header: 'Lease Dates', key: 'dates', align: 'center' },
+                    ]}
+                    data={[
+                      {
+                        id: property.id,
+                        unit: property.name,
+                        unitType: 'Entire Property',
+                        isVacant: leases.filter((l: any) => l.status === 'active' && (l.property_ref === property.id || l.property === (property as any).id)).length === 0,
+                        activeLease: leases.find((l: any) => l.status === 'active' && (l.property_ref === property.id || l.property === property.id)),
+                        monthlyRent: property.monthly_rent
+                      }
+                    ]}
+                    renderRow={(unit) => (
+                      <tr key={unit.id}>
+                        <td style={{ paddingLeft: '1.5rem' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                            <span style={{ fontWeight: '600', color: '#111827' }}>{unit.unit}</span>
+                            <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>{unit.unitType}</span>
+                          </div>
+                        </td>
+                        <td style={{ textAlign: 'center' }}>
+                          <StatusBadge status={unit.isVacant ? 'vacant' : 'occupied'} text={unit.isVacant ? 'Vacant' : 'Occupied'} />
+                        </td>
+                        <td style={{ textAlign: 'center', color: '#374151' }}>
+                          {unit.activeLease ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
+                              {(unit.activeLease as any).tenants?.map((t: any) => t.full_name).join(', ') || '-'}
+                            </div>
+                          ) : '-'}
+                        </td>
+                        <td style={{ textAlign: 'center', fontWeight: '600', color: '#111827' }}>
+                          {unit.monthlyRent ? `$${parseFloat(unit.monthlyRent).toFixed(2)}` : '-'}
+                        </td>
+                        <td style={{ textAlign: 'center', color: '#374151' }}>
+                          {unit.activeLease ? (
+                            <div style={{ fontSize: '0.875rem' }}>
+                              {new Date(unit.activeLease.start_date).toLocaleDateString()} - {new Date(unit.activeLease.end_date).toLocaleDateString()}
+                            </div>
+                          ) : '-'}
+                        </td>
+                      </tr>
+                    )}
+                  />
                 </div>
+              </div>
+            )}
 
             {/* Property History */}
             <div style={{
@@ -1278,6 +1411,22 @@ export default function PropertyDetails() {
                               >
                                   Rent Collection
                               </button>
+                              <button 
+                                  onClick={() => setActiveHistoryTab('price')}
+                      style={{
+                        padding: '0.5rem 0.75rem',
+                        fontSize: '0.875rem',
+                        fontWeight: '500',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        backgroundColor: activeHistoryTab === 'price' ? '#2563eb' : 'transparent',
+                        color: activeHistoryTab === 'price' ? 'white' : '#6b7280'
+                      }}
+                              >
+                                  Price History
+                              </button>
                           </div>
                   <div style={{
                     display: 'flex',
@@ -1343,6 +1492,41 @@ export default function PropertyDetails() {
                                 title="No Payment History"
                                 description="No rent payments have been recorded for this property yet."
                             />
+                    )}
+                  </div>
+                    )}
+                    {activeHistoryTab === 'price' && (
+                  <div className="history-table-container">
+                    {Array.isArray((property as any).price_history) && (property as any).price_history.length > 0 ? (
+                      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead>
+                          <tr style={{ borderBottom: '2px solid #e5e7eb' }}>
+                            <th style={{ textAlign: 'left', padding: '12px', fontSize: '0.875rem', fontWeight: 600, color: '#64748b' }}>Date</th>
+                            <th style={{ textAlign: 'left', padding: '12px', fontSize: '0.875rem', fontWeight: 600, color: '#64748b' }}>Event</th>
+                            <th style={{ textAlign: 'right', padding: '12px', fontSize: '0.875rem', fontWeight: 600, color: '#64748b' }}>Price</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(property as any).price_history.map((entry: any, idx: number) => (
+                            <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                              <td style={{ padding: '12px', fontSize: '0.875rem', color: '#0f172a' }}>
+                                {entry.date || '—'}
+                              </td>
+                              <td style={{ padding: '12px', fontSize: '0.875rem', color: '#64748b' }}>
+                                {entry.event || entry.priceChangeRate || '—'}
+                              </td>
+                              <td style={{ padding: '12px', fontSize: '0.875rem', fontWeight: 600, color: '#0f172a', textAlign: 'right' }}>
+                                {entry.price ? formatCurrency(entry.price) : '—'}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    ) : (
+                      <EmptyState
+                        title="No Price History"
+                        description="No pricing history data is available for this property."
+                      />
                     )}
                   </div>
                     )}

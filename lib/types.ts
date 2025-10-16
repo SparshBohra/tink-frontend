@@ -68,6 +68,27 @@ export interface Property {
   monthly_rent?: number | string | null;
   effective_rent?: number | string | null;
   effective_security_deposit?: number | string | null;
+  // Scraped/extended fields (optional)
+  bedrooms?: number;
+  bathrooms?: number | string;
+  square_footage?: number;
+  year_built?: number | string;
+  lot_size_sqft?: number | string;
+  images?: string[];
+  amenities?: string[] | string;
+  features?: any;
+  parking?: any;
+  pets_allowed?: any;
+  heating?: any;
+  cooling?: any;
+  laundry?: any;
+  videos?: string[];
+  floorplans?: string[];
+  virtual_tour_url?: string | null;
+  price_history?: any[];
+  neighborhood?: any;
+  schools?: any;
+  nearby_places?: any;
 }
 
 export interface Room {

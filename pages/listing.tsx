@@ -338,16 +338,34 @@ export default function ListingPage() {
 
   // Helper: Build the cross-app pending property payload
   const buildPendingPropertyData = () => {
+    // Build final images list: only non-removed images, with their staged or original URL
+    const finalImages: Array<{url: string; isStaged: boolean; originalUrl: string; index: number}> = [];
+    let displayIndex = 0;
+    
+    allImages.forEach((imageUrl, originalIdx) => {
+      // Skip removed images
+      if (removedImageIndices.has(originalIdx)) return;
+      
+      // Use staged version if available (staged images are keyed by original index), otherwise original
+      const finalUrl = stagedImages[originalIdx] || imageUrl;
+      const isStaged = !!stagedImages[originalIdx];
+      
+      finalImages.push({
+        url: finalUrl,
+        isStaged: isStaged,
+        originalUrl: imageUrl,
+        index: displayIndex
+      });
+      
+      displayIndex++;
+    });
+    
     return {
       // Original listing JSON data
       originalData: listing,
       
-      // Final edited images (staged or original)
-      finalImages: activeImages.map((imageUrl, idx) => ({
-        url: stagedImages[idx] || imageUrl,
-        isStaged: !!stagedImages[idx],
-        originalUrl: imageUrl
-      })),
+      // Final edited images (staged or original, excluding removed)
+      finalImages: finalImages,
       
       // Final description (AI-generated or original)
       finalDescription: showOriginalDescription 
@@ -983,85 +1001,80 @@ export default function ListingPage() {
               </div>
 
               {/* Zillow */}
-              <div className={`integration-item ${integrations.zillow ? 'active' : ''}`}>
+              <div className={`integration-item disabled`}>
                 <div className="integration-info">
                   <img src="/media/zillow.png" alt="Zillow" className="integration-logo" />
                   <div>
                     <div className="integration-name">Zillow</div>
-                    <div className="integration-desc">Reach millions of renters</div>
+                    <div className="integration-desc">Coming soon</div>
                   </div>
                 </div>
                 <div 
-                  className={`toggle-switch ${integrations.zillow ? 'active' : ''}`}
-                  onClick={() => toggleIntegration('zillow')}
+                  className={`toggle-switch disabled`}
                 >
                   <div className="toggle-slider"></div>
                 </div>
               </div>
 
               {/* Apartments.com */}
-              <div className={`integration-item ${integrations.apartments ? 'active' : ''}`}>
+              <div className={`integration-item disabled`}>
                 <div className="integration-info">
                   <img src="/media/Apartments.webp" alt="Apartments.com" className="integration-logo" />
                   <div>
                     <div className="integration-name">Apartments.com</div>
-                    <div className="integration-desc">Leading apartment marketplace</div>
+                    <div className="integration-desc">Coming soon</div>
                   </div>
                 </div>
                 <div 
-                  className={`toggle-switch ${integrations.apartments ? 'active' : ''}`}
-                  onClick={() => toggleIntegration('apartments')}
+                  className={`toggle-switch disabled`}
                 >
                   <div className="toggle-slider"></div>
                 </div>
               </div>
 
               {/* Realtor.com */}
-              <div className={`integration-item ${integrations.realtor ? 'active' : ''}`}>
+              <div className={`integration-item disabled`}>
                 <div className="integration-info">
                   <img src="/media/Realtor.com_logo.png" alt="Realtor.com" className="integration-logo" />
                   <div>
                     <div className="integration-name">Realtor.com</div>
-                    <div className="integration-desc">Trusted by millions</div>
+                    <div className="integration-desc">Coming soon</div>
                   </div>
                 </div>
                 <div 
-                  className={`toggle-switch ${integrations.realtor ? 'active' : ''}`}
-                  onClick={() => toggleIntegration('realtor')}
+                  className={`toggle-switch disabled`}
                 >
                   <div className="toggle-slider"></div>
                 </div>
               </div>
 
               {/* Trulia */}
-              <div className={`integration-item ${integrations.trulia ? 'active' : ''}`}>
+              <div className={`integration-item disabled`}>
                 <div className="integration-info">
                   <img src="/media/trulia-png.webp" alt="Trulia" className="integration-logo" />
                   <div>
                     <div className="integration-name">Trulia</div>
-                    <div className="integration-desc">Find quality renters</div>
+                    <div className="integration-desc">Coming soon</div>
                   </div>
                 </div>
                 <div 
-                  className={`toggle-switch ${integrations.trulia ? 'active' : ''}`}
-                  onClick={() => toggleIntegration('trulia')}
+                  className={`toggle-switch disabled`}
                 >
                   <div className="toggle-slider"></div>
                 </div>
               </div>
 
               {/* Facebook Marketplace */}
-              <div className={`integration-item ${integrations.facebook ? 'active' : ''}`}>
+              <div className={`integration-item disabled`}>
                 <div className="integration-info">
                   <div className="integration-logo-text facebook-logo">f</div>
                   <div>
                     <div className="integration-name">Facebook Marketplace</div>
-                    <div className="integration-desc">Local reach, fast results</div>
+                    <div className="integration-desc">Coming soon</div>
                   </div>
                 </div>
                 <div 
-                  className={`toggle-switch ${integrations.facebook ? 'active' : ''}`}
-                  onClick={() => toggleIntegration('facebook')}
+                  className={`toggle-switch disabled`}
                 >
                   <div className="toggle-slider"></div>
                 </div>

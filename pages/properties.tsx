@@ -20,6 +20,8 @@ function Properties() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Extra details per property (e.g., bedrooms)
+  const [propertyExtras, setPropertyExtras] = useState<{ [key: number]: { bedrooms?: number; bathrooms?: number } }>({});
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -146,7 +148,8 @@ function Properties() {
     try {
       console.log(`Loading detailed data for property ${propertyId}...`);
       
-      const [rooms, leases] = await Promise.all([
+      const [propertyDetail, rooms, leases] = await Promise.all([
+        apiClient.getProperty(propertyId),
         apiClient.getPropertyRooms(propertyId),
         apiClient.getLeases({ property: propertyId })
       ]);
@@ -159,6 +162,14 @@ function Properties() {
       setPropertyLeases(prev => ({
         ...prev,
         [propertyId]: leases.results || []
+      }));
+      // Save extra details like bedrooms/bathrooms for display
+      setPropertyExtras(prev => ({
+        ...prev,
+        [propertyId]: {
+          bedrooms: (propertyDetail as any)?.bedrooms,
+          bathrooms: (propertyDetail as any)?.bathrooms,
+        }
       }));
       
       setLoadedPropertyDetails(prev => new Set([...prev, propertyId]));
@@ -213,17 +224,45 @@ function Properties() {
   const getPropertyStats = (property: Property) => {
     const rooms = propertyRooms[property.id] || [];
     const leases = propertyLeases[property.id] || [];
+    const extras = propertyExtras[property.id] || {};
     
     // If we haven't loaded details yet, use the property's own fields
     if (!loadedPropertyDetails.has(property.id)) {
+      // For whole-property rentals, show bedroom count and hide vacant rooms wording
+      const bedroomCount = (extras.bedrooms ?? (property as any).bedrooms) || 1;
+      const totalRoomsDescription = property.rent_type === 'per_property'
+        ? `${bedroomCount} bed${bedroomCount > 1 ? 's' : ''}`
+        : `${property.total_rooms || 0} total`;
+      const vacantRoomsDescription = property.rent_type === 'per_property'
+        ? ''
+        : `${property.vacant_rooms || 0} vacant`;
+
       return {
         totalRooms: property.total_rooms || 0,
         vacantRooms: property.vacant_rooms || 0,
         occupiedRooms: (property.total_rooms || 0) - (property.vacant_rooms || 0),
         occupancyRate: property.total_rooms > 0 ? Math.round(((property.total_rooms - property.vacant_rooms) / property.total_rooms) * 100) : 0,
         activeLeases: 0, // We don't have this data yet
-        isDetailLoaded: false
-      };
+        isDetailLoaded: false,
+        totalRoomsDescription,
+        vacantRoomsDescription
+      } as any;
+    }
+    
+    // For whole-property rentals, treat the entire property as 1 unit
+    if (property.rent_type === 'per_property') {
+      const hasActiveLease = leases.filter(l => l.status === 'active').length > 0;
+      const bedroomCount = (extras.bedrooms ?? (property as any).bedrooms) || 1;
+      return {
+        totalRooms: 1,
+        occupiedRooms: hasActiveLease ? 1 : 0,
+        vacantRooms: hasActiveLease ? 0 : 1,
+        occupancyRate: hasActiveLease ? 100 : 0,
+        activeLeases: leases.filter(lease => lease.status === 'active').length,
+        isDetailLoaded: true,
+        totalRoomsDescription: `${bedroomCount} bed${bedroomCount > 1 ? 's' : ''}`,
+        vacantRoomsDescription: ''
+      } as any;
     }
     
     // Use backend occupancy data instead of filtering room status
@@ -239,8 +278,10 @@ function Properties() {
       vacantRooms,
       occupancyRate,
       activeLeases,
-      isDetailLoaded: true
-    };
+      isDetailLoaded: true,
+      totalRoomsDescription: `${totalRooms} total`,
+      vacantRoomsDescription: `${vacantRooms} vacant`
+    } as any;
   };
 
   // Calculate portfolio summary from full dataset
@@ -943,7 +984,7 @@ function Properties() {
                                 marginBottom: '0.25rem'
                               }}
                               >
-                                {property.name}
+                                {property.address_line1 || (property.name || '').split(',')[0]}
                               </div>
                             <div style={{
                               fontSize: '0.75rem',
@@ -969,11 +1010,11 @@ function Properties() {
                                     fontWeight: '600',
                                     color: '#111827',
                                     marginBottom: '0.125rem'
-                                  }}>{stats.totalRooms} total</div>
+                                  }}>{(stats as any).totalRoomsDescription}</div>
                                   <div style={{
                                     fontSize: '0.75rem',
                                     color: '#6b7280'
-                                  }}>{stats.vacantRooms} vacant</div>
+                                  }}>{(stats as any).vacantRoomsDescription}</div>
                                   </>
                                 ) : (
                                 <div>
@@ -982,11 +1023,8 @@ function Properties() {
                                     fontWeight: '600',
                                     color: '#111827',
                                     marginBottom: '0.125rem'
-                                  }}>{stats.totalRooms} total</div>
-                                  <div style={{
-                                    fontSize: '0.75rem',
-                                    color: '#9ca3af'
-                                  }}>Loading...</div>
+                                  }}>{(stats as any).totalRoomsDescription}</div>
+                                  <div style={{ fontSize: '0.75rem', color: '#9ca3af' }}>Loading...</div>
                                   </div>
                                 )}
                               </div>

@@ -939,7 +939,7 @@ function LandlordDashboard() {
                       <th style={{ padding: '0.75rem', textAlign: 'center', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Property</th>
                       <th style={{ padding: '0.75rem', textAlign: 'center', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Status</th>
                       <th style={{ padding: '0.75rem', textAlign: 'center', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Occupancy</th>
-                      <th style={{ padding: '0.75rem', textAlign: 'center', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Monthly Revenue</th>
+                      <th style={{ padding: '0.75rem', textAlign: 'center', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Rent</th>
                       <th style={{ padding: '0.75rem', textAlign: 'center', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Tasks</th>
                       <th style={{ padding: '0.75rem', textAlign: 'center', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Actions</th>
                     </tr>

@@ -216,17 +216,43 @@ function Properties() {
     
     // If we haven't loaded details yet, use the property's own fields
     if (!loadedPropertyDetails.has(property.id)) {
+      // For whole-property rentals, show bedroom count
+      const totalRoomsDescription = property.rent_type === 'per_property' 
+        ? `${property.bedrooms || 1} bed${property.bedrooms > 1 ? 's' : ''}` 
+        : `${property.total_rooms || 0} total`;
+      
+      const vacantRoomsDescription = property.rent_type === 'per_property' 
+        ? 'Whole Unit' 
+        : `${property.vacant_rooms || 0} vacant`;
+
       return {
         totalRooms: property.total_rooms || 0,
         vacantRooms: property.vacant_rooms || 0,
         occupiedRooms: (property.total_rooms || 0) - (property.vacant_rooms || 0),
         occupancyRate: property.total_rooms > 0 ? Math.round(((property.total_rooms - property.vacant_rooms) / property.total_rooms) * 100) : 0,
-        activeLeases: 0, // We don't have this data yet
-        isDetailLoaded: false
+        activeLeases: 0,
+        isDetailLoaded: false,
+        totalRoomsDescription,
+        vacantRoomsDescription
       };
     }
     
-    // Use backend occupancy data instead of filtering room status
+    // For whole-property rentals, treat the entire property as 1 unit
+    if (property.rent_type === 'per_property') {
+      const hasActiveLease = leases.some(lease => lease.status === 'active');
+      return {
+        totalRooms: 1,
+        occupiedRooms: hasActiveLease ? 1 : 0,
+        vacantRooms: hasActiveLease ? 0 : 1,
+        occupancyRate: hasActiveLease ? 100 : 0,
+        activeLeases: leases.filter(lease => lease.status === 'active').length,
+        isDetailLoaded: true,
+        totalRoomsDescription: `${property.bedrooms || 1} bed${property.bedrooms > 1 ? 's' : ''}`,
+        vacantRoomsDescription: 'Whole Unit'
+      };
+    }
+    
+    // Use backend occupancy data for per-room properties
     const totalRooms = rooms.length;
     const occupiedRooms = rooms.reduce((sum, room) => sum + (room.current_occupancy || 0), 0);
     const vacantRooms = Math.max(0, totalRooms - occupiedRooms);
@@ -239,7 +265,9 @@ function Properties() {
       vacantRooms,
       occupancyRate,
       activeLeases,
-      isDetailLoaded: true
+      isDetailLoaded: true,
+      totalRoomsDescription: `${totalRooms} total`,
+      vacantRoomsDescription: `${vacantRooms} vacant`
     };
   };
 
@@ -943,7 +971,7 @@ function Properties() {
                                 marginBottom: '0.25rem'
                               }}
                               >
-                                {property.name}
+                                {property.address_line1 || property.name.split(',')[0]}
                               </div>
                             <div style={{
                               fontSize: '0.75rem',
@@ -955,7 +983,7 @@ function Properties() {
                             padding: '0.75rem',
                             borderBottom: '1px solid #f3f4f6',
                             color: '#374151'
-                          }}>{property.full_address}</td>
+                          }}>{property.city}, {property.state}</td>
                           <td style={{
                             textAlign: 'left',
                             padding: '0.75rem',
@@ -969,11 +997,11 @@ function Properties() {
                                     fontWeight: '600',
                                     color: '#111827',
                                     marginBottom: '0.125rem'
-                                  }}>{stats.totalRooms} total</div>
+                                  }}>{stats.totalRoomsDescription}</div>
                                   <div style={{
                                     fontSize: '0.75rem',
                                     color: '#6b7280'
-                                  }}>{stats.vacantRooms} vacant</div>
+                                  }}>{stats.vacantRoomsDescription}</div>
                                   </>
                                 ) : (
                                 <div>
@@ -982,7 +1010,7 @@ function Properties() {
                                     fontWeight: '600',
                                     color: '#111827',
                                     marginBottom: '0.125rem'
-                                  }}>{stats.totalRooms} total</div>
+                                  }}>{stats.totalRoomsDescription}</div>
                                   <div style={{
                                     fontSize: '0.75rem',
                                     color: '#9ca3af'
