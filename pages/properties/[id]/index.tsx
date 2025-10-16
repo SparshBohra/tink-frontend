@@ -72,6 +72,7 @@ export default function PropertyDetails() {
   const [showAllHistory, setShowAllHistory] = useState(false);
   const [paymentHistory, setPaymentHistory] = useState<any[]>([]);
   const [paymentLoading, setPaymentLoading] = useState(false);
+  const [selectedImageIdx, setSelectedImageIdx] = useState(0);
 
   // This single useEffect handles both initial data fetching and the refresh after creation.
   useEffect(() => {
@@ -389,6 +390,15 @@ export default function PropertyDetails() {
   const listingPlatforms = [
     { id: 'zumper', name: 'Zumper' },
   ];
+
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>, fallbackUrl?: string) => {
+    if (fallbackUrl && e.currentTarget.src !== fallbackUrl) {
+      e.currentTarget.src = fallbackUrl;
+    } else {
+      // Optional: hide image or show a placeholder if both fail
+      e.currentTarget.style.display = 'none';
+    }
+  };
 
   if (loading) return <DashboardLayout title="Loading"><div className="loading-state">Loading property details...</div></DashboardLayout>;
   if (error) return <DashboardLayout title="Error"><div className="error-state">{error}</div></DashboardLayout>;
@@ -1017,40 +1027,61 @@ export default function PropertyDetails() {
                   <div>
                     <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr', gap: '8px' }}>
                       {/* Large primary image - wider with less height */}
-                      <div style={{ position: 'relative', width: '100%', paddingBottom: '30%', borderRadius: '12px', overflow: 'hidden', border: '1px solid #e5e7eb', background: '#f8fafc' }}>
-                        {(() => {
-                          const img = (property as any).images[0];
-                          const imgUrl = typeof img === 'string' ? img : img?.url;
-                          return <img src={imgUrl} alt="Primary" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />;
-                        })()}
-                      </div>
-                      {/* Thumbnails - scrollable if more than 4 */}
-                      <div style={{ 
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '8px',
-                        maxHeight: '600px', // Fixed height for consistent thumbnail column
-                        overflowY: (property as any).images.length > 5 ? 'auto' : 'visible',
-                        paddingRight: (property as any).images.length > 5 ? '4px' : '0'
-                      }}>
-                        {((property as any).images.slice(1)).map((img: any, idx: number) => {
-                          const imgUrl = typeof img === 'string' ? img : img?.url;
-                          return (
-                            <div key={idx} style={{ 
-                              position: 'relative', 
-                              width: '100%', 
-                              paddingBottom: '70%', 
-                              borderRadius: '8px', 
-                              overflow: 'hidden', 
-                              border: '1px solid #e5e7eb', 
-                              background: '#f8fafc',
-                              flexShrink: 0
-                            }}>
-                              <img src={imgUrl} alt={`Property image ${idx + 2}`} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-                            </div>
-                          );
-                        })}
-                      </div>
+                      <div style={{ position: 'relative', width: '100%', height: '700px', borderRadius: '12px', overflow: 'hidden', border: '1px solid #e5e7eb', background: '#f8fafc' }}>
+                         {property.images && property.images.length > 0 && (
+                           (() => {
+                             const img = (property as any).images[selectedImageIdx];
+                             if (!img) return null; // Guard against undefined image
+                             const imgUrl = typeof img === 'string' ? img : img?.url;
+                             const fallback = typeof img === 'object' ? img?.originalUrl : undefined;
+                             
+                             return <img 
+                               key={selectedImageIdx} // Force re-render when index changes
+                               src={imgUrl} 
+                               alt="Primary" 
+                               style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} 
+                               referrerPolicy="no-referrer"
+                               onError={(e) => handleImageError(e, fallback)}
+                             />;
+                           })()
+                         )}
+                       </div>
+                       {/* Thumbnails - scrollable within main image height */}
+                       <div style={{ 
+                         display: 'flex',
+                         flexDirection: 'column',
+                         gap: '8px',
+                         maxHeight: '700px',
+                         overflowY: 'auto',
+                         paddingRight: (property as any).images.length > 5 ? '4px' : '0'
+                       }}>
+                         {(property as any).images.map((img: any, idx: number) => {
+                           const imgUrl = typeof img === 'string' ? img : img?.url;
+                           const fallback = typeof img === 'object' ? img?.originalUrl : undefined;
+                           const isActive = selectedImageIdx === idx;
+                           return (
+                             <div 
+                               key={idx}
+                               onClick={() => setSelectedImageIdx(idx)}
+                               style={{ 
+                                 position: 'relative', 
+                                 width: '100%', 
+                                 paddingBottom: '66%', 
+                                 borderRadius: '8px', 
+                                 overflow: 'hidden', 
+                                 border: isActive ? '2px solid #2563eb' : '1px solid #e5e7eb', 
+                                 background: '#f8fafc',
+                                 flexShrink: 0,
+                                 cursor: 'pointer',
+                                 boxShadow: isActive ? '0 0 0 3px rgba(37, 99, 235, 0.15)' : 'none'
+                               }}
+                               title="Click to view"
+                             >
+                               <img src={imgUrl} alt={`Property image ${idx + 1}`} referrerPolicy="no-referrer" onError={(e) => handleImageError(e, fallback)} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                             </div>
+                           );
+                         })}
+                       </div>
                     </div>
                     {/* Image count indicator if more than 5 */}
                     {(property as any).images.length > 5 && (
