@@ -56,17 +56,9 @@ export default function ListingPage() {
 
   const [appUrl, setAppUrl] = useState('');
 
-  // Get API URL based on environment
+  // Get API URL from environment variable
   const getApiUrl = () => {
-    if (typeof window !== 'undefined') {
-      const hostname = window.location.hostname;
-      if (hostname === 'localhost') {
-        return 'http://localhost:8000';
-      } else {
-        return 'https://tink.global';
-      }
-    }
-    return 'http://localhost:8000';
+    return process.env.NEXT_PUBLIC_API_BASE_URL || 'https://tink.global/api';
   };
 
   // Staging API functions
@@ -745,7 +737,7 @@ export default function ListingPage() {
                         <span>{listing.property_details.year_built}</span>
                       </div>
                     )}
-                    {listing.property_details?.lot_size_sqft && (
+                    {listing.property_details?.lot_size_sqft != null && listing.property_details.lot_size_sqft > 0 && (
                       <div className="detail-item">
                         <strong>Lot Size</strong>
                         <span>{listing.property_details.lot_size_sqft.toLocaleString()} sqft</span>
@@ -787,7 +779,7 @@ export default function ListingPage() {
                         <span>{displayListing.laundry.join(', ')}</span>
                       </div>
                     )}
-                    {listing.pricing?.deposit && listing.pricing.deposit > 0 && (
+                    {listing.pricing?.deposit != null && listing.pricing.deposit > 0 && (
                       <div className="detail-item">
                         <strong>Security Deposit</strong>
                         <span>${listing.pricing.deposit.toLocaleString()}</span>
@@ -811,7 +803,7 @@ export default function ListingPage() {
                         <span>{new Date(listing.pricing.availability_date).toLocaleDateString()}</span>
                       </div>
                     )}
-                    {listing.pricing?.price_per_sqft && listing.pricing.price_per_sqft > 0 && (
+                    {listing.pricing?.price_per_sqft != null && listing.pricing.price_per_sqft > 0 && (
                       <div className="detail-item">
                         <strong>Price per sqft</strong>
                         <span>${listing.pricing.price_per_sqft.toFixed(2)}</span>
@@ -819,10 +811,12 @@ export default function ListingPage() {
                     )}
                     {listing.pricing?.other_fees && listing.pricing.other_fees.length > 0 && 
                       listing.pricing.other_fees.map((fee: any, idx: number) => (
-                        <div key={idx} className="detail-item">
-                          <strong>{fee.type}</strong>
-                          <span>${fee.amount.toLocaleString()}</span>
-                        </div>
+                        fee.amount != null && (
+                          <div key={idx} className="detail-item">
+                            <strong>{fee.type}</strong>
+                            <span>${fee.amount.toLocaleString()}</span>
+                          </div>
+                        )
                       ))
                     }
                   </div>
@@ -897,7 +891,9 @@ export default function ListingPage() {
                       </div>
                       <div className="price-history-details">
                         <span className="price-history-event">{entry.event}</span>
-                        <span className="price-history-price">${entry.price.toLocaleString()}</span>
+                        {entry.price != null && (
+                          <span className="price-history-price">${entry.price.toLocaleString()}</span>
+                        )}
                       </div>
                     </div>
                   ))}
