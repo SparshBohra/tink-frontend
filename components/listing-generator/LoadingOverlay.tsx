@@ -25,34 +25,40 @@ export default function LoadingOverlay({ onClose, onComplete, isLoading = true }
   const [currentStep, setCurrentStep] = useState(0);
   const [currentMessage, setCurrentMessage] = useState('Analyzing property address...');
   const [startTime] = useState(Date.now());
-  const [estimatedDuration] = useState(25000); // Estimate 25 seconds for API call (5 steps × 5 seconds)
 
   useEffect(() => {
-    // API call completed - finish all steps and transition
+    // API call completed - finish all steps and transition immediately
     if (!isLoading) {
       const completeAllSteps = () => {
         setSteps(prev => prev.map(step => ({ ...step, status: 'complete' })));
         setCurrentStep(steps.length);
+        // Reduced delay for faster transition
         setTimeout(() => {
           onComplete();
-        }, 800);
+        }, 400);
       };
       completeAllSteps();
       return;
     }
 
-    // API still loading - animate through steps
+    // API still loading - animate through steps with faster timing
     if (currentStep < steps.length && isLoading) {
-      // Calculate dynamic timing based on elapsed time and remaining steps
+      // Calculate step duration based on elapsed time
       const elapsed = Date.now() - startTime;
-      const remainingTime = Math.max(0, estimatedDuration - elapsed);
       const remainingSteps = steps.length - currentStep;
       
-      // Distribute remaining time across remaining steps
-      // Each step should take at least 5 seconds, but adjust if API is taking longer
-      const baseStepDuration = 5000; // 5 seconds per step
-      const calculatedDuration = remainingSteps > 0 ? remainingTime / remainingSteps : baseStepDuration;
-      const stepDuration = Math.max(baseStepDuration, Math.min(8000, calculatedDuration));
+      // Step duration - 1500ms per step
+      // This gives ~7.5 seconds total if API is fast, but can extend if API is slow
+      const baseStepDuration = 1500; // 1500ms per step (1.5 seconds)
+      const minStepDuration = 1000; // Minimum 1 second
+      const maxStepDuration = 2500; // Maximum 2.5 seconds
+      
+      // If API is taking longer than expected, slow down the steps
+      let stepDuration = baseStepDuration;
+      if (elapsed > 8000 && remainingSteps > 0) {
+        // If we've been waiting > 8s and have steps remaining, slow down
+        stepDuration = Math.min(maxStepDuration, baseStepDuration * 1.5);
+      }
       
       // First, set step to active immediately
       const activateTimer = setTimeout(() => {
@@ -79,11 +85,11 @@ export default function LoadingOverlay({ onClose, onComplete, isLoading = true }
         }, stepDuration);
         
         return () => clearTimeout(completeTimer);
-      }, 300); // Small delay before activating
+      }, 100); // Reduced initial delay from 300ms to 100ms
 
       return () => clearTimeout(activateTimer);
     }
-  }, [currentStep, steps.length, onComplete, isLoading, startTime, estimatedDuration, steps]);
+  }, [currentStep, steps.length, onComplete, isLoading, startTime, steps]);
 
   return (
     <div className="loading-overlay">
@@ -133,9 +139,9 @@ export default function LoadingOverlay({ onClose, onComplete, isLoading = true }
           display: flex;
           align-items: center;
           justify-content: center;
-          background: radial-gradient(circle at center, rgba(15, 23, 42, 0.45) 0%, rgba(15, 23, 42, 0.55) 50%, rgba(0, 0, 0, 0.65) 100%);
-          backdrop-filter: blur(24px);
-          -webkit-backdrop-filter: blur(24px);
+          background: radial-gradient(circle at center, rgba(15, 23, 42, 0.75) 0%, rgba(15, 23, 42, 0.85) 50%, rgba(0, 0, 0, 0.95) 100%);
+          backdrop-filter: blur(32px);
+          -webkit-backdrop-filter: blur(32px);
           animation: fadeIn 0.4s ease-out;
         }
 
