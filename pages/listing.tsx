@@ -56,9 +56,17 @@ export default function ListingPage() {
 
   const [appUrl, setAppUrl] = useState('');
 
-  // Get API URL from environment variable
+  // Get API URL based on environment
   const getApiUrl = () => {
-    return process.env.NEXT_PUBLIC_API_BASE_URL || 'https://tink.global/api';
+    if (typeof window !== 'undefined') {
+      const hostname = window.location.hostname;
+      if (hostname === 'localhost') {
+        return 'http://localhost:8000';
+      } else {
+        return 'https://tink.global';
+      }
+    }
+    return 'http://localhost:8000';
   };
 
   // Staging API functions
