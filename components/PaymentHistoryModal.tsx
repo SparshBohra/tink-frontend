@@ -338,10 +338,10 @@ const PaymentHistoryModal: React.FC<PaymentHistoryModalProps> = ({ isOpen, onClo
                       </div>
                     <div>
                         <p style={{ fontSize: '1.125rem', fontWeight: '600', color: '#111827', margin: '0 0 0.25rem 0' }}>
-                          {formatCurrency(payment.amount_dollars)}
+                          {formatCurrency(payment.amount_dollars)}{payment.amount_dollars > 20000 ? '' : '/mo'}
                         </p>
                         <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 0.25rem 0' }}>
-                          {payment.description || 'Monthly Rent Payment'}
+                          {payment.description || (payment.amount_dollars > 20000 ? 'Property Payment' : 'Monthly Rent Payment')}
                         </p>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                           <Calendar style={{ width: '0.875rem', height: '0.875rem', color: '#9ca3af' }} />

@@ -766,7 +766,7 @@ export default function ListingPage() {
           {/* Listing Details */}
           <div className="details-section">
             <div className="listing-header">
-              <div className="listing-type-badge">{displayListing.type}</div>
+              <div className="listing-type-badge">{(editedPrice || displayListing.price) > 20000 ? 'FOR SALE' : 'FOR RENT'}</div>
               <div className="listing-actions">
                 <button className="action-btn" onClick={handleHeartOrShareClick}>
                   <Heart size={20} />
@@ -788,13 +788,13 @@ export default function ListingPage() {
                     className="price-input"
                     autoFocus
                   />
-                  <span className="price-period">/mo</span>
+                  <span className="price-period">{editedPrice > 20000 ? '' : '/mo'}</span>
                   <button onClick={handlePriceSave} className="price-save-btn" title="Save">✓</button>
                   <button onClick={handlePriceCancel} className="price-cancel-btn" title="Cancel">✕</button>
                 </div>
               ) : (
                 <div className="listing-price">
-                  ${(editedPrice || displayListing.price).toLocaleString()}/mo
+                  ${(editedPrice || displayListing.price).toLocaleString()}{(editedPrice || displayListing.price) > 20000 ? '' : '/mo'}
                   <button onClick={handlePriceEdit} className="price-edit-btn" title="Edit price">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path>
@@ -1985,6 +1985,7 @@ export default function ListingPage() {
           line-height: 1.7;
           color: #475569;
           margin: 0;
+          white-space: pre-line;
         }
 
         .amenities-grid {
