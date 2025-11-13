@@ -6,8 +6,9 @@ interface StagedImageProps {
   stagedUrl?: string | null;
   mediaId: string;
   alt?: string;
+  showStagedByDefault?: boolean; // Which version to show by default
   onStage?: (mediaId: string) => Promise<void>;
-  onUnstage?: (mediaId: string) => Promise<void>;
+  onToggleView?: (mediaId: string, showStaged: boolean) => void; // Callback to persist toggle choice
   className?: string;
 }
 
@@ -16,20 +17,19 @@ export default function StagedImage({
   stagedUrl: propStagedUrl,
   mediaId,
   alt = 'Property image',
+  showStagedByDefault = false,
   onStage,
-  onUnstage,
+  onToggleView,
   className = ''
 }: StagedImageProps) {
   const [isStaging, setIsStaging] = useState(false);
-  const [showStaged, setShowStaged] = useState(!!propStagedUrl);
+  const [showStaged, setShowStaged] = useState(showStagedByDefault && !!propStagedUrl);
   const [error, setError] = useState<string | null>(null);
 
   // Update showStaged when prop changes
   useEffect(() => {
-    if (propStagedUrl) {
-      setShowStaged(true);
-    }
-  }, [propStagedUrl]);
+    setShowStaged(showStagedByDefault && !!propStagedUrl);
+  }, [propStagedUrl, showStagedByDefault]);
 
   const handleStage = async () => {
     if (!onStage) return;
@@ -49,20 +49,11 @@ export default function StagedImage({
     }
   };
 
-  const handleUnstage = async () => {
-    if (!onUnstage) return;
-    
-    try {
-      await onUnstage(mediaId);
-      setShowStaged(false);
-    } catch (err: any) {
-      setError(err.message || 'Failed to remove staging');
-      console.error('Unstage error:', err);
-    }
-  };
-
   const toggleView = () => {
-    setShowStaged(!showStaged);
+    const newShowStaged = !showStaged;
+    setShowStaged(newShowStaged);
+    // Notify parent of the toggle so it can persist the choice
+    onToggleView?.(mediaId, newShowStaged);
   };
 
   const currentUrl = (showStaged && propStagedUrl) ? propStagedUrl : originalUrl;

@@ -22,6 +22,9 @@ export default function ListingPage() {
   // Staging state - store staged URLs for each image index
   const [stagedImages, setStagedImages] = useState<{[key: number]: string}>({});
   
+  // View preferences - track user's last chosen view (original or staged) for each image
+  const [viewPreferences, setViewPreferences] = useState<{[key: number]: boolean}>({});
+  
   // AI Description generation state
   const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
   const [generatedDescription, setGeneratedDescription] = useState<string>('');
@@ -166,6 +169,12 @@ export default function ListingPage() {
         ...prev,
         [imageIndex]: data.staged_url,
       }));
+      
+      // Auto-show the staged version when staging
+      setViewPreferences(prev => ({
+        ...prev,
+        [imageIndex]: true
+      }));
     } catch (error: any) {
       console.error('❌ Staging error:', error);
       
@@ -191,12 +200,9 @@ export default function ListingPage() {
   };
 
   const handleUnstageImage = async (imageIndex: number) => {
-    // Remove staged version
-    setStagedImages(prev => {
-      const newStaged = { ...prev };
-      delete newStaged[imageIndex];
-      return newStaged;
-    });
+    // Just toggle the view - don't actually delete the staged version
+    // This is now a view toggle, not a deletion
+    // The StagedImage component handles the toggle internally via onToggleView callback
   };
 
   const handleGenerateDescription = async () => {
@@ -515,13 +521,13 @@ export default function ListingPage() {
     const files = event.target.files;
     if (!files || files.length === 0) return;
 
-    // Check total upload limit (10 max)
-    const currentTotal = uploadedImages.length + allImages.length;
+    // Check upload limit - only count manually uploaded files (10 max), not scraped images
+    const uploadedCount = uploadedImages.length;
     const newFilesCount = Array.from(files).filter(f => f.type.startsWith('image/') || f.type.startsWith('video/')).length;
     
-    if (currentTotal + newFilesCount > 10) {
-      const remaining = Math.max(0, 10 - currentTotal);
-      alert(`Maximum 10 media files allowed. You can upload ${remaining} more file${remaining !== 1 ? 's' : ''}.`);
+    if (uploadedCount + newFilesCount > 10) {
+      const remaining = Math.max(0, 10 - uploadedCount);
+      alert(`Maximum 10 uploads allowed. You can upload ${remaining} more file${remaining !== 1 ? 's' : ''}.`);
       // Reset file input
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
@@ -561,6 +567,10 @@ export default function ListingPage() {
   };
 
   const handleRemoveImage = (indexToRemove: number) => {
+    // Ask for confirmation before deleting
+    const confirmed = window.confirm('Are you sure you want to delete this image? This action cannot be undone.');
+    if (!confirmed) return;
+    
     // Add to removed set
     setRemovedImageIndices(prev => new Set([...prev, indexToRemove]));
     
@@ -643,8 +653,15 @@ export default function ListingPage() {
                 stagedUrl={stagedImages[currentImageIndex] || null}
                 mediaId={`image-${currentImageIndex}`}
                 alt={`Property - ${currentImageIndex + 1}`}
+                showStagedByDefault={viewPreferences[currentImageIndex] === true}
+                onToggleView={(mediaId, showStaged) => {
+                  // Save the user's view preference
+                  setViewPreferences(prev => ({
+                    ...prev,
+                    [currentImageIndex]: showStaged
+                  }));
+                }}
                 onStage={async () => await handleStageImage(currentImageIndex)}
-                onUnstage={async () => await handleUnstageImage(currentImageIndex)}
                 className="property-main-image"
               />
               <div className="image-controls">
@@ -678,13 +695,39 @@ export default function ListingPage() {
                   .filter((_, idx) => !removedImageIndices.has(idx))
                   .length;
                 
+                // Get the display URL - use staged if available and user prefers it
+                const stagedUrl = stagedImages[displayIdx];
+                const shouldShowStaged = viewPreferences[displayIdx] === true && !!stagedUrl;
+                const displayUrl = shouldShowStaged ? stagedUrl : image;
+                
                 return (
                   <div 
                     key={originalIdx} 
                     className={`thumbnail ${displayIdx === currentImageIndex ? 'active' : ''}`}
                     onClick={() => setCurrentImageIndex(displayIdx)}
                   >
-                    <img src={image} alt={`View ${displayIdx + 1}`} />
+                    <img src={displayUrl} alt={`View ${displayIdx + 1}`} />
+                    {/* Staged badge */}
+                    {stagedUrl && shouldShowStaged && (
+                      <div style={{
+                        position: 'absolute',
+                        top: '4px',
+                        left: '4px',
+                        background: 'rgba(17, 24, 39, 0.9)',
+                        color: 'white',
+                        padding: '2px 6px',
+                        borderRadius: '4px',
+                        fontSize: '10px',
+                        fontWeight: 600,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        zIndex: 10,
+                      }}>
+                        <Wand2 size={10} />
+                        <span>AI</span>
+                      </div>
+                    )}
                     <button
                       className="thumbnail-remove-btn"
                       onClick={(e) => {
@@ -697,8 +740,8 @@ export default function ListingPage() {
                   </div>
                 );
               })}
-              {/* Upload button - only show if under limit */}
-              {allImages.length < 10 && (
+              {/* Upload button - only show if under upload limit (10 uploads max, not counting scraped) */}
+              {uploadedImages.length < 10 && (
               <div 
                 className="thumbnail upload-thumbnail"
                 onClick={() => fileInputRef.current?.click()}
@@ -743,7 +786,7 @@ export default function ListingPage() {
                 )}
               </div>
               )}
-              {allImages.length >= 10 && (
+              {uploadedImages.length >= 10 && (
                 <div style={{
                   height: '100px',
                   borderRadius: '12px',
@@ -757,7 +800,7 @@ export default function ListingPage() {
                   textAlign: 'center',
                   padding: '8px'
                 }}>
-                  Max 10 files reached
+                  Max 10 uploads reached
                 </div>
               )}
             </div>

@@ -92,7 +92,7 @@ export default function AddProperty() {
   
   // Configuration state
   const [propertyType, setPropertyType] = useState('apartment'); // Auto-detected, not shown to user
-  const [rentType, setRentType] = useState('per_room');
+  const [rentType, setRentType] = useState('per_property'); // Default to whole property
   const [totalRooms, setTotalRooms] = useState(1);
   const [perRoomRent, setPerRoomRent] = useState<number>(0);
   const [manualRent, setManualRent] = useState<string>('');
@@ -820,50 +820,6 @@ export default function AddProperty() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <button
               type="button"
-              onClick={() => setRentType('per_room')}
-                      style={{
-                padding: '1.5rem',
-                borderRadius: '16px',
-                border: rentType === 'per_room' ? '3px solid #2563eb' : '2px solid #e5e7eb',
-                background: rentType === 'per_room' ? 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)' : 'white',
-                cursor: 'pointer',
-                textAlign: 'center',
-                transition: 'all 0.3s ease',
-                transform: rentType === 'per_room' ? 'scale(1.02)' : 'scale(1)',
-                boxShadow: rentType === 'per_room' ? '0 4px 12px rgba(37, 99, 235, 0.15)' : '0 2px 4px rgba(0, 0, 0, 0.05)'
-              }}
-              onMouseOver={(e) => {
-                if (rentType !== 'per_room') {
-                  e.currentTarget.style.borderColor = '#2563eb';
-                  e.currentTarget.style.transform = 'scale(1.01)';
-                }
-              }}
-              onMouseOut={(e) => {
-                if (rentType !== 'per_room') {
-                  e.currentTarget.style.borderColor = '#e5e7eb';
-                  e.currentTarget.style.transform = 'scale(1)';
-                }
-              }}
-            >
-                <div style={{
-                width: '48px',
-                height: '48px',
-                backgroundColor: rentType === 'per_room' ? '#2563eb' : '#f3f4f6',
-                borderRadius: '12px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                margin: '0 auto 1rem'
-              }}>
-                <Users style={{ width: '24px', height: '24px', color: rentType === 'per_room' ? 'white' : '#6b7280' }} />
-                  </div>
-              <div style={{ fontWeight: 700, color: '#111827', fontSize: '1rem', marginBottom: '0.5rem' }}>Per Room</div>
-              <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
-                Auto-create {totalRooms} rooms
-                </div>
-            </button>
-            <button
-              type="button"
               onClick={() => setRentType('per_property')}
                     style={{
                 padding: '1.5rem',
@@ -905,6 +861,50 @@ export default function AddProperty() {
               <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
                 {isSaleProperty ? 'Enter rent manually' : `$${scrapedPrice.toLocaleString()}/mo`}
                     </div>
+            </button>
+            <button
+              type="button"
+              onClick={() => setRentType('per_room')}
+                      style={{
+                padding: '1.5rem',
+                borderRadius: '16px',
+                border: rentType === 'per_room' ? '3px solid #2563eb' : '2px solid #e5e7eb',
+                background: rentType === 'per_room' ? 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)' : 'white',
+                cursor: 'pointer',
+                textAlign: 'center',
+                transition: 'all 0.3s ease',
+                transform: rentType === 'per_room' ? 'scale(1.02)' : 'scale(1)',
+                boxShadow: rentType === 'per_room' ? '0 4px 12px rgba(37, 99, 235, 0.15)' : '0 2px 4px rgba(0, 0, 0, 0.05)'
+              }}
+              onMouseOver={(e) => {
+                if (rentType !== 'per_room') {
+                  e.currentTarget.style.borderColor = '#2563eb';
+                  e.currentTarget.style.transform = 'scale(1.01)';
+                }
+              }}
+              onMouseOut={(e) => {
+                if (rentType !== 'per_room') {
+                  e.currentTarget.style.borderColor = '#e5e7eb';
+                  e.currentTarget.style.transform = 'scale(1)';
+                }
+              }}
+            >
+                <div style={{
+                width: '48px',
+                height: '48px',
+                backgroundColor: rentType === 'per_room' ? '#2563eb' : '#f3f4f6',
+                borderRadius: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 1rem'
+              }}>
+                <Users style={{ width: '24px', height: '24px', color: rentType === 'per_room' ? 'white' : '#6b7280' }} />
+                  </div>
+              <div style={{ fontWeight: 700, color: '#111827', fontSize: '1rem', marginBottom: '0.5rem' }}>Per Room</div>
+              <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                Auto-create {totalRooms} rooms
+                </div>
             </button>
                 </div>
                         </div>

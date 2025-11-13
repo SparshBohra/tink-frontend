@@ -3,7 +3,8 @@ import { apiClient } from '../lib/api';
 import { Property, Room } from '../lib/types';
 import styles from './NewListingModal.module.css';
 import { getMediaUrl } from '../lib/utils';
-import { Wand2, GripVertical, X, Plus } from 'lucide-react';
+import StagedImage from './StagedImage';
+import { Wand2, GripVertical, X, Plus, Trash2 } from 'lucide-react';
 
 interface NewListingModalProps {
   onClose: () => void;
@@ -18,6 +19,7 @@ interface MediaFile {
   id?: string;
   file: File | null;
   url: string;
+  originalUrl?: string; // Always preserve original URL
   staged_url?: string | null;
   caption: string;
   is_primary: boolean;
@@ -321,10 +323,14 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
             stagedUrl = null;
           }
           
+          // Preserve original URL - use originalUrl from item if available, otherwise imageUrl
+          const originalUrl = item.originalUrl || imageUrl;
+          
           return {
             id: item.id?.toString() || `kept-${index}`,
             file: null as any,
-            url: imageUrl,
+            url: stagedUrl || imageUrl, // Display staged if available, otherwise original
+            originalUrl: originalUrl, // Always preserve original
             staged_url: stagedUrl,
             caption: item.caption || '',
             is_primary: !!item.is_primary,
@@ -371,11 +377,12 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
           return {
             id: media.id?.toString() || `listing-media-${index}`,
             file: null as any,
-            url: originalUrl,
+            url: stagedUrl || originalUrl, // Display staged if available, otherwise original
+            originalUrl: originalUrl, // Always preserve original
             staged_url: stagedUrl,
-          caption: media.caption || '',
-          is_primary: media.is_primary || index === 0,
-          uploading: false
+            caption: media.caption || '',
+            is_primary: media.is_primary || index === 0,
+            uploading: false
           };
         });
         console.log('Loaded listing media:', mediaToLoad);
@@ -396,10 +403,14 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
               : (img?.url || img?.file_url || img);
             const stagedUrl = typeof img === 'object' ? (img.staged_url || null) : null;
             
+            // Preserve original URL
+            const originalUrl = typeof img === 'object' ? (img.originalUrl || imgUrl) : imgUrl;
+            
             return {
               id: `property-image-${index}`,
               file: null as any,
-              url: imgUrl,
+              url: stagedUrl || imgUrl, // Display staged if available, otherwise original
+              originalUrl: originalUrl, // Always preserve original
               staged_url: stagedUrl,
               caption: typeof img === 'object' ? (img.caption || '') : '',
               is_primary: index === 0,
@@ -552,6 +563,7 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
           id: Date.now().toString() + Math.random(),
           file,
           url,
+          originalUrl: url, // Preserve original URL for new uploads (blob URL)
           caption: '',
           is_primary: mediaFiles.length === 0,
           uploading: false
@@ -769,11 +781,14 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
         ? 'http://localhost:8000'
         : 'https://tink.global';
       
+      // Always use original URL for staging (preserve original)
+      const originalImageUrl = media.originalUrl || media.url;
+      
       const response = await fetch(`${baseUrl}/api/listings/stage-image-demo/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          image_url: media.url,
+          image_url: originalImageUrl,
           property_context: propertyContext,
         }),
       });
@@ -799,10 +814,10 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
         throw new Error('AI staging service returned no image. The service may be temporarily unavailable. Please try again in a moment.');
       }
 
-      // Success - update image and clear any errors
+      // Success - update staged URL but preserve original
       setMediaFiles(prev => prev.map(m => 
         m.id === mediaId 
-          ? { ...m, staged_url: data.staged_url, isStaging: false }
+          ? { ...m, staged_url: data.staged_url, originalUrl: m.originalUrl || m.url, isStaging: false }
           : { ...m, isStaging: false }
       ));
       
@@ -876,10 +891,9 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
   };
 
   const handleUnstageImage = (mediaId: string) => {
-    setMediaFiles(prev => prev.map(m => 
-      m.id === mediaId ? { ...m, staged_url: null } : m
-    ));
-    // Note: The staged_url removal from metadata will be handled when the listing is saved
+    // Just toggle the view - don't actually delete the staged version
+    // This is now a view toggle, not a deletion
+    // The StagedImage component handles the toggle internally
   };
 
   const handleSubmit = async () => {
@@ -1661,10 +1675,14 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
 
   // Restore property image to listing
   const handleRestorePropertyImage = (propertyImage: any) => {
+    // Preserve original URL - use originalUrl if available, otherwise url
+    const originalUrl = propertyImage.originalUrl || propertyImage.url;
+    
     const newMediaFile: MediaFile = {
       id: `property-image-${Date.now()}-${propertyImage.originalIndex}`,
       file: null as any,
-      url: propertyImage.url,
+      url: propertyImage.staged_url || propertyImage.url, // Display staged if available
+      originalUrl: originalUrl, // Always preserve original
       staged_url: propertyImage.staged_url || null,
       caption: propertyImage.caption || '',
       is_primary: mediaFiles.length === 0, // Make primary if it's the first image
@@ -1847,62 +1865,19 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
                   >
                   <div className={styles.mediaImage}>
                       <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-                        <img 
-                          src={displayUrl ? getMediaUrl(displayUrl) : 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0zNSA2NUw0NSA1NSw1NSA2NUw3NSA0NUwzNSA2NVoiIGZpbGw9IiNEMUQ1REIiLz4KPGNpcmNsZSBjeD0iNDAiIGN5PSIzNSIgcj0iNSIgZmlsbD0iI0QxRDVEQiIvPgo8L3N2Zz4='} 
-                          alt="Property" 
-                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                          onError={(e) => {
-                            // Fallback to placeholder if image fails to load
-                            (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0zNSA2NUw0NSA1NSw1NSA2NUw3NSA0NUwzNSA2NVoiIGZpbGw9IiNEMUQ1REIiLz4KPGNpcmNsZSBjeD0iNDAiIGN5PSIzNSIgcj0iNSIgZmlsbD0iI0QxRDVEQiIvPgo8L3N2Zz4=';
-                            console.error('Failed to load image:', displayUrl);
+                        {/* Use StagedImage component */}
+                        <StagedImage
+                          originalUrl={getMediaUrl(media.originalUrl || media.url)}
+                          stagedUrl={media.staged_url ? getMediaUrl(media.staged_url) : null}
+                          mediaId={media.id!}
+                          alt={`Property image ${index + 1}`}
+                          onStage={async () => {
+                            await handleStageImage(media.id!, index);
+                          }}
+                          onUnstage={async () => {
+                            handleUnstageImage(media.id!);
                           }}
                         />
-                    {media.is_primary && <div className={styles.primaryBadge}>Featured</div>}
-                        {isStaged && (
-                          <div style={{
-                            position: 'absolute',
-                            top: '8px',
-                            right: '8px',
-                            backgroundColor: 'rgba(37, 99, 235, 0.9)',
-                            color: 'white',
-                            padding: '4px 8px',
-                            borderRadius: '4px',
-                            fontSize: '0.75rem',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px'
-                          }}>
-                            <Wand2 size={12} />
-                            <span>Staged</span>
-                          </div>
-                        )}
-                        {/* Error message overlay */}
-                        {stagingErrors[media.id!] && (
-                          <div style={{
-                            position: 'absolute',
-                            top: '50%',
-                            left: '50%',
-                            transform: 'translate(-50%, -50%)',
-                            backgroundColor: 'rgba(239, 68, 68, 0.95)',
-                            color: 'white',
-                            padding: '12px 16px',
-                            borderRadius: '8px',
-                            fontSize: '0.875rem',
-                            maxWidth: '90%',
-                            textAlign: 'center',
-                            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
-                            zIndex: 10,
-                            border: '1px solid rgba(255, 255, 255, 0.2)'
-                          }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                              <AlertIcon />
-                              <strong>Staging Failed</strong>
-                            </div>
-                            <div style={{ fontSize: '0.8rem', lineHeight: '1.4' }}>
-                              {stagingErrors[media.id!]}
-                            </div>
-                          </div>
-                        )}
                         {/* Drag handle */}
                         <div style={{
                           position: 'absolute',
@@ -1912,66 +1887,72 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
                           color: 'white',
                           padding: '4px',
                           borderRadius: '4px',
-                          cursor: 'grab'
+                          cursor: 'grab',
+                          zIndex: 5
                         }}>
                           <GripVertical size={16} />
                         </div>
-                        {/* Staging button */}
-                        <div style={{
-                          position: 'absolute',
-                          bottom: '8px',
-                          right: '8px',
-                          display: 'flex',
-                          gap: '4px'
-                        }}>
-                          {isStaged && (
-                            <button
-                              type="button"
-                              onClick={() => handleUnstageImage(media.id!)}
-                              style={{
-                                backgroundColor: 'rgba(220, 38, 38, 0.9)',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '4px',
-                                padding: '6px',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center'
-                              }}
-                              title="Remove staging"
-                            >
-                              <X size={16} />
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => handleStageImage(media.id!, index)}
-                            disabled={media.isStaging}
-                            style={{
-                              backgroundColor: media.isStaging ? 'rgba(156, 163, 175, 0.9)' : (stagingErrors[media.id!] ? 'rgba(239, 68, 68, 0.9)' : 'rgba(37, 99, 235, 0.9)'),
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '4px',
-                              padding: '6px',
-                              cursor: media.isStaging ? 'not-allowed' : 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              transition: 'background-color 0.2s ease'
-                            }}
-                            title={stagingErrors[media.id!] ? stagingErrors[media.id!] : (isStaged ? "Regenerate staging" : "Stage with AI")}
-                          >
-                            {media.isStaging ? (
-                              <div style={{ width: '16px', height: '16px', border: '2px solid white', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-                            ) : (
-                              <Wand2 size={16} />
-                            )}
-                          </button>
-                        </div>
+                        {/* Primary badge */}
+                        {media.is_primary && <div className={styles.primaryBadge}>Featured</div>}
                       </div>
                   </div>
                   <div className={styles.mediaControls}>
+                      {/* Delete button with confirmation */}
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const confirmed = window.confirm('Are you sure you want to delete this image? This action cannot be undone.');
+                          if (!confirmed) return;
+                          await handleMediaDelete(media.id!);
+                        }}
+                        style={{
+                          backgroundColor: 'rgba(255,255,255,0.85)',
+                          border: '1px solid rgba(0,0,0,0.55)',
+                          borderRadius: '10px',
+                          width: '32px',
+                          height: '32px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          transition: 'all 0.2s ease',
+                          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.12)',
+                          color: '#ef4444',
+                          padding: 0,
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = 'rgba(239,68,68,0.12)';
+                          e.currentTarget.style.transform = 'scale(1.05)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.85)';
+                          e.currentTarget.style.transform = 'scale(1)';
+                        }}
+                        title="Delete image"
+                      >
+                        <svg 
+                          width="16" 
+                          height="16" 
+                          viewBox="0 0 24 24" 
+                          fill="none" 
+                          stroke="currentColor" 
+                          strokeWidth="2.5" 
+                          strokeLinecap="round" 
+                          strokeLinejoin="round"
+                          style={{ 
+                            transition: 'stroke 0.2s ease',
+                            display: 'block',
+                            flexShrink: 0,
+                            color: 'inherit',
+                            margin: '0 auto'
+                          }}
+                        >
+                          <polyline points="3 6 5 6 21 6"></polyline>
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                          <line x1="10" y1="11" x2="10" y2="17"></line>
+                          <line x1="14" y1="11" x2="14" y2="17"></line>
+                        </svg>
+                      </button>
                       <input 
                         type="text" 
                         placeholder="Add caption..." 

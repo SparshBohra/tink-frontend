@@ -17,6 +17,7 @@ import RentTypeConversionWizard from '../../../components/RentTypeConversionWiza
 import RoomCountEditor from '../../../components/RoomCountEditor';
 import RoomDeletionModal from '../../../components/RoomDeletionModal';
 import EditPropertyModal from '../../../components/EditPropertyModal';
+import StagedImage from '../../../components/StagedImage';
 import { 
   ArrowLeft, 
   Building, 
@@ -95,6 +96,35 @@ export default function PropertyDetails() {
   const [loadingListingForEdit, setLoadingListingForEdit] = useState(false);
   const [uploadingMedia, setUploadingMedia] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+  // Store staged images separately - keyed by image index
+  const [stagedImages, setStagedImages] = useState<{[key: number]: string}>({});
+  // Track which version (original or staged) the user is viewing - keyed by image index
+  const [viewPreferences, setViewPreferences] = useState<{[key: number]: boolean}>({});
+
+  // Load view preferences from localStorage when component mounts
+  useEffect(() => {
+    if (typeof window !== 'undefined' && id) {
+      try {
+        const savedPreferences = localStorage.getItem(`property-${id}-viewPreferences`);
+        if (savedPreferences) {
+          setViewPreferences(JSON.parse(savedPreferences));
+        }
+      } catch (err) {
+        console.error('Failed to load view preferences from localStorage:', err);
+      }
+    }
+  }, [id]);
+
+  // Save view preferences to localStorage whenever they change
+  useEffect(() => {
+    if (typeof window !== 'undefined' && id && Object.keys(viewPreferences).length > 0) {
+      try {
+        localStorage.setItem(`property-${id}-viewPreferences`, JSON.stringify(viewPreferences));
+      } catch (err) {
+        console.error('Failed to save view preferences to localStorage:', err);
+      }
+    }
+  }, [viewPreferences, id]);
 
   // This single useEffect handles both initial data fetching and the refresh after creation.
   useEffect(() => {
@@ -181,6 +211,18 @@ export default function PropertyDetails() {
       const propertyData = await apiClient.getProperty(propertyId);
       console.log('Property data:', propertyData);
       setProperty(propertyData);
+      
+      // Load staged images from property data - preserve original URLs
+      if (propertyData && (propertyData as any).images) {
+        const staged: {[key: number]: string} = {};
+        (propertyData as any).images.forEach((img: any, idx: number) => {
+          // If image is an object with staged_url, store it
+          if (typeof img === 'object' && img?.staged_url) {
+            staged[idx] = img.staged_url;
+          }
+        });
+        setStagedImages(staged);
+      }
 
       const roomsData = await apiClient.getPropertyRooms(propertyId);
       console.log('Rooms data:', roomsData);
@@ -483,24 +525,21 @@ export default function PropertyDetails() {
     }
   };
 
-  // Get staged images from property (only kept ones)
+  // Get staged images from property (only kept ones) - use stagedImages state
   const getStagedImages = () => {
     if (!property || !(property as any).images) return [];
     const images = (property as any).images;
-    // Filter out deleted images and get staged URLs
+    // Return staged URLs from state, preserving original order
     return images
-      .filter((img: any) => {
-        // Skip if image was deleted (check for a deleted flag or null)
-        if (!img) return false;
-        // Get the URL - prefer staged if available
-        const url = typeof img === 'string' ? img : (img?.url || img?.staged_url);
-        return url && url.trim() !== '';
+      .map((img: any, idx: number) => {
+        // Use staged URL if available, otherwise original
+        if (stagedImages[idx]) {
+          return stagedImages[idx];
+        }
+        const originalUrl = typeof img === 'string' ? img : (img?.originalUrl || img?.url);
+        return originalUrl;
       })
-      .map((img: any) => {
-        // Return staged URL if available, otherwise original
-        if (typeof img === 'string') return img;
-        return img?.staged_url || img?.url || img;
-      });
+      .filter((url: string) => url && url.trim() !== '');
   };
 
   const handleCreateListingSubmit = async () => {
@@ -1210,7 +1249,7 @@ export default function PropertyDetails() {
                 }
                 
                 return (
-                  <div style={{ position: 'relative' }} data-manage-listing-dropdown>
+                  <div style={{ position: 'relative', zIndex: 1000 }} data-manage-listing-dropdown>
                     <button
                       onClick={() => setShowManageListingDropdown(!showManageListingDropdown)}
                       style={{
@@ -1225,7 +1264,9 @@ export default function PropertyDetails() {
                         fontSize: '0.875rem',
                         fontWeight: '500',
                         cursor: 'pointer',
-                        transition: 'all 0.2s ease'
+                        transition: 'all 0.2s ease',
+                        position: 'relative',
+                        zIndex: 1001
                       }}
                       onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
                       onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
@@ -1244,7 +1285,7 @@ export default function PropertyDetails() {
                             left: 0,
                             right: 0,
                             bottom: 0,
-                            zIndex: 998
+                            zIndex: 999
                           }}
                           onClick={() => setShowManageListingDropdown(false)}
                         />
@@ -1258,7 +1299,7 @@ export default function PropertyDetails() {
                           borderRadius: '8px',
                           boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
                           minWidth: '180px',
-                          zIndex: 999,
+                          zIndex: 1000,
                           overflow: 'hidden'
                         }}>
                           <button
@@ -1456,134 +1497,127 @@ export default function PropertyDetails() {
                 {Array.isArray((property as any).images) && (property as any).images.length > 0 && (
                   <div>
                     <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr', gap: '8px' }}>
-                      {/* Large primary image - wider with less height */}
-                      <div style={{ position: 'relative', width: '100%', height: '700px', borderRadius: '12px', overflow: 'hidden', border: '1px solid #e5e7eb', background: '#f8fafc' }}>
-                        {/* Image overlay controls (icon-only) - matching listing page style */}
-                        <div style={{ position: 'absolute', top: 12, right: 12, display: 'flex', gap: '8px', zIndex: 2 }}>
-                          <button
-                            onClick={async () => {
-                              if (!property) return;
-                              try {
-                                setIsStaging(true);
-                                const img = (property as any).images[selectedImageIdx];
-                                const imageUrl = typeof img === 'string' ? img : img?.url;
-                                const propContext = {
-                                  type: (property as any).property_type || 'residential',
-                                  bedrooms: (property as any).bedrooms,
-                                  bathrooms: (property as any).bathrooms,
-                                  sqft: (property as any).square_footage,
-                                  price: (property as any).monthly_rent,
-                                  description: (property as any).description || '',
-                                };
-                                const controller = new AbortController();
-                                const timeoutId = setTimeout(() => controller.abort(), 90000);
-                                const baseUrl = typeof window !== 'undefined' && window.location.hostname === 'localhost'
-                                  ? 'http://localhost:8000'
-                                  : 'https://tink.global';
-                                const resp = await fetch(`${baseUrl}/api/listings/stage-image-demo/`, {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ image_url: imageUrl, property_context: propContext }),
-                                  signal: controller.signal,
-                                });
-                                clearTimeout(timeoutId);
-                                if (!resp.ok) {
-                                  const errJson = await resp.json().catch(() => ({}));
-                                  throw new Error(errJson.error || `Failed (${resp.status})`);
+                      {/* Large primary image - using StagedImage component */}
+                      {property.images && property.images.length > 0 && (() => {
+                        const img = (property as any).images[selectedImageIdx];
+                        if (!img) return null;
+                        
+                        // Get original URL - always preserve original
+                        const originalUrl = typeof img === 'string' 
+                          ? getMediaUrl(img) 
+                          : getMediaUrl(img?.originalUrl || img?.url || '');
+                        
+                        // Get staged URL from state
+                        const stagedUrl = stagedImages[selectedImageIdx] ? getMediaUrl(stagedImages[selectedImageIdx]) : null;
+                        
+                        return (
+                          <div style={{ position: 'relative', width: '100%', height: '700px', borderRadius: '12px', overflow: 'hidden', border: '1px solid #e5e7eb', background: '#f8fafc' }}>
+                            <StagedImage
+                              originalUrl={originalUrl}
+                              stagedUrl={stagedUrl}
+                              mediaId={`property-image-${selectedImageIdx}`}
+                              alt={`Property image ${selectedImageIdx + 1}`}
+                              showStagedByDefault={viewPreferences[selectedImageIdx] === true}
+                              onToggleView={(mediaId, showStaged) => {
+                                // Save the user's view preference
+                                setViewPreferences(prev => ({
+                                  ...prev,
+                                  [selectedImageIdx]: showStaged
+                                }));
+                              }}
+                              onStage={async () => {
+                                if (!property) return;
+                                try {
+                                  // Always use original URL for staging
+                                  const img = (property as any).images[selectedImageIdx];
+                                  const originalImageUrl = typeof img === 'string' 
+                                    ? img 
+                                    : (img?.originalUrl || img?.url);
+                                  
+                                  const propContext = {
+                                    type: (property as any).property_type || 'residential',
+                                    bedrooms: (property as any).bedrooms,
+                                    bathrooms: (property as any).bathrooms,
+                                    sqft: (property as any).square_footage,
+                                    price: (property as any).monthly_rent,
+                                    description: (property as any).description || '',
+                                  };
+                                  
+                                  const controller = new AbortController();
+                                  const timeoutId = setTimeout(() => controller.abort(), 90000);
+                                  const baseUrl = typeof window !== 'undefined' && window.location.hostname === 'localhost'
+                                    ? 'http://localhost:8000'
+                                    : 'https://tink.global';
+                                  
+                                  const resp = await fetch(`${baseUrl}/api/listings/stage-image-demo/`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ 
+                                      image_url: originalImageUrl, 
+                                      property_context: propContext 
+                                    }),
+                                    signal: controller.signal,
+                                  });
+                                  
+                                  clearTimeout(timeoutId);
+                                  
+                                  if (!resp.ok) {
+                                    const errJson = await resp.json().catch(() => ({}));
+                                    throw new Error(errJson.error || `Failed (${resp.status})`);
+                                  }
+                                  
+                                  const data = await resp.json();
+                                  if (!data.staged_url) {
+                                    throw new Error('AI staging service returned no image. The service may be temporarily unavailable. Please try again in a moment.');
+                                  }
+                                  
+                                  // Store staged URL in state (preserve original)
+                                  setStagedImages(prev => ({
+                                    ...prev,
+                                    [selectedImageIdx]: data.staged_url,
+                                  }));
+                                  
+                                  // When staging, auto-show the staged version
+                                  setViewPreferences(prev => ({
+                                    ...prev,
+                                    [selectedImageIdx]: true
+                                  }));
+                                  
+                                  // Update property images array to include staged_url while preserving original
+                                  const newImages = (property as any).images.map((im: any, i: number) => {
+                                    if (i === selectedImageIdx) {
+                                      if (typeof im === 'string') {
+                                        // Convert string to object with original and staged
+                                        return {
+                                          originalUrl: im,
+                                          url: im,
+                                          staged_url: data.staged_url,
+                                        };
+                                      } else {
+                                        // Preserve originalUrl, update staged_url
+                                        return {
+                                          ...(im || {}),
+                                          originalUrl: im?.originalUrl || im?.url || im,
+                                          url: im?.url || im,
+                                          staged_url: data.staged_url,
+                                        };
+                                      }
+                                    }
+                                    return im;
+                                  });
+                                  
+                                  const updated = await apiClient.updateProperty(property.id, { images: newImages } as any);
+                                  setProperty(updated);
+                                } catch (e: any) {
+                                  const errorMessage = e.message || 'Failed to stage image. The AI service may be temporarily unavailable. Please try again in a moment.';
+                                  throw new Error(errorMessage);
                                 }
-                                const data = await resp.json();
-                                if (!data.staged_url) {
-                                  throw new Error('AI staging service returned no image. The service may be temporarily unavailable. Please try again in a moment.');
-                                }
-                                // Replace the selected image and persist
-                                const newImages = (property as any).images.map((im: any, i: number) =>
-                                  i === selectedImageIdx ? (typeof im === 'string' ? data.staged_url : { ...(im || {}), url: data.staged_url, isStaged: true }) : im
-                                );
-                                const updated = await apiClient.updateProperty(property.id, { images: newImages } as any);
-                                setProperty(updated);
-                              } catch (e: any) {
-                                // Check for rate limit or cooldown errors
-                                const errorMessage = e.message || 'Failed to stage image. The AI service may be temporarily unavailable. Please try again in a moment.';
-                                const isRateLimit = errorMessage.toLowerCase().includes('rate limit') ||
-                                                   errorMessage.toLowerCase().includes('cooldown') ||
-                                                   errorMessage.toLowerCase().includes('quota') ||
-                                                   errorMessage.toLowerCase().includes('temporarily unavailable');
-                                
-                                const friendlyMessage = isRateLimit
-                                  ? 'AI service is temporarily unavailable due to rate limits. Please try again in a few moments.'
-                                  : errorMessage;
-                                
-                                // Show user-friendly error without disrupting the page
-                                alert(friendlyMessage);
-                                console.error('Staging error:', e);
-                              } finally {
-                                setIsStaging(false);
-                              }
-                            }}
-                            disabled={isStaging}
-                            className="stage-btn"
-                            title="Stage with AI — adds furniture/lighting without changing layout"
-                          >
-                            <Wand2 size={18} />
-                          </button>
-                          <button
-                            onClick={async () => {
-                              if (!property) return;
-                              const confirmed = window.confirm('Delete this image from the property?');
-                              if (!confirmed) return;
-                              const newImages = (property as any).images.filter((_: any, i: number) => i !== selectedImageIdx);
-                              const updated = await apiClient.updateProperty(property.id, { images: newImages } as any);
-                              setProperty(updated);
-                              setSelectedImageIdx(0);
-                            }}
-                            className="remove-btn"
-                            title="Delete image"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        </div>
-                         {property.images && property.images.length > 0 && (
-                           (() => {
-                             const img = (property as any).images[selectedImageIdx];
-                             if (!img) return null; // Guard against undefined image
-                             const imgUrl = typeof img === 'string' ? img : img?.url;
-                             const processedUrl = getMediaUrl(imgUrl || '');
-                             const fallback = typeof img === 'object' ? img?.originalUrl : undefined;
-                             
-                             return <img 
-                               key={selectedImageIdx} // Force re-render when index changes
-                               src={processedUrl} 
-                               alt="Primary" 
-                               style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} 
-                               referrerPolicy="no-referrer"
-                               onError={(e) => handleImageError(e, fallback)}
-                             />;
-                           })()
-                         )}
-                         
-                         {/* Staging Overlay Animation - matching listing page */}
-                         {isStaging && (
-                           <div className="staging-overlay">
-                             <div className="staging-spinner">
-                               <div className="wand-animation">
-                                 <Wand2 size={48} className="wand-icon" />
-                                 <div className="sparkles">
-                                   <div className="sparkle sparkle-1"></div>
-                                   <div className="sparkle sparkle-2"></div>
-                                   <div className="sparkle sparkle-3"></div>
-                                   <div className="sparkle sparkle-4"></div>
-                                 </div>
-                               </div>
-                               <p className="staging-text">Staging with AI...</p>
-                               <div className="progress-dots">
-                                 <span className="dot"></span>
-                                 <span className="dot"></span>
-                                 <span className="dot"></span>
-                               </div>
-                             </div>
-                           </div>
-                         )}
-                       </div>
+                              }}
+                              className="property-main-image"
+                            />
+                          </div>
+                        );
+                      })()}
                        {/* Thumbnails - scrollable within main image height */}
                        <div style={{ 
                          display: 'flex',
@@ -1646,14 +1680,20 @@ export default function PropertyDetails() {
                            paddingRight: (property as any).images.length > 5 ? '4px' : '0'
                          }}>
                            {(property as any).images.map((img: any, idx: number) => {
-                             const imgUrl = typeof img === 'string' ? img : img?.url;
-                             const processedUrl = getMediaUrl(imgUrl || '');
+                             // Use staged URL if available, otherwise original
+                             const stagedUrl = stagedImages[idx];
+                             const originalUrl = typeof img === 'string' 
+                               ? img 
+                               : (img?.originalUrl || img?.url);
+                             // Use the stored view preference if available, otherwise show staged if available
+                             const shouldShowStaged = viewPreferences[idx] !== false && !!stagedUrl;
+                             const displayUrl = shouldShowStaged ? getMediaUrl(stagedUrl) : getMediaUrl(originalUrl || '');
                              const fallback = typeof img === 'object' ? img?.originalUrl : undefined;
                              const isActive = selectedImageIdx === idx;
+                             
                              return (
                                <div 
                                  key={idx}
-                                 onClick={() => setSelectedImageIdx(idx)}
                                  style={{ 
                                    position: 'relative', 
                                    width: '100%', 
@@ -1668,7 +1708,116 @@ export default function PropertyDetails() {
                                  }}
                                  title="Click to view"
                                >
-                                 <img src={processedUrl} alt={`Property image ${idx + 1}`} referrerPolicy="no-referrer" onError={(e) => handleImageError(e, fallback)} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                                 <div
+                                   onClick={() => setSelectedImageIdx(idx)}
+                                   style={{ position: 'absolute', inset: 0 }}
+                                 >
+                                   <img 
+                                     src={displayUrl} 
+                                     alt={`Property image ${idx + 1}`} 
+                                     referrerPolicy="no-referrer" 
+                                     onError={(e) => handleImageError(e, fallback)} 
+                                     style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} 
+                                   />
+                                 </div>
+                                 {/* Delete button on thumbnail */}
+                                 <button
+                                   onClick={async (e) => {
+                                     e.stopPropagation();
+                                     if (!property) return;
+                                     const confirmed = window.confirm('Are you sure you want to delete this image? This action cannot be undone.');
+                                     if (!confirmed) return;
+                                     
+                                     // Remove from staged images if exists
+                                     setStagedImages(prev => {
+                                       const newStaged = { ...prev };
+                                       delete newStaged[idx];
+                                       return newStaged;
+                                     });
+                                     
+                                     // Remove from property images
+                                     const newImages = (property as any).images.filter((_: any, i: number) => i !== idx);
+                                     const updated = await apiClient.updateProperty(property.id, { images: newImages } as any);
+                                     setProperty(updated);
+                                     
+                                     // Adjust selected index if needed
+                                     if (selectedImageIdx >= newImages.length) {
+                                       setSelectedImageIdx(Math.max(0, newImages.length - 1));
+                                     }
+                                   }}
+                                   style={{
+                                     position: 'absolute',
+                                     top: '8px',
+                                     right: '8px',
+                                     width: '28px',
+                                     height: '28px',
+                                     borderRadius: '10px',
+                                     border: '1px solid rgba(0,0,0,0.55)',
+                                     background: 'rgba(255,255,255,0.85)',
+                                     display: 'flex',
+                                     alignItems: 'center',
+                                     justifyContent: 'center',
+                                     cursor: 'pointer',
+                                     zIndex: 10,
+                                     transition: 'all 0.2s ease',
+                                     boxShadow: '0 2px 8px rgba(0, 0, 0, 0.12)',
+                                     color: '#ef4444',
+                                     padding: 0,
+                                   }}
+                                   onMouseEnter={(e) => {
+                                     e.currentTarget.style.background = 'rgba(239,68,68,0.12)';
+                                     e.currentTarget.style.transform = 'scale(1.05)';
+                                   }}
+                                   onMouseLeave={(e) => {
+                                     e.currentTarget.style.background = 'rgba(255,255,255,0.85)';
+                                     e.currentTarget.style.transform = 'scale(1)';
+                                   }}
+                                   title="Delete image"
+                                 >
+                                  <svg 
+                                    width="16" 
+                                    height="16" 
+                                    viewBox="0 0 24 24" 
+                                    fill="none" 
+                                    stroke="currentColor" 
+                                    strokeWidth="2.5" 
+                                    strokeLinecap="round" 
+                                    strokeLinejoin="round"
+                                    style={{ 
+                                      transition: 'stroke 0.2s ease',
+                                      display: 'block',
+                                      flexShrink: 0,
+                                      color: 'inherit',
+                                      margin: '0 auto'
+                                    }}
+                                  >
+                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                    <line x1="10" y1="11" x2="10" y2="17"></line>
+                                    <line x1="14" y1="11" x2="14" y2="17"></line>
+                                  </svg>
+                                 </button>
+                                 {/* Staged badge */}
+                                 {stagedUrl && (
+                                   <div style={{
+                                     position: 'absolute',
+                                     top: '4px',
+                                     left: '4px',
+                                     background: 'rgba(17, 24, 39, 0.9)',
+                                     color: 'white',
+                                     padding: '2px 6px',
+                                     borderRadius: '4px',
+                                     fontSize: '10px',
+                                     fontWeight: 600,
+                                     display: 'flex',
+                                     alignItems: 'center',
+                                     gap: '4px',
+                                     zIndex: 10,
+                                   }}>
+                                     <Wand2 size={10} />
+                                     <span>AI</span>
+                                   </div>
+                                 )}
                                </div>
                              );
                            })}
@@ -1768,10 +1917,10 @@ export default function PropertyDetails() {
                     <DetailItem label="Lot Size (sqft)" value={`${(property as any).lot_size_sqft ?? '—'}`} />
                   </div>
 
-                  {/* Amenities list */}
-                  <div>
-                    <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#111827', marginBottom: '0.75rem' }}>Amenities</div>
-                    {Array.isArray((property as any).amenities) && (property as any).amenities.length > 0 ? (
+                  {/* Amenities list - only show if amenities exist */}
+                  {Array.isArray((property as any).amenities) && (property as any).amenities.length > 0 && (
+                    <div>
+                      <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#111827', marginBottom: '0.75rem' }}>Amenities</div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                         {(property as any).amenities.slice(0, 20).map((a: string, i: number) => (
                           <span key={i} style={{
@@ -1786,10 +1935,8 @@ export default function PropertyDetails() {
                           }}>{a}</span>
                         ))}
                       </div>
-                    ) : (
-                      <div style={{ color: '#6b7280', fontSize: '0.875rem' }}>No amenities provided</div>
-                    )}
-                  </div>
+                    </div>
+                  )}
 
                   {/* Additional Scraped Information */}
                   {((property as any).nearby_places && Object.keys((property as any).nearby_places).length > 0) ||
@@ -1827,22 +1974,41 @@ export default function PropertyDetails() {
                         </div>
                       )}
 
-                      {/* Nearby Places */}
-                      {(property as any).nearby_places && Object.keys((property as any).nearby_places).length > 0 && (
-                        <div style={{ marginBottom: '1rem' }}>
-                          <div style={{ fontSize: '0.875rem', fontWeight: 500, color: '#6b7280', marginBottom: '0.5rem' }}>Nearby Places</div>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                            {Object.entries((property as any).nearby_places).slice(0, 10).map(([category, places]: [string, any]) => (
-                              <div key={category}>
-                                <span style={{ fontSize: '0.875rem', fontWeight: 500, color: '#111827', textTransform: 'capitalize' }}>{category}: </span>
-                                <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>
-                                  {Array.isArray(places) ? places.slice(0, 5).join(', ') : String(places)}
-                                </span>
-                              </div>
-                            ))}
+                      {/* Nearby Places - filter out neighborhood and similar_listings */}
+                      {(property as any).nearby_places && Object.keys((property as any).nearby_places).length > 0 && (() => {
+                        const filteredPlaces = Object.entries((property as any).nearby_places).filter(([key]) => {
+                          const lowerKey = key.toLowerCase();
+                          return lowerKey !== 'neighborhood' && lowerKey !== 'similar_listings' && lowerKey !== 'similar listings';
+                        });
+                        return filteredPlaces.length > 0 ? (
+                          <div style={{ marginBottom: '1rem' }}>
+                            <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#111827', marginBottom: '0.75rem' }}>Nearby Places</div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '0.75rem', backgroundColor: '#f9fafb', borderRadius: '8px' }}>
+                              {filteredPlaces.slice(0, 10).map(([category, places]: [string, any]) => {
+                                // Format category name (replace underscores with spaces, capitalize)
+                                const formattedCategory = category
+                                  .replace(/_/g, ' ')
+                                  .split(' ')
+                                  .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                                  .join(' ');
+                                
+                                const placesList = Array.isArray(places) 
+                                  ? places.filter(p => p && String(p).trim()).slice(0, 5).join(', ')
+                                  : (places && String(places).trim() ? String(places) : null);
+                                
+                                if (!placesList) return null;
+                                
+                                return (
+                                  <div key={category}>
+                                    <span style={{ fontSize: '0.875rem', fontWeight: 500, color: '#111827' }}>{formattedCategory}: </span>
+                                    <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>{placesList}</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        ) : null;
+                      })()}
 
                       {/* Schools */}
                       {Array.isArray((property as any).schools) && (property as any).schools.length > 0 && (
