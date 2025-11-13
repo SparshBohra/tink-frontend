@@ -900,7 +900,7 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
                             fontSize: '0.875rem',
                             fontWeight: '600'
                           }}>
-                            {formatPrice(room.monthly_rent)}/month
+                            {formatPrice(room.monthly_rent)}{room.monthly_rent && room.monthly_rent > 20000 ? '' : '/month'}
                           </span>
                       </div>
                         <div style={{

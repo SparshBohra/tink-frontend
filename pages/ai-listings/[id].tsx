@@ -225,7 +225,7 @@ export default function ListingPage() {
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
               <div className="text-4xl font-bold text-indigo-600 mb-6">
                 {formatPrice(listing.pricing.price)}
-                <span className="text-lg text-gray-600 font-normal">/month</span>
+                {listing.pricing.price > 20000 ? '' : <span className="text-lg text-gray-600 font-normal">/month</span>}
               </div>
               
               <div className="grid grid-cols-3 gap-6 mb-6">

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
-import { MapPin, Bed, Bath, Maximize, DollarSign, Heart, Share2, Calendar, Shield, Zap, Wand2, RotateCcw, Upload, Plus } from 'lucide-react';
+import { MapPin, Bed, Bath, Maximize, DollarSign, Heart, Share2, Calendar, Shield, Zap, Wand2, RotateCcw, Upload, Plus, Download } from 'lucide-react';
 import StagedImage from '../components/StagedImage';
 import Walkthrough from '../components/Walkthrough';
 
@@ -484,6 +484,24 @@ export default function ListingPage() {
     setShowIntegrationModal(true);
   };
 
+  const handleDownloadImage = async (imageUrl: string, index: number) => {
+    try {
+      const response = await fetch(imageUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `property-image-${index + 1}.jpg`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Failed to download image:', error);
+      alert('Failed to download image. Please try again.');
+    }
+  };
+
   const handleAuthRedirect = (mode: 'login' | 'signup') => {
     // Ensure data is saved right before redirect as well
     savePendingPropertyData();
@@ -680,6 +698,13 @@ export default function ListingPage() {
                   ›
                 </button>
               </div>
+              <button
+                className="download-image-btn"
+                onClick={() => handleDownloadImage(displayListing.images[currentImageIndex], currentImageIndex)}
+                title="Download image"
+              >
+                <Download size={18} />
+              </button>
               <div className="image-counter">
                 {currentImageIndex + 1} / {displayListing.images.length}
               </div>
@@ -728,6 +753,17 @@ export default function ListingPage() {
                         <span>AI</span>
                       </div>
                     )}
+                    <button
+                      className="thumbnail-download-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDownloadImage(image, displayIdx);
+                      }}
+                      aria-label="Download image"
+                      title="Download image"
+                    >
+                      <Download size={14} />
+                    </button>
                     <button
                       className="thumbnail-remove-btn"
                       onClick={(e) => {
@@ -809,7 +845,7 @@ export default function ListingPage() {
           {/* Listing Details */}
           <div className="details-section">
             <div className="listing-header">
-              <div className="listing-type-badge">{displayListing.type}</div>
+              <div className="listing-type-badge">{(editedPrice || displayListing.price) > 20000 ? 'FOR SALE' : 'FOR RENT'}</div>
               <div className="listing-actions">
                 <button className="action-btn" onClick={handleHeartOrShareClick}>
                   <Heart size={20} />
@@ -831,13 +867,13 @@ export default function ListingPage() {
                     className="price-input"
                     autoFocus
                   />
-                  <span className="price-period">/mo</span>
+                  <span className="price-period">{editedPrice > 20000 ? '' : '/mo'}</span>
                   <button onClick={handlePriceSave} className="price-save-btn" title="Save">✓</button>
                   <button onClick={handlePriceCancel} className="price-cancel-btn" title="Cancel">✕</button>
                 </div>
               ) : (
                 <div className="listing-price">
-                  ${(editedPrice || displayListing.price).toLocaleString()}/mo
+                  ${(editedPrice || displayListing.price).toLocaleString()}{(editedPrice || displayListing.price) > 20000 ? '' : '/mo'}
                   <button onClick={handlePriceEdit} className="price-edit-btn" title="Edit price">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path>
@@ -1593,6 +1629,10 @@ export default function ListingPage() {
           opacity: 1;
         }
 
+        .thumbnail:hover .thumbnail-download-btn {
+          opacity: 1;
+        }
+
         .thumbnail.active {
           border-color: #1877F2;
         }
@@ -1657,6 +1697,72 @@ export default function ListingPage() {
         }
 
         .thumbnail-remove-btn:active {
+          transform: scale(0.95);
+        }
+
+        .thumbnail-download-btn {
+          position: absolute;
+          top: 8px;
+          left: 8px;
+          width: 24px;
+          height: 24px;
+          border: 1.5px solid rgba(255, 255, 255, 0.2);
+          border-radius: 50%;
+          background: rgba(15, 23, 42, 0.7);
+          color: #60a5fa;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          opacity: 0;
+          transition: all 0.2s ease-in-out;
+          backdrop-filter: blur(4px);
+          -webkit-backdrop-filter: blur(4px);
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+          flex-shrink: 0;
+          z-index: 2;
+        }
+
+        .thumbnail-download-btn:hover {
+          background: rgba(15, 23, 42, 0.9);
+          border-color: rgba(96, 165, 250, 0.4);
+          transform: scale(1.1);
+          color: #93c5fd;
+        }
+
+        .thumbnail-download-btn:active {
+          transform: scale(0.95);
+        }
+
+        .download-image-btn {
+          position: absolute;
+          top: 1rem;
+          right: 1rem;
+          width: 44px;
+          height: 44px;
+          border: 1.5px solid rgba(255, 255, 255, 0.2);
+          border-radius: 50%;
+          background: rgba(15, 23, 42, 0.7);
+          color: #60a5fa;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.2s ease-in-out;
+          backdrop-filter: blur(4px);
+          -webkit-backdrop-filter: blur(4px);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+          z-index: 10;
+        }
+
+        .download-image-btn:hover {
+          background: rgba(15, 23, 42, 0.9);
+          border-color: rgba(96, 165, 250, 0.4);
+          transform: scale(1.1);
+          color: #93c5fd;
+        }
+
+        .download-image-btn:active {
           transform: scale(0.95);
         }
 
@@ -2028,6 +2134,7 @@ export default function ListingPage() {
           line-height: 1.7;
           color: #475569;
           margin: 0;
+          white-space: pre-line;
         }
 
         .amenities-grid {
