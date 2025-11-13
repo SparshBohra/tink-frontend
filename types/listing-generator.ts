@@ -32,3 +32,7 @@ export interface AgentThought {
 export type AppState = 'input' | 'thinking' | 'preview' | 'platforms' | 'success';
 
 
+
+
+
+

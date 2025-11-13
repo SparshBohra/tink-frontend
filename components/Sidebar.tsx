@@ -72,21 +72,47 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
     const sidebar = event.currentTarget as HTMLElement;
     const relatedTarget = event.relatedTarget;
     
-    // If the mouse is moving to a child element, don't collapse
+    // If the mouse is moving to a child element (like dropdown), don't collapse
     if (relatedTarget && relatedTarget instanceof Node && sidebar.contains(relatedTarget)) {
       return;
     }
     
-    if (!isClickControlled && isHoverExpanded) {
-      // Don't collapse if dropdowns are open
-      if (showPropertiesDropdown || showPeopleDropdown) {
+    // Also check if moving to dropdown (which is outside sidebar but part of the interaction)
+    const propertiesDropdown = document.querySelector('.properties-dropdown') as HTMLElement;
+    const peopleDropdown = document.querySelector('.people-dropdown') as HTMLElement;
+    if (relatedTarget && relatedTarget instanceof Node) {
+      if ((propertiesDropdown && propertiesDropdown.contains(relatedTarget)) ||
+          (peopleDropdown && peopleDropdown.contains(relatedTarget))) {
         return;
       }
-      
+    }
+    
+    if (!isClickControlled && isHoverExpanded) {
+      // Add delay before closing to allow navigation to dropdowns
       hoverTimeoutRef.current = setTimeout(() => {
-        setIsHoverExpanded(false);
-        setIsCollapsingFromSubmenu(false); // Reset flag when collapsing from main sidebar
-      }, 200); // Reduced delay for more responsive feel
+        // Double-check we're not hovering over dropdowns before closing
+        const stillHoveringProperties = propertiesDropdown && propertiesDropdown.matches(':hover');
+        const stillHoveringPeople = peopleDropdown && peopleDropdown.matches(':hover');
+        const stillHoveringSidebar = sidebar.matches(':hover');
+        
+        if (!stillHoveringSidebar && !stillHoveringProperties && !stillHoveringPeople) {
+          // Clear any pending dropdown timeouts since we're leaving
+          if (propertiesTimeoutRef.current) {
+            clearTimeout(propertiesTimeoutRef.current);
+            propertiesTimeoutRef.current = null;
+          }
+          if (peopleTimeoutRef.current) {
+            clearTimeout(peopleTimeoutRef.current);
+            peopleTimeoutRef.current = null;
+          }
+          
+          // Close dropdowns when leaving sidebar
+          setShowPropertiesDropdown(false);
+          setShowPeopleDropdown(false);
+          setIsHoverExpanded(false);
+          setIsCollapsingFromSubmenu(false);
+        }
+      }, 300); // Longer delay to allow navigation
     }
   };
 
@@ -228,11 +254,26 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
     setShowPeopleDropdown(false);
   };
 
-  const handlePropertiesMouseLeave = () => {
-    // Add a small delay to allow moving to submenu
+  const handlePropertiesMouseLeave = (event: React.MouseEvent) => {
+    // Check if mouse is moving toward the dropdown
+    const relatedTarget = event.relatedTarget;
+    
+    // If moving directly to dropdown, don't close
+    if (relatedTarget && relatedTarget instanceof Node) {
+      const dropdown = document.querySelector('.properties-dropdown') as HTMLElement;
+      if (dropdown && dropdown.contains(relatedTarget)) {
+        return;
+      }
+    }
+    
+    // Add a longer delay to allow moving to submenu (accounting for mouse movement angle)
     propertiesTimeoutRef.current = setTimeout(() => {
-      setShowPropertiesDropdown(false);
-    }, 150);
+      // Double-check dropdown is still not being hovered before closing
+      const dropdown = document.querySelector('.properties-dropdown') as HTMLElement;
+      if (!dropdown || !dropdown.matches(':hover')) {
+        setShowPropertiesDropdown(false);
+      }
+    }, 500); // Increased to 500ms for much more lenient navigation
   };
 
   const handlePropertiesDropdownEnter = () => {
@@ -252,17 +293,36 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
     setShowPropertiesDropdown(true);
   };
 
-  const handlePropertiesDropdownLeave = () => {
-    setShowPropertiesDropdown(false);
+  const handlePropertiesDropdownLeave = (event: React.MouseEvent) => {
+    // Check if mouse is moving back to sidebar or menu item
+    const relatedTarget = event.relatedTarget;
+    const sidebar = document.querySelector('.sidebar') as HTMLElement;
     
-    // If sidebar is hover-expanded and not click-controlled, collapse it
-    if (isHoverExpanded && !isClickControlled) {
-      setIsCollapsingFromSubmenu(true);
-      hoverTimeoutRef.current = setTimeout(() => {
-        setIsHoverExpanded(false);
-        setIsCollapsingFromSubmenu(false);
-      }, 200);
+    // If moving back to sidebar or menu item, keep dropdown open briefly
+    if (relatedTarget && relatedTarget instanceof Node && sidebar && sidebar.contains(relatedTarget)) {
+      // Don't close immediately - let the menu item handler manage it
+      return;
     }
+    
+    // Add delay before closing dropdown to allow navigation back
+    propertiesTimeoutRef.current = setTimeout(() => {
+      // Double-check we're not hovering over sidebar or dropdown before closing
+      const stillHoveringSidebar = sidebar && sidebar.matches(':hover');
+      const stillHoveringDropdown = document.querySelector('.properties-dropdown')?.matches(':hover');
+      
+      if (!stillHoveringSidebar && !stillHoveringDropdown) {
+        setShowPropertiesDropdown(false);
+        
+        // If sidebar is hover-expanded and not click-controlled, collapse it
+        if (isHoverExpanded && !isClickControlled) {
+          setIsCollapsingFromSubmenu(true);
+          hoverTimeoutRef.current = setTimeout(() => {
+            setIsHoverExpanded(false);
+            setIsCollapsingFromSubmenu(false);
+          }, 200);
+        }
+      }
+    }, 300); // Delay before closing to allow navigation
   };
 
   // Hover handlers for People dropdown
@@ -281,11 +341,26 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
     setShowPropertiesDropdown(false);
   };
 
-  const handlePeopleMouseLeave = () => {
-    // Add a small delay to allow moving to submenu
+  const handlePeopleMouseLeave = (event: React.MouseEvent) => {
+    // Check if mouse is moving toward the dropdown
+    const relatedTarget = event.relatedTarget;
+    
+    // If moving directly to dropdown, don't close
+    if (relatedTarget && relatedTarget instanceof Node) {
+      const dropdown = document.querySelector('.people-dropdown') as HTMLElement;
+      if (dropdown && dropdown.contains(relatedTarget)) {
+        return;
+      }
+    }
+    
+    // Add a longer delay to allow moving to submenu (accounting for mouse movement angle)
     peopleTimeoutRef.current = setTimeout(() => {
-      setShowPeopleDropdown(false);
-    }, 150);
+      // Double-check dropdown is still not being hovered before closing
+      const dropdown = document.querySelector('.people-dropdown') as HTMLElement;
+      if (!dropdown || !dropdown.matches(':hover')) {
+        setShowPeopleDropdown(false);
+      }
+    }, 500); // Increased to 500ms for much more lenient navigation
   };
 
   const handlePeopleDropdownEnter = () => {
@@ -305,17 +380,36 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
     setShowPeopleDropdown(true);
   };
 
-  const handlePeopleDropdownLeave = () => {
-    setShowPeopleDropdown(false);
+  const handlePeopleDropdownLeave = (event: React.MouseEvent) => {
+    // Check if mouse is moving back to sidebar or menu item
+    const relatedTarget = event.relatedTarget;
+    const sidebar = document.querySelector('.sidebar') as HTMLElement;
     
-    // If sidebar is hover-expanded and not click-controlled, collapse it
-    if (isHoverExpanded && !isClickControlled) {
-      setIsCollapsingFromSubmenu(true);
-      hoverTimeoutRef.current = setTimeout(() => {
-        setIsHoverExpanded(false);
-        setIsCollapsingFromSubmenu(false);
-      }, 200);
+    // If moving back to sidebar or menu item, keep dropdown open briefly
+    if (relatedTarget && relatedTarget instanceof Node && sidebar && sidebar.contains(relatedTarget)) {
+      // Don't close immediately - let the menu item handler manage it
+      return;
     }
+    
+    // Add delay before closing dropdown to allow navigation back
+    peopleTimeoutRef.current = setTimeout(() => {
+      // Double-check we're not hovering over sidebar or dropdown before closing
+      const stillHoveringSidebar = sidebar && sidebar.matches(':hover');
+      const stillHoveringDropdown = document.querySelector('.people-dropdown')?.matches(':hover');
+      
+      if (!stillHoveringSidebar && !stillHoveringDropdown) {
+        setShowPeopleDropdown(false);
+        
+        // If sidebar is hover-expanded and not click-controlled, collapse it
+        if (isHoverExpanded && !isClickControlled) {
+          setIsCollapsingFromSubmenu(true);
+          hoverTimeoutRef.current = setTimeout(() => {
+            setIsHoverExpanded(false);
+            setIsCollapsingFromSubmenu(false);
+          }, 200);
+        }
+      }
+    }, 300); // Delay before closing to allow navigation
   };
 
   // SVG Icons
@@ -485,7 +579,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
               className="nav-item-container" 
               ref={item.path === '/properties' ? dropdownRef : item.path === '/tenants' ? peopleDropdownRef : undefined}
               onMouseEnter={item.path === '/properties' ? handlePropertiesMouseEnter : item.path === '/tenants' ? handlePeopleMouseEnter : undefined}
-              onMouseLeave={item.path === '/properties' ? handlePropertiesMouseLeave : item.path === '/tenants' ? handlePeopleMouseLeave : undefined}
+              onMouseLeave={item.path === '/properties' ? (e) => handlePropertiesMouseLeave(e) : item.path === '/tenants' ? (e) => handlePeopleMouseLeave(e) : undefined}
             >
               <button
                 ref={item.path === '/properties' ? propertiesNavRef : item.path === '/tenants' ? peopleNavRef : undefined}
@@ -517,7 +611,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                   className={`properties-dropdown ${isCollapsed && !isHoverExpanded ? 'collapsed' : ''}`}
                   style={{ top: `${dropdownPosition.top}px` }}
                   onMouseEnter={handlePropertiesDropdownEnter}
-                  onMouseLeave={handlePropertiesDropdownLeave}
+                  onMouseLeave={(e) => handlePropertiesDropdownLeave(e)}
                 >
                   <div className="dropdown-content">
                     <div className="dropdown-options">
@@ -567,7 +661,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                   className={`people-dropdown ${isCollapsed && !isHoverExpanded ? 'collapsed' : ''}`}
                   style={{ top: `${peopleDropdownPosition.top}px` }}
                   onMouseEnter={handlePeopleDropdownEnter}
-                  onMouseLeave={handlePeopleDropdownLeave}
+                  onMouseLeave={(e) => handlePeopleDropdownLeave(e)}
                 >
                   <div className="dropdown-content">
                     <div className="dropdown-options">
@@ -906,7 +1000,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         .people-dropdown {
           position: fixed;
           top: auto;
-          left: 250px; /* Aligns with expanded sidebar */
+          left: 260px; /* More spacing from sidebar */
           width: 320px;
           background: #1e293b;
           border: 1px solid rgba(255, 255, 255, 0.1);
@@ -921,7 +1015,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
 
         .properties-dropdown.collapsed,
         .people-dropdown.collapsed {
-          left: 80px; /* Provides spacing from collapsed sidebar */
+          left: 90px; /* More spacing when collapsed */
         }
 
         .dropdown-content {

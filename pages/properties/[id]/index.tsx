@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -16,6 +16,7 @@ import { calculatePropertyRevenue, getOccupancyStats as getOccupancyStatsUtil, f
 import RentTypeConversionWizard from '../../../components/RentTypeConversionWizard';
 import RoomCountEditor from '../../../components/RoomCountEditor';
 import RoomDeletionModal from '../../../components/RoomDeletionModal';
+import EditPropertyModal from '../../../components/EditPropertyModal';
 import { 
   ArrowLeft, 
   Building, 
@@ -34,8 +35,15 @@ import {
   AlertTriangle,
   Settings,
   RefreshCw,
-  MoreHorizontal
+  MoreHorizontal,
+  Wand2,
+  X,
+  Check,
+  Loader,
+  ChevronDown,
+  ExternalLink
 } from 'lucide-react';
+import { getMediaUrl } from '../../../lib/utils';
 
 // Small helper component for labeled values in the Property Details section
 const DetailItem = ({ label, value }: { label: string; value: any }) => (
@@ -58,6 +66,10 @@ export default function PropertyDetails() {
   const [selectedRoomForAssignment, setSelectedRoomForAssignment] = useState<Room | null>(null);
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [showListingModal, setShowListingModal] = useState(false);
+  const [showListingFlow, setShowListingFlow] = useState(false);
+  const [availableFrom, setAvailableFrom] = useState<string>('');
+  const [selectedRoomsForListing, setSelectedRoomsForListing] = useState<number[]>([]);
+  const [creatingListing, setCreatingListing] = useState(false);
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [listingLoading, setListingLoading] = useState(false);
   const [listingSuccess, setListingSuccess] = useState<string | null>(null);
@@ -71,8 +83,18 @@ export default function PropertyDetails() {
   const [roomCountEditorOpen, setRoomCountEditorOpen] = useState(false);
   const [showAllHistory, setShowAllHistory] = useState(false);
   const [paymentHistory, setPaymentHistory] = useState<any[]>([]);
+  const [showEditPropertyModal, setShowEditPropertyModal] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [selectedImageIdx, setSelectedImageIdx] = useState(0);
+  const [isStaging, setIsStaging] = useState(false);
+  const [isGeneratingDesc, setIsGeneratingDesc] = useState(false);
+  const [propertyListings, setPropertyListings] = useState<any[]>([]);
+  const [showManageListingDropdown, setShowManageListingDropdown] = useState(false);
+  const [showEditListingModal, setShowEditListingModal] = useState(false);
+  const [editingListing, setEditingListing] = useState<any>(null);
+  const [loadingListingForEdit, setLoadingListingForEdit] = useState(false);
+  const [uploadingMedia, setUploadingMedia] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
   // This single useEffect handles both initial data fetching and the refresh after creation.
   useEffect(() => {
@@ -98,6 +120,50 @@ export default function PropertyDetails() {
       }
     }
   }, [id]); // Dependency on `id` ensures this runs when the router is ready.
+
+  // Refresh listings when page becomes visible (user navigates back)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && id && property) {
+        // Refresh listings when user comes back to the page
+        const refreshListings = async () => {
+          try {
+            const listingsResponse = await apiClient.getListings();
+            const allListings = listingsResponse.results || [];
+            const propertyId = typeof id === 'string' ? parseInt(id) : id;
+            const updatedPropertyListings = allListings.filter((listing: any) => {
+              const listingPropertyId = typeof listing.property_ref === 'object' 
+                ? listing.property_ref?.id 
+                : listing.property_ref;
+              return listingPropertyId === propertyId;
+            });
+            setPropertyListings(updatedPropertyListings);
+          } catch (err) {
+            console.error('Error refreshing listings on visibility change:', err);
+          }
+        };
+        refreshListings();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [id, property]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showManageListingDropdown) {
+        const target = event.target as HTMLElement;
+        if (!target.closest('[data-manage-listing-dropdown]')) {
+          setShowManageListingDropdown(false);
+        }
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showManageListingDropdown]);
 
   const fetchPropertyData = async () => {
     // Add guard here to prevent running with an invalid ID
@@ -125,6 +191,25 @@ export default function PropertyDetails() {
       
       const leasesResponse = await apiClient.getLeases();
       setLeases(leasesResponse.results || []);
+
+      // Fetch listings for this property
+      try {
+        const listingsResponse = await apiClient.getListings();
+        const allListings = listingsResponse.results || [];
+        console.log('All listings:', allListings.map((l: any) => ({ id: l.id, property_ref: l.property_ref, title: l.title })));
+        const propertyListings = allListings.filter((listing: any) => {
+          // Handle both number and object property_ref
+          const listingPropertyId = typeof listing.property_ref === 'object' 
+            ? listing.property_ref?.id 
+            : listing.property_ref;
+          return listingPropertyId === propertyId;
+        });
+        console.log(`Found ${propertyListings.length} listings for property ${propertyId}:`, propertyListings.map((l: any) => ({ id: l.id, title: l.title })));
+        setPropertyListings(propertyListings);
+      } catch (err) {
+        console.error('Error fetching listings:', err);
+        // Don't fail the whole page if listings fail
+      }
 
     } catch (err: any) {
       console.error('Error fetching property data:', err);
@@ -299,8 +384,225 @@ export default function PropertyDetails() {
     setRoomCountEditorOpen(false);
   };
 
+  // Get the first active listing for this property
+  const getFirstListing = () => {
+    if (!propertyListings || propertyListings.length === 0 || !property) return null;
+    
+    // Filter listings that match this property
+    const propertyId = property.id;
+    const matchingListings = propertyListings.filter((l: any) => {
+      const listingPropertyId = typeof l.property_ref === 'object' 
+        ? l.property_ref?.id 
+        : l.property_ref;
+      return listingPropertyId === propertyId;
+    });
+    
+    if (matchingListings.length === 0) return null;
+    
+    // Prefer active listings, otherwise return the first one
+    const activeListing = matchingListings.find((l: any) => l.status === 'active' || l.is_active);
+    return activeListing || matchingListings[0];
+  };
+
   const handleCreateListing = () => {
-    router.push('/listings');
+    const existingListing = getFirstListing();
+    if (existingListing) {
+      // If listing exists, open the public listing page in a new tab
+      window.open(`/listings/${existingListing.public_slug || existingListing.id}`, '_blank');
+    } else {
+      // Otherwise, show create flow
+      setShowListingFlow(true);
+      // Initialize available_from to today's date
+      const today = new Date().toISOString().split('T')[0];
+      setAvailableFrom(today);
+      // Initialize selected rooms to all available rooms if per_room
+      if (property?.rent_type === 'per_room') {
+        setSelectedRoomsForListing(rooms.map(r => r.id));
+      }
+    }
+  };
+
+  const handleEditListing = async () => {
+    const existingListing = getFirstListing();
+    if (!existingListing) return;
+    
+    setLoadingListingForEdit(true);
+    setShowManageListingDropdown(false);
+    
+    try {
+      // Fetch full listing data for editing
+      const fullListingData = await apiClient.getListing(existingListing.id);
+      setEditingListing(fullListingData);
+      setShowEditListingModal(true);
+    } catch (err: any) {
+      console.error('Failed to fetch listing for editing:', err);
+      setError(err.message || 'Failed to load listing for editing.');
+    } finally {
+      setLoadingListingForEdit(false);
+    }
+  };
+
+  const handleEditListingSuccess = async (refreshedListing?: any) => {
+    setShowEditListingModal(false);
+    setEditingListing(null);
+    // Refresh listings to get updated data (including newly uploaded media)
+    try {
+      const listingsResponse = await apiClient.getListings();
+      const allListings = listingsResponse.results || [];
+      const propertyId = property?.id;
+      if (propertyId) {
+        const updatedPropertyListings = allListings.filter((listing: any) => {
+          const listingPropertyId = typeof listing.property_ref === 'object' 
+            ? listing.property_ref?.id 
+            : listing.property_ref;
+          return listingPropertyId === propertyId;
+        });
+        setPropertyListings(updatedPropertyListings);
+      }
+    } catch (err) {
+      console.error('Error refreshing listings after edit:', err);
+    }
+    await fetchPropertyData();
+  };
+
+  // Upload property media (images/videos)
+  const handleUploadPropertyMedia = async (files: FileList | null) => {
+    if (!property || !files || files.length === 0) return;
+    try {
+      setUploadingMedia(true);
+      const fileArr = Array.from(files);
+      await apiClient.uploadPropertyMedia(property.id, fileArr);
+      // Refresh property data to get new images/videos
+      await fetchPropertyData();
+    } catch (e) {
+      console.error('Failed to upload property media', e);
+      alert('Failed to upload files. Please try again.');
+    } finally {
+      setUploadingMedia(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  // Get staged images from property (only kept ones)
+  const getStagedImages = () => {
+    if (!property || !(property as any).images) return [];
+    const images = (property as any).images;
+    // Filter out deleted images and get staged URLs
+    return images
+      .filter((img: any) => {
+        // Skip if image was deleted (check for a deleted flag or null)
+        if (!img) return false;
+        // Get the URL - prefer staged if available
+        const url = typeof img === 'string' ? img : (img?.url || img?.staged_url);
+        return url && url.trim() !== '';
+      })
+      .map((img: any) => {
+        // Return staged URL if available, otherwise original
+        if (typeof img === 'string') return img;
+        return img?.staged_url || img?.url || img;
+      });
+  };
+
+  const handleCreateListingSubmit = async () => {
+    if (!property) return;
+    
+    if (!availableFrom) {
+      setError('Please select an available from date.');
+      return;
+    }
+
+    if (property.rent_type === 'per_room' && selectedRoomsForListing.length === 0) {
+      setError('Please select at least one room.');
+      return;
+    }
+
+    setCreatingListing(true);
+    setError(null);
+
+    try {
+      // Get staged images
+      const stagedImages = getStagedImages();
+      
+      // Get description from property
+      const description = (property as any).description || '';
+      
+      // Build listing data
+      const listingData: any = {
+        property_ref: property.id,
+        title: property.name,
+        description: description,
+        listing_type: property.rent_type === 'per_room' ? 'rooms' : 'whole_property',
+        available_from: availableFrom,
+        application_form_config: {
+          steps: {
+            basic_info: { enabled: true, mandatory: true },
+            contact_info: { enabled: true, mandatory: true }
+          },
+          global_settings: {
+            application_fee: 0,
+            minimum_income_ratio: 3,
+            required_documents: [],
+            allow_save_and_continue: true,
+            mobile_optimized: true
+          }
+        }
+      };
+
+      // Add rooms if per_room
+      if (property.rent_type === 'per_room') {
+        listingData.available_rooms = selectedRoomsForListing;
+      }
+
+      // Create listing
+      const newListing = await apiClient.createListing(listingData);
+      
+      // Upload images if we have staged images
+      if (stagedImages.length > 0 && newListing.id) {
+        // Note: Image upload would happen here via separate API call if needed
+        // For now, images are stored in property and can be referenced
+      }
+
+      // Immediately add the new listing to state so button updates right away
+      setPropertyListings(prev => {
+        // Check if listing already exists (shouldn't, but just in case)
+        const exists = prev.some((l: any) => l.id === newListing.id);
+        if (!exists) {
+          return [...prev, { ...newListing, property_ref: property.id }];
+        }
+        return prev;
+      });
+
+      // Refresh listings to update the button BEFORE redirecting
+      try {
+        const listingsResponse = await apiClient.getListings();
+        const allListings = listingsResponse.results || [];
+        const propertyId = property.id;
+        const updatedPropertyListings = allListings.filter((listing: any) => {
+          // Handle both number and object property_ref
+          const listingPropertyId = typeof listing.property_ref === 'object' 
+            ? listing.property_ref?.id 
+            : listing.property_ref;
+          return listingPropertyId === propertyId;
+        });
+        console.log(`Refreshed: Found ${updatedPropertyListings.length} listings for property ${propertyId}`);
+        setPropertyListings(updatedPropertyListings);
+      } catch (err) {
+        console.error('Error refreshing listings:', err);
+        // State already updated with new listing above, so button will still show correctly
+      }
+      
+      // Update state immediately so button shows correctly if user stays on page
+      setListingSuccess('Listing created successfully!');
+      setShowListingFlow(false);
+      setCreatingListing(false); // Hide loading overlay immediately
+      
+      // Open in new tab immediately
+      window.open(`/listings/${newListing.public_slug || newListing.id}`, '_blank');
+    } catch (err: any) {
+      console.error('Failed to create listing:', err);
+      setError(err.message || 'Failed to create listing. Please try again.');
+      setCreatingListing(false);
+    }
   };
 
   const handleDeleteRoom = (roomId: number, roomName: string) => {
@@ -542,13 +844,17 @@ export default function PropertyDetails() {
     const allActions = {
       // Listing/Marketing actions (high priority when vacant)
       createListing: {
-        title: 'Create Listing',
-        subtitle: isPerProperty ? 'List entire property' : 'List available rooms',
+        title: getFirstListing() ? 'View Listing' : 'Create Listing',
+        subtitle: getFirstListing() ? 'View public listing page' : (isPerProperty ? 'List entire property' : 'List available rooms'),
         icon: (
+          getFirstListing() ? (
+            <Eye width={20} height={20} />
+          ) : (
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
             <polyline points="9,22 9,12 15,12 15,22"/>
           </svg>
+          )
         ),
         color: 'orange',
         onClick: handleCreateListing,
@@ -701,17 +1007,19 @@ export default function PropertyDetails() {
       
       // Only show listing actions if there are vacant rooms
       if (hasVacantRooms) {
+        const existingListing = getFirstListing();
         actions.push(
           <button key="create-listing" className="btn btn-secondary" onClick={handleCreateListing}>
-            Create Listing
+            {existingListing ? 'View Listing' : 'Create Listing'}
           </button>
         );
       }
     } else {
       // When no active tenants, prioritize marketing/listing actions
+      const existingListing = getFirstListing();
       actions.push(
         <button key="create-listing" className="btn btn-primary" onClick={handleCreateListing}>
-          Create Listing
+          {existingListing ? 'View Listing' : 'Create Listing'}
         </button>
       );
       actions.push(
@@ -785,18 +1093,6 @@ export default function PropertyDetails() {
               >
                 <ArrowLeft style={{ width: '1.25rem', height: '1.25rem', color: '#6b7280' }} />
               </button>
-              <div style={{
-                width: '3rem',
-                height: '3rem',
-                backgroundColor: '#2563eb',
-                borderRadius: '12px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0
-              }}>
-                <Building style={{ width: '1.5rem', height: '1.5rem', color: 'white' }} />
-              </div>
               <div>
                 <h1 style={{
                   fontSize: '1.875rem',
@@ -861,7 +1157,7 @@ export default function PropertyDetails() {
                 Refresh
                 </button>
                 <button 
-                onClick={() => router.push(`/properties/${property?.id}/edit`)}
+                onClick={() => setShowEditPropertyModal(true)}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -882,14 +1178,20 @@ export default function PropertyDetails() {
                 <Edit style={{ width: '1rem', height: '1rem' }} />
                 Edit Property
               </button>
+              {(() => {
+                const existingListing = getFirstListing();
+                const hasListing = !!existingListing;
+                
+                if (!hasListing) {
+                  return (
               <button
-                onClick={() => setShowListingModal(true)}
+                      onClick={handleCreateListing}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.5rem',
                   padding: '0.5rem 0.75rem',
-                  backgroundColor: '#16a34a',
+                        backgroundColor: '#2563eb',
                   color: 'white',
                   border: 'none',
                   borderRadius: '6px',
@@ -898,12 +1200,140 @@ export default function PropertyDetails() {
                   cursor: 'pointer',
                   transition: 'all 0.2s ease'
                 }}
-                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#15803d'}
-                onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#16a34a'}
+                      onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
+                      onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
               >
                 <Plus style={{ width: '1rem', height: '1rem' }} />
                 Create Listing
+                    </button>
+                  );
+                }
+                
+                return (
+                  <div style={{ position: 'relative' }} data-manage-listing-dropdown>
+                    <button
+                      onClick={() => setShowManageListingDropdown(!showManageListingDropdown)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        padding: '0.5rem 0.75rem',
+                        backgroundColor: '#2563eb',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '0.875rem',
+                        fontWeight: '500',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
+                      onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+                    >
+                      <Settings style={{ width: '1rem', height: '1rem' }} />
+                      Manage Listing
+                      <ChevronDown style={{ width: '0.875rem', height: '0.875rem' }} />
+                    </button>
+                    
+                    {showManageListingDropdown && (
+                      <>
+                        <div
+                          style={{
+                            position: 'fixed',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            zIndex: 998
+                          }}
+                          onClick={() => setShowManageListingDropdown(false)}
+                        />
+                        <div style={{
+                          position: 'absolute',
+                          top: '100%',
+                          right: 0,
+                          marginTop: '0.5rem',
+                          backgroundColor: 'white',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                          minWidth: '180px',
+                          zIndex: 999,
+                          overflow: 'hidden'
+                        }}>
+                          <button
+                            onClick={() => {
+                              setShowManageListingDropdown(false);
+                              window.open(`/listings/${existingListing.public_slug || existingListing.id}`, '_blank');
+                            }}
+                            style={{
+                              width: '100%',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.75rem',
+                              padding: '0.75rem 1rem',
+                              backgroundColor: 'white',
+                              border: 'none',
+                              borderBottom: '1px solid #e5e7eb',
+                              cursor: 'pointer',
+                              fontSize: '0.875rem',
+                              color: '#374151',
+                              transition: 'background-color 0.2s',
+                              textAlign: 'left'
+                            }}
+                            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
+                            onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                          >
+                            <Eye style={{ width: '1rem', height: '1rem', color: '#6b7280' }} />
+                            <span>View Listing</span>
+                            <ExternalLink style={{ width: '0.75rem', height: '0.75rem', color: '#9ca3af', marginLeft: 'auto' }} />
+                          </button>
+                          <button
+                            onClick={handleEditListing}
+                            disabled={loadingListingForEdit}
+                            style={{
+                              width: '100%',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.75rem',
+                              padding: '0.75rem 1rem',
+                              backgroundColor: loadingListingForEdit ? '#f3f4f6' : 'white',
+                              border: 'none',
+                              cursor: loadingListingForEdit ? 'not-allowed' : 'pointer',
+                              fontSize: '0.875rem',
+                              color: loadingListingForEdit ? '#9ca3af' : '#374151',
+                              transition: 'background-color 0.2s',
+                              textAlign: 'left'
+                            }}
+                            onMouseOver={(e) => {
+                              if (!loadingListingForEdit) {
+                                e.currentTarget.style.backgroundColor = '#f9fafb';
+                              }
+                            }}
+                            onMouseOut={(e) => {
+                              if (!loadingListingForEdit) {
+                                e.currentTarget.style.backgroundColor = 'white';
+                              }
+                            }}
+                          >
+                            {loadingListingForEdit ? (
+                              <>
+                                <Loader style={{ width: '1rem', height: '1rem', color: '#9ca3af', animation: 'spin 1s linear infinite' }} />
+                                <span>Loading...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Edit style={{ width: '1rem', height: '1rem', color: '#6b7280' }} />
+                                <span>Edit Listing</span>
+                              </>
+                            )}
                 </button>
+              </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })()}
               </div>
             </div>
           </div>
@@ -1028,16 +1458,101 @@ export default function PropertyDetails() {
                     <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr', gap: '8px' }}>
                       {/* Large primary image - wider with less height */}
                       <div style={{ position: 'relative', width: '100%', height: '700px', borderRadius: '12px', overflow: 'hidden', border: '1px solid #e5e7eb', background: '#f8fafc' }}>
+                        {/* Image overlay controls (icon-only) - matching listing page style */}
+                        <div style={{ position: 'absolute', top: 12, right: 12, display: 'flex', gap: '8px', zIndex: 2 }}>
+                          <button
+                            onClick={async () => {
+                              if (!property) return;
+                              try {
+                                setIsStaging(true);
+                                const img = (property as any).images[selectedImageIdx];
+                                const imageUrl = typeof img === 'string' ? img : img?.url;
+                                const propContext = {
+                                  type: (property as any).property_type || 'residential',
+                                  bedrooms: (property as any).bedrooms,
+                                  bathrooms: (property as any).bathrooms,
+                                  sqft: (property as any).square_footage,
+                                  price: (property as any).monthly_rent,
+                                  description: (property as any).description || '',
+                                };
+                                const controller = new AbortController();
+                                const timeoutId = setTimeout(() => controller.abort(), 90000);
+                                const baseUrl = typeof window !== 'undefined' && window.location.hostname === 'localhost'
+                                  ? 'http://localhost:8000'
+                                  : 'https://tink.global';
+                                const resp = await fetch(`${baseUrl}/api/listings/stage-image-demo/`, {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ image_url: imageUrl, property_context: propContext }),
+                                  signal: controller.signal,
+                                });
+                                clearTimeout(timeoutId);
+                                if (!resp.ok) {
+                                  const errJson = await resp.json().catch(() => ({}));
+                                  throw new Error(errJson.error || `Failed (${resp.status})`);
+                                }
+                                const data = await resp.json();
+                                if (!data.staged_url) {
+                                  throw new Error('AI staging service returned no image. The service may be temporarily unavailable. Please try again in a moment.');
+                                }
+                                // Replace the selected image and persist
+                                const newImages = (property as any).images.map((im: any, i: number) =>
+                                  i === selectedImageIdx ? (typeof im === 'string' ? data.staged_url : { ...(im || {}), url: data.staged_url, isStaged: true }) : im
+                                );
+                                const updated = await apiClient.updateProperty(property.id, { images: newImages } as any);
+                                setProperty(updated);
+                              } catch (e: any) {
+                                // Check for rate limit or cooldown errors
+                                const errorMessage = e.message || 'Failed to stage image. The AI service may be temporarily unavailable. Please try again in a moment.';
+                                const isRateLimit = errorMessage.toLowerCase().includes('rate limit') ||
+                                                   errorMessage.toLowerCase().includes('cooldown') ||
+                                                   errorMessage.toLowerCase().includes('quota') ||
+                                                   errorMessage.toLowerCase().includes('temporarily unavailable');
+                                
+                                const friendlyMessage = isRateLimit
+                                  ? 'AI service is temporarily unavailable due to rate limits. Please try again in a few moments.'
+                                  : errorMessage;
+                                
+                                // Show user-friendly error without disrupting the page
+                                alert(friendlyMessage);
+                                console.error('Staging error:', e);
+                              } finally {
+                                setIsStaging(false);
+                              }
+                            }}
+                            disabled={isStaging}
+                            className="stage-btn"
+                            title="Stage with AI — adds furniture/lighting without changing layout"
+                          >
+                            <Wand2 size={18} />
+                          </button>
+                          <button
+                            onClick={async () => {
+                              if (!property) return;
+                              const confirmed = window.confirm('Delete this image from the property?');
+                              if (!confirmed) return;
+                              const newImages = (property as any).images.filter((_: any, i: number) => i !== selectedImageIdx);
+                              const updated = await apiClient.updateProperty(property.id, { images: newImages } as any);
+                              setProperty(updated);
+                              setSelectedImageIdx(0);
+                            }}
+                            className="remove-btn"
+                            title="Delete image"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
                          {property.images && property.images.length > 0 && (
                            (() => {
                              const img = (property as any).images[selectedImageIdx];
                              if (!img) return null; // Guard against undefined image
                              const imgUrl = typeof img === 'string' ? img : img?.url;
+                             const processedUrl = getMediaUrl(imgUrl || '');
                              const fallback = typeof img === 'object' ? img?.originalUrl : undefined;
                              
                              return <img 
                                key={selectedImageIdx} // Force re-render when index changes
-                               src={imgUrl} 
+                               src={processedUrl} 
                                alt="Primary" 
                                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} 
                                referrerPolicy="no-referrer"
@@ -1045,42 +1560,119 @@ export default function PropertyDetails() {
                              />;
                            })()
                          )}
+                         
+                         {/* Staging Overlay Animation - matching listing page */}
+                         {isStaging && (
+                           <div className="staging-overlay">
+                             <div className="staging-spinner">
+                               <div className="wand-animation">
+                                 <Wand2 size={48} className="wand-icon" />
+                                 <div className="sparkles">
+                                   <div className="sparkle sparkle-1"></div>
+                                   <div className="sparkle sparkle-2"></div>
+                                   <div className="sparkle sparkle-3"></div>
+                                   <div className="sparkle sparkle-4"></div>
+                                 </div>
+                               </div>
+                               <p className="staging-text">Staging with AI...</p>
+                               <div className="progress-dots">
+                                 <span className="dot"></span>
+                                 <span className="dot"></span>
+                                 <span className="dot"></span>
+                               </div>
+                             </div>
+                           </div>
+                         )}
                        </div>
                        {/* Thumbnails - scrollable within main image height */}
                        <div style={{ 
                          display: 'flex',
                          flexDirection: 'column',
                          gap: '8px',
-                         maxHeight: '700px',
-                         overflowY: 'auto',
-                         paddingRight: (property as any).images.length > 5 ? '4px' : '0'
+                         height: '700px'
                        }}>
-                         {(property as any).images.map((img: any, idx: number) => {
-                           const imgUrl = typeof img === 'string' ? img : img?.url;
-                           const fallback = typeof img === 'object' ? img?.originalUrl : undefined;
-                           const isActive = selectedImageIdx === idx;
-                           return (
-                             <div 
-                               key={idx}
-                               onClick={() => setSelectedImageIdx(idx)}
-                               style={{ 
-                                 position: 'relative', 
-                                 width: '100%', 
-                                 paddingBottom: '66%', 
-                                 borderRadius: '8px', 
-                                 overflow: 'hidden', 
-                                 border: isActive ? '2px solid #2563eb' : '1px solid #e5e7eb', 
-                                 background: '#f8fafc',
-                                 flexShrink: 0,
-                                 cursor: 'pointer',
-                                 boxShadow: isActive ? '0 0 0 3px rgba(37, 99, 235, 0.15)' : 'none'
-                               }}
-                               title="Click to view"
-                             >
-                               <img src={imgUrl} alt={`Property image ${idx + 1}`} referrerPolicy="no-referrer" onError={(e) => handleImageError(e, fallback)} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                         {/* Upload button as fixed mini card (always visible) */}
+                         <div 
+                           onClick={() => fileInputRef.current?.click()}
+                           style={{
+                             width: '100%',
+                             height: '100px',
+                             borderRadius: '12px',
+                             border: '2px dashed #cbd5e1',
+                             display: 'flex',
+                             alignItems: 'center',
+                             justifyContent: 'center',
+                             cursor: 'pointer',
+                             transition: 'all 0.2s',
+                             backgroundColor: '#f8fafc',
+                             flexShrink: 0
+                           }}
+                           onMouseOver={(e) => {
+                             e.currentTarget.style.borderColor = '#2563eb';
+                             e.currentTarget.style.backgroundColor = '#eff6ff';
+                           }}
+                           onMouseOut={(e) => {
+                             e.currentTarget.style.borderColor = '#cbd5e1';
+                             e.currentTarget.style.backgroundColor = '#f8fafc';
+                           }}
+                         >
+                           <input
+                             ref={fileInputRef}
+                             type="file"
+                             multiple
+                             accept="image/*,video/*"
+                             style={{ display: 'none' }}
+                             onChange={(e) => handleUploadPropertyMedia(e.target.files)}
+                           />
+                           {uploadingMedia ? (
+                             <div style={{ textAlign: 'center', color: '#2563eb' }}>
+                               <div style={{ fontSize: '12px', fontWeight: '500' }}>Uploading...</div>
                              </div>
-                           );
-                         })}
+                           ) : (
+                             <div style={{ textAlign: 'center', color: '#64748b' }}>
+                               <Plus size={24} style={{ marginBottom: '4px' }} />
+                               <div style={{ fontSize: '11px', fontWeight: '500' }}>Add Photo</div>
+                             </div>
+                           )}
+                         </div>
+
+                         {/* Scrollable list of thumbnails */}
+                         <div style={{
+                           overflowY: 'auto',
+                           flex: 1,
+                           display: 'flex',
+                           flexDirection: 'column',
+                           gap: '8px',
+                           paddingRight: (property as any).images.length > 5 ? '4px' : '0'
+                         }}>
+                           {(property as any).images.map((img: any, idx: number) => {
+                             const imgUrl = typeof img === 'string' ? img : img?.url;
+                             const processedUrl = getMediaUrl(imgUrl || '');
+                             const fallback = typeof img === 'object' ? img?.originalUrl : undefined;
+                             const isActive = selectedImageIdx === idx;
+                             return (
+                               <div 
+                                 key={idx}
+                                 onClick={() => setSelectedImageIdx(idx)}
+                                 style={{ 
+                                   position: 'relative', 
+                                   width: '100%', 
+                                   paddingBottom: '66%', 
+                                   borderRadius: '8px', 
+                                   overflow: 'hidden', 
+                                   border: isActive ? '2px solid #2563eb' : '1px solid #e5e7eb', 
+                                   background: '#f8fafc',
+                                   flexShrink: 0,
+                                   cursor: 'pointer',
+                                   boxShadow: isActive ? '0 0 0 3px rgba(37, 99, 235, 0.15)' : 'none'
+                                 }}
+                                 title="Click to view"
+                               >
+                                 <img src={processedUrl} alt={`Property image ${idx + 1}`} referrerPolicy="no-referrer" onError={(e) => handleImageError(e, fallback)} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                               </div>
+                             );
+                           })}
+                         </div>
                        </div>
                     </div>
                     {/* Image count indicator if more than 5 */}
@@ -1096,6 +1688,75 @@ export default function PropertyDetails() {
                     )}
                   </div>
                 )}
+
+                {/* Description under gallery with AI generation */}
+                {(property as any).description ? (
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 8 }}>
+                      <div style={{ fontSize: '0.975rem', fontWeight: 700, color: '#111827' }}>Description</div>
+                      <button
+                        onClick={async () => {
+                          if (!property) return;
+                          try {
+                            setIsGeneratingDesc(true);
+                            const baseUrl = typeof window !== 'undefined' && window.location.hostname === 'localhost'
+                              ? 'http://localhost:8000'
+                              : 'https://tink.global';
+                            const resp = await fetch(`${baseUrl}/api/listings/generate-description/`, {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                address: (property as any).full_address || property.name,
+                                type: (property as any).property_type,
+                                bedrooms: (property as any).bedrooms,
+                                bathrooms: (property as any).bathrooms,
+                                sqft: String((property as any).square_footage || ''),
+                                price: (property as any).monthly_rent || '',
+                                amenities: (property as any).amenities || [],
+                                features: {
+                                  lot_size_sqft: (property as any).lot_size_sqft,
+                                  year_built: (property as any).year_built
+                                },
+                                neighborhood: (property as any).neighborhood || {},
+                              }),
+                            });
+                            if (!resp.ok) {
+                              const errJ = await resp.json().catch(() => ({}));
+                              throw new Error(errJ.error || 'Failed to generate description');
+                            }
+                            const data = await resp.json();
+                            const newDesc = data.description || (property as any).description;
+                            const updated = await apiClient.updateProperty(property.id, { description: newDesc } as any);
+                            setProperty(updated);
+                          } catch (e: any) {
+                            alert(e.message || 'Failed to generate description');
+                          } finally {
+                            setIsGeneratingDesc(false);
+                          }
+                        }}
+                        disabled={isGeneratingDesc}
+                        className="generate-description-btn"
+                        title={isGeneratingDesc ? "Generating AI description..." : "Generate AI description — creates compelling copy using property details"}
+                      >
+                        {isGeneratingDesc ? (
+                          <div className="wand-loader">
+                            <Wand2 size={18} className="wand-generating" />
+                            <div className="mini-sparkles">
+                              <span className="mini-sparkle"></span>
+                              <span className="mini-sparkle"></span>
+                              <span className="mini-sparkle"></span>
+                            </div>
+                          </div>
+                        ) : (
+                          <Wand2 size={18} />
+                        )}
+                      </button>
+                    </div>
+                    <p style={{ fontSize: '0.95rem', color: '#374151', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+                      {(property as any).description}
+                    </p>
+                  </div>
+                ) : null}
 
                 {/* Facts and amenities */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -1129,6 +1790,103 @@ export default function PropertyDetails() {
                       <div style={{ color: '#6b7280', fontSize: '0.875rem' }}>No amenities provided</div>
                     )}
                   </div>
+
+                  {/* Additional Scraped Information */}
+                  {((property as any).nearby_places && Object.keys((property as any).nearby_places).length > 0) ||
+                   (property as any).neighborhood ||
+                   (property as any).walkability_score !== null ||
+                   (property as any).transit_score !== null ||
+                   (Array.isArray((property as any).schools) && (property as any).schools.length > 0) ||
+                   (Array.isArray((property as any).price_history) && (property as any).price_history.length > 0) ? (
+                    <div>
+                      <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#111827', marginBottom: '0.75rem' }}>Additional Information</div>
+                      
+                      {/* Neighborhood & Scores */}
+                      {((property as any).neighborhood || (property as any).walkability_score !== null || (property as any).transit_score !== null) && (
+                        <div style={{ marginBottom: '1rem', padding: '0.75rem', backgroundColor: '#f9fafb', borderRadius: '8px' }}>
+                          {(property as any).neighborhood && (
+                            <div style={{ marginBottom: '0.5rem' }}>
+                              <span style={{ fontSize: '0.875rem', fontWeight: 500, color: '#6b7280' }}>Neighborhood: </span>
+                              <span style={{ fontSize: '0.875rem', color: '#111827' }}>{(property as any).neighborhood}</span>
+                            </div>
+                          )}
+                          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                            {(property as any).walkability_score !== null && (
+                              <div>
+                                <span style={{ fontSize: '0.875rem', fontWeight: 500, color: '#6b7280' }}>Walk Score: </span>
+                                <span style={{ fontSize: '0.875rem', color: '#111827', fontWeight: 600 }}>{(property as any).walkability_score}/100</span>
+                              </div>
+                            )}
+                            {(property as any).transit_score !== null && (
+                              <div>
+                                <span style={{ fontSize: '0.875rem', fontWeight: 500, color: '#6b7280' }}>Transit Score: </span>
+                                <span style={{ fontSize: '0.875rem', color: '#111827', fontWeight: 600 }}>{(property as any).transit_score}/100</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Nearby Places */}
+                      {(property as any).nearby_places && Object.keys((property as any).nearby_places).length > 0 && (
+                        <div style={{ marginBottom: '1rem' }}>
+                          <div style={{ fontSize: '0.875rem', fontWeight: 500, color: '#6b7280', marginBottom: '0.5rem' }}>Nearby Places</div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                            {Object.entries((property as any).nearby_places).slice(0, 10).map(([category, places]: [string, any]) => (
+                              <div key={category}>
+                                <span style={{ fontSize: '0.875rem', fontWeight: 500, color: '#111827', textTransform: 'capitalize' }}>{category}: </span>
+                                <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                                  {Array.isArray(places) ? places.slice(0, 5).join(', ') : String(places)}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Schools */}
+                      {Array.isArray((property as any).schools) && (property as any).schools.length > 0 && (
+                        <div style={{ marginBottom: '1rem' }}>
+                          <div style={{ fontSize: '0.875rem', fontWeight: 500, color: '#6b7280', marginBottom: '0.5rem' }}>Nearby Schools</div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                            {(property as any).schools.slice(0, 5).map((school: any, i: number) => (
+                              <div key={i} style={{ fontSize: '0.875rem', color: '#111827' }}>
+                                {typeof school === 'string' ? school : (school.name || school)}
+                                {typeof school === 'object' && school.rating && (
+                                  <span style={{ color: '#6b7280', marginLeft: '0.5rem' }}>(Rating: {school.rating})</span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Price History */}
+                      {Array.isArray((property as any).price_history) && (property as any).price_history.length > 0 && (
+                        <div style={{ marginBottom: '1rem' }}>
+                          <div style={{ fontSize: '0.875rem', fontWeight: 500, color: '#6b7280', marginBottom: '0.5rem' }}>Price History</div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '0.75rem', backgroundColor: '#f9fafb', borderRadius: '8px' }}>
+                            {(property as any).price_history.slice(0, 10).map((entry: any, i: number) => (
+                              <div key={i} style={{ fontSize: '0.875rem', color: '#111827', display: 'flex', justifyContent: 'space-between' }}>
+                                <span>
+                                  {typeof entry === 'object' && entry.date ? (
+                                    <>
+                                      {new Date(entry.date).toLocaleDateString()}: 
+                                      <span style={{ fontWeight: 600, marginLeft: '0.5rem' }}>
+                                        ${typeof entry.price === 'number' ? entry.price.toLocaleString() : entry.price}
+                                      </span>
+                                    </>
+                                  ) : (
+                                    <span>{String(entry)}</span>
+                                  )}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : null}
 
                   {/* Virtual tour */}
                   {(property as any).virtual_tour_url ? (
@@ -1702,12 +2460,7 @@ export default function PropertyDetails() {
                   <div className="section-title-group">
                     <h2 className="section-title">Lease Details</h2>
                     <p className="section-subtitle">This property is leased as a whole unit</p>
-          </div>
-                  {!propertyLevelLease && (
-                    <button onClick={openPropertyAssignment} className="btn btn-primary">
-                      Assign Tenant
-                    </button>
-                  )}
+                  </div>
                 </div>
                 {propertyLevelLease ? (
                   <div className="lease-details">
@@ -1777,7 +2530,8 @@ export default function PropertyDetails() {
         />
       )}
 
-      {isNewApplicationModalOpen && (
+      {/* Modal commented out - using simplified flow instead */}
+      {/* {isNewApplicationModalOpen && (
         <NewListingModal onClose={() => setIsNewApplicationModalOpen(false)} onSuccess={() => setIsNewApplicationModalOpen(false)} />
       )}
 
@@ -1791,6 +2545,348 @@ export default function PropertyDetails() {
           selectedPropertyId={property.id}
           property_name={property.name}
         />
+      )} */}
+
+      {/* Full-screen loading overlay during listing creation and redirect */}
+      {creatingListing && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10000,
+          flexDirection: 'column',
+          gap: '1.5rem'
+        }}>
+          <Loader style={{ width: '3rem', height: '3rem', color: 'white', animation: 'spin 1s linear infinite' }} />
+          <div style={{
+            color: 'white',
+            fontSize: '1.125rem',
+            fontWeight: '600'
+          }}>
+            {listingSuccess ? 'Redirecting to listing page...' : 'Creating listing...'}
+          </div>
+        </div>
+      )}
+
+      {/* Edit Listing Modal */}
+      {showEditListingModal && editingListing && (
+        <NewListingModal
+          onClose={() => {
+            setShowEditListingModal(false);
+            setEditingListing(null);
+          }}
+          onSuccess={handleEditListingSuccess}
+          editMode={true}
+          existingListing={editingListing}
+          property_name={editingListing?.property_details?.name || editingListing?.property_name || property?.name}
+        />
+      )}
+
+      {/* Simplified Listing Creation Flow */}
+      {showListingFlow && property && !creatingListing && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '1rem'
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '16px',
+            maxWidth: '600px',
+            width: '100%',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            {/* Header */}
+            <div style={{
+              padding: '1.5rem',
+              borderBottom: '1px solid #e5e7eb',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <h2 style={{
+                fontSize: '1.25rem',
+                fontWeight: '700',
+                color: '#111827',
+                margin: 0
+              }}>Create Listing</h2>
+              <button
+                onClick={() => setShowListingFlow(false)}
+                style={{
+                  width: '2rem',
+                  height: '2rem',
+                  backgroundColor: '#f3f4f6',
+                  border: 'none',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#e5e7eb'}
+                onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+              >
+                <X style={{ width: '1rem', height: '1rem', color: '#6b7280' }} />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              {error && (
+                <div style={{
+                  backgroundColor: '#fef2f2',
+                  border: '1px solid #fecaca',
+                  borderRadius: '8px',
+                  padding: '1rem',
+                  color: '#dc2626',
+                  fontSize: '0.875rem'
+                }}>
+                  {error}
+                </div>
+              )}
+
+              {listingSuccess && (
+                <div style={{
+                  backgroundColor: '#f0fdf4',
+                  border: '1px solid #86efac',
+                  borderRadius: '8px',
+                  padding: '1rem',
+                  color: '#16a34a',
+                  fontSize: '0.875rem'
+                }}>
+                  {listingSuccess}
+                </div>
+              )}
+
+              {/* Property Preview */}
+              <div style={{
+                backgroundColor: '#f9fafb',
+                borderRadius: '12px',
+                padding: '1rem',
+                border: '1px solid #e5e7eb'
+              }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#6b7280', marginBottom: '0.5rem', textTransform: 'uppercase' }}>
+                  Property
+                </div>
+                <div style={{ fontSize: '1rem', fontWeight: '700', color: '#111827' }}>
+                  {property.name}
+                </div>
+                <div style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                  {(property as any).full_address || property.address_line1}
+                </div>
+                {getStagedImages().length > 0 && (
+                  <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.5rem' }}>
+                    {getStagedImages().length} image{getStagedImages().length !== 1 ? 's' : ''} ready
+                  </div>
+                )}
+              </div>
+
+              {/* Available From Date */}
+              <div>
+                <label style={{
+                  display: 'block',
+                  fontSize: '0.875rem',
+                  fontWeight: '600',
+                  color: '#374151',
+                  marginBottom: '0.5rem'
+                }}>
+                  Available From <span style={{ color: '#dc2626' }}>*</span>
+                </label>
+                <input
+                  type="date"
+                  value={availableFrom}
+                  onChange={(e) => setAvailableFrom(e.target.value)}
+                  min={new Date().toISOString().split('T')[0]}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '2px solid #e5e7eb',
+                    borderRadius: '8px',
+                    fontSize: '0.875rem',
+                    transition: 'all 0.2s ease',
+                    outline: 'none'
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#2563eb';
+                    e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.1)';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#e5e7eb';
+                    e.target.style.boxShadow = 'none';
+                  }}
+                />
+              </div>
+
+              {/* Room Selection (only for per_room properties) */}
+              {property.rent_type === 'per_room' && rooms.length > 0 && (
+                <div>
+                  <label style={{
+                    display: 'block',
+                    fontSize: '0.875rem',
+                    fontWeight: '600',
+                    color: '#374151',
+                    marginBottom: '0.5rem'
+                  }}>
+                    Select Rooms <span style={{ color: '#dc2626' }}>*</span>
+                  </label>
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
+                    gap: '0.75rem',
+                    maxHeight: '200px',
+                    overflowY: 'auto',
+                    padding: '0.5rem',
+                    border: '2px solid #e5e7eb',
+                    borderRadius: '8px'
+                  }}>
+                    {rooms.map((room) => (
+                      <button
+                        key={room.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedRoomsForListing(prev =>
+                            prev.includes(room.id)
+                              ? prev.filter(id => id !== room.id)
+                              : [...prev, room.id]
+                          );
+                        }}
+                        style={{
+                          padding: '0.75rem',
+                          borderRadius: '8px',
+                          border: selectedRoomsForListing.includes(room.id) ? '2px solid #2563eb' : '2px solid #e5e7eb',
+                          background: selectedRoomsForListing.includes(room.id) ? '#eff6ff' : 'white',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          fontSize: '0.875rem',
+                          fontWeight: '500',
+                          color: '#111827'
+                        }}
+                        onMouseOver={(e) => {
+                          if (!selectedRoomsForListing.includes(room.id)) {
+                            e.currentTarget.style.borderColor = '#2563eb';
+                            e.currentTarget.style.backgroundColor = '#f9fafb';
+                          }
+                        }}
+                        onMouseOut={(e) => {
+                          if (!selectedRoomsForListing.includes(room.id)) {
+                            e.currentTarget.style.borderColor = '#e5e7eb';
+                            e.currentTarget.style.backgroundColor = 'white';
+                          }
+                        }}
+                      >
+                        {room.name}
+                      </button>
+                    ))}
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.5rem' }}>
+                    {selectedRoomsForListing.length} room{selectedRoomsForListing.length !== 1 ? 's' : ''} selected
+                  </div>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div style={{
+                display: 'flex',
+                gap: '1rem',
+                marginTop: '1rem',
+                paddingTop: '1.5rem',
+                borderTop: '1px solid #e5e7eb'
+              }}>
+                <button
+                  onClick={() => setShowListingFlow(false)}
+                  disabled={creatingListing}
+                  style={{
+                    flex: 1,
+                    padding: '0.75rem',
+                    backgroundColor: 'white',
+                    color: '#374151',
+                    border: '2px solid #e5e7eb',
+                    borderRadius: '8px',
+                    fontSize: '0.875rem',
+                    fontWeight: '600',
+                    cursor: creatingListing ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseOver={(e) => {
+                    if (!creatingListing) {
+                      e.currentTarget.style.borderColor = '#d1d5db';
+                      e.currentTarget.style.backgroundColor = '#f9fafb';
+                    }
+                  }}
+                  onMouseOut={(e) => {
+                    if (!creatingListing) {
+                      e.currentTarget.style.borderColor = '#e5e7eb';
+                      e.currentTarget.style.backgroundColor = 'white';
+                    }
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleCreateListingSubmit}
+                  disabled={creatingListing || !availableFrom || (property.rent_type === 'per_room' && selectedRoomsForListing.length === 0)}
+                  style={{
+                    flex: 2,
+                    padding: '0.75rem',
+                    backgroundColor: creatingListing || !availableFrom || (property.rent_type === 'per_room' && selectedRoomsForListing.length === 0) ? '#9ca3af' : '#2563eb',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '0.875rem',
+                    fontWeight: '600',
+                    cursor: creatingListing || !availableFrom || (property.rent_type === 'per_room' && selectedRoomsForListing.length === 0) ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.2s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem'
+                  }}
+                  onMouseOver={(e) => {
+                    if (!creatingListing && availableFrom && (property.rent_type === 'per_property' || selectedRoomsForListing.length > 0)) {
+                      e.currentTarget.style.backgroundColor = '#1d4ed8';
+                    }
+                  }}
+                  onMouseOut={(e) => {
+                    if (!creatingListing && availableFrom && (property.rent_type === 'per_property' || selectedRoomsForListing.length > 0)) {
+                      e.currentTarget.style.backgroundColor = '#2563eb';
+                    }
+                  }}
+                >
+                  {creatingListing ? (
+                    <>
+                      <Loader style={{ width: '1rem', height: '1rem', animation: 'spin 1s linear infinite' }} />
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <Check style={{ width: '1rem', height: '1rem' }} />
+                      Create Listing
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Conversion Wizard */}
@@ -1844,6 +2940,18 @@ export default function PropertyDetails() {
           isOpen={showDeleteModal}
           onClose={cancelDeleteRoom}
           onDelete={handleDeleteComplete}
+        />
+      )}
+
+      {/* Edit Property Modal */}
+      {showEditPropertyModal && property && (
+        <EditPropertyModal
+          property={property}
+          onClose={() => setShowEditPropertyModal(false)}
+          onSuccess={() => {
+            setShowEditPropertyModal(false);
+            fetchPropertyData();
+          }}
         />
       )}
 
@@ -2623,6 +3731,355 @@ export default function PropertyDetails() {
           .alert-actions {
             width: 100%;
             justify-content: flex-end;
+          }
+        }
+
+        /* Image action buttons - matching listing page style */
+        .stage-btn,
+        .remove-btn {
+          background: rgba(255, 255, 255, 0.95);
+          border: 1px solid rgba(0, 0, 0, 0.55);
+          border-radius: 10px;
+          width: 42px;
+          height: 42px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+        }
+
+        .stage-btn {
+          color: #ffffff;
+          background: rgba(17, 24, 39, 0.9);
+          border-color: rgba(0, 0, 0, 0.65);
+        }
+
+        .stage-btn:hover:not(:disabled) {
+          background: rgba(17, 24, 39, 0.4);
+          color: #ffffff;
+          transform: scale(1.05);
+        }
+
+        .stage-btn:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
+        .remove-btn {
+          color: #ef4444;
+          background: rgba(255, 255, 255, 0.85);
+        }
+
+        .remove-btn:hover {
+          background: rgba(239, 68, 68, 0.12);
+          color: #ef4444;
+          transform: scale(1.05);
+        }
+
+        /* Description button styles - matching listing page */
+        .button-group {
+          display: flex;
+          gap: 8px;
+          align-items: center;
+        }
+
+        .generate-description-btn {
+          background: rgba(17, 24, 39, 0.9);
+          border: 1px solid rgba(0, 0, 0, 0.65);
+          border-radius: 10px;
+          width: 42px;
+          height: 42px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+          color: #ffffff;
+          position: relative;
+          backdrop-filter: blur(5px);
+          -webkit-backdrop-filter: blur(5px);
+        }
+
+        .generate-description-btn:hover:not(:disabled) {
+          background: rgba(17, 24, 39, 0.4);
+          color: #ffffff;
+          transform: scale(1.05);
+        }
+
+        .generate-description-btn:active:not(:disabled) {
+          transform: scale(0.95);
+        }
+
+        .generate-description-btn:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
+        .generate-description-btn svg {
+          animation: sparkle 2s ease-in-out infinite;
+        }
+
+        @keyframes sparkle {
+          0%, 100% {
+            transform: rotate(0deg) scale(1);
+          }
+          25% {
+            transform: rotate(-10deg) scale(1.1);
+          }
+          75% {
+            transform: rotate(10deg) scale(1.1);
+          }
+        }
+
+        .wand-loader {
+          position: relative;
+          width: 18px;
+          height: 18px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .wand-generating {
+          position: relative;
+          z-index: 2;
+          animation: wandBounce 0.8s ease-in-out infinite;
+          filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.8));
+        }
+
+        @keyframes wandBounce {
+          0%, 100% {
+            transform: translateY(0px) rotate(-8deg);
+          }
+          50% {
+            transform: translateY(-3px) rotate(8deg);
+          }
+        }
+
+        .mini-sparkles {
+          position: absolute;
+          inset: -8px;
+          pointer-events: none;
+        }
+
+        .mini-sparkle {
+          position: absolute;
+          width: 3px;
+          height: 3px;
+          background: linear-gradient(135deg, #60a5fa, #ffffff);
+          border-radius: 50%;
+          box-shadow: 0 0 4px rgba(96, 165, 250, 0.8);
+          animation: miniSparkle 1.2s ease-in-out infinite;
+        }
+
+        .mini-sparkle:nth-child(1) {
+          top: 0;
+          right: 2px;
+          animation-delay: 0s;
+        }
+
+        .mini-sparkle:nth-child(2) {
+          bottom: 0;
+          left: 2px;
+          animation-delay: 0.4s;
+        }
+
+        .mini-sparkle:nth-child(3) {
+          top: 50%;
+          left: -2px;
+          animation-delay: 0.8s;
+        }
+
+        @keyframes miniSparkle {
+          0%, 100% {
+            transform: translateY(0px) scale(1);
+            opacity: 1;
+          }
+          50% {
+            transform: translateY(-8px) scale(1.3);
+            opacity: 0.6;
+          }
+        }
+
+        .spin {
+          animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(360deg);
+          }
+        }
+
+        /* Staging Overlay Animation - matching listing page */
+        .staging-overlay {
+          position: absolute;
+          inset: 0;
+          background: rgba(0, 0, 0, 0.75);
+          backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(8px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 3;
+          animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+
+        .staging-spinner {
+          text-align: center;
+          color: white;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 16px;
+        }
+
+        .wand-animation {
+          position: relative;
+          width: 80px;
+          height: 80px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .wand-icon {
+          position: relative;
+          z-index: 2;
+          color: #ffffff;
+          filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.6));
+          animation: wandFloat 2s ease-in-out infinite;
+        }
+
+        @keyframes wandFloat {
+          0%, 100% {
+            transform: translateY(0px) rotate(-5deg);
+          }
+          50% {
+            transform: translateY(-10px) rotate(5deg);
+          }
+        }
+
+        .sparkles {
+          position: absolute;
+          inset: 0;
+        }
+
+        .sparkle {
+          position: absolute;
+          width: 8px;
+          height: 8px;
+          background: linear-gradient(135deg, #60a5fa, #a78bfa);
+          border-radius: 50%;
+          box-shadow: 0 0 8px rgba(96, 165, 250, 0.8);
+          animation: sparkleFloat 2s ease-in-out infinite;
+        }
+
+        .sparkle-1 {
+          top: 10%;
+          right: 15%;
+          animation-delay: 0s;
+        }
+
+        .sparkle-2 {
+          top: 25%;
+          left: 10%;
+          animation-delay: 0.5s;
+          width: 6px;
+          height: 6px;
+        }
+
+        .sparkle-3 {
+          bottom: 20%;
+          right: 20%;
+          animation-delay: 1s;
+          width: 10px;
+          height: 10px;
+        }
+
+        .sparkle-4 {
+          bottom: 15%;
+          left: 15%;
+          animation-delay: 1.5s;
+        }
+
+        @keyframes sparkleFloat {
+          0%, 100% {
+            transform: translateY(0px) scale(1);
+            opacity: 1;
+          }
+          25% {
+            transform: translateY(-15px) scale(1.2);
+            opacity: 0.8;
+          }
+          50% {
+            transform: translateY(-20px) scale(0.8);
+            opacity: 0.6;
+          }
+          75% {
+            transform: translateY(-10px) scale(1.1);
+            opacity: 0.9;
+          }
+        }
+
+        .staging-text {
+          margin: 0;
+          font-size: 16px;
+          font-weight: 600;
+          letter-spacing: 0.3px;
+          color: white;
+          text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .progress-dots {
+          display: flex;
+          gap: 8px;
+          align-items: center;
+        }
+
+        .progress-dots .dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: rgba(255, 255, 255, 0.6);
+          animation: dotPulse 1.4s ease-in-out infinite;
+        }
+
+        .progress-dots .dot:nth-child(1) {
+          animation-delay: 0s;
+        }
+
+        .progress-dots .dot:nth-child(2) {
+          animation-delay: 0.2s;
+        }
+
+        .progress-dots .dot:nth-child(3) {
+          animation-delay: 0.4s;
+        }
+
+        @keyframes dotPulse {
+          0%, 80%, 100% {
+            transform: scale(1);
+            background: rgba(255, 255, 255, 0.4);
+          }
+          40% {
+            transform: scale(1.3);
+            background: rgba(255, 255, 255, 1);
           }
         }
       `}</style>

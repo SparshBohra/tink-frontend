@@ -63,6 +63,46 @@ function Properties() {
     fetchProperties(1, true);
   }, []);
 
+  // Refresh properties when navigating back to this page (e.g., after editing a property)
+  useEffect(() => {
+    const handleRouteChange = (url: string) => {
+      // If navigating to the properties page, refresh the list
+      if (url === '/properties' || url.startsWith('/properties?')) {
+        fetchProperties(1, true);
+      }
+    };
+
+    router.events.on('routeChangeComplete', handleRouteChange);
+
+    return () => {
+      router.events.off('routeChangeComplete', handleRouteChange);
+    };
+  }, [router]);
+
+  // Also refresh when page becomes visible after being hidden
+  useEffect(() => {
+    let lastHiddenTime: number | null = null;
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        lastHiddenTime = Date.now();
+      } else if (document.visibilityState === 'visible' && lastHiddenTime) {
+        // Only refresh if page was hidden for more than 1 second (to avoid unnecessary refreshes)
+        const timeHidden = Date.now() - lastHiddenTime;
+        if (timeHidden > 1000) {
+          fetchProperties(1, true);
+        }
+        lastHiddenTime = null;
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
   // Re-sort when sort option changes
   useEffect(() => {
     if (allProperties.length > 0) {
@@ -984,7 +1024,7 @@ function Properties() {
                                 marginBottom: '0.25rem'
                               }}
                               >
-                                {property.address_line1 || (property.name || '').split(',')[0]}
+                                {property.name ? `${property.name}` : (property.address_line1 || 'Unnamed Property')}
                               </div>
                             <div style={{
                               fontSize: '0.75rem',

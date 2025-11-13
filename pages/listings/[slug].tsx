@@ -103,7 +103,9 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
             fontSize: '0.875rem',
             margin: '0 0 1.5rem 0'
           }}>
-            {error || 'The property listing you requested could not be found.'}
+            {error && error.includes('500') 
+              ? 'Server error occurred. Please try again later.' 
+              : error || 'The property listing you requested could not be found.'}
           </p>
           <button 
             onClick={() => router.push('/')}
@@ -232,6 +234,28 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
         )}
       </Head>
 
+      <style jsx global>{`
+        /* Custom scrollbar for thumbnail gallery */
+        .thumbnail-scroll::-webkit-scrollbar {
+          width: 6px;
+        }
+        .thumbnail-scroll::-webkit-scrollbar-track {
+          background: #f1f1f1;
+          border-radius: 10px;
+        }
+        .thumbnail-scroll::-webkit-scrollbar-thumb {
+          background: #cbd5e1;
+          border-radius: 10px;
+        }
+        .thumbnail-scroll::-webkit-scrollbar-thumb:hover {
+          background: #94a3b8;
+        }
+        .thumbnail-scroll {
+          scrollbar-width: thin;
+          scrollbar-color: #cbd5e1 #f1f1f1;
+        }
+      `}</style>
+
       <div style={{
         minHeight: '100vh',
         backgroundColor: '#ffffff'
@@ -330,7 +354,7 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
                     Furnished
                   </span>
                 )}
-                {listing.utilities_included && listing.utilities_included.length > 0 && (
+                {listing.property_details?.utilities_included && listing.property_details.utilities_included.length > 0 && (
                   <span style={{
                     backgroundColor: '#f3f4f6',
                     color: '#374151',
@@ -343,7 +367,7 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
                     Utilities Included
                   </span>
                 )}
-                {listing.pet_policy !== 'not_allowed' && (
+                {listing.property_details?.pet_policy && listing.property_details.pet_policy !== 'not_allowed' && (
                   <span style={{
                     backgroundColor: '#f3f4f6',
                     color: '#374151',
@@ -407,134 +431,193 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
         </div>
       </div>
 
-      {/* Image Gallery */}
+      {/* Image Gallery - Matching Property Detail Page Style */}
       {listing.media && listing.media.length > 0 && (
-          <div style={{
-            maxWidth: '1200px',
-            margin: '0 auto',
-            padding: '2rem 1rem'
-          }}>
-            <div style={{
-              position: 'relative',
-              borderRadius: '8px',
-              overflow: 'hidden',
-              marginBottom: '1rem',
-              border: '1px solid #e5e7eb'
+        <div style={{
+          maxWidth: '1200px',
+          margin: '0 auto',
+          padding: '2rem 1rem'
+        }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr', gap: '8px' }}>
+            {/* Large primary image - not cropped */}
+            <div style={{ 
+              position: 'relative', 
+              width: '100%', 
+              height: '700px', 
+              borderRadius: '12px', 
+              overflow: 'hidden', 
+              border: '1px solid #e5e7eb', 
+              background: '#f8fafc',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
             }}>
-            <img 
-              src={getMediaUrl(listing.media[currentImageIndex].file_url || '')} 
-              alt={listing.title}
+              <img 
+                src={getMediaUrl(listing.media[currentImageIndex].file_url || '')} 
+                alt={listing.title}
                 style={{
                   width: '100%',
-                  height: '24rem',
-                  objectFit: 'cover',
+                  height: '100%',
+                  objectFit: 'contain',
                   display: 'block'
                 }}
-            />
-            {listing.media.length > 1 && (
-              <>
-                <button 
-                  onClick={prevImage}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.objectFit = 'cover';
+                }}
+              />
+              {listing.media.length > 1 && (
+                <>
+                  <button 
+                    onClick={prevImage}
                     style={{
                       position: 'absolute',
                       top: '50%',
                       left: '1rem',
                       transform: 'translateY(-50%)',
-                      backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                      backgroundColor: 'rgba(0, 0, 0, 0.7)',
                       color: 'white',
                       border: 'none',
                       borderRadius: '50%',
-                      width: '2.5rem',
-                      height: '2.5rem',
+                      width: '3rem',
+                      height: '3rem',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       cursor: 'pointer',
-                      transition: 'background-color 0.2s'
+                      transition: 'all 0.2s',
+                      zIndex: 10
                     }}
-                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.8)'}
-                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.6)'}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.9)';
+                      e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+                      e.currentTarget.style.transform = 'translateY(-50%) scale(1)';
+                    }}
                   >
-                    <ChevronLeft style={{ width: '1.25rem', height: '1.25rem' }} />
-                </button>
-                <button 
-                  onClick={nextImage}
+                    <ChevronLeft style={{ width: '1.5rem', height: '1.5rem' }} />
+                  </button>
+                  <button 
+                    onClick={nextImage}
                     style={{
                       position: 'absolute',
                       top: '50%',
                       right: '1rem',
                       transform: 'translateY(-50%)',
-                      backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                      backgroundColor: 'rgba(0, 0, 0, 0.7)',
                       color: 'white',
                       border: 'none',
                       borderRadius: '50%',
-                      width: '2.5rem',
-                      height: '2.5rem',
+                      width: '3rem',
+                      height: '3rem',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       cursor: 'pointer',
-                      transition: 'background-color 0.2s'
+                      transition: 'all 0.2s',
+                      zIndex: 10
                     }}
-                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.8)'}
-                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.6)'}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.9)';
+                      e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+                      e.currentTarget.style.transform = 'translateY(-50%) scale(1)';
+                    }}
                   >
-                    <ChevronRight style={{ width: '1.25rem', height: '1.25rem' }} />
-                </button>
-              </>
-            )}
-              
-              {listing.media.length > 1 && (
-                <div style={{
-                  position: 'absolute',
-                  bottom: '1rem',
-                  right: '1rem',
-                  backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                  color: 'white',
-                  padding: '0.25rem 0.75rem',
-                  borderRadius: '4px',
-                  fontSize: '0.75rem'
-                }}>
-                  {currentImageIndex + 1} / {listing.media.length}
-                </div>
+                    <ChevronRight style={{ width: '1.5rem', height: '1.5rem' }} />
+                  </button>
+                  <div style={{
+                    position: 'absolute',
+                    bottom: '1rem',
+                    right: '1rem',
+                    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                    color: 'white',
+                    padding: '0.5rem 1rem',
+                    borderRadius: '8px',
+                    fontSize: '0.875rem',
+                    fontWeight: '600',
+                    zIndex: 10
+                  }}>
+                    {currentImageIndex + 1} / {listing.media.length}
+                  </div>
+                </>
+              )}
+            </div>
+            
+            {/* Thumbnails - scrollable column */}
+            {listing.media.length > 1 && (
+              <div className="thumbnail-scroll" style={{ 
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+                maxHeight: '700px',
+                overflowY: 'auto',
+                paddingRight: listing.media.length > 5 ? '4px' : '0'
+              }}>
+                {listing.media.map((media, index) => {
+                  const isActive = currentImageIndex === index;
+                  return (
+                    <div 
+                      key={index}
+                      onClick={() => setCurrentImageIndex(index)}
+                      style={{ 
+                        position: 'relative', 
+                        width: '100%', 
+                        paddingBottom: '66%', 
+                        borderRadius: '8px', 
+                        overflow: 'hidden', 
+                        border: isActive ? '2px solid #2563eb' : '1px solid #e5e7eb', 
+                        background: '#f8fafc',
+                        flexShrink: 0,
+                        cursor: 'pointer',
+                        boxShadow: isActive ? '0 0 0 3px rgba(37, 99, 235, 0.15)' : 'none',
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseOver={(e) => {
+                        if (!isActive) {
+                          e.currentTarget.style.borderColor = '#2563eb';
+                          e.currentTarget.style.boxShadow = '0 0 0 2px rgba(37, 99, 235, 0.1)';
+                        }
+                      }}
+                      onMouseOut={(e) => {
+                        if (!isActive) {
+                          e.currentTarget.style.borderColor = '#e5e7eb';
+                          e.currentTarget.style.boxShadow = 'none';
+                        }
+                      }}
+                      title="Click to view"
+                    >
+                      <img 
+                        src={getMediaUrl(media.file_url || '')} 
+                        alt={`${listing.title} - Image ${index + 1}`}
+                        style={{
+                          position: 'absolute',
+                          inset: 0,
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover'
+                        }}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </div>
           
-          {listing.media.length > 1 && (
-              <div style={{
-                display: 'flex',
-                gap: '0.5rem',
-                overflowX: 'auto',
-                padding: '0.5rem 0'
-              }}>
-              {listing.media.map((media, index) => (
-                <button
-                  key={index}
-                  onClick={() => setCurrentImageIndex(index)}
-                    style={{
-                      flexShrink: 0,
-                      width: '4rem',
-                      height: '3rem',
-                      borderRadius: '4px',
-                      overflow: 'hidden',
-                      border: `2px solid ${index === currentImageIndex ? '#2563eb' : '#e5e7eb'}`,
-                      cursor: 'pointer',
-                      transition: 'border-color 0.2s',
-                      background: 'none',
-                      padding: 0
-                    }}
-                  >
-                    <img 
-                      src={getMediaUrl(media.file_url || '')} 
-                      alt={`${listing.title} - Image ${index + 1}`}
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover'
-                      }}
-                    />
-                </button>
-              ))}
+          {/* Image count indicator */}
+          {listing.media.length > 5 && (
+            <div style={{ 
+              marginTop: '0.75rem', 
+              fontSize: '0.875rem', 
+              color: '#6b7280',
+              textAlign: 'right',
+              fontWeight: '500'
+            }}>
+              {listing.media.length} photos total
             </div>
           )}
         </div>
@@ -549,27 +632,31 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
           <div style={{
             display: 'grid',
             gridTemplateColumns: '2fr 1fr',
-            gap: '2rem'
+            gap: '2rem',
+            marginTop: '2rem'
           }}>
           {/* Left Column - Property Details */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
               {/* Property Details */}
               <div style={{
                 backgroundColor: 'white',
-                borderRadius: '8px',
+                borderRadius: '12px',
                 padding: '1.5rem',
-                border: '1px solid #e5e7eb'
+                border: '1px solid #e5e7eb',
+                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
               }}>
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.5rem',
-                  marginBottom: '1rem'
+                  marginBottom: '1.5rem',
+                  paddingBottom: '1rem',
+                  borderBottom: '1px solid #e5e7eb'
                 }}>
                   <Home style={{ width: '1.25rem', height: '1.25rem', color: '#6b7280' }} />
                   <h2 style={{
                     fontSize: '1.25rem',
-                    fontWeight: '600',
+                    fontWeight: '700',
                     color: '#111827',
                     margin: 0
                   }}>
@@ -582,13 +669,15 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
                   gap: '1rem'
                 }}>
                   {[
-                    { label: 'Property Type', value: listing.property_type || 'N/A', icon: <Home style={{ width: '1rem', height: '1rem' }} /> },
-                    { label: 'Max Occupancy', value: `${listing.max_occupancy || 'N/A'} ${listing.max_occupancy === 1 ? 'person' : 'people'}`, icon: <Users style={{ width: '1rem', height: '1rem' }} /> },
-                    { label: 'Available From', value: listing.available_from ? formatUTCDate(listing.available_from) : 'TBD', icon: <Calendar style={{ width: '1rem', height: '1rem' }} /> },
-                    { label: 'Lease Term', value: `${listing.min_lease_term || 'N/A'} - ${listing.max_lease_term || '∞'} months`, icon: <Clock style={{ width: '1rem', height: '1rem' }} /> },
-                    { label: 'Pet Policy', value: listing.pet_policy ? formatPetPolicy(listing.pet_policy) : 'N/A', icon: <Shield style={{ width: '1rem', height: '1rem' }} /> },
-                    { label: 'Smoking', value: listing.smoking_allowed ? 'Allowed' : 'Not Allowed', icon: <Wind style={{ width: '1rem', height: '1rem' }} /> }
-                  ].map((item, index) => (
+                    { label: 'Property Type', value: listing.property_details?.property_type, icon: <Home style={{ width: '1rem', height: '1rem' }} /> },
+                    { label: 'Bedrooms', value: listing.property_details?.bedrooms, icon: <Bed style={{ width: '1rem', height: '1rem' }} /> },
+                    { label: 'Bathrooms', value: listing.property_details?.bathrooms, icon: <Droplets style={{ width: '1rem', height: '1rem' }} /> },
+                    { label: 'Square Footage', value: listing.property_details?.square_footage ? `${listing.property_details.square_footage} sq ft` : null, icon: <Home style={{ width: '1rem', height: '1rem' }} /> },
+                    { label: 'Max Occupancy', value: listing.property_details?.max_occupancy ? `${listing.property_details.max_occupancy} ${listing.property_details.max_occupancy === 1 ? 'person' : 'people'}` : null, icon: <Users style={{ width: '1rem', height: '1rem' }} /> },
+                    { label: 'Available From', value: listing.available_from ? formatUTCDate(listing.available_from) : null, icon: <Calendar style={{ width: '1rem', height: '1rem' }} /> },
+                    { label: 'Pet Policy', value: listing.property_details?.pet_policy ? formatPetPolicy(listing.property_details.pet_policy) : null, icon: <Shield style={{ width: '1rem', height: '1rem' }} /> },
+                    { label: 'Smoking', value: listing.property_details?.smoking_allowed !== undefined ? (listing.property_details.smoking_allowed ? 'Allowed' : 'Not Allowed') : null, icon: <Wind style={{ width: '1rem', height: '1rem' }} /> }
+                  ].filter(item => item.value !== null && item.value !== undefined && item.value !== 'N/A' && item.value !== '').map((item, index) => (
                     <div key={index} style={{
                       padding: '0.75rem',
                       backgroundColor: '#f9fafb',
@@ -626,41 +715,48 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
                   </div>
 
               {/* Description */}
-              <div style={{
-                backgroundColor: 'white',
-                borderRadius: '8px',
-                padding: '1.5rem',
-                border: '1px solid #e5e7eb'
-              }}>
-                <h2 style={{
-                  fontSize: '1.25rem',
-                  fontWeight: '600',
-                  color: '#111827',
-                  margin: '0 0 1rem 0'
-                }}>
-                  Description
-                </h2>
-                <p style={{
-                  lineHeight: 1.6,
-                  color: '#4b5563',
-                  fontSize: '0.875rem',
-                  margin: 0
-                }}>
-                  {listing.description}
-                </p>
-              </div>
-
-              {/* Utilities & Amenities */}
-              {((listing.utilities_included && listing.utilities_included.length > 0) || 
-                (listing.amenities && listing.amenities.length > 0)) && (
+              {listing.description && listing.description.trim() && (
                 <div style={{
                   backgroundColor: 'white',
-                  borderRadius: '8px',
+                  borderRadius: '12px',
                   padding: '1.5rem',
-                  border: '1px solid #e5e7eb'
+                  border: '1px solid #e5e7eb',
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
                 }}>
-            {listing.utilities_included && listing.utilities_included.length > 0 && (
-                    <div style={{ marginBottom: listing.amenities && listing.amenities.length > 0 ? '1.5rem' : 0 }}>
+                  <h2 style={{
+                    fontSize: '1.25rem',
+                    fontWeight: '700',
+                    color: '#111827',
+                    margin: '0 0 1rem 0',
+                    paddingBottom: '1rem',
+                    borderBottom: '1px solid #e5e7eb'
+                  }}>
+                    Description
+                  </h2>
+                  <p style={{
+                    lineHeight: 1.8,
+                    color: '#374151',
+                    fontSize: '0.9375rem',
+                    margin: 0,
+                    whiteSpace: 'pre-wrap'
+                  }}>
+                    {listing.description}
+                  </p>
+                </div>
+              )}
+
+              {/* Utilities & Amenities */}
+              {((listing.property_details?.utilities_included && listing.property_details.utilities_included.length > 0) || 
+                (listing.property_details?.amenities && listing.property_details.amenities.length > 0)) && (
+                <div style={{
+                  backgroundColor: 'white',
+                  borderRadius: '12px',
+                  padding: '1.5rem',
+                  border: '1px solid #e5e7eb',
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+                }}>
+            {listing.property_details?.utilities_included && listing.property_details.utilities_included.length > 0 && (
+                    <div style={{ marginBottom: listing.property_details?.amenities && listing.property_details.amenities.length > 0 ? '1.5rem' : 0 }}>
                       <div style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -682,7 +778,7 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
                         flexWrap: 'wrap',
                         gap: '0.5rem'
                       }}>
-                  {listing.utilities_included.map((utility, index) => (
+                  {listing.property_details.utilities_included.map((utility, index) => (
                           <span key={index} style={{
                             backgroundColor: '#fef3c7',
                             color: '#92400e',
@@ -699,7 +795,7 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
                     </div>
             )}
 
-            {listing.amenities && listing.amenities.length > 0 && (
+            {listing.property_details?.amenities && listing.property_details.amenities.length > 0 && (
                     <div>
                       <div style={{
                         display: 'flex',
@@ -722,7 +818,7 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
                         flexWrap: 'wrap',
                         gap: '0.5rem'
                       }}>
-                  {listing.amenities.map((amenity, index) => (
+                  {listing.property_details.amenities.map((amenity, index) => (
                           <span key={index} style={{
                             backgroundColor: '#dcfce7',
                             color: '#166534',
@@ -745,20 +841,23 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
             {listing.listing_type === 'rooms' && listing.available_room_details && listing.available_room_details.length > 0 && (
                 <div style={{
                   backgroundColor: 'white',
-                  borderRadius: '8px',
+                  borderRadius: '12px',
                   padding: '1.5rem',
-                  border: '1px solid #e5e7eb'
+                  border: '1px solid #e5e7eb',
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
                 }}>
                   <div style={{
                     display: 'flex',
                     alignItems: 'center',
                     gap: '0.5rem',
-                    marginBottom: '1rem'
+                    marginBottom: '1.5rem',
+                    paddingBottom: '1rem',
+                    borderBottom: '1px solid #e5e7eb'
                   }}>
                     <Bed style={{ width: '1.25rem', height: '1.25rem', color: '#6b7280' }} />
                     <h2 style={{
                       fontSize: '1.25rem',
-                      fontWeight: '600',
+                      fontWeight: '700',
                       color: '#111827',
                       margin: 0
                     }}>
@@ -810,24 +909,30 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
                           gap: '0.5rem',
                           fontSize: '0.75rem'
                         }}>
-                          <div>
-                            <span style={{ color: '#6b7280', fontWeight: '500' }}>Type:</span>
-                            <div style={{ color: '#111827', fontWeight: '600' }}>
-                              {room.room_type?.replace('_', ' ') || 'N/A'}
-                        </div>
-                          </div>
-                          <div>
-                            <span style={{ color: '#6b7280', fontWeight: '500' }}>Size:</span>
-                            <div style={{ color: '#111827', fontWeight: '600' }}>
-                              {room.square_footage ? `${room.square_footage} sq ft` : 'N/A'}
-                          </div>
-                          </div>
-                          <div>
-                            <span style={{ color: '#6b7280', fontWeight: '500' }}>Floor:</span>
-                            <div style={{ color: '#111827', fontWeight: '600' }}>
-                              {room.floor_number || 'N/A'}
-                          </div>
-                          </div>
+                          {room.room_type && (
+                            <div>
+                              <span style={{ color: '#6b7280', fontWeight: '500' }}>Type:</span>
+                              <div style={{ color: '#111827', fontWeight: '600' }}>
+                                {room.room_type.replace('_', ' ')}
+                              </div>
+                            </div>
+                          )}
+                          {room.square_footage && (
+                            <div>
+                              <span style={{ color: '#6b7280', fontWeight: '500' }}>Size:</span>
+                              <div style={{ color: '#111827', fontWeight: '600' }}>
+                                {room.square_footage} sq ft
+                              </div>
+                            </div>
+                          )}
+                          {room.floor_number && (
+                            <div>
+                              <span style={{ color: '#6b7280', fontWeight: '500' }}>Floor:</span>
+                              <div style={{ color: '#111827', fontWeight: '600' }}>
+                                {room.floor_number}
+                              </div>
+                            </div>
+                          )}
                           <div>
                             <span style={{ color: '#6b7280', fontWeight: '500' }}>Available:</span>
                             <div style={{ color: '#111827', fontWeight: '600' }}>
@@ -870,20 +975,23 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
             <div style={{ position: 'sticky', top: '2rem', height: 'fit-content' }}>
               <div style={{
                 backgroundColor: 'white',
-                borderRadius: '8px',
+                borderRadius: '12px',
                 padding: '1.5rem',
-                border: '1px solid #e5e7eb'
+                border: '1px solid #e5e7eb',
+                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
               }}>
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.5rem',
-                  marginBottom: '1rem'
+                  marginBottom: '1.5rem',
+                  paddingBottom: '1rem',
+                  borderBottom: '1px solid #e5e7eb'
                 }}>
                   <DollarSign style={{ width: '1.25rem', height: '1.25rem', color: '#6b7280' }} />
                   <h3 style={{
                     fontSize: '1.25rem',
-                    fontWeight: '600',
+                    fontWeight: '700',
                     color: '#111827',
                     margin: 0
                   }}>

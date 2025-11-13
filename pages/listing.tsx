@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
-import { MapPin, Bed, Bath, Maximize, DollarSign, Heart, Share2, Calendar, Shield, Zap, Wand2, RotateCcw } from 'lucide-react';
+import { MapPin, Bed, Bath, Maximize, DollarSign, Heart, Share2, Calendar, Shield, Zap, Wand2, RotateCcw, Upload, Plus } from 'lucide-react';
 import StagedImage from '../components/StagedImage';
 import Walkthrough from '../components/Walkthrough';
 
@@ -32,10 +32,16 @@ export default function ListingPage() {
   
   // Image management state
   const [removedImageIndices, setRemovedImageIndices] = useState<Set<number>>(new Set());
+  const [uploadedImages, setUploadedImages] = useState<string[]>([]);
+  const [uploadedFiles, setUploadedFiles] = useState<Map<string, File>>(new Map()); // Store File objects for blob URLs
+  const [isUploading, setIsUploading] = useState(false);
   
   // Price editing state
   const [isEditingPrice, setIsEditingPrice] = useState(false);
   const [editedPrice, setEditedPrice] = useState<number>(0);
+
+  // File upload ref (must be declared before any conditional returns)
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Get base URL for app subdomain based on environment
   const getAppUrl = () => {
@@ -69,12 +75,43 @@ export default function ListingPage() {
     return 'http://localhost:8000';
   };
 
+  // Helper function to convert blob URL to base64 data URL
+  const blobToBase64 = (blobUrl: string): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const file = uploadedFiles.get(blobUrl);
+      if (!file) {
+        reject(new Error('File not found for blob URL'));
+        return;
+      }
+      
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        resolve(base64String);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
   // Staging API functions
   const handleStageImage = async (imageIndex: number) => {
     try {
       const imageUrl = displayListing.images[imageIndex];
       
       console.log('🎨 Staging image:', imageUrl);
+      
+      // If it's a blob URL, convert to base64 data URL
+      let imageUrlToSend = imageUrl;
+      if (imageUrl.startsWith('blob:')) {
+        try {
+          imageUrlToSend = await blobToBase64(imageUrl);
+          console.log('✅ Converted blob URL to base64 data URL');
+        } catch (error) {
+          console.error('Failed to convert blob URL to base64:', error);
+          throw new Error('Failed to process uploaded image. Please try uploading again.');
+        }
+      }
       
       // Send property context to help AI make better staging decisions
       const propertyContext = {
@@ -93,7 +130,7 @@ export default function ListingPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          image_url: imageUrl,
+          image_url: imageUrlToSend,
           property_context: propertyContext,
         }),
         signal: controller.signal,
@@ -104,6 +141,13 @@ export default function ListingPage() {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         const errorMsg = errorData.error || errorData.message || `Server error (${response.status})`;
+        
+        // Handle rate limit errors specifically
+        if (response.status === 429 || errorData.rate_limit_exceeded) {
+          const resetTime = errorData.reset_time ? new Date(errorData.reset_time).toLocaleTimeString() : 'later';
+          throw new Error(`Rate limit exceeded. Maximum 10 staging operations per hour. Please try again after ${resetTime}.`);
+        }
+        
         throw new Error(errorMsg);
       }
       
@@ -312,7 +356,7 @@ export default function ListingPage() {
     'https://images.unsplash.com/photo-1600585154526-990dced4db0d?w=1200&h=800&fit=crop&q=80',
   ];
 
-  const allImages = apiImages.length > 0 ? apiImages : fallbackImages;
+  const allImages = [...(apiImages.length > 0 ? apiImages : fallbackImages), ...uploadedImages];
   // Filter out removed images
   const activeImages = allImages.filter((_, idx) => !removedImageIndices.has(idx));
 
@@ -350,11 +394,15 @@ export default function ListingPage() {
       const finalUrl = stagedImages[originalIdx] || imageUrl;
       const isStaged = !!stagedImages[originalIdx];
       
+      // Check if this is an uploaded image (starts with blob:)
+      const isUploaded = imageUrl.startsWith('blob:') || uploadedImages.includes(imageUrl);
+      
       finalImages.push({
         url: finalUrl,
         isStaged: isStaged,
         originalUrl: imageUrl,
-        index: displayIndex
+        index: displayIndex,
+        isUploaded: isUploaded
       });
       
       displayIndex++;
@@ -460,6 +508,56 @@ export default function ListingPage() {
       ...prev,
       [platform]: !prev[platform as keyof typeof prev]
     }));
+  };
+
+  // File upload handler for landing page
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    // Check total upload limit (10 max)
+    const currentTotal = uploadedImages.length + allImages.length;
+    const newFilesCount = Array.from(files).filter(f => f.type.startsWith('image/') || f.type.startsWith('video/')).length;
+    
+    if (currentTotal + newFilesCount > 10) {
+      const remaining = Math.max(0, 10 - currentTotal);
+      alert(`Maximum 10 media files allowed. You can upload ${remaining} more file${remaining !== 1 ? 's' : ''}.`);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const newImageUrls: string[] = [];
+      const newFilesMap = new Map<string, File>();
+      
+      Array.from(files).forEach(file => {
+        if (file.type.startsWith('image/') || file.type.startsWith('video/')) {
+          const url = URL.createObjectURL(file);
+          newImageUrls.push(url);
+          newFilesMap.set(url, file); // Store File object for blob URL
+        }
+      });
+      
+      setUploadedImages(prev => [...prev, ...newImageUrls]);
+      setUploadedFiles(prev => {
+        const updated = new Map(prev);
+        newFilesMap.forEach((file, url) => updated.set(url, file));
+        return updated;
+      });
+    } catch (error) {
+      console.error('Failed to process uploaded files:', error);
+      alert('Failed to upload images. Please try again.');
+    } finally {
+      setIsUploading(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
   };
 
   const handleRemoveImage = (indexToRemove: number) => {
@@ -599,6 +697,69 @@ export default function ListingPage() {
                   </div>
                 );
               })}
+              {/* Upload button - only show if under limit */}
+              {allImages.length < 10 && (
+              <div 
+                className="thumbnail upload-thumbnail"
+                onClick={() => fileInputRef.current?.click()}
+                style={{
+                  height: '100px',
+                  borderRadius: '12px',
+                  border: '2px dashed #cbd5e1',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  backgroundColor: '#f8fafc',
+                  position: 'relative'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.borderColor = '#2563eb';
+                  e.currentTarget.style.backgroundColor = '#eff6ff';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.borderColor = '#cbd5e1';
+                  e.currentTarget.style.backgroundColor = '#f8fafc';
+                }}
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*,video/*"
+                  multiple
+                  onChange={handleFileUpload}
+                  style={{ display: 'none' }}
+                />
+                {isUploading ? (
+                  <div style={{ textAlign: 'center', color: '#2563eb' }}>
+                    <div style={{ fontSize: '12px', fontWeight: '500' }}>Uploading...</div>
+                  </div>
+                ) : (
+                  <div style={{ textAlign: 'center', color: '#64748b' }}>
+                    <Plus size={24} style={{ marginBottom: '4px' }} />
+                    <div style={{ fontSize: '11px', fontWeight: '500' }}>Add Photo</div>
+                  </div>
+                )}
+              </div>
+              )}
+              {allImages.length >= 10 && (
+                <div style={{
+                  height: '100px',
+                  borderRadius: '12px',
+                  border: '2px solid #e5e7eb',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: '#f9fafb',
+                  color: '#6b7280',
+                  fontSize: '11px',
+                  textAlign: 'center',
+                  padding: '8px'
+                }}>
+                  Max 10 files reached
+                </div>
+              )}
             </div>
           </div>
 

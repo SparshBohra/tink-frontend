@@ -485,21 +485,53 @@ class ApiClient {
     return response.data;
   }
 
+  async checkDuplicateAddress(data: {
+    address?: string;
+    address_line1?: string;
+    address_line2?: string;
+    city?: string;
+    state?: string;
+    postal_code?: string;
+  }): Promise<{ is_duplicate: boolean; existing_property: Property | null; match_reason: string | null }> {
+    try {
+      const response = await this.api.post('/properties/check-duplicate/', data);
+      return response.data;
+    } catch (error: any) {
+      console.error('Error checking duplicate address:', error);
+      // If check fails, return no duplicate to allow proceeding
+      return { is_duplicate: false, existing_property: null, match_reason: null };
+    }
+  }
+
   async createProperty(data: PropertyFormData): Promise<Property> {
     try {
-      // The landlord should already be determined by the form
-      // If not provided, this is an error that should be caught
-      if (!data.landlord) {
-        throw new Error('Landlord information is required but was not provided.');
-      }
-
       // Extract room-related fields for later use
       const { total_rooms, room_names, room_types, room_rents, room_capacities, ...propertyData } = data;
 
-      const payload = {
+      // Helper to safely parse currency-like strings to number
+      const parseCurrencyToNumber = (value: any): number | undefined => {
+        if (value === null || value === undefined || value === '') return undefined;
+        const str = String(value);
+        // Remove currency symbols and thousand separators, keep digits and dot
+        const cleaned = str.replace(/[^0-9.]/g, '');
+        if (!cleaned) return undefined;
+        const num = parseFloat(cleaned);
+        return isNaN(num) ? undefined : num;
+      };
+
+      const payload: any = {
         ...propertyData,
-        landlord: data.landlord,
-        monthly_rent: data.monthly_rent ? parseInt(String(data.monthly_rent), 10) : undefined,
+        // Only include landlord if explicitly provided (admins)
+        ...(data.landlord ? { landlord: data.landlord } : {}),
+        // Backend expects a Decimal; send a number if present
+        monthly_rent: parseCurrencyToNumber(data.monthly_rent),
+        // Ensure structural fields are passed through
+        total_rooms,
+        // Pass room metadata so backend can create rooms server-side
+        ...(room_names && room_names.length > 0 ? { room_names } : {}),
+        ...(room_types && room_types.length > 0 ? { room_types } : {}),
+        ...(room_rents && room_rents.length > 0 ? { room_rents } : {}),
+        ...(room_capacities && room_capacities.length > 0 ? { room_capacities } : {}),
       };
 
       console.log('Creating property with payload:', payload); // Debug log
@@ -509,8 +541,8 @@ class ApiClient {
       
       console.log('Property created successfully:', newProperty); // Debug log
       
-      // Auto-create rooms if rent_type is 'per_room'
-      if (data.rent_type === 'per_room' && total_rooms > 0) {
+      // Auto-create rooms if rent_type is 'per_room' AND the FE didn't pass room_names (backend may already create from room_names)
+      if (data.rent_type === 'per_room' && total_rooms > 0 && (!room_names || room_names.length === 0)) {
         console.log(`Auto-creating ${total_rooms} rooms for property ${newProperty.id}`);
         try {
           const roomPromises = Array.from({ length: total_rooms }, (_, index) => {
@@ -580,10 +612,27 @@ class ApiClient {
         throw new Error('You do not have permission to create properties. Please contact your administrator.');
       }
       if (error.response?.status === 400) {
-        const errorMessage = error.response?.data?.detail || 
-                           error.response?.data?.message || 
-                           'Invalid property data. Please check all required fields.';
-        throw new Error(errorMessage);
+        // Build detailed validation message from backend field errors
+        const data = error.response?.data;
+        if (data && typeof data === 'object') {
+          const parts: string[] = [];
+          for (const [field, messages] of Object.entries<any>(data)) {
+            if (Array.isArray(messages)) {
+              parts.push(`${field}: ${messages.join(', ')}`);
+            } else if (messages && typeof messages === 'object') {
+              // Nested error object
+              parts.push(`${field}: ${JSON.stringify(messages)}`);
+            } else {
+              parts.push(`${field}: ${messages}`);
+            }
+          }
+          const msg = parts.length ? `Invalid property data - ${parts.join('; ')}` : 'Invalid property data. Please check all required fields.';
+          throw new Error(msg);
+        }
+        const fallback = error.response?.data?.detail ||
+                         error.response?.data?.message ||
+                         'Invalid property data. Please check all required fields.';
+        throw new Error(fallback);
       }
       if (error.response?.status === 500) {
         throw new Error('Server error occurred while creating property. Please try again later or contact support.');
@@ -1397,11 +1446,31 @@ class ApiClient {
   // Delete media from listing
   async deleteListingMedia(listingId: number, mediaId: number): Promise<void> {
     try {
-      await this.api.delete(`/properties/listings/${listingId}/media/${mediaId}/`);
+      await this.api.delete(`/properties/listing-media/${mediaId}/`);
     } catch (error: any) {
       console.error('Failed to delete media:', error);
       throw error;
     }
+  }
+  
+  async updateListingMedia(mediaId: number, data: { caption?: string; display_order?: number; is_primary?: boolean }): Promise<ListingMedia> {
+    try {
+      const response = await this.api.patch(`/properties/listing-media/${mediaId}/`, data);
+      return response.data;
+    } catch (error: any) {
+      console.error('Failed to update media:', error);
+      throw error;
+    }
+  }
+
+  // Upload property media (images/videos) directly to a property
+  async uploadPropertyMedia(propertyId: number, files: File[]): Promise<{ images: string[]; videos: string[]; errors: any[] }> {
+    const formData = new FormData();
+    files.forEach(f => formData.append('files', f));
+    const response = await this.api.post(`/properties/${propertyId}/upload-media/`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
   }
 
   // ===== PUBLIC LISTING ENDPOINTS (No Auth Required) =====

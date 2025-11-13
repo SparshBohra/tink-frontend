@@ -3,10 +3,11 @@ import { apiClient } from '../lib/api';
 import { Property, Room } from '../lib/types';
 import styles from './NewListingModal.module.css';
 import { getMediaUrl } from '../lib/utils';
+import { Wand2, GripVertical, X, Plus } from 'lucide-react';
 
 interface NewListingModalProps {
   onClose: () => void;
-  onSuccess?: () => void;
+  onSuccess?: (refreshedListing?: any) => void;
   editMode?: boolean;
   existingListing?: any;
   property_name?: string;
@@ -15,11 +16,13 @@ interface NewListingModalProps {
 
 interface MediaFile {
   id?: string;
-  file: File;
+  file: File | null;
   url: string;
+  staged_url?: string | null;
   caption: string;
   is_primary: boolean;
   uploading?: boolean;
+  isStaging?: boolean;
 }
 
 // SVG Icon Components
@@ -101,6 +104,18 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
   const [properties, setProperties] = useState<Property[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [propertyData, setPropertyData] = useState<Property | null>(null);
+  const [applicationMode, setApplicationMode] = useState<'default' | 'manual'>('default');
+  const [stagingErrors, setStagingErrors] = useState<Record<string, string>>({});
+  const [publishingPlatforms, setPublishingPlatforms] = useState({
+    squareft: true,
+    zillow: false,
+    apartments: false,
+    realtor: false,
+    trulia: false,
+    facebook: false
+  });
   
   // Form data
   const [formData, setFormData] = useState({
@@ -168,8 +183,27 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
     // Only fetch properties if not in edit mode, or if we need them for room selection
     if (!editMode) {
       fetchProperties();
+    } else if (editMode && existingListing) {
+      // In edit mode, fetch property data to get staged images
+      const propertyId = typeof existingListing.property_ref === 'object' 
+        ? existingListing.property_ref?.id 
+        : existingListing.property_ref;
+      
+      if (propertyId) {
+        fetchPropertyData(Number(propertyId));
+      }
     }
-  }, [editMode]);
+  }, [editMode, existingListing]);
+
+  const fetchPropertyData = async (propertyId: number) => {
+    try {
+      const property = await apiClient.getProperty(propertyId);
+      setPropertyData(property);
+      console.log('Fetched property data for staging:', property);
+    } catch (err) {
+      console.error('Failed to fetch property data:', err);
+    }
+  };
 
   // Populate form with existing data in edit mode
   useEffect(() => {
@@ -205,6 +239,9 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
       
       console.log('Final property_ref value:', propertyRefValue);
       
+      // Extract metadata from listing_metadata or root level (for backward compatibility)
+      const metadata = existingListing.listing_metadata || {};
+      
       // Map the API response to form data structure
       const newFormData = {
         property_ref: propertyRefValue,
@@ -223,50 +260,191 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
         minimum_income_ratio: existingListing.application_form_config?.global_settings?.minimum_income_ratio || 3,
         required_documents: existingListing.application_form_config?.global_settings?.required_documents || [],
         
-        // Handle property details that might be at root level
-        pricing_notes: existingListing.pricing_notes || '',
-        lease_terms: existingListing.lease_terms || '',
-        utilities_included: Array.isArray(existingListing.utilities_included) ? existingListing.utilities_included : [],
-        amenities: Array.isArray(existingListing.amenities) ? existingListing.amenities : [],
-        pet_policy: existingListing.pet_policy || '',
-        smoking_policy: existingListing.smoking_policy || (existingListing.smoking_allowed ? 'smoking_allowed' : 'no_smoking'),
+        // Handle metadata fields (from listing_metadata or root level for backward compatibility)
+        pricing_notes: metadata.pricing_notes || existingListing.pricing_notes || '',
+        lease_terms: metadata.lease_terms || existingListing.lease_terms || '',
+        utilities_included: Array.isArray(metadata.utilities_included) ? metadata.utilities_included : 
+                           (Array.isArray(existingListing.utilities_included) ? existingListing.utilities_included : []),
+        amenities: Array.isArray(metadata.amenities) ? metadata.amenities : 
+                  (Array.isArray(existingListing.amenities) ? existingListing.amenities : []),
+        pet_policy: metadata.pet_policy || existingListing.pet_policy || '',
+        smoking_policy: metadata.smoking_policy || existingListing.smoking_policy || 
+                      (existingListing.smoking_allowed ? 'smoking_allowed' : 'no_smoking'),
         
         // Contact information
-        contact_email: existingListing.contact_info?.contact_email || existingListing.contact_email || '',
-        contact_phone: existingListing.contact_info?.contact_phone || existingListing.contact_phone || '',
-        show_landlord_info: existingListing.show_landlord_info !== false,
-        is_active: existingListing.is_active !== false,
+        contact_email: metadata.contact_email || existingListing.contact_info?.contact_email || existingListing.contact_email || '',
+        contact_phone: metadata.contact_phone || existingListing.contact_info?.contact_phone || existingListing.contact_phone || '',
+        show_landlord_info: metadata.show_landlord_info !== undefined ? metadata.show_landlord_info : 
+                           (existingListing.show_landlord_info !== false),
+        is_active: existingListing.is_active !== undefined ? existingListing.is_active : 
+                  (existingListing.status === 'active'),
         
         // SEO fields
-        seo_title: existingListing.seo_title || '',
-        seo_description: existingListing.seo_description || '',
-        marketing_tags: Array.isArray(existingListing.marketing_tags) ? existingListing.marketing_tags : [],
+        seo_title: metadata.seo_title || existingListing.seo_title || '',
+        seo_description: metadata.seo_description || existingListing.seo_description || '',
+        marketing_tags: Array.isArray(metadata.marketing_tags) ? metadata.marketing_tags : 
+                       (Array.isArray(existingListing.marketing_tags) ? existingListing.marketing_tags : []),
       };
 
       console.log('Setting form data to:', newFormData);
       setFormData(newFormData);
       setIsFormDataPopulated(true); // Mark form data as populated
       
+      // Set application mode based on existing settings
+      const hasCustomSettings = (existingListing.application_form_config?.global_settings?.application_fee || 0) > 0 ||
+                                existingListing.application_form_config?.steps?.background_check?.enabled ||
+                                existingListing.application_form_config?.steps?.employment_info?.enabled ||
+                                (existingListing.application_form_config?.global_settings?.required_documents || []).length > 0;
+      setApplicationMode(hasCustomSettings ? 'manual' : 'default');
+      
       console.log('✅ Form data has been set. property_ref in form data:', newFormData.property_ref);
 
       // Load existing media if available
-      if (existingListing.media && Array.isArray(existingListing.media) && existingListing.media.length > 0) {
-        const existingMedia = existingListing.media.map((media: any, index: number) => ({
-          id: media.id?.toString() || `existing-${index}`,
-          file: null as any, // No file object for existing media
-          url: media.file_url || media.url,
+      // Check multiple possible locations for media
+      let mediaToLoad: any[] = [];
+      
+      // 0. If metadata.kept_property_images exists, prefer it (explicit user selection)
+      const keptFromMetadata = Array.isArray(existingListing?.listing_metadata?.kept_property_images)
+        ? existingListing.listing_metadata.kept_property_images
+        : [];
+      if (keptFromMetadata.length > 0) {
+        const sortedKept = [...keptFromMetadata].sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0));
+        mediaToLoad = sortedKept.map((item: any, index: number) => {
+          // Ensure URL is valid - handle both string URLs and object formats
+          let imageUrl = item.url || item.file_url || '';
+          if (typeof imageUrl !== 'string') {
+            imageUrl = '';
+          }
+          // Process staged URL similarly
+          let stagedUrl = item.staged_url || null;
+          if (stagedUrl && typeof stagedUrl !== 'string') {
+            stagedUrl = null;
+          }
+          
+          return {
+            id: item.id?.toString() || `kept-${index}`,
+            file: null as any,
+            url: imageUrl,
+            staged_url: stagedUrl,
+            caption: item.caption || '',
+            is_primary: !!item.is_primary,
+            uploading: false,
+          };
+        });
+        console.log('Loaded kept_property_images from metadata:', mediaToLoad);
+      }
+      
+      // 1. Check listing.media (listing-specific media)
+      if (mediaToLoad.length === 0 && existingListing.media && Array.isArray(existingListing.media) && existingListing.media.length > 0) {
+        // Get staged URLs from listing_metadata
+        const stagedMediaUrls = existingListing.listing_metadata?.staged_media_urls || {};
+        
+        // Sort by display_order if available
+        const sortedMedia = [...existingListing.media].sort((a: any, b: any) => {
+          const orderA = a.display_order ?? 0;
+          const orderB = b.display_order ?? 0;
+          return orderA - orderB;
+        });
+        
+        mediaToLoad = sortedMedia.map((media: any, index: number) => {
+          const originalUrl = media.file_url || media.url || media.thumbnail;
+          let stagedUrl = null;
+          
+          // First check listing_metadata for staged URL
+          if (media.id && stagedMediaUrls[media.id]) {
+            stagedUrl = stagedMediaUrls[media.id];
+          } else {
+            // Fallback: Try to find staged version from property data
+            if (propertyData && (propertyData as any).images) {
+              const propertyImg = (propertyData as any).images.find((img: any) => {
+                const imgUrl = typeof img === 'string' ? img : (img?.url || img?.staged_url);
+                return imgUrl === originalUrl || imgUrl?.includes(originalUrl.split('/').pop() || '');
+              });
+              if (propertyImg) {
+                stagedUrl = typeof propertyImg === 'string' 
+                  ? null 
+                  : (propertyImg.staged_url || null);
+              }
+            }
+          }
+          
+          return {
+            id: media.id?.toString() || `listing-media-${index}`,
+            file: null as any,
+            url: originalUrl,
+            staged_url: stagedUrl,
           caption: media.caption || '',
           is_primary: media.is_primary || index === 0,
           uploading: false
-        }));
-        setMediaFiles(existingMedia);
-        console.log('Loaded existing media:', existingMedia);
+          };
+        });
+        console.log('Loaded listing media:', mediaToLoad);
+      }
+      
+      // 2. If no listing media, check property_ref.images (staged images from property)
+      if (mediaToLoad.length === 0) {
+        const propertyImages = propertyData ? (propertyData as any).images 
+          : (existingListing.property_ref && typeof existingListing.property_ref === 'object' 
+            ? existingListing.property_ref.images 
+            : existingListing.property_details?.images) || [];
+        
+        if (Array.isArray(propertyImages) && propertyImages.length > 0) {
+          mediaToLoad = propertyImages.map((img: any, index: number) => {
+            // Handle both string URLs and object formats
+            const imgUrl = typeof img === 'string' 
+              ? img 
+              : (img?.url || img?.file_url || img);
+            const stagedUrl = typeof img === 'object' ? (img.staged_url || null) : null;
+            
+            return {
+              id: `property-image-${index}`,
+              file: null as any,
+              url: imgUrl,
+              staged_url: stagedUrl,
+              caption: typeof img === 'object' ? (img.caption || '') : '',
+              is_primary: index === 0,
+              uploading: false
+            };
+          });
+          console.log('Loaded property images as media:', mediaToLoad);
+        }
+      }
+      
+      // 3. Check property_details.images as fallback
+      if (mediaToLoad.length === 0 && existingListing.property_details?.images) {
+        const propertyImages = existingListing.property_details.images;
+        if (Array.isArray(propertyImages) && propertyImages.length > 0) {
+          mediaToLoad = propertyImages.map((img: any, index: number) => {
+            const imgUrl = typeof img === 'string' 
+              ? img 
+              : (img?.staged_url || img?.url || img?.file_url || img);
+            const stagedUrl = typeof img === 'object' ? (img.staged_url || null) : null;
+            
+            return {
+              id: `property-detail-image-${index}`,
+              file: null as any,
+              url: imgUrl,
+              staged_url: stagedUrl,
+              caption: typeof img === 'object' ? (img.caption || '') : '',
+              is_primary: index === 0,
+              uploading: false
+            };
+          });
+          console.log('Loaded property_details images as media:', mediaToLoad);
+        }
+      }
+      
+      if (mediaToLoad.length > 0) {
+        setMediaFiles(mediaToLoad);
+        console.log('✅ Final media files set:', mediaToLoad);
+      } else {
+        console.log('⚠️ No media found in listing data');
       }
     } else {
       console.log('Conditions not met for populating form in edit mode.');
     }
     console.log('--- End Edit Mode Debug ---');
-  }, [editMode, existingListing]);
+  }, [editMode, existingListing, propertyData]);
 
   // Fetch rooms when property selection changes
   useEffect(() => {
@@ -391,27 +569,317 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
     );
   };
 
-  const handleMediaDelete = (id: string) => {
-    setMediaFiles(prev => {
-      const filtered = prev.filter(media => media.id !== id);
-      // If we deleted the primary image, make the first remaining image primary
-      if (filtered.length > 0 && !filtered.some(media => media.is_primary)) {
-        filtered[0].is_primary = true;
+  // Helper to update kept_property_images in metadata immediately
+  const updateKeptPropertyImages = async (currentMediaFiles: MediaFile[]) => {
+    if (!editMode || !existingListing?.id) return;
+    
+    // Check if we're using property images (no ListingMedia or synthetic IDs)
+    const isUsingPropertyImages = !existingListing.media?.length || 
+      currentMediaFiles.some(m => 
+        !m.file && m.id && (m.id.toString().startsWith('property-image-') || 
+                           m.id.toString().startsWith('kept-') || 
+                           m.id.toString().startsWith('property-detail-image-'))
+      );
+    
+    if (isUsingPropertyImages) {
+      const keptImages = currentMediaFiles
+        .filter(m => !m.file) // Only existing images
+        .map((media, index) => {
+          // Ensure we save the original URL
+          const originalUrl = media.url || '';
+          const stagedUrl = media.staged_url || null;
+          
+          return {
+            id: media.id?.toString() || `kept-${index}`,
+            url: originalUrl, // Original URL (will be processed by getMediaUrl when displaying)
+            staged_url: stagedUrl,
+            caption: media.caption || '',
+            display_order: index,
+            is_primary: media.is_primary || false
+          };
+        });
+      
+      const currentMetadata = existingListing.listing_metadata || {};
+      const updatedMetadata = {
+        ...currentMetadata,
+        kept_property_images: keptImages,
+        staged_media_urls: keptImages.reduce((acc: Record<string, string>, img) => {
+          if (img.staged_url) acc[img.id] = img.staged_url;
+          return acc;
+        }, {})
+      };
+      
+      try {
+        await apiClient.updateListing(existingListing.id, {
+          listing_metadata: updatedMetadata
+        } as any);
+        console.log('✅ Updated kept_property_images immediately:', keptImages.length, 'items');
+      } catch (err) {
+        console.error('❌ Failed to update kept_property_images:', err);
       }
-      return filtered;
-    });
+    }
   };
 
-  const setPrimaryImage = (id: string) => {
+  const handleMediaDelete = async (id: string) => {
+    const updatedMediaFiles = mediaFiles.filter(media => media.id !== id);
+      // If we deleted the primary image, make the first remaining image primary
+    if (updatedMediaFiles.length > 0 && !updatedMediaFiles.some(media => media.is_primary)) {
+      updatedMediaFiles[0].is_primary = true;
+    }
+    setMediaFiles(updatedMediaFiles);
+
+    // Immediately delete from backend when editing an existing listing
+    if (editMode && existingListing?.id) {
+      // Try to resolve backend media ID from existing listing by matching id or url
+      const match = (existingListing.media || []).find((m: any) =>
+        m.id?.toString() === id || (m.file_url === (mediaFiles.find(x => x.id === id)?.url))
+      );
+      if (match?.id) {
+        try {
+          await apiClient.deleteListingMedia(existingListing.id, match.id);
+          console.log(`✅ Deleted media ${match.id} immediately`);
+        } catch (err) {
+          console.error('Failed to delete media immediately:', err);
+        }
+      }
+      
+      // Update kept_property_images if using property images
+      await updateKeptPropertyImages(updatedMediaFiles);
+    }
+  };
+
+  const setPrimaryImage = async (id: string) => {
     console.log('Setting primary image:', id);
-    setMediaFiles(prev => {
-      const updated = prev.map(media => ({
+    const updatedMediaFiles = mediaFiles.map(media => ({
         ...media,
         is_primary: media.id === id
       }));
-      console.log('Updated media files:', updated);
-      return updated;
+    setMediaFiles(updatedMediaFiles);
+    console.log('Updated media files:', updatedMediaFiles);
+    
+    // Update backend immediately
+    if (editMode && existingListing?.id) {
+      const match = (existingListing.media || []).find((m: any) =>
+        m.id?.toString() === id || (m.file_url === (mediaFiles.find(x => x.id === id)?.url))
+      );
+      if (match?.id) {
+        try {
+          // Set new primary
+          await apiClient.updateListingMedia(match.id, { is_primary: true });
+          // Unset old primary
+          const oldPrimary = mediaFiles.find(m => m.is_primary && m.id !== id);
+          if (oldPrimary?.id) {
+            const oldMatch = (existingListing.media || []).find((m: any) =>
+              m.id?.toString() === oldPrimary.id || (m.file_url === oldPrimary.url)
+            );
+            if (oldMatch?.id) {
+              await apiClient.updateListingMedia(oldMatch.id, { is_primary: false });
+            }
+          }
+          console.log(`✅ Updated primary status for media ${match.id}`);
+        } catch (err) {
+          console.error('Failed to update primary status:', err);
+        }
+      }
+      
+      // Update kept_property_images if using property images
+      await updateKeptPropertyImages(updatedMediaFiles);
+    }
+  };
+
+  // Drag and drop handlers
+  const handleDragStart = (index: number) => {
+    setDraggedIndex(index);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (draggedIndex === null) return;
+    
+    if (draggedIndex !== index) {
+      const newMediaFiles = [...mediaFiles];
+      const draggedItem = newMediaFiles[draggedIndex];
+      newMediaFiles.splice(draggedIndex, 1);
+      newMediaFiles.splice(index, 0, draggedItem);
+      setMediaFiles(newMediaFiles);
+      setDraggedIndex(index);
+    }
+  };
+
+  const handleDragEnd = async () => {
+    setDraggedIndex(null);
+
+    // Persist new order immediately when editing existing listing
+    if (editMode && existingListing?.id) {
+      // Update ListingMedia objects if they exist
+      const hasListingMedia = (existingListing.media || []).length > 0;
+      if (hasListingMedia) {
+        for (const [idx, m] of mediaFiles.entries()) {
+          // Only update existing media (skip new uploads)
+          if (m.file) continue;
+          const match = (existingListing.media || []).find((em: any) =>
+            em.id?.toString() === m.id?.toString() || (em.file_url === m.url)
+          );
+          if (match?.id) {
+            try {
+              await apiClient.updateListingMedia(match.id, { display_order: idx });
+              console.log(`✅ Updated display_order for media ${match.id} to ${idx}`);
+            } catch (err) {
+              console.error('Failed to persist display_order:', err);
+            }
+          }
+        }
+      }
+      
+      // Update kept_property_images if using property images
+      await updateKeptPropertyImages(mediaFiles);
+    }
+  };
+
+  // Staging handlers
+  const handleStageImage = async (mediaId: string, index: number) => {
+    const media = mediaFiles.find(m => m.id === mediaId);
+    if (!media) return;
+
+    // Clear any previous error for this image
+    setStagingErrors(prev => {
+      const newErrors = { ...prev };
+      delete newErrors[mediaId];
+      return newErrors;
     });
+
+    setMediaFiles(prev => prev.map(m => 
+      m.id === mediaId ? { ...m, isStaging: true } : m
+    ));
+
+    try {
+      const propertyContext = propertyData ? {
+        type: propertyData.property_type || 'residential',
+        bedrooms: (propertyData as any).bedrooms || 0,
+        bathrooms: (propertyData as any).bathrooms || 0,
+        sqft: (propertyData as any).square_footage || 0,
+        description: formData.description || '',
+      } : {
+        type: 'residential',
+        description: formData.description || '',
+      };
+
+      // Get API base URL (matching property page pattern)
+      const baseUrl = typeof window !== 'undefined' && window.location.hostname === 'localhost'
+        ? 'http://localhost:8000'
+        : 'https://tink.global';
+      
+      const response = await fetch(`${baseUrl}/api/listings/stage-image-demo/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          image_url: media.url,
+          property_context: propertyContext,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error || errorData.message || `Server error (${response.status})`;
+        
+        // Check for rate limit or cooldown errors
+        const isRateLimit = response.status === 429 || 
+                           errorMessage.toLowerCase().includes('rate limit') ||
+                           errorMessage.toLowerCase().includes('cooldown') ||
+                           errorMessage.toLowerCase().includes('quota');
+        
+        throw new Error(isRateLimit 
+          ? 'AI service is temporarily unavailable due to rate limits. Please try again in a few moments.'
+          : errorMessage
+        );
+      }
+
+      const data = await response.json();
+      if (!data.staged_url) {
+        throw new Error('AI staging service returned no image. The service may be temporarily unavailable. Please try again in a moment.');
+      }
+
+      // Success - update image and clear any errors
+      setMediaFiles(prev => prev.map(m => 
+        m.id === mediaId 
+          ? { ...m, staged_url: data.staged_url, isStaging: false }
+          : { ...m, isStaging: false }
+      ));
+      
+      // Clear error for this image
+      setStagingErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[mediaId];
+        return newErrors;
+      });
+
+      // Immediately persist staged URL to listing metadata in edit mode
+      if (editMode && existingListing?.id) {
+        // Check if we're using ListingMedia or property images
+        const match = (existingListing.media || []).find((m: any) =>
+          m.id?.toString() === mediaId || (m.file_url === media.url)
+        );
+        const isUsingPropertyImages = !match || mediaId.toString().startsWith('property-image-') || 
+                                       mediaId.toString().startsWith('kept-') || 
+                                       mediaId.toString().startsWith('property-detail-image-');
+        
+        if (match?.id && !isUsingPropertyImages) {
+          // Update staged_media_urls for ListingMedia
+          const currentMetadata = existingListing.listing_metadata || {};
+          const stagedMap = { ...(currentMetadata.staged_media_urls || {}) } as any;
+          stagedMap[match.id] = data.staged_url;
+          try {
+            await apiClient.updateListing(existingListing.id, {
+              listing_metadata: { ...currentMetadata, staged_media_urls: stagedMap }
+            } as any);
+            console.log('✅ Persisted staged URL for ListingMedia immediately');
+          } catch (err) {
+            console.error('Failed to persist staged URL immediately:', err);
+          }
+        } else if (isUsingPropertyImages) {
+          // Update kept_property_images for property images
+          const updatedMediaFiles = mediaFiles.map(m => 
+            m.id === mediaId ? { ...m, staged_url: data.staged_url } : m
+          );
+          await updateKeptPropertyImages(updatedMediaFiles);
+        }
+      }
+    } catch (err: any) {
+      console.error('Staging error:', err);
+      // Set user-friendly error message (never throw to UI)
+      const rawMessage = (err && err.message) ? String(err.message) : '';
+      const isRateLimit = rawMessage.toLowerCase().includes('rate limit')
+        || rawMessage.toLowerCase().includes('cooldown')
+        || rawMessage.toLowerCase().includes('quota')
+        || rawMessage.toLowerCase().includes('temporarily unavailable');
+      const friendlyMessage = isRateLimit
+        ? 'AI service is temporarily unavailable due to rate limits. Please try again in a few moments.'
+        : (rawMessage || 'Oops, we could not stage this image. Please try again in a moment.');
+      setStagingErrors(prev => ({
+        ...prev,
+        [mediaId]: friendlyMessage
+      }));
+      
+      setMediaFiles(prev => prev.map(m => 
+        m.id === mediaId ? { ...m, isStaging: false } : m
+      ));
+      
+      // Auto-clear error after 8 seconds
+      setTimeout(() => {
+        setStagingErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors[mediaId];
+          return newErrors;
+        });
+      }, 8000);
+    }
+  };
+
+  const handleUnstageImage = (mediaId: string) => {
+    setMediaFiles(prev => prev.map(m => 
+      m.id === mediaId ? { ...m, staged_url: null } : m
+    ));
+    // Note: The staged_url removal from metadata will be handled when the listing is saved
   };
 
   const handleSubmit = async () => {
@@ -419,6 +887,41 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
     setError(null);
 
     try {
+      // Simple success toast helper
+      const showToast = (msg: string) => {
+        try {
+          const containerId = 'sqft-global-toast-container';
+          let container = document.getElementById(containerId);
+          if (!container) {
+            container = document.createElement('div');
+            container.id = containerId;
+            container.style.position = 'fixed';
+            container.style.top = '20px';
+            container.style.right = '20px';
+            container.style.zIndex = '2147483647';
+            container.style.display = 'flex';
+            container.style.flexDirection = 'column';
+            container.style.gap = '8px';
+            document.body.appendChild(container);
+          }
+          const toast = document.createElement('div');
+          toast.style.background = '#10B981';
+          toast.style.color = 'white';
+          toast.style.padding = '10px 14px';
+          toast.style.borderRadius = '8px';
+          toast.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+          toast.style.fontSize = '0.875rem';
+          toast.style.fontWeight = '600';
+          toast.textContent = msg || 'Saved successfully';
+          container.appendChild(toast);
+          setTimeout(() => {
+            toast.style.transition = 'opacity 300ms ease';
+            toast.style.opacity = '0';
+            setTimeout(() => toast.remove(), 320);
+          }, 1600);
+        } catch {}
+      };
+
       // Validation
       if (!formData.title || !formData.description) {
         throw new Error('Please fill in all required fields (Title, Description).');
@@ -483,12 +986,11 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
         contact_email: formData.contact_email,
         contact_phone: formData.contact_phone,
         show_landlord_info: formData.show_landlord_info,
-        is_active: formData.is_active,
+        is_active: formData.is_active, // Backend will map this to status
         seo_title: formData.seo_title || formData.title,
         seo_description: formData.seo_description || formData.description,
         marketing_tags: formData.marketing_tags,
-        property_name: selectedProperty?.name || existingListing?.property_name || '',
-        property_address: selectedProperty?.full_address || existingListing?.property_address || '',
+        // Note: property_name and property_address are read-only fields, don't send them
         
         // Remove media_info as it's not the correct way to handle uploads
         // media_info will be created from the actual uploaded files
@@ -506,20 +1008,231 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
       console.log('Listing saved:', savedListing);
       console.log('Listing ID:', savedListing?.id);
 
-      // Now upload media files if any
-      const newMediaFiles = mediaFiles.filter(media => media.file); // Only new files with File objects
-      console.log('=== MEDIA UPLOAD DEBUG ===');
+      // Handle media updates: deletions, reordering, staging, captions, primary image
+      if (editMode && savedListing?.id) {
+        console.log('=== MEDIA UPDATE DEBUG ===');
       console.log('Total mediaFiles:', mediaFiles.length);
-      console.log('All mediaFiles:', mediaFiles.map(m => ({
+        console.log('All mediaFiles:', mediaFiles.map((m, idx) => ({
         id: m.id,
+          index: idx,
         hasFile: !!m.file,
-        fileName: m.file?.name,
-        fileSize: m.file?.size,
-        fileType: m.file?.type,
+          url: m.url,
+          staged_url: m.staged_url,
         caption: m.caption,
         is_primary: m.is_primary,
-        url: m.url
+          display_order: idx
       })));
+        
+        // Get existing media IDs from the listing
+        const existingMediaIds = (existingListing?.media || []).map((m: any) => m.id?.toString());
+        
+        // Build a map of current media by URL and ID for better matching
+        const currentMediaMap = new Map<string, string>(); // URL -> ID
+        mediaFiles
+          .filter(m => !m.file) // Only existing media (not new uploads)
+          .forEach(m => {
+            if (m.id) currentMediaMap.set(m.id.toString(), m.url);
+            currentMediaMap.set(m.url, m.id?.toString() || '');
+          });
+        
+        // Find media to delete (exist in backend but not matched in current mediaFiles)
+        const mediaToDelete = existingMediaIds.filter(id => {
+          const existingMedia = (existingListing?.media || []).find((m: any) => m.id?.toString() === id);
+          if (!existingMedia) return false;
+          
+          const existingUrl = existingMedia.file_url || existingMedia.url;
+          // Check if this URL or ID exists in current mediaFiles
+          const hasUrlMatch = mediaFiles.some(m => 
+            !m.file && (m.url === existingUrl || m.id?.toString() === id)
+          );
+          return !hasUrlMatch;
+        });
+        console.log('Media to delete:', mediaToDelete);
+        
+        // Delete removed media
+        for (const mediaId of mediaToDelete) {
+          try {
+            await apiClient.deleteListingMedia(savedListing.id, parseInt(mediaId));
+            console.log(`✅ Deleted media ${mediaId}`);
+          } catch (err: any) {
+            console.error(`❌ Failed to delete media ${mediaId}:`, err);
+          }
+        }
+        
+        // Collect all staged URLs to update metadata in one batch
+        const stagedMediaUpdates: Record<string, string | null> = {};
+        const mediaUpdates: Array<{ id: number; data: any }> = [];
+        const allExistingMediaIds = new Set((existingListing?.media || []).map((m: any) => m.id?.toString()).filter(Boolean));
+        
+        // Update existing media (captions, display_order, is_primary, staged_url)
+        for (let index = 0; index < mediaFiles.length; index++) {
+          const media = mediaFiles[index];
+          
+          // Skip new files (will be uploaded separately)
+          if (media.file) continue;
+          
+          // Find the existing media ID
+          const existingMedia = (existingListing?.media || []).find((m: any) => {
+            const mUrl = m.file_url || m.url;
+            return mUrl === media.url || m.id?.toString() === media.id?.toString();
+          });
+          
+          if (existingMedia?.id) {
+            const mediaIdStr = existingMedia.id.toString();
+            
+            // Track staged URL changes (including removals when staged_url is null)
+            if (media.staged_url !== undefined) {
+              stagedMediaUpdates[mediaIdStr] = media.staged_url || null;
+            }
+            
+            // Collect media updates
+            mediaUpdates.push({
+              id: existingMedia.id,
+              data: {
+                caption: media.caption || '',
+                display_order: index,
+                is_primary: media.is_primary || false
+              }
+            });
+          }
+        }
+        
+        // Remove staged URLs for media that was deleted
+        const currentMediaIds = new Set(mediaFiles
+          .filter(m => !m.file)
+          .map(m => {
+            const existingMedia = (existingListing?.media || []).find((em: any) => {
+              const mUrl = em.file_url || em.url;
+              return mUrl === m.url || em.id?.toString() === m.id?.toString();
+            });
+            return existingMedia?.id?.toString();
+          })
+          .filter(Boolean)
+        );
+        
+        // Mark staged URLs for deletion for removed media
+        for (const mediaId of allExistingMediaIds) {
+          if (!currentMediaIds.has(mediaId)) {
+            stagedMediaUpdates[mediaId] = null;
+          }
+        }
+        
+        // Check if we're working with ListingMedia objects or property images
+        const hasListingMedia = existingMediaIds.length > 0;
+        const isUsingPropertyImages = !hasListingMedia || mediaFiles.some(m => 
+          !m.file && m.id && (m.id.toString().startsWith('property-image-') || m.id.toString().startsWith('kept-') || m.id.toString().startsWith('property-detail-image-'))
+        );
+        
+        // Batch update all ListingMedia objects (if any)
+        if (hasListingMedia && !isUsingPropertyImages) {
+          for (const update of mediaUpdates) {
+            try {
+              await apiClient.updateListingMedia(update.id, update.data);
+              console.log(`✅ Updated media ${update.id}:`, update.data);
+            } catch (err: any) {
+              console.error(`❌ Failed to update media ${update.id}:`, err);
+            }
+          }
+        }
+        
+        // Update listing metadata: staged_media_urls AND kept_property_images
+        const currentMetadata = savedListing.listing_metadata || {};
+        let metadataUpdated = false;
+        
+        // Handle staged_media_urls (for ListingMedia objects)
+        if (hasListingMedia && !isUsingPropertyImages && Object.keys(stagedMediaUpdates).length > 0) {
+          try {
+            const existingStagedUrls = currentMetadata.staged_media_urls || {};
+            const updatedStagedUrls: Record<string, string> = {};
+            
+            // Keep existing staged URLs that aren't being updated
+            for (const [mediaId, stagedUrl] of Object.entries(existingStagedUrls)) {
+              if (!(mediaId in stagedMediaUpdates)) {
+                updatedStagedUrls[mediaId] = stagedUrl;
+              }
+            }
+            
+            // Apply updates (add new, update existing, remove null ones)
+            for (const [mediaId, stagedUrl] of Object.entries(stagedMediaUpdates)) {
+              if (stagedUrl !== null) {
+                updatedStagedUrls[mediaId] = stagedUrl;
+              }
+            }
+            
+            currentMetadata.staged_media_urls = updatedStagedUrls;
+            metadataUpdated = true;
+            console.log('✅ Updated listing metadata with staged URLs:', updatedStagedUrls);
+          } catch (err: any) {
+            console.error('❌ Failed to update listing metadata:', err);
+          }
+        }
+        
+        // Handle kept_property_images (for property images without ListingMedia)
+        if (isUsingPropertyImages) {
+          try {
+            // Build kept_property_images array from current mediaFiles (excluding new uploads)
+            const keptImages = mediaFiles
+              .filter(m => !m.file) // Only existing images
+              .map((media, index) => {
+                // Ensure we're saving the original URL (not processed)
+                // media.url should already be the original URL from when it was loaded
+                const originalUrl = media.url || '';
+                const stagedUrl = media.staged_url || null;
+                
+                console.log(`[kept_property_images] Saving image ${index}:`, {
+                  id: media.id,
+                  url: originalUrl?.substring(0, 100),
+                  staged_url: stagedUrl?.substring(0, 100) || null,
+                  caption: media.caption
+                });
+                
+                return {
+                  id: media.id?.toString() || `kept-${index}`,
+                  url: originalUrl, // Save original URL (will be processed by getMediaUrl when displaying)
+                  staged_url: stagedUrl,
+                  caption: media.caption || '',
+                  display_order: index,
+                  is_primary: media.is_primary || false
+                };
+              });
+            
+            currentMetadata.kept_property_images = keptImages;
+            
+            // Also update staged_media_urls for property images (using synthetic IDs)
+            const propertyStagedUrls: Record<string, string> = {};
+            keptImages.forEach((img) => {
+              if (img.staged_url) {
+                propertyStagedUrls[img.id] = img.staged_url;
+              }
+            });
+            currentMetadata.staged_media_urls = propertyStagedUrls;
+            
+            metadataUpdated = true;
+            console.log('✅ Updated kept_property_images:', keptImages.length, 'items');
+            console.log('✅ Updated staged_media_urls for property images:', Object.keys(propertyStagedUrls).length, 'staged URLs');
+          } catch (err: any) {
+            console.error('❌ Failed to update kept_property_images:', err);
+          }
+        }
+        
+        // Save metadata if it was updated
+        if (metadataUpdated) {
+          try {
+            await apiClient.updateListing(savedListing.id, {
+              listing_metadata: currentMetadata
+            });
+            console.log('✅ Saved listing metadata');
+          } catch (err: any) {
+            console.error('❌ Failed to save listing metadata:', err);
+          }
+        }
+        
+        console.log('=== END MEDIA UPDATE DEBUG ===');
+      }
+
+      // Now upload NEW media files if any
+      const newMediaFiles = mediaFiles.filter(media => media.file); // Only new files with File objects
+      console.log('=== MEDIA UPLOAD DEBUG ===');
       console.log('Filtered newMediaFiles:', newMediaFiles.length);
       console.log('Listing ID:', savedListing?.id);
       console.log('=== END DEBUG ===');
@@ -552,6 +1265,33 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
               const uploadedMedia = await apiClient.uploadListingMedia(savedListing.id, media.file, media.caption);
               console.log('✅ Upload successful:', uploadedMedia);
               uploadedCount++;
+              
+              // Update the uploaded media with display_order, is_primary, and staged_url
+              const mediaIndex = mediaFiles.findIndex(m => m.id === media.id);
+              if (uploadedMedia.id) {
+                const updateData: any = {
+                  display_order: mediaIndex,
+                  is_primary: media.is_primary || false
+                };
+                
+                // Update media with order and primary status
+                await apiClient.updateListingMedia(uploadedMedia.id, updateData);
+                console.log(`✅ Updated new media ${uploadedMedia.id} with order and primary status`);
+                
+                // Store staged_url in listing_metadata if present
+                if (media.staged_url) {
+                  const currentMetadata = savedListing.listing_metadata || {};
+                  const stagedMediaMap = currentMetadata.staged_media_urls || {};
+                  stagedMediaMap[uploadedMedia.id] = media.staged_url;
+                  currentMetadata.staged_media_urls = stagedMediaMap;
+                  
+                  // Update listing metadata
+                  await apiClient.updateListing(savedListing.id, {
+                    listing_metadata: currentMetadata
+                  });
+                  console.log(`✅ Stored staged URL for new media ${uploadedMedia.id}`);
+                }
+              }
               
               // If this is the primary image, save the URL
               if (media.is_primary) {
@@ -604,7 +1344,20 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
         console.log('ℹ️ Media upload conditions not met');
       }
       
-      onSuccess?.();
+      // Refresh listing data to get newly uploaded media
+      let refreshedListing = savedListing;
+      if (editMode && savedListing?.id) {
+        try {
+          refreshedListing = await apiClient.getListing(savedListing.id);
+          console.log('✅ Refreshed listing with new media:', refreshedListing);
+        } catch (err) {
+          console.error('⚠️ Failed to refresh listing data:', err);
+        }
+      }
+      
+      // Show friendly confirmation
+      showToast(editMode ? 'Listing updated' : 'Listing created');
+      onSuccess?.(refreshedListing);
       onClose();
     } catch (error: any) {
       console.error('Failed to create listing:', error);
@@ -735,7 +1488,77 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
               </div>
 
               <div className={styles.formGroup}>
-          <label htmlFor="description">Description <span className={styles.required}>*</span></label>
+          <label htmlFor="description" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span>Description <span className={styles.required}>*</span></span>
+            <button
+              type="button"
+              onClick={async () => {
+                if (!selectedProperty && !propertyData) {
+                  alert('Please select a property first');
+                  return;
+                }
+                try {
+                  const property = selectedProperty || propertyData;
+                  const baseUrl = typeof window !== 'undefined' && window.location.hostname === 'localhost'
+                    ? 'http://localhost:8000'
+                    : 'https://tink.global';
+                  const resp = await fetch(`${baseUrl}/api/listings/generate-description/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      address: property?.full_address || property?.name || '',
+                      type: property?.property_type || '',
+                      bedrooms: (property as any)?.bedrooms || 0,
+                      bathrooms: (property as any)?.bathrooms || 0,
+                      sqft: String((property as any)?.square_footage || ''),
+                      price: formData.listing_type === 'whole_property' 
+                        ? (property as any)?.monthly_rent || ''
+                        : '',
+                      amenities: (property as any)?.amenities || [],
+                      features: {
+                        lot_size_sqft: (property as any)?.lot_size_sqft,
+                        year_built: (property as any)?.year_built
+                      },
+                      neighborhood: (property as any)?.neighborhood || {},
+                    }),
+                  });
+                  if (!resp.ok) {
+                    const errJ = await resp.json().catch(() => ({}));
+                    throw new Error(errJ.error || 'Failed to generate description');
+                  }
+                  const data = await resp.json();
+                  const newDesc = data.description || '';
+                  handleInputChange('description', newDesc);
+                } catch (err: any) {
+                  alert(err.message || 'Failed to generate description');
+                }
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '28px',
+                height: '28px',
+                padding: '0',
+                backgroundColor: '#eff6ff',
+                border: '1px solid #dbeafe',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.backgroundColor = '#dbeafe';
+                e.currentTarget.style.borderColor = '#93c5fd';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.backgroundColor = '#eff6ff';
+                e.currentTarget.style.borderColor = '#dbeafe';
+              }}
+              title="Generate AI description"
+            >
+              <Wand2 size={16} color="#2563eb" />
+            </button>
+          </label>
           <textarea id="description" value={formData.description} onChange={(e) => handleInputChange('description', e.target.value)} placeholder="Describe your property, highlight key features, nearby amenities, and what makes it special..." rows={4} required />
               </div>
 
@@ -799,7 +1622,68 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
     </>
   );
 
-  const renderMediaTab = () => (
+  // Get available property images that aren't in the listing
+  const getAvailablePropertyImages = () => {
+    if (!propertyData || !propertyData.images || !Array.isArray(propertyData.images)) {
+      return [];
+    }
+    
+    // Get URLs currently in the listing
+    const currentUrls = new Set(
+      mediaFiles
+        .filter(m => !m.file) // Only existing images
+        .map(m => {
+          // Normalize URL for comparison (remove query params, etc.)
+          const url = m.url || '';
+          return url.split('?')[0]; // Remove query params
+        })
+    );
+    
+    // Filter property images to only those not in listing
+    return propertyData.images
+      .map((img: any, index: number) => {
+        const imgUrl = typeof img === 'string' ? img : (img?.url || img?.file_url || '');
+        const normalizedUrl = imgUrl.split('?')[0];
+        
+        return {
+          id: `property-img-${index}`,
+          url: imgUrl,
+          staged_url: typeof img === 'object' ? (img.staged_url || null) : null,
+          caption: typeof img === 'object' ? (img.caption || '') : '',
+          originalIndex: index
+        };
+      })
+      .filter((img: any) => {
+        const normalizedUrl = img.url.split('?')[0];
+        return !currentUrls.has(normalizedUrl);
+      });
+  };
+
+  // Restore property image to listing
+  const handleRestorePropertyImage = (propertyImage: any) => {
+    const newMediaFile: MediaFile = {
+      id: `property-image-${Date.now()}-${propertyImage.originalIndex}`,
+      file: null as any,
+      url: propertyImage.url,
+      staged_url: propertyImage.staged_url || null,
+      caption: propertyImage.caption || '',
+      is_primary: mediaFiles.length === 0, // Make primary if it's the first image
+      uploading: false
+    };
+    
+    setMediaFiles(prev => [...prev, newMediaFile]);
+    
+    // If using property images, update kept_property_images immediately
+    if (editMode && existingListing?.id) {
+      const updatedMediaFiles = [...mediaFiles, newMediaFile];
+      updateKeptPropertyImages(updatedMediaFiles);
+    }
+  };
+
+  const renderMediaTab = () => {
+    const availablePropertyImages = editMode && propertyData ? getAvailablePropertyImages() : [];
+    
+    return (
     <>
       <div className={styles.sectionHeader}>
         <h3>Photos & Media</h3>
@@ -821,33 +1705,306 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
           </div>
         </div>
 
+        {/* Available Property Images Section */}
+        {availablePropertyImages.length > 0 && (
+          <div className={styles.formGroup} style={{ marginTop: '2rem' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+              <span>Available Property Images</span>
+              <span style={{ 
+                fontSize: '0.875rem', 
+                color: '#6b7280', 
+                fontWeight: 'normal' 
+              }}>
+                ({availablePropertyImages.length} {availablePropertyImages.length === 1 ? 'image' : 'images'} available)
+              </span>
+            </label>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+              gap: '1rem',
+              marginTop: '0.5rem'
+            }}>
+              {availablePropertyImages.map((img: any) => {
+                const displayUrl = img.staged_url || img.url;
+                return (
+                  <div
+                    key={img.id}
+                    style={{
+                      position: 'relative',
+                      aspectRatio: '1',
+                      borderRadius: '8px',
+                      overflow: 'hidden',
+                      border: '2px solid #e5e7eb',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      backgroundColor: '#f9fafb'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = '#2563eb';
+                      e.currentTarget.style.transform = 'scale(1.02)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = '#e5e7eb';
+                      e.currentTarget.style.transform = 'scale(1)';
+                    }}
+                    onClick={() => handleRestorePropertyImage(img)}
+                  >
+                    <img
+                      src={displayUrl ? getMediaUrl(displayUrl) : 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0zNSA2NUw0NSA1NSw1NSA2NUw3NSA0NUwzNSA2NVoiIGZpbGw9IiNEMUQ1REIiLz4KPGNpcmNsZSBjeD0iNDAiIGN5PSIzNSIgcj0iNSIgZmlsbD0iI0QxRDVEQiIvPgo8L3N2Zz4='}
+                      alt="Property"
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0zNSA2NUw0NSA1NSw1NSA2NUw3NSA0NUwzNSA2NVoiIGZpbGw9IiNEMUQ1REIiLz4KPGNpcmNsZSBjeD0iNDAiIGN5PSIzNSIgcj0iNSIgZmlsbD0iI0QxRDVEQiIvPgo8L3N2Zz4=';
+                      }}
+                    />
+                    {/* Restore overlay */}
+                    <div style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      opacity: 0,
+                      transition: 'opacity 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.opacity = '1';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.opacity = '0';
+                    }}
+                    >
+                      <div style={{
+                        backgroundColor: '#2563eb',
+                        color: 'white',
+                        padding: '8px 16px',
+                        borderRadius: '6px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        fontSize: '0.875rem',
+                        fontWeight: '500'
+                      }}>
+                        <Plus size={16} />
+                        <span>Add to Listing</span>
+                      </div>
+                    </div>
+                    {/* Staged badge if applicable */}
+                    {img.staged_url && (
+                      <div style={{
+                        position: 'absolute',
+                        top: '8px',
+                        right: '8px',
+                        backgroundColor: 'rgba(37, 99, 235, 0.9)',
+                        color: 'white',
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        fontSize: '0.75rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}>
+                        <Wand2 size={12} />
+                        <span>Staged</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            <small style={{ display: 'block', marginTop: '0.75rem', color: '#6b7280' }}>
+              Click on any image to add it back to your listing. These are images from the property that aren't currently in the listing.
+            </small>
+          </div>
+        )}
+
         {mediaFiles.length > 0 && (
           <div className={styles.mediaPreview}>
             <div className={styles.sectionHeader}>
               <h4>Uploaded Photos ({mediaFiles.length})</h4>
             </div>
             <div className={styles.mediaGrid}>
-              {mediaFiles.map(media => (
-                <div key={media.id} className={styles.mediaItem}>
+              {mediaFiles.map((media, index) => {
+                const displayUrl = media.staged_url || media.url;
+                const isStaged = !!media.staged_url;
+                
+                return (
+                  <div 
+                    key={media.id} 
+                    className={styles.mediaItem}
+                    draggable
+                    onDragStart={() => handleDragStart(index)}
+                    onDragOver={(e) => handleDragOver(e, index)}
+                    onDragEnd={handleDragEnd}
+                    style={{ 
+                      opacity: draggedIndex === index ? 0.5 : 1,
+                      cursor: 'move'
+                    }}
+                  >
                   <div className={styles.mediaImage}>
-                    <img src={getMediaUrl(media.url)} alt="Property" />
+                      <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                        <img 
+                          src={displayUrl ? getMediaUrl(displayUrl) : 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0zNSA2NUw0NSA1NSw1NSA2NUw3NSA0NUwzNSA2NVoiIGZpbGw9IiNEMUQ1REIiLz4KPGNpcmNsZSBjeD0iNDAiIGN5PSIzNSIgcj0iNSIgZmlsbD0iI0QxRDVEQiIvPgo8L3N2Zz4='} 
+                          alt="Property" 
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          onError={(e) => {
+                            // Fallback to placeholder if image fails to load
+                            (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0zNSA2NUw0NSA1NSw1NSA2NUw3NSA0NUwzNSA2NVoiIGZpbGw9IiNEMUQ1REIiLz4KPGNpcmNsZSBjeD0iNDAiIGN5PSIzNSIgcj0iNSIgZmlsbD0iI0QxRDVEQiIvPgo8L3N2Zz4=';
+                            console.error('Failed to load image:', displayUrl);
+                          }}
+                        />
                     {media.is_primary && <div className={styles.primaryBadge}>Featured</div>}
+                        {isStaged && (
+                          <div style={{
+                            position: 'absolute',
+                            top: '8px',
+                            right: '8px',
+                            backgroundColor: 'rgba(37, 99, 235, 0.9)',
+                            color: 'white',
+                            padding: '4px 8px',
+                            borderRadius: '4px',
+                            fontSize: '0.75rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}>
+                            <Wand2 size={12} />
+                            <span>Staged</span>
+                          </div>
+                        )}
+                        {/* Error message overlay */}
+                        {stagingErrors[media.id!] && (
+                          <div style={{
+                            position: 'absolute',
+                            top: '50%',
+                            left: '50%',
+                            transform: 'translate(-50%, -50%)',
+                            backgroundColor: 'rgba(239, 68, 68, 0.95)',
+                            color: 'white',
+                            padding: '12px 16px',
+                            borderRadius: '8px',
+                            fontSize: '0.875rem',
+                            maxWidth: '90%',
+                            textAlign: 'center',
+                            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+                            zIndex: 10,
+                            border: '1px solid rgba(255, 255, 255, 0.2)'
+                          }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                              <AlertIcon />
+                              <strong>Staging Failed</strong>
+                            </div>
+                            <div style={{ fontSize: '0.8rem', lineHeight: '1.4' }}>
+                              {stagingErrors[media.id!]}
+                            </div>
+                          </div>
+                        )}
+                        {/* Drag handle */}
+                        <div style={{
+                          position: 'absolute',
+                          top: '8px',
+                          left: '8px',
+                          backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                          color: 'white',
+                          padding: '4px',
+                          borderRadius: '4px',
+                          cursor: 'grab'
+                        }}>
+                          <GripVertical size={16} />
+                        </div>
+                        {/* Staging button */}
+                        <div style={{
+                          position: 'absolute',
+                          bottom: '8px',
+                          right: '8px',
+                          display: 'flex',
+                          gap: '4px'
+                        }}>
+                          {isStaged && (
+                            <button
+                              type="button"
+                              onClick={() => handleUnstageImage(media.id!)}
+                              style={{
+                                backgroundColor: 'rgba(220, 38, 38, 0.9)',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '4px',
+                                padding: '6px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                              }}
+                              title="Remove staging"
+                            >
+                              <X size={16} />
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleStageImage(media.id!, index)}
+                            disabled={media.isStaging}
+                            style={{
+                              backgroundColor: media.isStaging ? 'rgba(156, 163, 175, 0.9)' : (stagingErrors[media.id!] ? 'rgba(239, 68, 68, 0.9)' : 'rgba(37, 99, 235, 0.9)'),
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              padding: '6px',
+                              cursor: media.isStaging ? 'not-allowed' : 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              transition: 'background-color 0.2s ease'
+                            }}
+                            title={stagingErrors[media.id!] ? stagingErrors[media.id!] : (isStaged ? "Regenerate staging" : "Stage with AI")}
+                          >
+                            {media.isStaging ? (
+                              <div style={{ width: '16px', height: '16px', border: '2px solid white', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                            ) : (
+                              <Wand2 size={16} />
+                            )}
+                          </button>
+                        </div>
+                      </div>
                   </div>
                   <div className={styles.mediaControls}>
-                    <input type="text" placeholder="Add caption..." value={media.caption} onChange={(e) => handleMediaUpdate(media.id!, { caption: e.target.value })} />
+                      <input 
+                        type="text" 
+                        placeholder="Add caption..." 
+                        value={media.caption} 
+                        onChange={(e) => handleMediaUpdate(media.id!, { caption: e.target.value })} 
+                      />
                     <div className={styles.mediaActions}>
-                      <button type="button" onClick={() => setPrimaryImage(media.id!)} className={`${styles.btn} ${styles.btnSm} ${media.is_primary ? styles.btnPrimary : styles.btnSecondary}`}>{media.is_primary ? 'Featured' : 'Set as Featured'}</button>
-                      <button type="button" onClick={() => handleMediaDelete(media.id!)} className={`${styles.btn} ${styles.btnSm} ${styles.btnDanger}`}>Delete</button>
+                        <button 
+                          type="button" 
+                          onClick={() => setPrimaryImage(media.id!)} 
+                          className={`${styles.btn} ${styles.btnSm} ${media.is_primary ? styles.btnPrimary : styles.btnSecondary}`}
+                        >
+                          {media.is_primary ? 'Featured' : 'Set as Featured'}
+                        </button>
+                        <button 
+                          type="button" 
+                          onClick={() => handleMediaDelete(media.id!)} 
+                          className={`${styles.btn} ${styles.btnSm} ${styles.btnDanger}`}
+                        >
+                          Delete
+                        </button>
                     </div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
               </div>
             </div>
           )}
         </div>
     </>
   );
+  };
 
   const renderDetailsTab = () => (
     <>
@@ -917,17 +2074,65 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
       
       <div className={styles.formSection}>
         <div className={styles.formGroup}>
+          <label>Application Configuration</label>
+          <div className={styles.radioGroup} style={{ marginBottom: '1.5rem' }}>
+            <label 
+              className={`${styles.radioOption} ${applicationMode === 'default' ? styles.selected : ''}`}
+              onClick={() => {
+                setApplicationMode('default');
+                // Set default values
+                handleInputChange('application_fee', 0);
+                handleInputChange('require_background_check', false);
+                handleInputChange('require_income_verification', false);
+                handleInputChange('minimum_income_ratio', 3);
+                handleInputChange('required_documents', []);
+              }}
+            >
+              <input 
+                type="radio" 
+                name="application_mode" 
+                value="default" 
+                checked={applicationMode === 'default'} 
+                onChange={() => setApplicationMode('default')} 
+              />
+              <div className="radio-content">
+                <span className={styles.radioTitle}>Default</span>
+                <small className={styles.radioDescription}>Free application • No background check</small>
+              </div>
+            </label>
+            <label 
+              className={`${styles.radioOption} ${applicationMode === 'manual' ? styles.selected : ''}`}
+              onClick={() => setApplicationMode('manual')}
+            >
+              <input 
+                type="radio" 
+                name="application_mode" 
+                value="manual" 
+                checked={applicationMode === 'manual'} 
+                onChange={() => setApplicationMode('manual')} 
+              />
+              <div className="radio-content">
+                <span className={styles.radioTitle}>Edit Manually</span>
+                <small className={styles.radioDescription}>Customize application fee and requirements</small>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        {applicationMode === 'manual' && (
+          <>
+        <div className={styles.formGroup}>
           <label htmlFor="application_fee">Application Fee</label>
           <div className={styles.inputWithPrefix}>
             <span className={styles.prefix}>$</span>
-            <input id="application_fee" type="number" value={formData.application_fee} onChange={(e) => handleInputChange('application_fee', parseInt(e.target.value))} min="0" step="1" />
+                <input id="application_fee" type="number" value={formData.application_fee} onChange={(e) => handleInputChange('application_fee', parseInt(e.target.value) || 0)} min="0" step="1" />
           </div>
         </div>
 
         <div className={styles.formGroup}>
           <label htmlFor="minimum_income_ratio">Minimum Income Ratio</label>
           <div className={styles.inputWithSuffix}>
-            <input id="minimum_income_ratio" type="number" value={formData.minimum_income_ratio} onChange={(e) => handleInputChange('minimum_income_ratio', parseFloat(e.target.value))} min="1" max="10" step="0.1" />
+                <input id="minimum_income_ratio" type="number" value={formData.minimum_income_ratio} onChange={(e) => handleInputChange('minimum_income_ratio', parseFloat(e.target.value) || 3)} min="1" max="10" step="0.1" />
             <span className={styles.suffix}>x rent</span>
           </div>
           <small>Income must be at least this many times the monthly rent</small>
@@ -957,6 +2162,8 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
             ))}
           </div>
         </div>
+          </>
+        )}
       </div>
     </>
   );
@@ -964,12 +2171,169 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
   const renderContactTab = () => (
     <>
       <div className={styles.sectionHeader}>
-        <h3>Contact & Publish</h3>
-        <p>Set contact information and publish your listing.</p>
+        <h3>Publish Your Listing</h3>
+        <p>Choose where you want to publish this listing. We'll syndicate it to all selected platforms instantly.</p>
       </div>
       
       <div className={styles.formSection}>
+        {/* Publishing Platforms */}
         <div className={styles.formGroup}>
+          <label>Publishing Platforms</label>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.75rem' }}>
+            {/* SquareFt Platform */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '1rem',
+              backgroundColor: publishingPlatforms.squareft ? '#eff6ff' : 'white',
+              border: `2px solid ${publishingPlatforms.squareft ? '#2563eb' : '#e5e7eb'}`,
+              borderRadius: '8px',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+            onClick={() => setPublishingPlatforms(prev => ({ ...prev, squareft: true }))}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{
+                  width: '40px',
+                  height: '40px',
+                  backgroundColor: '#2563eb',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white',
+                  fontWeight: 'bold',
+                  fontSize: '0.875rem'
+                }}>Sft</div>
+                <div>
+                  <div style={{ fontWeight: '600', color: '#111827', marginBottom: '0.25rem' }}>SquareFt Public Listing</div>
+                  <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>Always included • Free forever</div>
+                </div>
+              </div>
+              <div style={{
+                width: '44px',
+                height: '24px',
+                backgroundColor: publishingPlatforms.squareft ? '#2563eb' : '#d1d5db',
+                borderRadius: '12px',
+                position: 'relative',
+                transition: 'background-color 0.2s',
+                cursor: 'pointer'
+              }}>
+                <div style={{
+                  position: 'absolute',
+                  top: '2px',
+                  left: publishingPlatforms.squareft ? '22px' : '2px',
+                  width: '20px',
+                  height: '20px',
+                  backgroundColor: 'white',
+                  borderRadius: '50%',
+                  transition: 'left 0.2s',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                }} />
+              </div>
+        </div>
+
+            {/* Other Platforms */}
+            {[
+              { key: 'zillow', name: 'Zillow', logo: 'Z' },
+              { key: 'apartments', name: 'Apartments.com', logo: 'A' },
+              { key: 'realtor', name: 'Realtor.com', logo: 'R' },
+              { key: 'trulia', name: 'Trulia', logo: 'T' },
+              { key: 'facebook', name: 'Facebook Marketplace', logo: 'f' }
+            ].map(platform => (
+              <div key={platform.key} style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '1rem',
+                backgroundColor: 'white',
+                border: '1px solid #e5e7eb',
+                borderRadius: '8px',
+                cursor: 'not-allowed',
+                opacity: 0.6
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <div style={{
+                    width: '40px',
+                    height: '40px',
+                    backgroundColor: '#f3f4f6',
+                    borderRadius: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#6b7280',
+                    fontWeight: 'bold',
+                    fontSize: '0.875rem'
+                  }}>{platform.logo}</div>
+                  <div>
+                    <div style={{ fontWeight: '600', color: '#111827', marginBottom: '0.25rem' }}>{platform.name}</div>
+                    <div style={{ fontSize: '0.875rem', color: '#9ca3af' }}>Coming soon</div>
+                  </div>
+                </div>
+                <div style={{
+                  width: '44px',
+                  height: '24px',
+                  backgroundColor: '#d1d5db',
+                  borderRadius: '12px',
+                  position: 'relative',
+                  cursor: 'not-allowed'
+                }}>
+                  <div style={{
+                    position: 'absolute',
+                    top: '2px',
+                    left: '2px',
+                    width: '20px',
+                    height: '20px',
+                    backgroundColor: 'white',
+                    borderRadius: '50%',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                  }} />
+                </div>
+              </div>
+            ))}
+          </div>
+          <small style={{ display: 'block', marginTop: '0.75rem', color: '#6b7280', fontSize: '0.875rem' }}>
+            You can always add more platforms later
+          </small>
+        </div>
+
+        {/* Listing Status Toggle */}
+        <div className={styles.formGroup} style={{ marginTop: '1.5rem' }}>
+          <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+            <span>Listing Status</span>
+            <div style={{
+              width: '52px',
+              height: '28px',
+              backgroundColor: formData.is_active ? '#2563eb' : '#d1d5db',
+              borderRadius: '14px',
+              position: 'relative',
+              transition: 'background-color 0.2s',
+              cursor: 'pointer'
+            }}
+            onClick={() => handleInputChange('is_active', !formData.is_active)}
+            >
+              <div style={{
+                position: 'absolute',
+                top: '2px',
+                left: formData.is_active ? '26px' : '2px',
+                width: '24px',
+                height: '24px',
+                backgroundColor: 'white',
+                borderRadius: '50%',
+                transition: 'left 0.2s',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+              }} />
+            </div>
+            </label>
+          <small style={{ display: 'block', marginTop: '0.5rem', color: '#6b7280' }}>
+            {formData.is_active ? 'Listing is active and visible to tenants' : 'Listing is inactive and hidden'}
+          </small>
+        </div>
+
+        {/* Contact Information */}
+        <div className={styles.formGroup} style={{ marginTop: '1.5rem' }}>
           <label htmlFor="contact_email">Contact Email</label>
           <input id="contact_email" type="email" value={formData.contact_email} onChange={(e) => handleInputChange('contact_email', e.target.value)} placeholder="contact@example.com" />
         </div>
@@ -977,30 +2341,6 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
         <div className={styles.formGroup}>
           <label htmlFor="contact_phone">Contact Phone</label>
           <input id="contact_phone" type="tel" value={formData.contact_phone} onChange={(e) => handleInputChange('contact_phone', e.target.value)} placeholder="(555) 123-4567" />
-        </div>
-
-        <div className={styles.formGroup}>
-          <label>Visibility Settings</label>
-          <div className={styles.checkboxGrid}>
-            <label className={`${styles.checkboxOption} ${formData.show_landlord_info ? styles.selected : ''}`}>
-              <input type="checkbox" checked={formData.show_landlord_info} onChange={(e) => handleInputChange('show_landlord_info', e.target.checked)} />
-              <span>Show Landlord Information</span>
-            </label>
-            <label className={`${styles.checkboxOption} ${formData.is_active ? styles.selected : ''}`}>
-              <input type="checkbox" checked={formData.is_active} onChange={(e) => handleInputChange('is_active', e.target.checked)} />
-              <span>Publish Listing (Active)</span>
-            </label>
-          </div>
-        </div>
-
-        <div className={styles.formGroup}>
-          <label htmlFor="seo_title">SEO Title</label>
-          <input id="seo_title" type="text" value={formData.seo_title} onChange={(e) => handleInputChange('seo_title', e.target.value)} placeholder="Custom title for search engines (optional)" />
-        </div>
-
-        <div className={styles.formGroup}>
-          <label htmlFor="seo_description">SEO Description</label>
-          <textarea id="seo_description" value={formData.seo_description} onChange={(e) => handleInputChange('seo_description', e.target.value)} placeholder="Custom description for search engines (optional)" rows={3} />
         </div>
       </div>
     </>

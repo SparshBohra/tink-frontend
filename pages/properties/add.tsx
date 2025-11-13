@@ -1,24 +1,43 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
-import Link from 'next/link';
-import { apiClient } from '../../lib/api';
+import { ArrowLeft, Building, MapPin, Home, Check, Loader, DollarSign, Users, Sparkles } from 'lucide-react';
 import DashboardLayout from '../../components/DashboardLayout';
-import { usStates } from '../../lib/states';
-import { Landlord } from '../../lib/types';
-import MapboxAddressAutocomplete from '../../components/MapboxAddressAutocomplete';
-import { ArrowLeft, Building, Home } from 'lucide-react';
+import LoadingOverlay from '../../components/listing-generator/LoadingOverlay';
+import { apiClient } from '../../lib/api';
 
-interface RoomTypeConfig {
+interface MapboxFeature {
+  place_name: string;
+  properties: {
+    address?: string;
+  };
+  context: Array<{
   id: string;
-  roomType: string;
-  quantity: number;
-  monthlyRent: number;
-  maxCapacity: number;
-  floor: string;
+    text: string;
+    short_code?: string;
+  }>;
 }
 
-// Updated to match backend API specifications
+interface ScrapedListing {
+  listing_id: string;
+  title: string;
+  description: string;
+  address: any;
+  pricing: any;
+  property_details: any;
+  source?: { platform?: string; url?: string; provider_listing_id?: string };
+  amenities?: string[];
+  nearby?: any;
+  schools?: any[];
+  media: {
+    thumbnail?: string;
+    photos?: string[];
+    videos?: string[];
+    floorplans?: string[];
+    virtual_tour?: string;
+  };
+}
+
 const PROPERTY_TYPES = [
   { value: 'apartment', label: 'Apartment Building', description: 'Multi-unit apartment complex' },
   { value: 'house', label: 'Single-Family House', description: 'Individual residential house' },
@@ -31,580 +50,533 @@ const RENT_TYPES = [
   { value: 'per_property', label: 'Rent is for the whole property', description: 'Single rent for entire property' }
 ];
 
-const TIMEZONE_OPTIONS = [
-  { value: 'America/Los_Angeles', label: 'Pacific Time (PT)', description: 'West Coast time zone' },
-  { value: 'America/New_York', label: 'Eastern Time (ET)', description: 'East Coast time zone' },
-  { value: 'America/Chicago', label: 'Central Time (CT)', description: 'Central US time zone' },
-  { value: 'America/Denver', label: 'Mountain Time (MT)', description: 'Mountain time zone' },
-  { value: 'Europe/London', label: 'GMT/BST', description: 'Greenwich Mean Time' },
-  { value: 'Europe/Paris', label: 'CET/CEST', description: 'Central European Time' }
-];
-
-const ROOM_TYPES = [
-  { value: 'standard', label: 'Standard Room', description: 'Basic room with standard amenities' },
-  { value: 'suite', label: 'Suite', description: 'Large room with separate living area' },
-  { value: 'studio', label: 'Studio', description: 'Open-plan room with kitchenette' },
-  { value: 'shared', label: 'Shared Room', description: 'Shared accommodation with multiple beds' },
-  { value: 'single', label: 'Single Occupancy', description: 'Room for one person' },
-  { value: 'double', label: 'Double Occupancy', description: 'Room for two people' },
-  { value: 'premium', label: 'Premium Room', description: 'High-end room with luxury amenities' }
-];
+// Auto-detect timezone from US state
+const getTimezoneFromState = (state: string): string => {
+  const stateUpper = state.toUpperCase();
+  
+  // Pacific Time
+  const pacificStates = ['CA', 'WA', 'OR', 'NV'];
+  if (pacificStates.includes(stateUpper)) return 'America/Los_Angeles';
+  
+  // Mountain Time
+  const mountainStates = ['MT', 'ID', 'WY', 'UT', 'CO', 'AZ', 'NM'];
+  if (mountainStates.includes(stateUpper)) return 'America/Denver';
+  
+  // Central Time
+  const centralStates = ['ND', 'SD', 'NE', 'KS', 'OK', 'TX', 'MN', 'IA', 'MO', 'AR', 'LA', 'MS', 'AL', 'WI', 'IL', 'TN', 'KY'];
+  if (centralStates.includes(stateUpper)) return 'America/Chicago';
+  
+  // Eastern Time (default for most remaining states)
+  const easternStates = ['ME', 'NH', 'VT', 'MA', 'RI', 'CT', 'NY', 'NJ', 'PA', 'DE', 'MD', 'DC', 'VA', 'WV', 'NC', 'SC', 'GA', 'FL', 'OH', 'MI', 'IN'];
+  if (easternStates.includes(stateUpper)) return 'America/New_York';
+  
+  // Default to Pacific
+  return 'America/Los_Angeles';
+};
 
 export default function AddProperty() {
   const router = useRouter();
-  const [formData, setFormData] = useState({
-    name: '',
-    address_line1: '',
-    address_line2: '',
-    city: '',
-    state: '',
-    postal_code: '',
-    country: 'United States',
-    property_type: 'apartment',
-    timezone: 'America/Los_Angeles',
-    rent_type: 'per_room',
-    monthly_rent: '',
-    security_deposit: '',
-    total_rooms: 1,
-    landlord: undefined as number | undefined,
-  });
-  const [roomTypeConfigs, setRoomTypeConfigs] = useState<RoomTypeConfig[]>([]);
-  const [landlords, setLandlords] = useState<Landlord[]>([]);
-  const [landlordsLoading, setLandlordsLoading] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState<'address' | 'configure' | 'saving'>('address');
+  
+  // Address input state
+  const [address, setAddress] = useState('');
+  const [suggestions, setSuggestions] = useState<MapboxFeature[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(-1);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const debounceRef = useRef<NodeJS.Timeout | undefined>(undefined);
+  const MAPBOX_ACCESS_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
+  
+  // Scraped data state
+  const [scrapedData, setScrapedData] = useState<ScrapedListing | null>(null);
+  
+  // Configuration state
+  const [propertyType, setPropertyType] = useState('apartment'); // Auto-detected, not shown to user
+  const [rentType, setRentType] = useState('per_room');
+  const [totalRooms, setTotalRooms] = useState(1);
+  const [perRoomRent, setPerRoomRent] = useState<number>(0);
+  const [manualRent, setManualRent] = useState<string>('');
+  const [detectedTimezone, setDetectedTimezone] = useState<string>('America/Los_Angeles'); // Auto-detected
+  
+  // Loading states
+  const [showLoading, setShowLoading] = useState(false);
+  const [isApiLoading, setIsApiLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  
+  // Error states
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [profileResolved, setProfileResolved] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  
+  // Duplicate address warning modal
+  const [duplicateModal, setDuplicateModal] = useState<{
+    show: boolean;
+    existingProperty: any;
+    addressToCheck: string;
+  }>({ show: false, existingProperty: null, addressToCheck: '' });
 
-  // Auto-detect landlord or fetch list
-  useEffect(() => {
-    const init = async () => {
-      try {
-        const profile = await apiClient.getProfile();
-        
-        // Always set the current user as the landlord
-          setFormData(prev => ({ ...prev, landlord: profile.id }));
-        
-        // If user is a manager, we might still want to show landlord relationships
-        // but we'll use the current user's ID as the landlord for property creation
-        if (profile.role === 'manager') {
-          try {
-          const rel = await apiClient.getManagerLandlordRelationships();
-            // If manager has relationships, use the first one, otherwise use their own ID
-            if (rel.length > 0) {
-            setFormData(prev => ({ ...prev, landlord: rel[0].landlord }));
-          }
-          } catch (e) {
-            console.error('Failed to load manager relationships:', e);
-            // Fallback to using manager's own ID
-        }
-        }
-      } catch (e) {
-        console.error('Failed to load profile:', e);
-        setError('Failed to load user profile. Please refresh the page.');
-      } finally {
-        setProfileResolved(true);
+  // Get API URL based on environment
+  const getApiUrl = () => {
+    if (typeof window !== 'undefined') {
+      const hostname = window.location.hostname;
+      if (hostname === 'localhost') {
+        return 'http://localhost:8000';
+      } else {
+        return 'https://tink.global';
       }
-    };
-    init();
-  }, []);
-
-  const addRoomTypeConfig = () => {
-    const newConfig: RoomTypeConfig = {
-      id: `room-type-${Date.now()}`,
-      roomType: 'standard',
-      quantity: 1,
-      monthlyRent: 0,
-      maxCapacity: 2,
-      floor: ''
-    };
-    setRoomTypeConfigs(prev => [...prev, newConfig]);
+    }
+    return 'http://localhost:8000';
   };
 
-  const updateRoomTypeConfig = (id: string, field: keyof RoomTypeConfig, value: string | number) => {
-    let finalValue: string | number = value;
-
-    if (field === 'roomType' && typeof value === 'string') {
-      // Normalise to backend-friendly lowercase slug
-      const trimmed = value.trim();
-      // If user somehow selected/typed the label instead of value, map it
-      const match = ROOM_TYPES.find(rt => rt.value === trimmed.toLowerCase() || rt.label.toLowerCase() === trimmed.toLowerCase());
-      finalValue = match ? match.value : trimmed.toLowerCase();
-    }
-
-    console.log('Updating room config:', { id, field, originalValue: value, finalValue });
-
-    setRoomTypeConfigs(prev =>
-      prev.map(config => (config.id === id ? { ...config, [field]: finalValue } : config))
-    );
-  };
-
-  const removeRoomTypeConfig = (id: string) => {
-    setRoomTypeConfigs(prev => prev.filter(config => config.id !== id));
-  };
-
-  const createRoomsForProperty = async (propertyId: number) => {
-    const roomsToCreate = [];
-    // Track counts per room type to generate unique names
-    const typeCounters: Record<string, number> = {};
-    
-    for (const config of roomTypeConfigs) {
-      // Canonical room type value
-      const matchType = ROOM_TYPES.find(rt => rt.value === config.roomType) || ROOM_TYPES.find(rt => rt.label.toLowerCase() === config.roomType.toLowerCase());
-      const canonicalType = matchType ? matchType.value : config.roomType.toLowerCase();
-      const typeLabel = ROOM_TYPES.find(rt => rt.value === canonicalType)?.label || canonicalType;
-
-      for (let i = 1; i <= config.quantity; i++) {
-        // Increment sequence number for this type
-        typeCounters[canonicalType] = (typeCounters[canonicalType] || 0) + 1;
-        const seq = typeCounters[canonicalType];
-        const roomName = `${typeLabel} ${seq}`;
-        
-        const roomData = {
-          property_ref: propertyId,
-          name: roomName,
-          room_type: canonicalType,
-          max_capacity: config.maxCapacity,
-          monthly_rent: config.monthlyRent,
-          security_deposit: config.monthlyRent * 2,
-        } as any;
-
-        if (config.floor && config.floor.trim() !== '') roomData.floor = config.floor;
-
-        roomsToCreate.push(roomData);
-      }
-    }
-
-    // Create all rooms
-    const createdRooms = [];
-    for (const roomData of roomsToCreate) {
-      try {
-        console.log('Creating room with data:', roomData); // Debug log
-        const room = await apiClient.createRoom(roomData);
-        createdRooms.push(room);
-      } catch (error: any) {
-        console.error('Failed to create room:', roomData.name, error);
-        console.error('Room data that failed:', roomData); // Debug log
-        
-        // Extract more detailed error information
-        let errorMessage = `Failed to create room: ${roomData.name}`;
-        if (error.response?.data) {
-          const errorData = error.response.data;
-          if (typeof errorData === 'object') {
-            const errorDetails = Object.entries(errorData).map(([field, messages]) => {
-              if (Array.isArray(messages)) {
-                return `${field}: ${messages.join(', ')}`;
-              }
-              return `${field}: ${messages}`;
-            }).join('; ');
-            errorMessage += ` - ${errorDetails}`;
-          } else {
-            errorMessage += ` - ${errorData}`;
-          }
-        }
-        
-        throw new Error(errorMessage);
-      }
-    }
-
-    return createdRooms;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-    setSuccess(null);
-
-    // Wait for profile resolution
-    if (!profileResolved) {
-      setError('Please wait for the system to load your profile information.');
-      setLoading(false);
+  // Mapbox address search function
+  const searchAddresses = async (query: string) => {
+    if (!query.trim() || !MAPBOX_ACCESS_TOKEN) {
+      setSuggestions([]);
+      setShowSuggestions(false);
       return;
-    }
-
-    // Validate landlord is set
-    if (!formData.landlord) {
-      setError('Unable to determine landlord information. Please refresh the page and try again.');
-      setLoading(false);
-      return;
-    }
-
-    // Validate required fields
-    if (!formData.name || !formData.address_line1 || !formData.city || !formData.state || !formData.postal_code || !formData.country || !formData.timezone) {
-      setError('Please fill in all required fields.');
-      setLoading(false);
-      return;
-    }
-
-    // Validate rent type specific requirements
-    if (formData.rent_type === 'per_property') {
-      if (!formData.monthly_rent || isNaN(Number(formData.monthly_rent)) || Number(formData.monthly_rent) <= 0) {
-        setError('Please enter a valid monthly rent amount for the property. This field is required when "Rent is for the whole property" is selected.');
-      setLoading(false);
-      return;
-      }
-    }
-
-    if (formData.rent_type === 'per_room') {
-      if (roomTypeConfigs.length === 0) {
-        setError('Please add at least one room type configuration when using "Rent is per room" structure.');
-        setLoading(false);
-        return;
-      }
-
-      // Validate room configurations
-      for (const config of roomTypeConfigs) {
-        if (!config.roomType || config.quantity < 1 || config.monthlyRent <= 0 || config.maxCapacity < 1) {
-          setError('Please ensure all room configurations have valid room type, quantity, rent amount, and capacity.');
-          setLoading(false);
-          return;
-        }
-      }
     }
 
     try {
-      // Prepare property data according to backend API
-      const propertyData = {
-        name: formData.name,
-        address_line1: formData.address_line1,
-        address_line2: formData.address_line2 || undefined,
-        city: formData.city,
-        state: formData.state,
-        postal_code: formData.postal_code,
-        country: formData.country,
-        property_type: formData.property_type,
-        timezone: formData.timezone,
-        rent_type: formData.rent_type as 'per_room' | 'per_property',
-        total_rooms: formData.rent_type === 'per_room' ? getTotalRooms() : formData.total_rooms,
-        monthly_rent: formData.rent_type === 'per_property' ? formData.monthly_rent : '',
-        landlord: formData.landlord,
-        // Include security_deposit only for per_property
-        ...(formData.rent_type === 'per_property' && {
-          security_deposit: formData.security_deposit || undefined
-        })
+      const response = await fetch(
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?` +
+        `access_token=${MAPBOX_ACCESS_TOKEN}&` +
+        `country=US&` +
+        `types=address&` +
+        `limit=5&` +
+        `autocomplete=true`
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setSuggestions(data.features || []);
+        setShowSuggestions(data.features && data.features.length > 0);
+        setSelectedIndex(-1);
+      }
+    } catch (error) {
+      console.error('Address search error:', error);
+      setSuggestions([]);
+      setShowSuggestions(false);
+    }
+  };
+
+  // Handle input change with debouncing
+  const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    setAddress(newValue);
+
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+
+    if (MAPBOX_ACCESS_TOKEN) {
+      debounceRef.current = setTimeout(() => {
+        searchAddresses(newValue);
+      }, 300);
+    }
+  };
+
+  // Handle suggestion selection
+  const handleSuggestionSelect = (feature: MapboxFeature) => {
+    setAddress(feature.place_name);
+    setShowSuggestions(false);
+    setSuggestions([]);
+    setSelectedIndex(-1);
+  };
+
+  // Handle keyboard navigation
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!showSuggestions || suggestions.length === 0) return;
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setSelectedIndex(prev => 
+          prev < suggestions.length - 1 ? prev + 1 : prev
+        );
+        break;
+      
+      case 'ArrowUp':
+        e.preventDefault();
+        setSelectedIndex(prev => prev > 0 ? prev - 1 : -1);
+        break;
+      
+      case 'Enter':
+        e.preventDefault();
+        if (selectedIndex >= 0 && selectedIndex < suggestions.length) {
+          handleSuggestionSelect(suggestions[selectedIndex]);
+        } else if (address.trim()) {
+          handleScrapeAddress();
+        }
+        break;
+      
+      case 'Escape':
+        setShowSuggestions(false);
+        setSelectedIndex(-1);
+        break;
+    }
+  };
+
+  // Check for duplicate address before scraping (using backend)
+  const checkForDuplicateBeforeScraping = async (addressString: string): Promise<boolean> => {
+    try {
+      const result = await apiClient.checkDuplicateAddress({
+        address: addressString
+      });
+
+      if (result.is_duplicate && result.existing_property) {
+        setDuplicateModal({
+          show: true,
+          existingProperty: result.existing_property,
+          addressToCheck: addressString
+        });
+        return true; // Duplicate found
+      }
+      return false; // No duplicate
+    } catch (error) {
+      console.error('Error checking for duplicate address:', error);
+      // If check fails, allow proceeding
+      return false;
+    }
+  };
+
+  // Handle address scraping
+  const handleScrapeAddress = async () => {
+    if (!address.trim()) return;
+
+    // Check for duplicate first
+    const hasDuplicate = await checkForDuplicateBeforeScraping(address.trim());
+    if (hasDuplicate) {
+      return; // Stop here, modal will be shown
+    }
+
+    setShowLoading(true);
+    setIsApiLoading(true);
+    setError(null);
+    
+    try {
+      const apiUrl = getApiUrl();
+      const response = await fetch(`${apiUrl}/api/listings/ingest/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ address: address.trim() }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.listing) {
+          setScrapedData(data.listing);
+          
+          // Auto-detect property type from scraped data
+          const scrapedType = String(data.listing?.property_details?.type || '').toLowerCase();
+          let mappedType = 'apartment';
+          if (scrapedType.includes('house') || scrapedType.includes('single')) mappedType = 'house';
+          else if (scrapedType.includes('dorm')) mappedType = 'dorm';
+          else if (scrapedType.includes('apartment') || scrapedType.includes('apt') || scrapedType.includes('multi')) mappedType = 'apartment';
+          else if (scrapedType.includes('condo') || scrapedType.includes('town')) mappedType = 'apartment';
+          else if (scrapedType) mappedType = 'other';
+          setPropertyType(mappedType);
+          
+          // Auto-detect timezone from state
+          const state = data.listing?.address?.state || '';
+          const tz = getTimezoneFromState(state);
+          setDetectedTimezone(tz);
+          
+          // Set total rooms from bedrooms if available
+          const bedrooms = Number(data.listing?.property_details?.bedrooms) || 1;
+          setTotalRooms(bedrooms);
+          
+          // Calculate per-room rent if not a sale property
+          const price = Number(data.listing?.pricing?.price) || 0;
+          if (price <= 100000) {
+            setPerRoomRent(bedrooms > 0 ? Math.round((price / bedrooms) || 0) : 0);
+          }
+          
+          setStep('configure');
+          } else {
+          setErrorMessage('Sorry, property not found. Please check the address and try again.');
+          setShowErrorModal(true);
+        }
+          } else {
+        setErrorMessage('Sorry, property not found. Please check the address and try again.');
+        setShowErrorModal(true);
+      }
+    } catch (error) {
+      console.error('Error calling API:', error);
+      setErrorMessage('Network error occurred. Please check your connection and try again.');
+      setShowErrorModal(true);
+    } finally {
+      setShowLoading(false);
+      setIsApiLoading(false);
+    }
+  };
+
+  // Handle loading complete
+  const handleLoadingComplete = () => {
+    setShowLoading(false);
+  };
+
+  // Handle close loading
+  const handleCloseLoading = () => {
+    setShowLoading(false);
+    setIsApiLoading(false);
+  };
+
+  // Close error modal
+  const handleCloseErrorModal = () => {
+    setShowErrorModal(false);
+    setErrorMessage('');
+  };
+
+  // Handle continue despite duplicate
+  const handleContinueWithDuplicate = async () => {
+    setDuplicateModal({ show: false, existingProperty: null, addressToCheck: '' });
+    
+    // Now proceed with scraping
+    setShowLoading(true);
+    setIsApiLoading(true);
+    setError(null);
+    
+    try {
+      const apiUrl = getApiUrl();
+      const response = await fetch(`${apiUrl}/api/listings/ingest/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ address: address.trim() }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.listing) {
+          setScrapedData(data.listing);
+          
+          // Auto-detect property type from scraped data
+          const scrapedType = String(data.listing?.property_details?.type || '').toLowerCase();
+          let mappedType = 'apartment';
+          if (scrapedType.includes('house') || scrapedType.includes('single')) mappedType = 'house';
+          else if (scrapedType.includes('dorm')) mappedType = 'dorm';
+          else if (scrapedType.includes('apartment') || scrapedType.includes('apt') || scrapedType.includes('multi')) mappedType = 'apartment';
+          else if (scrapedType.includes('condo') || scrapedType.includes('town')) mappedType = 'apartment';
+          else if (scrapedType) mappedType = 'other';
+          setPropertyType(mappedType);
+          
+          // Auto-detect timezone from state
+          const state = data.listing?.address?.state || '';
+          const tz = getTimezoneFromState(state);
+          setDetectedTimezone(tz);
+          
+          // Set total rooms from bedrooms if available
+          const bedrooms = Number(data.listing?.property_details?.bedrooms) || 1;
+          setTotalRooms(bedrooms);
+          
+          // Calculate per-room rent if not a sale property
+          const price = Number(data.listing?.pricing?.price) || 0;
+          if (price <= 100000) {
+            setPerRoomRent(bedrooms > 0 ? Math.round((price / bedrooms) || 0) : 0);
+          }
+          
+          setStep('configure');
+        } else {
+          setErrorMessage('Sorry, property not found. Please check the address and try again.');
+          setShowErrorModal(true);
+        }
+      } else {
+        setErrorMessage('Sorry, property not found. Please check the address and try again.');
+        setShowErrorModal(true);
+      }
+    } catch (error) {
+      console.error('Error calling API:', error);
+      setErrorMessage('Network error occurred. Please check your connection and try again.');
+      setShowErrorModal(true);
+    } finally {
+      setShowLoading(false);
+      setIsApiLoading(false);
+    }
+  };
+
+  // Handle property save
+  const handleSaveProperty = async () => {
+    if (!scrapedData) return;
+
+    setSaving(true);
+    setError(null);
+
+    try {
+      // Get current user profile
+      const profile = await apiClient.getProfile();
+
+      // Extract data from scraped listing
+      const addressData = scrapedData.address || {};
+      const pricingData = scrapedData.pricing || {};
+      const propertyDetails = scrapedData.property_details || {};
+      
+      // Detect if this is a sale property (price > 100k)
+      const scrapedPrice = Number(pricingData.price) || 0;
+      const isSaleProperty = scrapedPrice > 100000;
+
+      // Prepare property data
+      const propertyData: any = {
+        name: scrapedData.title || address,
+        address_line1: addressData.street || addressData.full_address || address,
+        address_line2: addressData.unit || '',
+        city: addressData.city || '',
+        state: addressData.state || '',
+        postal_code: addressData.zipcode || '',
+        country: addressData.country || 'United States',
+        property_type: propertyType,
+        timezone: detectedTimezone,
+        rent_type: rentType as 'per_room' | 'per_property',
+        total_rooms: rentType === 'per_property' ? (Number(propertyDetails.bedrooms) || 1) : (Number(propertyDetails.bedrooms) || totalRooms || 1),
+        landlord: profile.id,
+        // Scraped details
+        bedrooms: Number(propertyDetails.bedrooms) || undefined,
+        bathrooms: Number(propertyDetails.bathrooms) || undefined,
+        square_footage: Number(propertyDetails.living_area_sqft || propertyDetails.square_feet || propertyDetails.sqft) || undefined,
+        lot_size_sqft: Number(propertyDetails.lot_size_sqft) || undefined,
+        year_built: Number(propertyDetails.year_built) || undefined,
+        stories: Number(propertyDetails.stories) || undefined,
+        description: scrapedData.description || '',
+        amenities: Array.isArray(scrapedData?.amenities) ? scrapedData.amenities : (Array.isArray(propertyDetails?.amenities) ? propertyDetails.amenities : []),
+        features: propertyDetails || {},
+        // Media (store raw URLs; backend supports JSON list)
+        images: Array.isArray(scrapedData?.media?.photos) ? scrapedData.media.photos.slice(0, 12) : [],
+        videos: Array.isArray(scrapedData?.media?.videos) ? scrapedData.media.videos : [],
+        floorplans: Array.isArray(scrapedData?.media?.floorplans) ? scrapedData.media.floorplans : [],
+        virtual_tour_url: scrapedData?.media?.virtual_tour || undefined,
+        // Pricing details
+        price_per_sqft: scrapedData?.pricing?.price_per_sqft || undefined,
+        rent_estimate: scrapedData?.pricing?.rent_estimate || undefined,
+        application_fee: scrapedData?.pricing?.application_fee || undefined,
+        other_fees: scrapedData?.pricing?.other_fees || [],
+        lease_term: scrapedData?.pricing?.lease_term || undefined,
+        availability_date: scrapedData?.pricing?.availability_date || undefined,
+        // Source info
+        source_platform: scrapedData?.source?.platform || undefined,
+        source_url: scrapedData?.source?.url || undefined,
+        provider_listing_id: scrapedData?.source?.provider_listing_id || undefined,
+        // Neighborhood/schools
+        neighborhood: scrapedData?.nearby?.neighborhood || undefined,
+        schools: Array.isArray(scrapedData?.schools) ? scrapedData.schools : [],
+        nearby_places: scrapedData?.nearby || {},
+        raw_scraped_data: scrapedData,
       };
 
-      let bulkRoomsProvided = false;
-      if (formData.rent_type === 'per_room') {
-        // Build arrays for bulk room creation in property payload
-        const roomNames: string[] = [];
-        const roomTypes: string[] = [];
-        const roomRents: string[] = [];
-        const roomCaps: number[] = [];
-        const typeCounters: Record<string, number> = {};
-
-        roomTypeConfigs.forEach(cfg => {
-          const matchType = ROOM_TYPES.find(rt => rt.value === cfg.roomType) || ROOM_TYPES.find(rt => rt.label.toLowerCase() === cfg.roomType.toLowerCase());
-          const canonical = matchType ? matchType.value : cfg.roomType.toLowerCase();
-          const label = ROOM_TYPES.find(rt => rt.value === canonical)?.label || canonical;
-          for (let i = 0; i < cfg.quantity; i++) {
-            typeCounters[canonical] = (typeCounters[canonical] || 0) + 1;
-            const seq = typeCounters[canonical];
-            const name = `${label} ${seq}`;
-            roomNames.push(name);
-            roomTypes.push(canonical);
-            roomRents.push(cfg.monthlyRent.toFixed(2));
-            roomCaps.push(cfg.maxCapacity);
+      // Handle rent based on rent type and sale property detection
+      if (rentType === 'per_property') {
+        // For sale properties, require manual rent; otherwise use scraped price or manual rent
+        if (isSaleProperty) {
+          if (!manualRent) {
+            throw new Error('Please enter the monthly rent amount for this property.');
           }
-        });
-
-        Object.assign(propertyData, {
-          room_names: roomNames,
-          room_types: roomTypes,
-          room_rents: roomRents,
-          room_capacities: roomCaps,
-        });
-        bulkRoomsProvided = true;
+          propertyData.monthly_rent = String(manualRent);
+        } else {
+          // For non-sale properties, use manual rent if provided, otherwise use scraped price
+          propertyData.monthly_rent = String(manualRent || scrapedPrice || 0);
+        }
+      } else {
+        // For per-room: provide optional room arrays so API can set rents
+        const bedrooms = Number(propertyDetails.bedrooms) || totalRooms || 1;
+        let computedPerRoom = 0;
+        
+        if (isSaleProperty) {
+          if (!manualRent) {
+            throw new Error('Please enter the monthly rent amount for this property.');
+          }
+          // For sale properties with per-room, divide manual rent by bedrooms
+          computedPerRoom = bedrooms > 0 ? Math.round(Number(manualRent) / bedrooms) : 0;
+        } else {
+          // For non-sale properties, use scraped price divided by bedrooms
+          computedPerRoom = bedrooms > 0 ? Math.round((scrapedPrice / bedrooms) || 0) : 0;
+        }
+        
+        propertyData.room_names = Array.from({ length: bedrooms }, (_, i) => `Room ${i + 1}`);
+        propertyData.room_types = Array.from({ length: bedrooms }, () => 'standard');
+        propertyData.room_capacities = Array.from({ length: bedrooms }, () => 1);
+        propertyData.room_rents = Array.from({ length: bedrooms }, () => String(computedPerRoom));
       }
 
       const newProperty = await apiClient.createProperty(propertyData);
 
-      // If per_room rent type and bulk rooms not sent, create manually
-      if (formData.rent_type === 'per_room' && roomTypeConfigs.length > 0 && !bulkRoomsProvided) {
-        await createRoomsForProperty(newProperty.id);
-      }
-
-      setSuccess(`Property "${newProperty.name}" created successfully! ${formData.rent_type === 'per_room' ? `Created ${getTotalRooms()} rooms.` : ''}`);
-
-      setTimeout(() => {
+      // Success - redirect to property page
         router.push(`/properties/${newProperty.id}?created=true`);
-      }, 2000);
     } catch (err: any) {
       console.error('Failed to create property:', err);
       setError(err.message || 'Failed to create property. Please try again.');
-    } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
+  // Handle click outside to close suggestions
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (inputRef.current && !inputRef.current.contains(event.target as Node)) {
+        const target = event.target as Element;
+        if (!target.closest('.address-suggestions')) {
+          setShowSuggestions(false);
+        }
+      }
+    };
 
-  // Handle address selection from Mapbox autocomplete
-  const handleAddressSelect = (addressComponents: any) => {
-    setFormData(prev => ({
-      ...prev,
-      address_line1: addressComponents.address_line1,
-      city: addressComponents.city,
-      state: addressComponents.state,
-      postal_code: addressComponents.postal_code,
-    }));
-  };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
-  const getTotalRooms = () => {
-    return roomTypeConfigs.reduce((total, config) => total + config.quantity, 0);
-  };
-
-  const getEstimatedRevenue = () => {
-    const total = roomTypeConfigs.reduce((total, config) => total + (config.quantity * config.monthlyRent), 0);
-    // Round to 2 decimal places to fix floating point precision issues
-    return Math.round(total * 100) / 100;
-  };
-
-  const getTotalCapacity = () => {
-    return roomTypeConfigs.reduce((total, config) => total + (config.quantity * config.maxCapacity), 0);
-  };
-
-  const calculateTotalRevenue = () => {
-    return roomTypeConfigs.reduce((total, config) => total + (config.quantity * config.monthlyRent), 0);
-  };
-
-  // Don't render the form until profile is resolved
-  if (!profileResolved) {
-  return (
-    <>
-      <Head>
-          <title>Add Property - Loading - SquareFt</title>
-      </Head>
-      <DashboardLayout title="">
-        <div className="dashboard-container">
-          <div className="dashboard-header">
-            <div className="header-content">
-              <div className="header-left">
-                  <h1 className="dashboard-title">Loading...</h1>
-                  <p className="welcome-message">Please wait while we load your profile information.</p>
-                </div>
-              </div>
-            </div>
-            <div className="loading-section">
-              <div className="loading-indicator">
-                <div className="loading-spinner"></div>
-                <p>Loading profile information...</p>
-              </div>
-            </div>
-          </div>
-        </DashboardLayout>
-      </>
-    );
-  }
-
-  return (
-    <>
-      <Head>
-        <title>Add New Property - SquareFt</title>
-      </Head>
-      <DashboardLayout title="">
-        <div className="dashboard-container">
-          {/* Modern Title Section */}
+  // Render address input step
+  const renderAddressStep = () => (
           <div style={{
-            backgroundColor: 'white',
-            borderRadius: '12px',
-            border: '1px solid #e5e7eb',
-            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-            marginBottom: '2rem',
-            marginTop: '1.5rem',
-            transition: 'all 0.2s ease'
-          }}
-          onMouseOver={(e) => {
-            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-            e.currentTarget.style.transform = 'translateY(-1px)';
-          }}
-          onMouseOut={(e) => {
-            e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
-            e.currentTarget.style.transform = 'translateY(0)';
-          }}>
-            <div style={{
-              padding: '1.5rem',
+      maxWidth: '600px',
+      width: '100%',
+      padding: '0 1rem 2rem 1rem',
               display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between'
+      flexDirection: 'column',
+      justifyContent: 'center',
+      minHeight: '60vh'
             }}>
+      <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
               <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '1rem'
-              }}>
-                <button
-                  onClick={() => router.push('/properties')}
-                  style={{
-                    width: '2.5rem',
-                    height: '2.5rem',
-                    backgroundColor: '#f3f4f6',
-                    border: 'none',
-                    borderRadius: '8px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease'
-                  }}
-                  onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#e5e7eb'}
-                  onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
-                >
-                  <ArrowLeft style={{ width: '1.25rem', height: '1.25rem', color: '#6b7280' }} />
-                </button>
-                <div style={{
-                  width: '3rem',
-                  height: '3rem',
-                  backgroundColor: '#16a34a',
+          width: '4rem',
+          height: '4rem',
+                  backgroundColor: '#2563eb',
                   borderRadius: '12px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  flexShrink: 0
+          margin: '0 auto 1rem'
                 }}>
-                  <Building style={{ width: '1.5rem', height: '1.5rem', color: 'white' }} />
+          <MapPin style={{ width: '2rem', height: '2rem', color: 'white' }} />
               </div>
-                <div>
-                  <h1 style={{
-                    fontSize: '1.875rem',
+                <h2 style={{
+          fontSize: '1.5rem',
                     fontWeight: '700',
                     color: '#111827',
-                    margin: 0,
-                    marginBottom: '0.25rem'
-                  }}>Add New Property</h1>
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
+          marginBottom: '0.5rem'
+        }}>Enter Property Address</h2>
+                <p style={{
                     fontSize: '0.875rem',
                     color: '#6b7280'
-                  }}>
-                    <Home style={{ width: '1rem', height: '1rem' }} />
-                    Create a new property in your portfolio
-                  </div>
-                </div>
-              </div>
-            </div>
+        }}>We'll automatically fetch property details and photos</p>
           </div>
 
-          {error && (
             <div style={{
-              backgroundColor: '#fef2f2',
-              border: '1px solid #fecaca',
-              borderRadius: '8px',
-              padding: '1rem',
-              marginBottom: '1.5rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem'
-            }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2">
-                <circle cx="12" cy="12" r="10"/>
-                <line x1="15" y1="9" x2="9" y2="15"/>
-                <line x1="9" y1="9" x2="15" y2="15"/>
-              </svg>
-              <div style={{ color: '#dc2626', fontWeight: '600' }}>
-                <strong>Error:</strong> {error}
-              </div>
-            </div>
-          )}
-          
-          {success && (
-            <div style={{
-              backgroundColor: '#f0fdf4',
-              border: '1px solid #bbf7d0',
-              borderRadius: '8px',
-              padding: '1rem',
-              marginBottom: '1.5rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem'
-            }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2">
-                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                <polyline points="22,4 12,14.01 9,11.01"/>
-              </svg>
-              <div style={{ color: '#16a34a', fontWeight: '600' }}>
-                <strong>Success:</strong> {success}
-              </div>
-            </div>
-          )}
-
-          {/* Modern Property Details Section */}
-          <div style={{
-            backgroundColor: 'white',
-            borderRadius: '12px',
-            border: '1px solid #e5e7eb',
-            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-            transition: 'all 0.2s ease'
-          }}
-          onMouseOver={(e) => {
-            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-            e.currentTarget.style.transform = 'translateY(-1px)';
-          }}
-          onMouseOut={(e) => {
-            e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
-            e.currentTarget.style.transform = 'translateY(0)';
-          }}>
-            {/* Section Header */}
-            <div style={{
-              padding: '1.5rem',
-              borderBottom: '1px solid #e5e7eb',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between'
-            }}>
-              <div>
-                <h2 style={{
-                  fontSize: '1.25rem',
-                  fontWeight: '700',
-                  color: '#111827',
-                  margin: 0,
-                  marginBottom: '0.25rem'
-                }}>Property Details</h2>
-                <p style={{
-                  fontSize: '0.875rem',
-                  color: '#6b7280',
-                  margin: 0
-                }}>Enter the basic information for your new property</p>
-              </div>
-            </div>
-
-            {/* Form Content */}
-            <form onSubmit={handleSubmit} style={{ padding: '1.5rem' }}>
-              {/* Property Name */}
-              <div style={{ marginBottom: '1.5rem' }}>
-                <label style={{
-                  display: 'block',
-                  fontSize: '0.875rem',
-                  fontWeight: '600',
-                  color: '#374151',
-                  marginBottom: '0.5rem'
-                }}>
-                  Property Name <span style={{ color: '#dc2626' }}>*</span>
-                </label>
+        position: 'relative', 
+        marginBottom: '1rem'
+      }}>
                   <input
+          ref={inputRef}
                     type="text"
-                    id="name"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    placeholder="e.g., Main Street Apartments"
-                    maxLength={200}
-                    required
+          value={address}
+          onChange={handleAddressChange}
+          onKeyDown={handleKeyDown}
+          placeholder="123 Main Street, San Francisco, CA"
                   style={{
                     width: '100%',
-                    padding: '0.75rem',
-                    border: '1px solid #d1d5db',
+            padding: '1rem 1rem 1rem 3rem',
+            border: '2px solid #d1d5db',
                     borderRadius: '8px',
-                    fontSize: '0.875rem',
+            fontSize: '1rem',
                     transition: 'all 0.2s ease',
                     outline: 'none'
                   }}
@@ -617,1478 +589,745 @@ export default function AddProperty() {
                     e.target.style.boxShadow = 'none';
                   }}
                 />
-                <div style={{
-                  fontSize: '0.75rem',
-                  color: '#6b7280',
-                  marginTop: '0.25rem'
-                }}>Maximum 200 characters</div>
-                  </div>
+        <MapPin style={{
+          position: 'absolute',
+          left: '1rem',
+          top: '50%',
+          transform: 'translateY(-50%)',
+          width: '1.25rem',
+          height: '1.25rem',
+          color: '#6b7280'
+        }} />
 
-                {/* Property Type */}
-              <div style={{ marginBottom: '1.5rem' }}>
-                <label style={{
-                  display: 'block',
-                  fontSize: '0.875rem',
-                  fontWeight: '600',
-                  color: '#374151',
-                  marginBottom: '0.5rem'
-                }}>
-                  Property Type <span style={{ color: '#dc2626' }}>*</span>
-                </label>
-                  <select
-                    id="property_type"
-                    name="property_type"
-                    value={formData.property_type}
-                    onChange={handleChange}
-                    required
+        {/* Suggestions Dropdown */}
+        {showSuggestions && suggestions.length > 0 && (
+          <div className="address-suggestions" style={{
+            position: 'absolute',
+            top: '100%',
+            left: 0,
+            right: 0,
+            backgroundColor: 'white',
+            border: '1px solid #e5e7eb',
+            borderRadius: '8px',
+            marginTop: '0.5rem',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+            zIndex: 50,
+            maxHeight: '300px',
+            overflowY: 'auto'
+          }}>
+            {suggestions.map((suggestion, index) => (
+              <div
+                key={index}
+                onClick={() => handleSuggestionSelect(suggestion)}
                   style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '8px',
-                    fontSize: '0.875rem',
-                    backgroundColor: 'white',
-                    transition: 'all 0.2s ease',
-                    outline: 'none'
-                  }}
-                  onFocus={(e) => {
-                    e.target.style.borderColor = '#2563eb';
-                    e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.1)';
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = '#d1d5db';
-                    e.target.style.boxShadow = 'none';
-                  }}
-                  >
-                    {PROPERTY_TYPES.map(type => (
-                      <option key={type.value} value={type.value}>
-                        {type.label}
-                      </option>
-                    ))}
-                  </select>
+                  padding: '0.75rem 1rem',
+                  cursor: 'pointer',
+                  backgroundColor: selectedIndex === index ? '#f3f4f6' : 'white',
+                  borderBottom: index < suggestions.length - 1 ? '1px solid #f3f4f6' : 'none'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = selectedIndex === index ? '#f3f4f6' : 'white'}
+              >
                 <div style={{
-                  fontSize: '0.75rem',
-                  color: '#6b7280',
-                  marginTop: '0.25rem'
-                }}>
-                    {PROPERTY_TYPES.find(t => t.value === formData.property_type)?.description}
+                display: 'flex',
+                alignItems: 'center',
+              gap: '0.5rem'
+            }}>
+                  <MapPin style={{ width: '1rem', height: '1rem', color: '#6b7280' }} />
+                  <span style={{ fontSize: '0.875rem', color: '#374151' }}>
+                    {suggestion.place_name}
+                  </span>
                   </div>
                   </div>
-
-                {/* Rent Structure */}
-              <div style={{ marginBottom: '1.5rem' }}>
-                <label style={{
-                  display: 'block',
-                  fontSize: '0.875rem',
-                  fontWeight: '600',
-                  color: '#374151',
-                  marginBottom: '0.5rem'
-                }}>
-                  Rent Structure <span style={{ color: '#dc2626' }}>*</span>
-                </label>
-                  <select
-                    id="rent_type"
-                    name="rent_type"
-                    value={formData.rent_type}
-                    onChange={handleChange}
-                    required
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '8px',
-                    fontSize: '0.875rem',
-                    backgroundColor: 'white',
-                    transition: 'all 0.2s ease',
-                    outline: 'none'
-                  }}
-                  onFocus={(e) => {
-                    e.target.style.borderColor = '#2563eb';
-                    e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.1)';
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = '#d1d5db';
-                    e.target.style.boxShadow = 'none';
-                  }}
-                  >
-                    {RENT_TYPES.map(type => (
-                      <option key={type.value} value={type.value}>
-                        {type.label}
-                      </option>
-                      ))}
-                    </select>
-                <div style={{
-                  fontSize: '0.75rem',
-                  color: '#6b7280',
-                  marginTop: '0.25rem'
-                }}>
-                    {RENT_TYPES.find(t => t.value === formData.rent_type)?.description}
+            ))}
                   </div>
+          )}
                 </div>
 
-                {/* Conditional Fields based on Rent Type */}
-                {formData.rent_type === 'per_property' && (
-                  <>
-                  <div style={{ marginBottom: '1.5rem' }}>
-                    <label style={{
-                      display: 'block',
-                      fontSize: '0.875rem',
-                      fontWeight: '600',
-                      color: '#374151',
-                      marginBottom: '0.5rem'
-                    }}>
-                      Total Rooms <span style={{ color: '#dc2626' }}>*</span>
-                    </label>
-                      <input
-                        type="number"
-                        id="total_rooms"
-                        name="total_rooms"
-                        value={formData.total_rooms}
-                        onChange={(e) => setFormData(prev => ({ ...prev, total_rooms: parseInt(e.target.value) || 1 }))}
-                        min="1"
-                        max="50"
-                        required
+        {/* Action Buttons */}
+        <div style={{
+          display: 'flex',
+          gap: '1rem',
+          marginTop: '1rem'
+        }}>
+          <button
+            onClick={() => router.push('/properties')}
+            disabled={isApiLoading}
                       style={{
-                        width: '100%',
-                        padding: '0.75rem',
-                        border: '1px solid #d1d5db',
-                        borderRadius: '8px',
+              flex: 1,
+              padding: '1rem',
+              backgroundColor: 'white',
+              color: '#374151',
+              border: '2px solid #e5e7eb',
+              borderRadius: '12px',
                         fontSize: '0.875rem',
-                        transition: 'all 0.2s ease',
-                        outline: 'none'
-                      }}
-                      onFocus={(e) => {
-                        e.target.style.borderColor = '#2563eb';
-                        e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.1)';
-                      }}
-                      onBlur={(e) => {
-                        e.target.style.borderColor = '#d1d5db';
-                        e.target.style.boxShadow = 'none';
-                      }}
-                    />
-                    <div style={{
-                      fontSize: '0.75rem',
-                      color: '#6b7280',
-                      marginTop: '0.25rem'
-                    }}>Number of rooms in this property (1-50)</div>
-                  </div>
-
-                  <div style={{ marginBottom: '1.5rem' }}>
-                    <label style={{
-                      display: 'block',
-                      fontSize: '0.875rem',
-                      fontWeight: '600',
-                      color: '#374151',
-                      marginBottom: '0.5rem'
-                    }}>
-                      Monthly Rent <span style={{ color: '#dc2626' }}>*</span>
-                    </label>
-                    <div style={{ position: 'relative' }}>
-                      <span style={{
-                        position: 'absolute',
-                        left: '0.75rem',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        color: '#6b7280',
-                        fontSize: '0.875rem',
-                        fontWeight: '500'
-                      }}>$</span>
-                        <input
-                          type="number"
-                          id="monthly_rent"
-                          name="monthly_rent"
-                          value={formData.monthly_rent}
-                          onChange={handleChange}
-                          placeholder="3500.00"
-                          min="0"
-                          step="0.01"
-                          required
+              fontWeight: '600',
+              cursor: isApiLoading ? 'not-allowed' : 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseOver={(e) => {
+              if (!isApiLoading) {
+                e.currentTarget.style.borderColor = '#d1d5db';
+                e.currentTarget.style.backgroundColor = '#f9fafb';
+              }
+            }}
+            onMouseOut={(e) => {
+              if (!isApiLoading) {
+                e.currentTarget.style.borderColor = '#e5e7eb';
+                e.currentTarget.style.backgroundColor = 'white';
+              }
+            }}
+          >
+            Back
+          </button>
+          <button
+            onClick={handleScrapeAddress}
+            disabled={!address.trim() || isApiLoading}
                         style={{
-                          width: '100%',
-                          padding: '0.75rem 0.75rem 0.75rem 2rem',
-                          border: '1px solid #d1d5db',
-                          borderRadius: '8px',
-                          fontSize: '0.875rem',
+              flex: 2,
+              padding: '1rem',
+              backgroundColor: !address.trim() || isApiLoading ? '#9ca3af' : '#2563eb',
+              color: 'white',
+              border: 'none',
+              borderRadius: '12px',
+              fontSize: '1rem',
+              fontWeight: '600',
+              cursor: !address.trim() || isApiLoading ? 'not-allowed' : 'pointer',
                           transition: 'all 0.2s ease',
-                          outline: 'none'
-                        }}
-                        onFocus={(e) => {
-                          e.target.style.borderColor = '#2563eb';
-                          e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.1)';
-                        }}
-                        onBlur={(e) => {
-                          e.target.style.borderColor = '#d1d5db';
-                          e.target.style.boxShadow = 'none';
-                        }}
-                        />
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.5rem',
+              boxShadow: (!address.trim() || isApiLoading) ? 'none' : '0 4px 12px rgba(37, 99, 235, 0.3)'
+            }}
+            onMouseOver={(e) => {
+              if (address.trim() && !isApiLoading) {
+                e.currentTarget.style.backgroundColor = '#1d4ed8';
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 6px 16px rgba(37, 99, 235, 0.4)';
+              }
+            }}
+            onMouseOut={(e) => {
+              if (address.trim() && !isApiLoading) {
+                e.currentTarget.style.backgroundColor = '#2563eb';
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(37, 99, 235, 0.3)';
+              }
+            }}
+          >
+            {isApiLoading ? (
+              <>
+                <Loader style={{ width: '1rem', height: '1rem', animation: 'spin 1s linear infinite' }} />
+                Fetching Property Data...
+              </>
+            ) : (
+              <>
+                <Building style={{ width: '1rem', height: '1rem' }} />
+                Fetch Property Details
+              </>
+            )}
+          </button>
                   </div>
-                    <div style={{
-                      fontSize: '0.75rem',
-                      color: '#6b7280',
-                      marginTop: '0.25rem'
-                    }}>Total monthly rent for the entire property</div>
                     </div>
+  );
 
-                  <div style={{ marginBottom: '1.5rem' }}>
-                    <label style={{
-                      display: 'block',
-                      fontSize: '0.875rem',
-                      fontWeight: '600',
-                      color: '#374151',
-                      marginBottom: '0.5rem'
-                    }}>
-                      Security Deposit
-                    </label>
-                    <div style={{ position: 'relative' }}>
-                      <span style={{
-                        position: 'absolute',
-                        left: '0.75rem',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        color: '#6b7280',
-                        fontSize: '0.875rem',
-                        fontWeight: '500'
-                      }}>$</span>
-                          <input 
-                          type="number"
-                          id="security_deposit"
-                          name="security_deposit"
-                          value={formData.security_deposit}
-                            onChange={handleChange}
-                          placeholder="1750.00"
-                          min="0"
-                          step="0.01"
-                        style={{
+  // Render configuration step
+  const renderConfigureStep = () => {
+    if (!scrapedData) return null;
+
+    const scrapedPrice = Number(scrapedData.pricing?.price) || 0;
+    const isSaleProperty = scrapedPrice > 100000;
+
+    return (
+      <div style={{ 
+        maxWidth: '800px', 
                           width: '100%',
-                          padding: '0.75rem 0.75rem 0.75rem 2rem',
-                          border: '1px solid #d1d5db',
-                          borderRadius: '8px',
-                          fontSize: '0.875rem',
-                          transition: 'all 0.2s ease',
-                          outline: 'none'
-                        }}
-                        onFocus={(e) => {
-                          e.target.style.borderColor = '#2563eb';
-                          e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.1)';
-                        }}
-                        onBlur={(e) => {
-                          e.target.style.borderColor = '#d1d5db';
-                          e.target.style.boxShadow = 'none';
-                        }}
-                        />
-                            </div>
+        padding: '0 1rem 2rem 1rem'
+      }}>
+          {error && (
                     <div style={{
-                      fontSize: '0.75rem',
-                      color: '#6b7280',
-                      marginTop: '0.25rem'
-                    }}>Optional security deposit amount</div>
+              backgroundColor: '#fef2f2',
+              border: '1px solid #fecaca',
+            borderRadius: '12px',
+              padding: '1rem',
+              marginBottom: '1.5rem',
+            color: '#dc2626',
+            fontSize: '0.875rem'
+          }}>
+            {error}
                           </div>
-                  </>
-                )}
+          )}
 
-                {/* Address Information */}
-              <div style={{
-                borderTop: '1px solid #e5e7eb',
-                paddingTop: '1.5rem',
-                marginTop: '1.5rem'
-              }}>
-                <h3 style={{
-                  fontSize: '1.125rem',
-                  fontWeight: '600',
+        {/* Property Name - Part of page flow */}
+        <div style={{ marginBottom: '2rem', textAlign: 'center', paddingTop: '1rem' }}>
+          <h2 style={{
+            fontSize: '1.75rem',
+            fontWeight: '700',
                   color: '#111827',
-                  marginBottom: '1rem'
-                }}>Address Information</h3>
-
-                <div style={{ marginBottom: '1.5rem' }}>
-                  <label style={{
-                    display: 'block',
-                    fontSize: '0.875rem',
-                    fontWeight: '600',
-                    color: '#374151',
                     marginBottom: '0.5rem'
-                  }}>
-                    Address Line 1 <span style={{ color: '#dc2626' }}>*</span>
-                  </label>
-                  <MapboxAddressAutocomplete
-                    id="address_line1"
-                    name="address_line1"
-                    value={formData.address_line1}
-                    onChange={(value) => setFormData(prev => ({ ...prev, address_line1: value }))}
-                    onAddressSelect={handleAddressSelect}
-                    placeholder="123 Main Street"
-                    className="form-input"
-                    required
-                  />
+          }}>{scrapedData.title || address}</h2>
+          {scrapedData.address && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.5rem',
+              color: '#6b7280',
+              fontSize: '0.875rem'
+            }}>
+              <MapPin style={{ width: '16px', height: '16px' }} />
+              <span>{scrapedData.address.full_address || address}</span>
                 </div>
-
-                <div style={{ marginBottom: '1.5rem' }}>
-                  <label style={{
-                    display: 'block',
-                    fontSize: '0.875rem',
-                    fontWeight: '600',
-                    color: '#374151',
-                    marginBottom: '0.5rem'
-                  }}>
-                    Address Line 2 (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    id="address_line2"
-                    name="address_line2"
-                    value={formData.address_line2}
-                    onChange={handleChange}
-                    placeholder="Apartment, suite, unit, building, floor, etc."
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '8px',
-                      fontSize: '0.875rem',
-                      transition: 'all 0.2s ease',
-                      outline: 'none'
-                    }}
-                    onFocus={(e) => {
-                      e.target.style.borderColor = '#2563eb';
-                      e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.1)';
-                    }}
-                    onBlur={(e) => {
-                      e.target.style.borderColor = '#d1d5db';
-                      e.target.style.boxShadow = 'none';
-                    }}
-                  />
+          )}
                           </div>
 
+        {/* Sale Property Notice */}
+        {isSaleProperty && (
                 <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr 1fr',
-                  gap: '1rem',
-                  marginBottom: '1.5rem'
-                }}>
+            backgroundColor: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+            background: '#fef3c7',
+            border: '2px solid #fde047',
+            borderRadius: '12px',
+            padding: '1.25rem',
+            marginBottom: '2rem',
+              display: 'flex',
+              alignItems: 'center',
+            gap: '1rem'
+            }}>
+            <Sparkles style={{ width: '24px', height: '24px', color: '#92400e', flexShrink: 0 }} />
                   <div>
-                    <label style={{
-                      display: 'block',
-                      fontSize: '0.875rem',
-                      fontWeight: '600',
-                      color: '#374151',
-                      marginBottom: '0.5rem'
-                    }}>
-                      City <span style={{ color: '#dc2626' }}>*</span>
-                    </label>
-                    <input
-                      type="text"
-                      id="city"
-                      name="city"
-                      value={formData.city}
-                      onChange={handleChange}
-                      placeholder="San Francisco"
-                      required
-                      style={{
-                        width: '100%',
-                        padding: '0.75rem',
-                        border: '1px solid #d1d5db',
-                        borderRadius: '8px',
-                        fontSize: '0.875rem',
-                        transition: 'all 0.2s ease',
-                        outline: 'none'
-                      }}
-                      onFocus={(e) => {
-                        e.target.style.borderColor = '#2563eb';
-                        e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.1)';
-                      }}
-                      onBlur={(e) => {
-                        e.target.style.borderColor = '#d1d5db';
-                        e.target.style.boxShadow = 'none';
-                      }}
-                    />
+              <div style={{ fontSize: '0.875rem', fontWeight: '600', color: '#92400e', marginBottom: '0.25rem' }}>
+                Property Listed for Sale
                       </div>
-
-                  <div>
-                    <label style={{
-                      display: 'block',
-                      fontSize: '0.875rem',
-                      fontWeight: '600',
-                      color: '#374151',
-                      marginBottom: '0.5rem'
-                    }}>
-                      State <span style={{ color: '#dc2626' }}>*</span>
-                    </label>
-                    <select
-                      id="state"
-                      name="state"
-                      value={formData.state}
-                      onChange={handleChange}
-                      required
-                      style={{
-                        width: '100%',
-                        padding: '0.75rem',
-                        border: '1px solid #d1d5db',
-                        borderRadius: '8px',
-                        fontSize: '0.875rem',
-                        backgroundColor: 'white',
-                        transition: 'all 0.2s ease',
-                        outline: 'none'
-                      }}
-                      onFocus={(e) => {
-                        e.target.style.borderColor = '#2563eb';
-                        e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.1)';
-                      }}
-                      onBlur={(e) => {
-                        e.target.style.borderColor = '#d1d5db';
-                        e.target.style.boxShadow = 'none';
-                      }}
-                    >
-                      <option value="">Select State</option>
-                      {usStates.map(state => (
-                        <option key={state.value} value={state.value}>
-                          {state.label}
-                        </option>
-                      ))}
-                    </select>
-                    </div>
-
-                  <div>
-                    <label style={{
-                      display: 'block',
-                      fontSize: '0.875rem',
-                      fontWeight: '600',
-                      color: '#374151',
-                      marginBottom: '0.5rem'
-                    }}>
-                      ZIP Code <span style={{ color: '#dc2626' }}>*</span>
-                    </label>
-                    <input
-                      type="text"
-                      id="postal_code"
-                      name="postal_code"
-                      value={formData.postal_code}
-                      onChange={handleChange}
-                      placeholder="94102"
-                      required
-                      style={{
-                        width: '100%',
-                        padding: '0.75rem',
-                        border: '1px solid #d1d5db',
-                        borderRadius: '8px',
-                        fontSize: '0.875rem',
-                        transition: 'all 0.2s ease',
-                        outline: 'none'
-                      }}
-                      onFocus={(e) => {
-                        e.target.style.borderColor = '#2563eb';
-                        e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.1)';
-                      }}
-                      onBlur={(e) => {
-                        e.target.style.borderColor = '#d1d5db';
-                        e.target.style.boxShadow = 'none';
-                      }}
-                    />
+              <div style={{ fontSize: '0.75rem', color: '#78350f' }}>
+                This property appears to be listed for sale (${scrapedPrice.toLocaleString()}). Please enter the monthly rent amount.
+            </div>
                   </div>
+          </div>
+        )}
+
+        {/* Rent Structure Selection - Large Visual Cards */}
+        <div style={{ marginBottom: '2rem' }}>
+          <div style={{
+            fontSize: '1rem',
+                      fontWeight: '600',
+            color: '#111827',
+            marginBottom: '1rem',
+            textAlign: 'center'
+          }}>
+            How do you want to rent this property?
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <button
+              type="button"
+              onClick={() => setRentType('per_room')}
+                      style={{
+                padding: '1.5rem',
+                borderRadius: '16px',
+                border: rentType === 'per_room' ? '3px solid #2563eb' : '2px solid #e5e7eb',
+                background: rentType === 'per_room' ? 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)' : 'white',
+                cursor: 'pointer',
+                textAlign: 'center',
+                transition: 'all 0.3s ease',
+                transform: rentType === 'per_room' ? 'scale(1.02)' : 'scale(1)',
+                boxShadow: rentType === 'per_room' ? '0 4px 12px rgba(37, 99, 235, 0.15)' : '0 2px 4px rgba(0, 0, 0, 0.05)'
+              }}
+              onMouseOver={(e) => {
+                if (rentType !== 'per_room') {
+                  e.currentTarget.style.borderColor = '#2563eb';
+                  e.currentTarget.style.transform = 'scale(1.01)';
+                }
+              }}
+              onMouseOut={(e) => {
+                if (rentType !== 'per_room') {
+                  e.currentTarget.style.borderColor = '#e5e7eb';
+                  e.currentTarget.style.transform = 'scale(1)';
+                }
+              }}
+            >
+                <div style={{
+                width: '48px',
+                height: '48px',
+                backgroundColor: rentType === 'per_room' ? '#2563eb' : '#f3f4f6',
+                borderRadius: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 1rem'
+              }}>
+                <Users style={{ width: '24px', height: '24px', color: rentType === 'per_room' ? 'white' : '#6b7280' }} />
+                  </div>
+              <div style={{ fontWeight: 700, color: '#111827', fontSize: '1rem', marginBottom: '0.5rem' }}>Per Room</div>
+              <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                Auto-create {totalRooms} rooms
                 </div>
-
-                <div style={{ marginBottom: '1.5rem' }}>
-                  <label style={{
-                    display: 'block',
-                    fontSize: '0.875rem',
-                    fontWeight: '600',
-                    color: '#374151',
-                    marginBottom: '0.5rem'
-                  }}>
-                    Country <span style={{ color: '#dc2626' }}>*</span>
-                  </label>
-                        <input 
-                    type="text"
-                    id="country"
-                    name="country"
-                    value={formData.country}
-                          onChange={handleChange} 
-                          required 
+            </button>
+            <button
+              type="button"
+              onClick={() => setRentType('per_property')}
                     style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '8px',
-                      fontSize: '0.875rem',
-                      transition: 'all 0.2s ease',
-                      outline: 'none'
-                    }}
-                    onFocus={(e) => {
-                      e.target.style.borderColor = '#2563eb';
-                      e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.1)';
-                    }}
-                    onBlur={(e) => {
-                      e.target.style.borderColor = '#d1d5db';
-                      e.target.style.boxShadow = 'none';
-                    }}
-                        />
-                      </div>
-
-                <div style={{ marginBottom: '1.5rem' }}>
-                  <label style={{
-                    display: 'block',
-                    fontSize: '0.875rem',
-                    fontWeight: '600',
-                    color: '#374151',
-                    marginBottom: '0.5rem'
-                  }}>
-                    Timezone <span style={{ color: '#dc2626' }}>*</span>
-                  </label>
-                  <select
-                    id="timezone"
-                    name="timezone"
-                    value={formData.timezone}
-                    onChange={handleChange}
-                    required
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '8px',
-                      fontSize: '0.875rem',
-                      backgroundColor: 'white',
-                      transition: 'all 0.2s ease',
-                      outline: 'none'
-                    }}
-                    onFocus={(e) => {
-                      e.target.style.borderColor = '#2563eb';
-                      e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.1)';
-                    }}
-                    onBlur={(e) => {
-                      e.target.style.borderColor = '#d1d5db';
-                      e.target.style.boxShadow = 'none';
-                    }}
-                  >
-                    {TIMEZONE_OPTIONS.map(tz => (
-                      <option key={tz.value} value={tz.value}>
-                        {tz.label}
-                      </option>
-                    ))}
-                  </select>
+                padding: '1.5rem',
+                borderRadius: '16px',
+                border: rentType === 'per_property' ? '3px solid #2563eb' : '2px solid #e5e7eb',
+                background: rentType === 'per_property' ? 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)' : 'white',
+                cursor: 'pointer',
+                textAlign: 'center',
+                transition: 'all 0.3s ease',
+                transform: rentType === 'per_property' ? 'scale(1.02)' : 'scale(1)',
+                boxShadow: rentType === 'per_property' ? '0 4px 12px rgba(37, 99, 235, 0.15)' : '0 2px 4px rgba(0, 0, 0, 0.05)'
+              }}
+              onMouseOver={(e) => {
+                if (rentType !== 'per_property') {
+                  e.currentTarget.style.borderColor = '#2563eb';
+                  e.currentTarget.style.transform = 'scale(1.01)';
+                }
+              }}
+              onMouseOut={(e) => {
+                if (rentType !== 'per_property') {
+                  e.currentTarget.style.borderColor = '#e5e7eb';
+                  e.currentTarget.style.transform = 'scale(1)';
+                }
+              }}
+            >
                   <div style={{
-                    fontSize: '0.75rem',
-                    color: '#6b7280',
-                    marginTop: '0.25rem'
-                  }}>
-                    {TIMEZONE_OPTIONS.find(t => t.value === formData.timezone)?.description}
+                width: '48px',
+                height: '48px',
+                backgroundColor: rentType === 'per_property' ? '#2563eb' : '#f3f4f6',
+                borderRadius: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 1rem'
+              }}>
+                <Home style={{ width: '24px', height: '24px', color: rentType === 'per_property' ? 'white' : '#6b7280' }} />
                   </div>
+              <div style={{ fontWeight: 700, color: '#111827', fontSize: '1rem', marginBottom: '0.5rem' }}>Whole Property</div>
+              <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                {isSaleProperty ? 'Enter rent manually' : `$${scrapedPrice.toLocaleString()}/mo`}
                     </div>
+            </button>
                 </div>
-
-                {/* Room Configuration for per_room rent type */}
-                  {formData.rent_type === 'per_room' && (
-                <div style={{
-                  borderTop: '1px solid #e5e7eb',
-                  paddingTop: '1.5rem',
-                  marginTop: '1.5rem'
-                }}>
-                  <div style={{ marginBottom: '1.5rem' }}>
-                    <h3 style={{
-                      fontSize: '1.125rem',
-                      fontWeight: '600',
-                      color: '#111827',
-                      margin: 0,
-                      marginBottom: '0.25rem'
-                    }}>Room Configuration</h3>
-                    <p style={{
-                      fontSize: '0.875rem',
-                      color: '#6b7280',
-                      margin: 0
-                    }}>Configure the types and quantities of rooms for this property</p>
                         </div>
 
-                    {roomTypeConfigs.length > 0 && (
-                    <div style={{ marginBottom: '1.5rem' }}>
-                        {roomTypeConfigs.map((config) => (
-                        <div key={config.id} style={{
-                          backgroundColor: '#f9fafb',
+        {/* Rent Input - Large Visual Card */}
+        {(isSaleProperty || rentType === 'per_property') && (
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '16px',
                           border: '1px solid #e5e7eb',
-                          borderRadius: '8px',
+            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)',
                           padding: '1.5rem',
-                          marginBottom: '1rem'
+            marginBottom: '2rem'
                         }}>
                           <div style={{
                             display: 'flex',
                             alignItems: 'center',
-                            justifyContent: 'space-between',
+              gap: '0.75rem',
                             marginBottom: '1rem'
                           }}>
-                            <h4 style={{
-                              fontSize: '1rem',
-                              fontWeight: '600',
-                              color: '#111827',
-                              margin: 0
-                            }}>
-                                  {ROOM_TYPES.find(rt => rt.value === config.roomType)?.label || 'Room Type'}
-                                </h4>
-                              <button
-                                type="button"
-                                onClick={() => removeRoomTypeConfig(config.id)}
-                                title="Remove room configuration"
-                              style={{
-                                width: '2.5rem',
-                                height: '2.5rem',
-                                backgroundColor: '#fef2f2',
-                                border: '1px solid #fecaca',
-                                borderRadius: '6px',
+                    <div style={{
+                width: '40px',
+                height: '40px',
+                backgroundColor: '#fef3c7',
+                borderRadius: '10px',
                                 display: 'flex',
                                 alignItems: 'center',
-                                justifyContent: 'center',
-                                cursor: 'pointer',
-                                color: '#dc2626',
-                                transition: 'all 0.2s ease'
-                              }}
-                              onMouseOver={(e) => {
-                                e.currentTarget.style.backgroundColor = '#fee2e2';
-                              }}
-                              onMouseOut={(e) => {
-                                e.currentTarget.style.backgroundColor = '#fef2f2';
-                              }}
-                              >
-                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                                <polyline points="3,6 5,6 21,6"/>
-                                <path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2V6"/>
-                                <line x1="10" y1="11" x2="10" y2="17"/>
-                                <line x1="14" y1="11" x2="14" y2="17"/>
-                                </svg>
-                              </button>
-                      </div>
-
-                          <div style={{
-                            display: 'grid',
-                            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                            gap: '1rem'
-                          }}>
-                            <div>
-                              <label style={{
-                                display: 'block',
-                                fontSize: '0.875rem',
-                                fontWeight: '600',
-                                color: '#374151',
-                                marginBottom: '0.5rem'
-                              }}>Room Type</label>
-                                <select
-                                  value={config.roomType}
-                                  onChange={(e) => updateRoomTypeConfig(config.id, 'roomType', e.target.value)}
-                                style={{
-                                  width: '100%',
-                                  padding: '0.75rem',
-                                  border: '1px solid #d1d5db',
-                                  borderRadius: '8px',
-                                  fontSize: '0.875rem',
-                                  backgroundColor: 'white',
-                                  transition: 'all 0.2s ease',
-                                  outline: 'none'
-                                }}
-                                >
-                                  {ROOM_TYPES.map(type => (
-                                    <option key={type.value} value={type.value}>
-                                      {type.label}
-                                    </option>
-                                  ))}
-                                </select>
+                justifyContent: 'center'
+              }}>
+                <DollarSign style={{ width: '20px', height: '20px', color: '#92400e' }} />
                     </div>
-
                             <div>
-                              <label style={{
-                                display: 'block',
-                                fontSize: '0.875rem',
-                                fontWeight: '600',
-                                color: '#374151',
-                                marginBottom: '0.5rem'
-                              }}>Quantity</label>
-                                <input
-                                  type="number"
-                                  value={config.quantity}
-                                  onChange={(e) => updateRoomTypeConfig(config.id, 'quantity', parseInt(e.target.value) || 1)}
-                                  min="1"
-                                  max="20"
-                                style={{
-                                  width: '100%',
-                                  padding: '0.75rem',
-                                  border: '1px solid #d1d5db',
-                                  borderRadius: '8px',
-                                  fontSize: '0.875rem',
-                                  transition: 'all 0.2s ease',
-                                  outline: 'none',
-                                  MozAppearance: 'textfield'
-                                }}
-                                onFocus={(e) => {
-                                  e.target.style.borderColor = '#2563eb';
-                                  e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.1)';
-                                }}
-                                onBlur={(e) => {
-                                  e.target.style.borderColor = '#d1d5db';
-                                  e.target.style.boxShadow = 'none';
-                                }}
-                                onWheel={(e) => e.currentTarget.blur()}
-                                />
+                <div style={{ fontWeight: 600, color: '#111827', fontSize: '0.875rem' }}>
+                  Monthly Rent {isSaleProperty && <span style={{ color: '#dc2626' }}>*</span>}
                 </div>
-
-                            <div>
-                              <label style={{
-                                display: 'block',
-                                fontSize: '0.875rem',
-                                fontWeight: '600',
-                                color: '#374151',
-                                marginBottom: '0.5rem'
-                              }}>Monthly Rent</label>
-                              <div style={{ position: 'relative' }}>
-                                <span style={{
-                                  position: 'absolute',
-                                  left: '0.75rem',
-                                  top: '50%',
-                                  transform: 'translateY(-50%)',
-                                  color: '#6b7280',
-                                  fontSize: '0.875rem',
-                                  fontWeight: '500'
-                                }}>$</span>
+                {!isSaleProperty && (
+                  <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                    Leave empty to use ${scrapedPrice.toLocaleString()}
+                  </div>
+                )}
+              </div>
+            </div>
                                   <input
                                     type="number"
-                                  value={config.monthlyRent}
-                                    onChange={(e) => updateRoomTypeConfig(config.id, 'monthlyRent', parseFloat(e.target.value) || 0)}
+              value={manualRent}
+              onChange={(e) => setManualRent(e.target.value)}
+              placeholder={isSaleProperty ? "Enter monthly rent" : `Default: $${scrapedPrice.toLocaleString()}`}
                                     min="0"
                                     step="0.01"
                                   style={{
                                     width: '100%',
-                                    padding: '0.75rem 0.75rem 0.75rem 2rem',
-                                    border: '1px solid #d1d5db',
-                                    borderRadius: '8px',
-                                    fontSize: '0.875rem',
-                                    transition: 'all 0.2s ease',
-                                    outline: 'none',
-                                    MozAppearance: 'textfield'
-                                  }}
-                                  onFocus={(e) => {
-                                    e.target.style.borderColor = '#2563eb';
-                                    e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.1)';
-                                  }}
-                                  onBlur={(e) => {
-                                    e.target.style.borderColor = '#d1d5db';
-                                    e.target.style.boxShadow = 'none';
-                                  }}
-                                  onWheel={(e) => e.currentTarget.blur()}
-                                  />
-                </div>
-            </div>
-
-                            <div>
-                              <label style={{
-                                display: 'block',
-                                fontSize: '0.875rem',
+                padding: '1rem',
+                border: '2px solid #e5e7eb',
+                borderRadius: '12px',
+                fontSize: '1.125rem',
                                 fontWeight: '600',
-                                color: '#374151',
-                                marginBottom: '0.5rem'
-                              }}>Max Capacity</label>
-                                <input
-                                  type="number"
-                                  value={config.maxCapacity}
-                                  onChange={(e) => updateRoomTypeConfig(config.id, 'maxCapacity', parseInt(e.target.value) || 1)}
-                                  min="1"
-                                  max="10"
-                                style={{
-                                  width: '100%',
-                                  padding: '0.75rem',
-                                  border: '1px solid #d1d5db',
-                                  borderRadius: '8px',
-                                  fontSize: '0.875rem',
                                   transition: 'all 0.2s ease',
-                                  outline: 'none',
-                                  MozAppearance: 'textfield'
+                          outline: 'none'
                                 }}
                                 onFocus={(e) => {
                                   e.target.style.borderColor = '#2563eb';
                                   e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.1)';
                                 }}
                                 onBlur={(e) => {
-                                  e.target.style.borderColor = '#d1d5db';
+                e.target.style.borderColor = '#e5e7eb';
                                   e.target.style.boxShadow = 'none';
                                 }}
-                                onWheel={(e) => e.currentTarget.blur()}
-                                />
-                              </div>
-
-                            <div>
-                              <label style={{
-                                display: 'block',
-                                fontSize: '0.875rem',
-                                fontWeight: '600',
-                                color: '#374151',
-                                marginBottom: '0.5rem'
-                              }}>Floor</label>
-                                <input
-                                  type="text"
-                                  value={config.floor}
-                                  onChange={(e) => updateRoomTypeConfig(config.id, 'floor', e.target.value)}
-                                placeholder="e.g., 1st, Ground"
-                                style={{
-                                  width: '100%',
-                                  padding: '0.75rem',
-                                  border: '1px solid #d1d5db',
-                                  borderRadius: '8px',
-                                  fontSize: '0.875rem',
-                                  transition: 'all 0.2s ease',
-                                  outline: 'none'
-                                }}
-                                />
-                </div>
-                  </div>
-                </div>
-                        ))}
+                                  />
                   </div>
                     )}
 
+
+        {/* Action Buttons */}
+                <div style={{
+          display: 'flex',
+                  gap: '1rem',
+          marginTop: '2rem'
+        }}>
                       <button
-                        type="button"
-                        onClick={addRoomTypeConfig}
+            onClick={() => {
+              setStep('address');
+              setScrapedData(null);
+              setManualRent('');
+            }}
+            disabled={saving}
                     style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      padding: '0.75rem 1rem',
-                      backgroundColor: '#f0fdf4',
-                      color: '#16a34a',
-                      border: '1px solid #bbf7d0',
-                      borderRadius: '8px',
+              flex: 1,
+              padding: '1rem',
+                        backgroundColor: 'white',
+                      color: '#374151',
+              border: '2px solid #e5e7eb',
+              borderRadius: '12px',
                       fontSize: '0.875rem',
-                      fontWeight: '500',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                      marginBottom: '1.5rem'
+                    fontWeight: '600',
+              cursor: saving ? 'not-allowed' : 'pointer',
+              transition: 'all 0.2s ease'
                     }}
                     onMouseOver={(e) => {
-                      e.currentTarget.style.backgroundColor = '#dcfce7';
+              if (!saving) {
+                e.currentTarget.style.borderColor = '#d1d5db';
+                e.currentTarget.style.backgroundColor = '#f9fafb';
+              }
                     }}
                     onMouseOut={(e) => {
-                      e.currentTarget.style.backgroundColor = '#f0fdf4';
-                    }}
-                      >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <line x1="12" y1="5" x2="12" y2="19"/>
-                      <line x1="5" y1="12" x2="19" y2="12"/>
-                        </svg>
-                    Add Room Configuration
+              if (!saving) {
+                e.currentTarget.style.borderColor = '#e5e7eb';
+                e.currentTarget.style.backgroundColor = 'white';
+              }
+            }}
+          >
+            Back
                       </button>
-
-                  {/* Revenue Projection */}
-                    {roomTypeConfigs.length > 0 && (
-                    <div style={{
-                      backgroundColor: '#f8fafc',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '8px',
-                      padding: '1.5rem'
-                    }}>
-                      <h4 style={{
-                        fontSize: '1rem',
-                        fontWeight: '600',
-                        color: '#111827',
-                        marginBottom: '1rem'
-                      }}>Revenue Projection</h4>
-                      <div style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-                        gap: '1rem'
-                      }}>
-                        <div style={{
-                          backgroundColor: 'white',
-                          padding: '1rem',
-                          borderRadius: '6px',
-                          textAlign: 'center'
-                        }}>
-                          <div style={{
-                            fontSize: '1.25rem',
-                            fontWeight: '700',
-                            color: '#059669'
-                          }}>
-                            ${calculateTotalRevenue().toLocaleString()}
-                  </div>
-                          <div style={{
-                            fontSize: '0.75rem',
-                            color: '#6b7280',
-                            marginTop: '0.25rem'
-                          }}>Monthly Revenue</div>
-                  </div>
-                </div>
-              </div>
-                    )}
-            </div>
-                )}
-
-              {/* Form Actions */}
-              <div style={{
-                borderTop: '1px solid #e5e7eb',
-                paddingTop: '1.5rem',
-                marginTop: '1.5rem',
-                display: 'flex',
-                justifyContent: 'flex-end'
-              }}>
                   <button
-                    type="submit"
-                    disabled={loading}
+            onClick={handleSaveProperty}
+            disabled={saving}
                   style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    padding: '0.75rem 1.5rem',
-                    backgroundColor: loading ? '#9ca3af' : '#16a34a',
+              flex: 2,
+              padding: '1rem',
+              backgroundColor: saving ? '#9ca3af' : '#2563eb',
                     color: 'white',
                     border: 'none',
-                    borderRadius: '8px',
-                    fontSize: '0.875rem',
+              borderRadius: '12px',
+              fontSize: '1rem',
                     fontWeight: '600',
-                    cursor: loading ? 'not-allowed' : 'pointer',
-                    transition: 'all 0.2s ease'
+              cursor: saving ? 'not-allowed' : 'pointer',
+                                  transition: 'all 0.2s ease',
+                      display: 'flex',
+                      alignItems: 'center',
+              justifyContent: 'center',
+                      gap: '0.5rem',
+              boxShadow: saving ? 'none' : '0 4px 12px rgba(37, 99, 235, 0.3)'
                   }}
                   onMouseOver={(e) => {
-                    if (!loading) {
-                      e.currentTarget.style.backgroundColor = '#15803d';
-                      e.currentTarget.style.transform = 'translateY(-1px)';
-                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(22, 163, 74, 0.4)';
+              if (!saving) {
+                      e.currentTarget.style.backgroundColor = '#1d4ed8';
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 6px 16px rgba(37, 99, 235, 0.4)';
                     }
                   }}
                   onMouseOut={(e) => {
-                    if (!loading) {
-                      e.currentTarget.style.backgroundColor = '#16a34a';
+              if (!saving) {
+                      e.currentTarget.style.backgroundColor = '#2563eb';
                       e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = 'none';
-                    }
-                  }}
-                  >
-                    {loading ? (
-                      <>
-                      <div style={{
-                        width: '1rem',
-                        height: '1rem',
-                        border: '2px solid transparent',
-                        borderTop: '2px solid white',
-                        borderRadius: '50%',
-                        animation: 'spin 1s linear infinite'
-                      }}></div>
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(37, 99, 235, 0.3)';
+              }
+            }}
+          >
+            {saving ? (
+              <>
+                <Loader style={{ width: '1rem', height: '1rem', animation: 'spin 1s linear infinite' }} />
                         Creating Property...
                       </>
                     ) : (
                     <>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                        <polyline points="22,4 12,14.01 9,11.01"/>
-                      </svg>
+                <Sparkles style={{ width: '1rem', height: '1rem' }} />
                       Create Property
                     </>
                     )}
                   </button>
                 </div>
-              </form>
           </div>
+    );
+  };
+
+  return (
+    <>
+      <Head>
+        <title>Add New Property - SquareFt</title>
+      </Head>
+      <DashboardLayout title="">
+                    <div style={{
+          width: '100%',
+          padding: '16px 20px 20px 20px',
+          background: '#f8fafc',
+          minHeight: 'calc(100vh - 72px)',
+          boxSizing: 'border-box',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center'
+        }}>
+          {/* Content */}
+          {step === 'address' && renderAddressStep()}
+          {step === 'configure' && renderConfigureStep()}
         </div>
       </DashboardLayout>
+
+      {/* Loading Overlay */}
+      {showLoading && (
+        <LoadingOverlay
+          onComplete={handleLoadingComplete}
+          onClose={handleCloseLoading}
+          isLoading={isApiLoading}
+        />
+      )}
+
+      {/* Duplicate Address Modal */}
+      {duplicateModal.show && duplicateModal.existingProperty && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10000,
+          padding: '1rem'
+        }}
+        onClick={() => {
+          // Don't close on backdrop click - require explicit action
+        }}
+        >
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '16px',
+            padding: '2rem',
+            maxWidth: '500px',
+            width: '100%',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+          }}
+          onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '1rem',
+              marginBottom: '1.5rem'
+            }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '50%',
+                backgroundColor: '#fef3c7',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+              }}>
+                <span style={{ color: '#f59e0b', fontSize: '24px', fontWeight: 'bold' }}>!</span>
+              </div>
+              <div>
+                <h3 style={{
+                  fontSize: '1.25rem',
+                  fontWeight: '700',
+                  color: '#111827',
+                  margin: 0,
+                  marginBottom: '0.25rem'
+                }}>
+                  Property Already Exists
+                </h3>
+                <p style={{
+                  fontSize: '0.875rem',
+                  color: '#6b7280',
+                  margin: 0
+                }}>
+                  A property with a similar address was found
+                </p>
+              </div>
+            </div>
+
+            <div style={{
+              backgroundColor: '#f9fafb',
+              borderRadius: '12px',
+              padding: '1rem',
+              marginBottom: '1.5rem'
+            }}>
+              <div style={{
+                fontSize: '0.875rem',
+                color: '#6b7280',
+                marginBottom: '0.5rem'
+              }}>
+                Existing Property:
+              </div>
+              <div style={{
+                fontSize: '1rem',
+                fontWeight: '600',
+                color: '#111827'
+              }}>
+                {duplicateModal.existingProperty.address_line1}
+                {duplicateModal.existingProperty.address_line2 ? `, ${duplicateModal.existingProperty.address_line2}` : ''}
+              </div>
+              {duplicateModal.existingProperty.city && (
+                <div style={{
+                  fontSize: '0.875rem',
+                  color: '#6b7280',
+                  marginTop: '0.25rem'
+                }}>
+                  {duplicateModal.existingProperty.city}, {duplicateModal.existingProperty.state} {duplicateModal.existingProperty.postal_code}
+                </div>
+              )}
+            </div>
+
+            <div style={{
+              fontSize: '0.875rem',
+              color: '#6b7280',
+              marginBottom: '1.5rem',
+              lineHeight: '1.6'
+            }}>
+              You're trying to add: <strong>{duplicateModal.addressToCheck}</strong>
+              <br /><br />
+              If this is a different property (e.g., different apartment/unit number), you can continue. Otherwise, please cancel and edit the existing property.
+            </div>
+
+            <div style={{
+              display: 'flex',
+              gap: '0.75rem',
+              justifyContent: 'flex-end'
+            }}>
+              <button
+                onClick={() => setDuplicateModal({ show: false, existingProperty: null, addressToCheck: '' })}
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: '8px',
+                  border: '2px solid #e5e7eb',
+                  backgroundColor: 'white',
+                  color: '#374151',
+                  fontSize: '0.875rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f9fafb';
+                  e.currentTarget.style.borderColor = '#d1d5db';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = 'white';
+                  e.currentTarget.style.borderColor = '#e5e7eb';
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleContinueWithDuplicate}
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: '8px',
+                  border: 'none',
+                  backgroundColor: '#2563eb',
+                  color: 'white',
+                  fontSize: '0.875rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = '#1d4ed8';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(37, 99, 235, 0.4)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = '#2563eb';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(37, 99, 235, 0.3)';
+                }}
+              >
+                Continue Anyway
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Error Modal */}
+      {showErrorModal && (
+              <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                display: 'flex',
+                      alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999
+                      }}>
+                        <div style={{
+                          backgroundColor: 'white',
+            borderRadius: '12px',
+            padding: '2rem',
+            maxWidth: '400px',
+            width: '90%'
+          }}>
+            <h3 style={{
+                            fontSize: '1.25rem',
+                            fontWeight: '700',
+              color: '#dc2626',
+              marginBottom: '1rem'
+            }}>Error</h3>
+            <p style={{
+              fontSize: '0.875rem',
+              color: '#4b5563',
+              marginBottom: '1.5rem'
+            }}>{errorMessage}</p>
+                  <button
+              onClick={handleCloseErrorModal}
+                  style={{
+                width: '100%',
+                padding: '0.75rem',
+                backgroundColor: '#2563eb',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '0.875rem',
+                    fontWeight: '600',
+                cursor: 'pointer'
+              }}
+            >
+              Close
+                  </button>
+                </div>
+          </div>
+      )}
+
       <style jsx>{`
-        .dashboard-container {
-          width: 100%;
-          padding: 16px 20px 20px 20px;
-          background: #f8fafc;
-          min-height: calc(100vh - 72px);
-          box-sizing: border-box;
-        }
-        .dashboard-header { margin-bottom: 24px; }
-        .header-content { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; }
-        .header-left { flex: 1; }
-        .header-right { flex-shrink: 0; }
-        .dashboard-title { font-size: 22px; font-weight: 700; color: #1e293b; margin: 0 0 4px 0; line-height: 1.15; }
-        .welcome-message { font-size: 14px; color: #4b5563; margin: 0; line-height: 1.45; }
-        .back-btn { background: #4f46e5; color: white; border: none; padding: 10px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s ease; text-decoration: none; }
-        .back-btn:hover { background: #3730a3; transform: translateY(-1px); }
-        .alert { padding: 12px 16px; border-radius: 6px; margin-bottom: 20px; font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 8px; }
-        .alert-error { background-color: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
-        .alert-success { background-color: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
-        .main-content-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; align-items: flex-start; }
-        .form-section, .quick-actions-section { background: white; border-radius: 6px; padding: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e2e8f0; height: fit-content; }
-        .section-header { margin-bottom: 16px; }
-        .section-title { font-size: 14px; font-weight: 700; color: #1e293b; margin: 0 0 3px 0; }
-        .section-subtitle { font-size: 12px; color: #64748b; margin: 0; }
-        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
-        .form-group { display: flex; flex-direction: column; gap: 6px; }
-        .form-group.full-width { grid-column: 1 / -1; }
-        .form-label { font-weight: 600; color: #374151; font-size: 14px; }
-        .form-input { padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; transition: all 0.2s ease; box-sizing: border-box; }
-        .input-group .form-input { padding-left: 48px; }
-        .form-input:focus { outline: none; border-color: #4f46e5; box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); }
-        .form-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 16px; padding-top: 16px; border-top: 1px solid #e2e8f0; }
-        .btn { padding: 10px 16px; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s ease; text-decoration: none; border: none; }
-        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
-        .btn-primary { background: #4f46e5; color: white; }
-        .btn-primary:hover:not(:disabled) { background: #3730a3; }
-        .btn-secondary { background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; }
-        .btn-secondary:hover { background: #e2e8f0; }
-        .actions-grid { display: flex; flex-direction: column; gap: 12px; }
-        .action-card { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 5px; border: 1px solid #e2e8f0; cursor: pointer; transition: all 0.2s ease; text-decoration: none; }
-        .action-card:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        .action-card.blue { background: #eff6ff; border-color: #dbeafe; }
-        .action-card.green { background: #f0fdf4; border-color: #dcfce7; }
-        .action-card.purple { background: #faf5ff; border-color: #e9d5ff; }
-        .action-icon { width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: white; }
-        .action-card.blue .action-icon { background: #3b82f6; }
-        .action-card.green .action-icon { background: #10b981; }
-        .action-card.purple .action-icon { background: #8b5cf6; }
-        .action-content { flex: 1; }
-        .action-title { font-size: 13px; font-weight: 600; color: #1e293b; margin: 0 0 2px 0; }
-        .action-subtitle { font-size: 11px; color: #64748b; margin: 0; }
-        
-        /* Enhanced Rent Type Selection */
-        .rent-type-selection {
-          margin-top: 8px;
-        }
-        
-        .rent-type-options {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 16px;
-        }
-        
-        .rent-type-option {
-          display: flex;
-          align-items: flex-start;
-          gap: 12px;
-          padding: 16px;
-          border: 2px solid #e2e8f0;
-          border-radius: 8px;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          background: #f8fafc;
-        }
-        
-        .rent-type-option:hover {
-          border-color: #cbd5e1;
-          background: #f1f5f9;
-        }
-        
-        .rent-type-option.selected {
-          border-color: #4f46e5;
-          background: #eff6ff;
-        }
-        
-        .rent-type-radio {
-          margin: 0;
-          width: 20px;
-          height: 20px;
-          accent-color: #4f46e5;
-        }
-        
-        .rent-type-content {
-          flex: 1;
-        }
-        
-        .rent-type-header {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          margin-bottom: 8px;
-        }
-        
-        .rent-type-header svg {
-          color: #4f46e5;
-          flex-shrink: 0;
-        }
-        
-        .rent-type-title {
-          font-size: 14px;
-          font-weight: 600;
-          color: #1e293b;
-          margin: 0;
-        }
-        
-        .rent-type-description {
-          font-size: 12px;
-          color: #64748b;
-          margin: 0;
-          line-height: 1.4;
-        }
-        
-        /* Enhanced Currency Input */
-        .rent-input-wrapper {
-          position: relative;
-          display: inline-block;
-          width: 100%;
-        }
-        
-        .currency-symbol {
-          position: absolute;
-          left: 12px;
-          top: 50%;
-          transform: translateY(-50%);
-          color: #6b7280;
-          font-weight: 600;
-          font-size: 14px;
-          z-index: 1;
-        }
-        
-        .currency-input {
-          padding-left: 48px;
-        }
-        
-        .form-help {
-          font-size: 12px;
-          color: #6b7280;
-          margin: 4px 0 0 0;
-          font-style: italic;
-        }
-        
-        /* Per Room Info */
-        .per-room-info {
-          display: flex;
-          align-items: flex-start;
-          gap: 12px;
-          padding: 16px;
-          background: #f0f9ff;
-          border: 1px solid #bae6fd;
-          border-radius: 8px;
-          margin-top: 8px;
-        }
-        
-        .info-icon {
-          width: 40px;
-          height: 40px;
-          background: #0ea5e9;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: white;
-          flex-shrink: 0;
-        }
-        
-        .info-content {
-          flex: 1;
-        }
-        
-        .info-title {
-          font-size: 14px;
-          font-weight: 600;
-          color: #0c4a6e;
-          margin: 0 0 4px 0;
-        }
-        
-        .info-description {
-          font-size: 12px;
-          color: #075985;
-          margin: 0;
-          line-height: 1.4;
-        }
-        
-        /* Room Types Section */
-        .room-types-section {
-          margin-top: 24px;
-          padding-top: 24px;
-          border-top: 1px solid #e2e8f0;
-        }
-
-        .empty-room-types {
-          text-align: center;
-          padding: 40px 20px;
-          background: #f8fafc;
-          border: 2px dashed #cbd5e1;
-          border-radius: 8px;
-          margin: 16px 0;
-        }
-
-        .empty-icon {
-          width: 48px;
-          height: 48px;
-          margin: 0 auto 16px;
-          color: #94a3af;
-        }
-
-        .empty-room-types h4 {
-          font-size: 16px;
-          font-weight: 600;
-          color: #374151;
-          margin: 0 0 8px 0;
-        }
-
-        .empty-room-types p {
-          font-size: 14px;
-          color: #6b7280;
-          margin: 0 0 20px 0;
-        }
-
-        .room-type-config {
-          background: white;
-          border: 1px solid #e5e7eb;
-          border-radius: 8px;
-          padding: 20px;
-          margin-bottom: 20px;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        }
-
-        .room-type-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 16px;
-          padding-bottom: 12px;
-          border-bottom: 1px solid #f3f4f6;
-        }
-
-        .room-type-header h4 {
-          font-size: 14px;
-          font-weight: 600;
-          color: #374151;
-          margin: 0;
-        }
-
-        .remove-btn {
-          background: #fee2e2;
-          color: #dc2626;
-          border: 1px solid #fecaca;
-          border-radius: 6px;
-          padding: 6px;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .remove-btn:hover {
-          background: #fecaca;
-          border-color: #fca5a5;
-        }
-
-        .room-config-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-          gap: 16px;
-          margin-bottom: 16px;
-        }
-
-        .room-summary {
-          display: flex;
-          gap: 24px;
-          padding: 12px 16px;
-          background: #f8fafc;
-          border-radius: 6px;
-          border: 1px solid #e2e8f0;
-        }
-
-        .summary-item {
-          display: flex;
-          flex-direction: column;
-          gap: 2px;
-        }
-
-        .summary-label {
-          font-size: 12px;
-          color: #6b7280;
-          font-weight: 500;
-        }
-
-        .summary-value {
-          font-size: 14px;
-          color: #374151;
-          font-weight: 600;
-        }
-
-        .property-summary {
-          margin-top: 24px;
-          padding: 20px;
-          background: #f0fdf4;
-          border: 1px solid #bbf7d0;
-          border-radius: 8px;
-        }
-
-        .property-summary h4 {
-          font-size: 16px;
-          font-weight: 600;
-          color: #166534;
-          margin: 0 0 16px 0;
-        }
-
-        .summary-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-          gap: 16px;
-        }
-
-        .summary-card {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          padding: 12px;
-          background: white;
-          border-radius: 6px;
-          border: 1px solid #dcfce7;
-        }
-
-        .summary-icon {
-          width: 32px;
-          height: 32px;
-          background: #16a34a;
-          border-radius: 6px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: white;
-          flex-shrink: 0;
-        }
-
-        .summary-content {
-          display: flex;
-          flex-direction: column;
-          gap: 2px;
-        }
-
-        .summary-number {
-          font-size: 18px;
-          font-weight: 700;
-          color: #374151;
-          line-height: 1;
-        }
-
-        .summary-card .summary-label {
-          font-size: 12px;
-          color: #6b7280;
-          font-weight: 500;
-        }
-
-        :global(.dark-mode) .dashboard-container { background-color: #0a0a0a; }
-        :global(.dark-mode) .dashboard-title, :global(.dark-mode) .section-title, :global(.dark-mode) .action-title { color: #ffffff; }
-        :global(.dark-mode) .welcome-message, :global(.dark-mode) .section-subtitle, :global(.dark-mode) .action-subtitle { color: #94a3b8; }
-        :global(.dark-mode) .back-btn, :global(.dark-mode) .btn-secondary { background: #1a1a1a; border: 1px solid #333333; color: #e2e8f0; }
-        :global(.dark-mode) .back-btn:hover, :global(.dark-mode) .btn-secondary:hover { background: #222222; }
-        :global(.dark-mode) .alert-error { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.3); color: #ef4444; }
-        :global(.dark-mode) .alert-success { background: rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.3); color: #10b981; }
-        :global(.dark-mode) .form-section, :global(.dark-mode) .quick-actions-section { background: #1a1a1a; border-color: #333333; }
-        :global(.dark-mode) .form-label { color: #e2e8f0; }
-        :global(.dark-mode) .form-input { background: #111111; border-color: #333333; color: #ffffff; }
-        :global(.dark-mode) .form-input:focus { border-color: #4f46e5; }
-        :global(.dark-mode) .action-card { color: #e2e8f0; }
-        :global(.dark-mode) .action-card:hover { background: #222222; }
-        
-        :global(.dark-mode) .rent-type-option {
-          background: #111111;
-          border-color: #333333;
-        }
-        
-        :global(.dark-mode) .rent-type-option:hover {
-          background: #1a1a1a;
-          border-color: #404040;
-        }
-        
-        :global(.dark-mode) .rent-type-option.selected {
-          background: #1e1b4b;
-          border-color: #4f46e5;
-        }
-        
-        :global(.dark-mode) .rent-type-title {
-          color: #e2e8f0;
-        }
-        
-        :global(.dark-mode) .rent-type-description {
-          color: #9ca3af;
-        }
-        
-        :global(.dark-mode) .currency-symbol {
-          color: #9ca3af;
-        }
-        
-        :global(.dark-mode) .form-help {
-          color: #9ca3af;
-        }
-        
-        :global(.dark-mode) .per-room-info {
-          background: #0f172a;
-          border-color: #1e293b;
-        }
-        
-        :global(.dark-mode) .info-icon {
-          background: #0ea5e9;
-        }
-        
-        :global(.dark-mode) .info-title {
-          color: #38bdf8;
-        }
-        
-        :global(.dark-mode) .info-description {
-          color: #94a3b8;
-        }
-        
-        :global(.dark-mode) .summary-card .summary-label {
-          color: #9ca3af;
-        }
-        
-        /* Loading States */
-        .loading-section {
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          min-height: 200px;
-          padding: 40px;
-        }
-
-        .loading-indicator {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 16px;
-        }
-
-        .loading-spinner {
-          width: 40px;
-          height: 40px;
-          border: 4px solid #f3f4f6;
-          border-top: 4px solid #4f46e5;
-          border-radius: 50%;
-          animation: spin 1s linear infinite;
-        }
-
         @keyframes spin {
           0% { transform: rotate(0deg); }
           100% { transform: rotate(360deg); }
-        }
-
-        .loading-indicator p {
-          font-size: 14px;
-          color: #6b7280;
-          margin: 0;
-        }
-
-        :global(.dark-mode) .loading-spinner {
-          border-color: #374151;
-          border-top-color: #4f46e5;
-        }
-
-        :global(.dark-mode) .loading-indicator p {
-          color: #9ca3af;
-        }
-        
-        @media (max-width: 1024px) { 
-          .main-content-grid { grid-template-columns: 1fr; }
-          .rent-type-options { grid-template-columns: 1fr; }
-          .room-config-grid { grid-template-columns: 1fr 1fr; }
-          .summary-grid { grid-template-columns: 1fr 1fr; }
-        }
-        @media (max-width: 768px) { 
-          .form-grid { grid-template-columns: 1fr; } 
-          .form-group.full-width { grid-column: span 1; } 
-          .rent-type-options { grid-template-columns: 1fr; }
-          .room-config-grid { grid-template-columns: 1fr; }
-          .summary-grid { grid-template-columns: 1fr; }
-          .room-summary { flex-direction: column; gap: 12px; }
-          .summary-grid { grid-template-columns: 1fr; }
-          .room-summary { flex-direction: column; gap: 12px; }
-        }
-
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-
-        /* Hide number input spinners */
-        input[type="number"]::-webkit-outer-spin-button,
-        input[type="number"]::-webkit-inner-spin-button {
-          -webkit-appearance: none;
-          margin: 0;
-        }
-
-        input[type="number"] {
-          -moz-appearance: textfield;
         }
       `}</style>
     </>

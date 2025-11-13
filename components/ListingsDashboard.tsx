@@ -18,7 +18,8 @@ import {
   Trash2,
   Grid,
   List,
-  Filter
+  Filter,
+  Loader
 } from 'lucide-react';
 
 interface ListingsDashboardProps {}
@@ -33,6 +34,9 @@ export default function ListingsDashboard(props: ListingsDashboardProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingListing, setEditingListing] = useState<any>(null);
+  const [loadingListingForEdit, setLoadingListingForEdit] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [viewMode, setViewMode] = useState<'panel' | 'list'>('panel');
   const [activeDropdown, setActiveDropdown] = useState<number | null>(null);
@@ -204,9 +208,31 @@ export default function ListingsDashboard(props: ListingsDashboardProps) {
     window.open(`/listings/${slug}`, '_blank');
   };
 
-  const handleEditListing = (listingId: number) => {
-    // Navigate to edit page (to be implemented)
-    router.push(`/listings/edit/${listingId}`);
+  const handleEditListing = async (listingId: number) => {
+    setLoadingListingForEdit(true);
+    setActiveDropdown(null); // Close dropdown
+    
+    try {
+      // Fetch full listing data for editing
+      // apiRequest already returns parsed JSON, not a Response object
+      const fullListingData = await apiRequest(`/properties/listings/${listingId}/`, {
+        method: 'GET',
+      });
+      setEditingListing(fullListingData);
+      setShowEditModal(true);
+    } catch (err: any) {
+      console.error('Failed to fetch listing for editing:', err);
+      setError(err.message || 'Failed to load listing for editing.');
+    } finally {
+      setLoadingListingForEdit(false);
+    }
+  };
+
+  const handleEditListingSuccess = async () => {
+    setShowEditModal(false);
+    setEditingListing(null);
+    // Refresh listings to get updated data
+    await fetchListings();
   };
 
   const getMetrics = () => {
@@ -931,25 +957,43 @@ export default function ListingsDashboard(props: ListingsDashboardProps) {
                   </button>
                   <button
                     onClick={() => handleEditListing(listing.id)}
+                    disabled={loadingListingForEdit}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
                       gap: '0.375rem',
                       padding: '0.5rem 0.75rem',
-                      backgroundColor: 'white',
-                      color: '#374151',
+                      backgroundColor: loadingListingForEdit ? '#f3f4f6' : 'white',
+                      color: loadingListingForEdit ? '#9ca3af' : '#374151',
                       border: '1px solid #d1d5db',
                       borderRadius: '6px',
                       fontSize: '0.75rem',
                       fontWeight: '500',
-                      cursor: 'pointer',
+                      cursor: loadingListingForEdit ? 'not-allowed' : 'pointer',
                       transition: 'all 0.2s ease'
                     }}
-                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
-                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                    onMouseOver={(e) => {
+                      if (!loadingListingForEdit) {
+                        e.currentTarget.style.backgroundColor = '#f9fafb';
+                      }
+                    }}
+                    onMouseOut={(e) => {
+                      if (!loadingListingForEdit) {
+                        e.currentTarget.style.backgroundColor = 'white';
+                      }
+                    }}
                   >
-                    <Edit style={{ width: '0.875rem', height: '0.875rem' }} />
-                    Edit
+                    {loadingListingForEdit ? (
+                      <>
+                        <Loader style={{ width: '0.875rem', height: '0.875rem', animation: 'spin 1s linear infinite' }} />
+                        Loading...
+                      </>
+                    ) : (
+                      <>
+                        <Edit style={{ width: '0.875rem', height: '0.875rem' }} />
+                        Edit
+                      </>
+                    )}
                   </button>
                   <button
                     onClick={() => handleToggleActive(listing.id, listing.is_active)}
@@ -1178,6 +1222,7 @@ export default function ListingsDashboard(props: ListingsDashboardProps) {
                                 
                                 <button 
                                   onClick={() => handleEditListing(listing.id)}
+                                  disabled={loadingListingForEdit}
                               style={{
                                 display: 'flex',
                                 alignItems: 'center',
@@ -1185,18 +1230,35 @@ export default function ListingsDashboard(props: ListingsDashboardProps) {
                                 width: '100%',
                                 padding: '0.75rem 1rem',
                                 backgroundColor: 'transparent',
-                                color: '#374151',
+                                color: loadingListingForEdit ? '#9ca3af' : '#374151',
                                 border: 'none',
                                 fontSize: '0.875rem',
-                                cursor: 'pointer',
+                                cursor: loadingListingForEdit ? 'not-allowed' : 'pointer',
                                 transition: 'background-color 0.2s ease',
                                 textAlign: 'left'
                               }}
-                              onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
-                              onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                              onMouseOver={(e) => {
+                                if (!loadingListingForEdit) {
+                                  e.currentTarget.style.backgroundColor = '#f9fafb';
+                                }
+                              }}
+                              onMouseOut={(e) => {
+                                if (!loadingListingForEdit) {
+                                  e.currentTarget.style.backgroundColor = 'transparent';
+                                }
+                              }}
                             >
-                              <Edit style={{ width: '1rem', height: '1rem' }} />
+                              {loadingListingForEdit ? (
+                                <>
+                                  <Loader style={{ width: '1rem', height: '1rem', animation: 'spin 1s linear infinite' }} />
+                                  Loading...
+                                </>
+                              ) : (
+                                <>
+                                  <Edit style={{ width: '1rem', height: '1rem' }} />
                                   Edit Listing
+                                </>
+                              )}
                                 </button>
                                 
                                 <button 
@@ -1263,6 +1325,20 @@ export default function ListingsDashboard(props: ListingsDashboardProps) {
           onClose={() => setShowCreateModal(false)}
           onSuccess={fetchListings}
           selectedPropertyId={selectedProperty}
+        />
+      )}
+
+      {/* Edit Listing Modal */}
+      {showEditModal && editingListing && (
+        <NewListingModal
+          onClose={() => {
+            setShowEditModal(false);
+            setEditingListing(null);
+          }}
+          onSuccess={handleEditListingSuccess}
+          editMode={true}
+          existingListing={editingListing}
+          property_name={editingListing?.property_details?.name || editingListing?.property_name}
         />
       )}
 

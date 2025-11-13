@@ -449,7 +449,7 @@
 .mediaUploadArea {
   border: 2px dashed var(--gray-300);
   border-radius: 8px;
-  padding: 32px;
+  padding: 16px 24px;
   text-align: center;
   transition: all 0.2s ease;
 }
