@@ -3,6 +3,8 @@ import { useRouter } from 'next/router';
 import { MapPin, Bed, Bath, Maximize, DollarSign, Heart, Share2, Calendar, Shield, Zap, Wand2, RotateCcw, Upload, Plus, Download } from 'lucide-react';
 import StagedImage from '../components/StagedImage';
 import Walkthrough from '../components/Walkthrough';
+import JSZip from 'jszip';
+import { getMediaUrl } from '../lib/utils';
 
 export default function ListingPage() {
   const router = useRouter();
@@ -22,6 +24,9 @@ export default function ListingPage() {
   // Staging state - store staged URLs for each image index
   const [stagedImages, setStagedImages] = useState<{[key: number]: string}>({});
   
+  // Track which image is currently being staged (for hiding download button during animation)
+  const [stagingImageIndex, setStagingImageIndex] = useState<number | null>(null);
+  
   // View preferences - track user's last chosen view (original or staged) for each image
   const [viewPreferences, setViewPreferences] = useState<{[key: number]: boolean}>({});
   
@@ -38,6 +43,7 @@ export default function ListingPage() {
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const [uploadedFiles, setUploadedFiles] = useState<Map<string, File>>(new Map()); // Store File objects for blob URLs
   const [isUploading, setIsUploading] = useState(false);
+  const [isDownloadingAll, setIsDownloadingAll] = useState(false);
   
   // Price editing state
   const [isEditingPrice, setIsEditingPrice] = useState(false);
@@ -99,6 +105,7 @@ export default function ListingPage() {
 
   // Staging API functions
   const handleStageImage = async (imageIndex: number) => {
+    setStagingImageIndex(imageIndex);
     try {
       const imageUrl = displayListing.images[imageIndex];
       
@@ -176,6 +183,7 @@ export default function ListingPage() {
         [imageIndex]: true
       }));
     } catch (error: any) {
+      setStagingImageIndex(null);
       console.error('❌ Staging error:', error);
       
       // Provide user-friendly error messages
@@ -195,7 +203,10 @@ export default function ListingPage() {
       }
       
       // Show user-friendly error
+      setStagingImageIndex(null);
       throw new Error(userMessage);
+    } finally {
+      setStagingImageIndex(null);
     }
   };
 
@@ -502,6 +513,148 @@ export default function ListingPage() {
     }
   };
 
+  const handleDownloadAll = async () => {
+    setIsDownloadingAll(true);
+    try {
+      const zip = new JSZip();
+      const imagePromises: Promise<void>[] = [];
+
+      allImages.forEach((imageUrl, originalIdx) => {
+        // Skip if image was removed
+        if (removedImageIndices.has(originalIdx)) return;
+
+        // Calculate display index
+        const displayIdx = allImages
+          .slice(0, originalIdx)
+          .filter((_, idx) => !removedImageIndices.has(idx))
+          .length;
+
+        const imageNumber = displayIdx + 1;
+
+        // Add original image
+        imagePromises.push(
+          (async () => {
+            try {
+              let blob: Blob;
+              
+              // Handle blob URLs (uploaded images)
+              if (imageUrl.startsWith('blob:')) {
+                const file = uploadedFiles.get(imageUrl);
+                if (file) {
+                  blob = file;
+                } else {
+                  const response = await fetch(imageUrl);
+                  blob = await response.blob();
+                }
+              } else {
+                // Use getMediaUrl for S3 URLs - converts S3 URLs to Django proxy URLs
+                const mediaUrl = getMediaUrl(imageUrl);
+                const response = await fetch(mediaUrl, {
+                  mode: 'cors',
+                  credentials: 'omit'
+                });
+                if (!response.ok) {
+                  throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
+                }
+                blob = await response.blob();
+              }
+
+              // Determine file extension from blob type or URL
+              let extension = 'jpg';
+              if (blob.type) {
+                if (blob.type.includes('png')) extension = 'png';
+                else if (blob.type.includes('webp')) extension = 'webp';
+                else if (blob.type.includes('gif')) extension = 'gif';
+                else if (blob.type.includes('jpeg')) extension = 'jpg';
+              } else if (imageUrl.includes('.png')) extension = 'png';
+              else if (imageUrl.includes('.webp')) extension = 'webp';
+              else if (imageUrl.includes('.gif')) extension = 'gif';
+
+              zip.file(`image-${imageNumber}-original.${extension}`, blob);
+            } catch (error) {
+              console.error(`Failed to fetch original image ${imageNumber}:`, error);
+            }
+          })()
+        );
+
+        // Add staged image if it exists
+        const stagedUrl = stagedImages[displayIdx];
+        if (stagedUrl) {
+          imagePromises.push(
+            (async () => {
+              try {
+                let blob: Blob;
+                
+                // Handle base64 data URLs
+                if (stagedUrl.startsWith('data:image/')) {
+                  // Convert base64 data URL to blob
+                  const response = await fetch(stagedUrl);
+                  if (!response.ok) {
+                    throw new Error(`Failed to convert base64 image: ${response.status}`);
+                  }
+                  blob = await response.blob();
+                } else {
+                  // Handle S3 URLs or regular URLs - use getMediaUrl for S3 URLs
+                  // getMediaUrl converts S3 URLs to Django proxy URLs, or returns original URL
+                  const mediaUrl = getMediaUrl(stagedUrl);
+                  
+                  // For S3 URLs, getMediaUrl returns Django proxy URL which handles CORS
+                  // For regular URLs, it returns the original URL
+                  const response = await fetch(mediaUrl, {
+                    mode: 'cors',
+                    credentials: 'omit'
+                  });
+                  
+                  if (!response.ok) {
+                    throw new Error(`Failed to fetch staged image: ${response.status} ${response.statusText}`);
+                  }
+                  blob = await response.blob();
+                }
+                
+                let extension = 'jpg';
+                if (blob.type) {
+                  if (blob.type.includes('png')) extension = 'png';
+                  else if (blob.type.includes('webp')) extension = 'webp';
+                  else if (blob.type.includes('gif')) extension = 'gif';
+                  else if (blob.type.includes('jpeg')) extension = 'jpg';
+                } else if (stagedUrl.includes('.png')) extension = 'png';
+                else if (stagedUrl.includes('.webp')) extension = 'webp';
+                else if (stagedUrl.includes('.gif')) extension = 'gif';
+
+                zip.file(`image-${imageNumber}-staged.${extension}`, blob);
+              } catch (error) {
+                console.error(`Failed to fetch staged image ${imageNumber} (${stagedUrl}):`, error);
+                // Don't fail the whole download if one staged image fails
+                // Log the error but continue with other images
+              }
+            })()
+          );
+        }
+      });
+
+      // Wait for all images to be added
+      await Promise.all(imagePromises);
+
+      // Generate ZIP file
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      
+      // Download ZIP file
+      const url = window.URL.createObjectURL(zipBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `property-images-${new Date().toISOString().split('T')[0]}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Failed to download all images:', error);
+      alert('Failed to download images. Please try again.');
+    } finally {
+      setIsDownloadingAll(false);
+    }
+  };
+
   const handleAuthRedirect = (mode: 'login' | 'signup') => {
     // Ensure data is saved right before redirect as well
     savePendingPropertyData();
@@ -698,13 +851,16 @@ export default function ListingPage() {
                   ›
                 </button>
               </div>
-              <button
-                className="download-image-btn"
-                onClick={() => handleDownloadImage(displayListing.images[currentImageIndex], currentImageIndex)}
-                title="Download image"
-              >
-                <Download size={18} />
-              </button>
+              {/* Download button - positioned dynamically based on whether image is staged */}
+              {stagingImageIndex !== currentImageIndex && (
+                <button
+                  className={`download-image-btn ${stagedImages[currentImageIndex] ? 'with-toggle' : 'no-toggle'}`}
+                  onClick={() => handleDownloadImage(displayListing.images[currentImageIndex], currentImageIndex)}
+                  title="Download image"
+                >
+                  <Download size={18} />
+                </button>
+              )}
               <div className="image-counter">
                 {currentImageIndex + 1} / {displayListing.images.length}
               </div>
@@ -753,6 +909,7 @@ export default function ListingPage() {
                         <span>AI</span>
                       </div>
                     )}
+                    {/* Download button - positioned just left of delete button */}
                     <button
                       className="thumbnail-download-btn"
                       onClick={(e) => {
@@ -762,7 +919,7 @@ export default function ListingPage() {
                       aria-label="Download image"
                       title="Download image"
                     >
-                      <Download size={14} />
+                      <Download size={14} strokeWidth={2.5} />
                     </button>
                     <button
                       className="thumbnail-remove-btn"
@@ -837,6 +994,70 @@ export default function ListingPage() {
                   padding: '8px'
                 }}>
                   Max 10 uploads reached
+                </div>
+              )}
+              {/* Download All button */}
+              {allImages.length > 0 && (
+                <div 
+                  className="thumbnail download-all-thumbnail"
+                  onClick={isDownloadingAll ? undefined : handleDownloadAll}
+                  style={{
+                    height: '100px',
+                    borderRadius: '12px',
+                    border: '2px solid #2563eb',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: isDownloadingAll ? 'wait' : 'pointer',
+                    transition: 'all 0.2s',
+                    backgroundColor: isDownloadingAll ? '#dbeafe' : '#eff6ff',
+                    position: 'relative',
+                    opacity: isDownloadingAll ? 0.7 : 1
+                  }}
+                  onMouseOver={(e) => {
+                    if (!isDownloadingAll) {
+                      e.currentTarget.style.borderColor = '#1d4ed8';
+                      e.currentTarget.style.backgroundColor = '#dbeafe';
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(37, 99, 235, 0.2)';
+                    }
+                  }}
+                  onMouseOut={(e) => {
+                    if (!isDownloadingAll) {
+                      e.currentTarget.style.borderColor = '#2563eb';
+                      e.currentTarget.style.backgroundColor = '#eff6ff';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = 'none';
+                    }
+                  }}
+                >
+                  {isDownloadingAll ? (
+                    <>
+                      <RotateCcw size={24} className="spin" style={{ color: '#2563eb', marginBottom: '4px' }} />
+                      <div style={{ fontSize: '11px', fontWeight: '600', color: '#2563eb', textAlign: 'center' }}>
+                        Preparing...
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <Download size={24} style={{ color: '#2563eb', marginBottom: '4px' }} />
+                      <div style={{ fontSize: '11px', fontWeight: '600', color: '#2563eb', textAlign: 'center' }}>
+                        Download All
+                      </div>
+                      <div style={{ fontSize: '9px', color: '#60a5fa', marginTop: '2px', textAlign: 'center' }}>
+                        {(() => {
+                          // Count original images (excluding removed ones)
+                          const originalCount = allImages.filter((_, idx) => !removedImageIndices.has(idx)).length;
+                          // Count staged images
+                          const stagedCount = Object.keys(stagedImages).length;
+                          // Total files to download (originals + staged)
+                          const totalFiles = originalCount + stagedCount;
+                          return `${totalFiles} file${totalFiles !== 1 ? 's' : ''}`;
+                        })()}
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -1703,24 +1924,33 @@ export default function ListingPage() {
         .thumbnail-download-btn {
           position: absolute;
           top: 8px;
-          left: 8px;
+          right: 40px;
           width: 24px;
           height: 24px;
-          border: 1.5px solid rgba(255, 255, 255, 0.2);
+          min-width: 24px;
+          min-height: 24px;
+          max-width: 24px;
+          max-height: 24px;
           border-radius: 50%;
           background: rgba(15, 23, 42, 0.7);
-          color: #60a5fa;
+          backdrop-filter: blur(4px);
+          -webkit-backdrop-filter: blur(4px);
+          border: 1px solid rgba(255, 255, 255, 0.1);
           cursor: pointer;
           display: flex;
           align-items: center;
           justify-content: center;
+          padding: 0;
           opacity: 0;
           transition: all 0.2s ease-in-out;
-          backdrop-filter: blur(4px);
-          -webkit-backdrop-filter: blur(4px);
+          z-index: 10;
           box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
           flex-shrink: 0;
-          z-index: 2;
+          color: #60a5fa;
+        }
+
+        .thumbnail:hover .thumbnail-download-btn {
+          opacity: 1;
         }
 
         .thumbnail-download-btn:hover {
@@ -1728,38 +1958,54 @@ export default function ListingPage() {
           border-color: rgba(96, 165, 250, 0.4);
           transform: scale(1.1);
           color: #93c5fd;
+          box-shadow: 0 2px 8px rgba(96, 165, 250, 0.4);
         }
 
         .thumbnail-download-btn:active {
           transform: scale(0.95);
         }
 
+        .thumbnail-download-btn svg {
+          width: 14px;
+          height: 14px;
+          stroke-width: 2.5;
+        }
+
         .download-image-btn {
           position: absolute;
-          top: 1rem;
-          right: 1rem;
-          width: 44px;
-          height: 44px;
-          border: 1.5px solid rgba(255, 255, 255, 0.2);
-          border-radius: 50%;
-          background: rgba(15, 23, 42, 0.7);
-          color: #60a5fa;
+          top: 12px;
+          right: 62px;
+          width: 42px;
+          height: 42px;
+          border: 1px solid rgba(0,0,0,0.55);
+          border-radius: 10px;
+          background: rgba(255,255,255,0.85);
+          color: #2563eb;
           cursor: pointer;
           display: flex;
           align-items: center;
           justify-content: center;
-          transition: all 0.2s ease-in-out;
+          transition: all 0.2s ease;
           backdrop-filter: blur(4px);
           -webkit-backdrop-filter: blur(4px);
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-          z-index: 10;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+          z-index: 3;
         }
 
+        /* Dynamic positioning: when toggle button exists (image is staged), move download button further left */
+        .download-image-btn.with-toggle {
+          right: 112px;
+        }
+
+        .download-image-btn.no-toggle {
+          right: 62px;
+        }
+
+
         .download-image-btn:hover {
-          background: rgba(15, 23, 42, 0.9);
-          border-color: rgba(96, 165, 250, 0.4);
-          transform: scale(1.1);
-          color: #93c5fd;
+          background: rgba(37, 99, 235, 0.12);
+          transform: scale(1.05);
+          color: #2563eb;
         }
 
         .download-image-btn:active {
@@ -2484,6 +2730,19 @@ export default function ListingPage() {
           to {
             opacity: 1;
           }
+        }
+
+        @keyframes spin {
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(360deg);
+          }
+        }
+
+        .spin {
+          animation: spin 1s linear infinite;
         }
 
         .auth-modal {

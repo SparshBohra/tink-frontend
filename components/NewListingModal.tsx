@@ -4,7 +4,8 @@ import { Property, Room } from '../lib/types';
 import styles from './NewListingModal.module.css';
 import { getMediaUrl } from '../lib/utils';
 import StagedImage from './StagedImage';
-import { Wand2, GripVertical, X, Plus, Trash2 } from 'lucide-react';
+import { Wand2, GripVertical, X, Plus, Trash2, Download, RotateCcw } from 'lucide-react';
+import JSZip from 'jszip';
 
 interface NewListingModalProps {
   onClose: () => void;
@@ -118,6 +119,11 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
     trulia: false,
     facebook: false
   });
+  // Download state
+  const [isDownloadingAll, setIsDownloadingAll] = useState(false);
+  const [stagingImageId, setStagingImageId] = useState<string | null>(null);
+  // View preferences for staged images
+  const [viewPreferences, setViewPreferences] = useState<{[key: string]: boolean}>({});
   
   // Form data
   const [formData, setFormData] = useState({
@@ -718,6 +724,134 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
     }
   };
 
+  // Download single image
+  const handleDownloadImage = async (media: MediaFile, index: number) => {
+    try {
+      const displayUrl = viewPreferences[media.id!] && media.staged_url 
+        ? media.staged_url 
+        : (media.originalUrl || media.url);
+      const mediaUrl = getMediaUrl(displayUrl);
+      const response = await fetch(mediaUrl, {
+        mode: 'cors',
+        credentials: 'omit'
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to fetch image: ${response.status}`);
+      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const listingTitle = formData.title || existingListing?.title || `listing-${existingListing?.id || 'new'}`;
+      const sanitizedName = listingTitle.replace(/[^a-z0-9]/gi, '-').toLowerCase();
+      link.download = `${sanitizedName}-image-${index + 1}.jpg`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Failed to download image:', error);
+      alert('Failed to download image. Please try again.');
+    }
+  };
+
+  // Download all images (original + staged) as ZIP
+  const handleDownloadAll = async () => {
+    if (!mediaFiles || mediaFiles.length === 0) return;
+    
+    setIsDownloadingAll(true);
+    try {
+      const zip = new JSZip();
+      const imagePromises: Promise<void>[] = [];
+      const listingTitle = formData.title || existingListing?.title || `listing-${existingListing?.id || 'new'}`;
+      const sanitizedName = listingTitle.replace(/[^a-z0-9]/gi, '-').toLowerCase();
+
+      mediaFiles.forEach((media, idx) => {
+        const imageNumber = idx + 1;
+        const originalUrl = media.originalUrl || media.url;
+        
+        // Add original image
+        imagePromises.push(
+          (async () => {
+            try {
+              const mediaUrl = getMediaUrl(originalUrl);
+              const response = await fetch(mediaUrl, {
+                mode: 'cors',
+                credentials: 'omit'
+              });
+              if (!response.ok) {
+                throw new Error(`Failed to fetch image: ${response.status}`);
+              }
+              const blob = await response.blob();
+              let extension = 'jpg';
+              if (blob.type) {
+                if (blob.type.includes('png')) extension = 'png';
+                else if (blob.type.includes('webp')) extension = 'webp';
+                else if (blob.type.includes('gif')) extension = 'gif';
+                else if (blob.type.includes('jpeg')) extension = 'jpg';
+              }
+              zip.file(`${sanitizedName}-image-${imageNumber}-original.${extension}`, blob);
+            } catch (error) {
+              console.error(`Failed to fetch original image ${imageNumber}:`, error);
+            }
+          })()
+        );
+
+        // Add staged image if it exists
+        if (media.staged_url) {
+          imagePromises.push(
+            (async () => {
+              try {
+                let blob: Blob;
+                if (media.staged_url!.startsWith('data:image/')) {
+                  const response = await fetch(media.staged_url!);
+                  if (!response.ok) throw new Error(`Failed to convert base64 image: ${response.status}`);
+                  blob = await response.blob();
+                } else {
+                  const mediaUrl = getMediaUrl(media.staged_url!);
+                  const response = await fetch(mediaUrl, {
+                    mode: 'cors',
+                    credentials: 'omit'
+                  });
+                  if (!response.ok) {
+                    throw new Error(`Failed to fetch staged image: ${response.status}`);
+                  }
+                  blob = await response.blob();
+                }
+                let extension = 'jpg';
+                if (blob.type) {
+                  if (blob.type.includes('png')) extension = 'png';
+                  else if (blob.type.includes('webp')) extension = 'webp';
+                  else if (blob.type.includes('gif')) extension = 'gif';
+                  else if (blob.type.includes('jpeg')) extension = 'jpg';
+                }
+                zip.file(`${sanitizedName}-image-${imageNumber}-staged.${extension}`, blob);
+              } catch (error) {
+                console.error(`Failed to fetch staged image ${imageNumber}:`, error);
+              }
+            })()
+          );
+        }
+      });
+
+      await Promise.all(imagePromises);
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const url = window.URL.createObjectURL(zipBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${sanitizedName}-images-${new Date().toISOString().split('T')[0]}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Failed to download all images:', error);
+      alert('Failed to download images. Please try again.');
+    } finally {
+      setIsDownloadingAll(false);
+    }
+  };
+
   const handleDragEnd = async () => {
     setDraggedIndex(null);
 
@@ -760,6 +894,7 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
       return newErrors;
     });
 
+    setStagingImageId(mediaId);
     setMediaFiles(prev => prev.map(m => 
       m.id === mediaId ? { ...m, isStaging: true } : m
     ));
@@ -814,12 +949,17 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
         throw new Error('AI staging service returned no image. The service may be temporarily unavailable. Please try again in a moment.');
       }
 
-      // Success - update staged URL but preserve original
-      setMediaFiles(prev => prev.map(m => 
-        m.id === mediaId 
-          ? { ...m, staged_url: data.staged_url, originalUrl: m.originalUrl || m.url, isStaging: false }
-          : { ...m, isStaging: false }
-      ));
+        // Success - update staged URL but preserve original
+        setMediaFiles(prev => prev.map(m => 
+          m.id === mediaId 
+            ? { ...m, staged_url: data.staged_url, originalUrl: m.originalUrl || m.url, isStaging: false }
+            : { ...m, isStaging: false }
+        ));
+        // Auto-show staged version
+        setViewPreferences(prev => ({
+          ...prev,
+          [mediaId]: true
+        }));
       
       // Clear error for this image
       setStagingErrors(prev => {
@@ -1840,6 +1980,68 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
           </div>
         )}
 
+        {/* Download All button */}
+        {mediaFiles.length > 0 && (
+          <div 
+            onClick={isDownloadingAll ? undefined : handleDownloadAll}
+            style={{
+              width: '100%',
+              padding: '1rem',
+              borderRadius: '12px',
+              border: '2px solid #2563eb',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: isDownloadingAll ? 'wait' : 'pointer',
+              transition: 'all 0.2s',
+              backgroundColor: isDownloadingAll ? '#dbeafe' : '#eff6ff',
+              marginTop: '1rem',
+              marginBottom: '1rem'
+            }}
+            onMouseOver={(e) => {
+              if (!isDownloadingAll) {
+                e.currentTarget.style.borderColor = '#1d4ed8';
+                e.currentTarget.style.backgroundColor = '#dbeafe';
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(37, 99, 235, 0.2)';
+              }
+            }}
+            onMouseOut={(e) => {
+              if (!isDownloadingAll) {
+                e.currentTarget.style.borderColor = '#2563eb';
+                e.currentTarget.style.backgroundColor = '#eff6ff';
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = 'none';
+              }
+            }}
+          >
+            {isDownloadingAll ? (
+              <>
+                <RotateCcw size={24} className="spin" style={{ color: '#2563eb', marginBottom: '4px' }} />
+                <div style={{ fontSize: '12px', fontWeight: '600', color: '#2563eb', textAlign: 'center' }}>
+                  Preparing...
+                </div>
+              </>
+            ) : (
+              <>
+                <Download size={24} style={{ color: '#2563eb', marginBottom: '4px' }} />
+                <div style={{ fontSize: '12px', fontWeight: '600', color: '#2563eb', textAlign: 'center' }}>
+                  Download All
+                </div>
+                <div style={{ fontSize: '10px', color: '#60a5fa', marginTop: '2px', textAlign: 'center' }}>
+                  {(() => {
+                    const originalCount = mediaFiles.length;
+                    const stagedCount = mediaFiles.filter(m => m.staged_url).length;
+                    const totalFiles = originalCount + stagedCount;
+                    return `${totalFiles} file${totalFiles !== 1 ? 's' : ''}`;
+                  })()}
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
         {mediaFiles.length > 0 && (
           <div className={styles.mediaPreview}>
             <div className={styles.sectionHeader}>
@@ -1865,17 +2067,59 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
                   >
                   <div className={styles.mediaImage}>
                       <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                        {/* Download button - positioned dynamically based on whether image is staged */}
+                        {stagingImageId !== media.id && (
+                          <button
+                            onClick={() => handleDownloadImage(media, index)}
+                            style={{
+                              position: 'absolute',
+                              top: '8px',
+                              right: media.staged_url ? '112px' : '62px',
+                              width: '42px',
+                              height: '42px',
+                              border: '1px solid rgba(0,0,0,0.55)',
+                              borderRadius: '10px',
+                              background: 'rgba(255,255,255,0.85)',
+                              color: '#2563eb',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              transition: 'all 0.2s ease',
+                              backdropFilter: 'blur(4px)',
+                              WebkitBackdropFilter: 'blur(4px)',
+                              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.12)',
+                              zIndex: 3,
+                              padding: 0
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = 'rgba(37, 99, 235, 0.12)';
+                              e.currentTarget.style.transform = 'scale(1.05)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = 'rgba(255,255,255,0.85)';
+                              e.currentTarget.style.transform = 'scale(1)';
+                            }}
+                            title="Download image"
+                          >
+                            <Download size={18} />
+                          </button>
+                        )}
                         {/* Use StagedImage component */}
                         <StagedImage
                           originalUrl={getMediaUrl(media.originalUrl || media.url)}
                           stagedUrl={media.staged_url ? getMediaUrl(media.staged_url) : null}
                           mediaId={media.id!}
                           alt={`Property image ${index + 1}`}
+                          showStagedByDefault={viewPreferences[media.id!] === true}
+                          onToggleView={(mediaId, showStaged) => {
+                            setViewPreferences(prev => ({
+                              ...prev,
+                              [mediaId]: showStaged
+                            }));
+                          }}
                           onStage={async () => {
                             await handleStageImage(media.id!, index);
-                          }}
-                          onUnstage={async () => {
-                            handleUnstageImage(media.id!);
                           }}
                         />
                         {/* Drag handle */}
@@ -1897,6 +2141,37 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
                       </div>
                   </div>
                   <div className={styles.mediaControls}>
+                      {/* Download button */}
+                      <button
+                        type="button"
+                        onClick={() => handleDownloadImage(media, index)}
+                        style={{
+                          backgroundColor: 'rgba(255,255,255,0.85)',
+                          border: '1px solid rgba(0,0,0,0.55)',
+                          borderRadius: '10px',
+                          width: '32px',
+                          height: '32px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          transition: 'all 0.2s ease',
+                          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.12)',
+                          color: '#2563eb',
+                          padding: 0,
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = 'rgba(37, 99, 235, 0.12)';
+                          e.currentTarget.style.transform = 'scale(1.05)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.85)';
+                          e.currentTarget.style.transform = 'scale(1)';
+                        }}
+                        title="Download image"
+                      >
+                        <Download size={16} />
+                      </button>
                       {/* Delete button with confirmation */}
                       <button
                         type="button"

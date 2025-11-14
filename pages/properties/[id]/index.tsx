@@ -42,9 +42,12 @@ import {
   Check,
   Loader,
   ChevronDown,
-  ExternalLink
+  ExternalLink,
+  Download,
+  RotateCcw
 } from 'lucide-react';
 import { getMediaUrl } from '../../../lib/utils';
+import JSZip from 'jszip';
 
 // Small helper component for labeled values in the Property Details section
 const DetailItem = ({ label, value }: { label: string; value: any }) => (
@@ -100,6 +103,9 @@ export default function PropertyDetails() {
   const [stagedImages, setStagedImages] = useState<{[key: number]: string}>({});
   // Track which version (original or staged) the user is viewing - keyed by image index
   const [viewPreferences, setViewPreferences] = useState<{[key: number]: boolean}>({});
+  // Download state
+  const [isDownloadingAll, setIsDownloadingAll] = useState(false);
+  const [stagingImageIndex, setStagingImageIndex] = useState<number | null>(null);
 
   // Load view preferences from localStorage when component mounts
   useEffect(() => {
@@ -522,6 +528,133 @@ export default function PropertyDetails() {
     } finally {
       setUploadingMedia(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  // Download single image
+  const handleDownloadImage = async (imageUrl: string, index: number) => {
+    try {
+      const mediaUrl = getMediaUrl(imageUrl);
+      const response = await fetch(mediaUrl, {
+        mode: 'cors',
+        credentials: 'omit'
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to fetch image: ${response.status}`);
+      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const propertyName = property?.name || `property-${property?.id || 'unknown'}`;
+      const sanitizedName = propertyName.replace(/[^a-z0-9]/gi, '-').toLowerCase();
+      link.download = `${sanitizedName}-image-${index + 1}.jpg`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Failed to download image:', error);
+      alert('Failed to download image. Please try again.');
+    }
+  };
+
+  // Download all images (original + staged) as ZIP
+  const handleDownloadAll = async () => {
+    if (!property || !(property as any).images || (property as any).images.length === 0) return;
+    
+    setIsDownloadingAll(true);
+    try {
+      const zip = new JSZip();
+      const imagePromises: Promise<void>[] = [];
+      const images = (property as any).images;
+      const propertyName = property?.name || `property-${property?.id || 'unknown'}`;
+      const sanitizedName = propertyName.replace(/[^a-z0-9]/gi, '-').toLowerCase();
+
+      images.forEach((img: any, idx: number) => {
+        const imageNumber = idx + 1;
+        const originalUrl = typeof img === 'string' ? img : (img?.originalUrl || img?.url || '');
+        
+        // Add original image
+        imagePromises.push(
+          (async () => {
+            try {
+              const mediaUrl = getMediaUrl(originalUrl);
+              const response = await fetch(mediaUrl, {
+                mode: 'cors',
+                credentials: 'omit'
+              });
+              if (!response.ok) {
+                throw new Error(`Failed to fetch image: ${response.status}`);
+              }
+              const blob = await response.blob();
+              let extension = 'jpg';
+              if (blob.type) {
+                if (blob.type.includes('png')) extension = 'png';
+                else if (blob.type.includes('webp')) extension = 'webp';
+                else if (blob.type.includes('gif')) extension = 'gif';
+                else if (blob.type.includes('jpeg')) extension = 'jpg';
+              }
+              zip.file(`${sanitizedName}-image-${imageNumber}-original.${extension}`, blob);
+            } catch (error) {
+              console.error(`Failed to fetch original image ${imageNumber}:`, error);
+            }
+          })()
+        );
+
+        // Add staged image if it exists
+        const stagedUrl = stagedImages[idx];
+        if (stagedUrl) {
+          imagePromises.push(
+            (async () => {
+              try {
+                let blob: Blob;
+                if (stagedUrl.startsWith('data:image/')) {
+                  const response = await fetch(stagedUrl);
+                  if (!response.ok) throw new Error(`Failed to convert base64 image: ${response.status}`);
+                  blob = await response.blob();
+                } else {
+                  const mediaUrl = getMediaUrl(stagedUrl);
+                  const response = await fetch(mediaUrl, {
+                    mode: 'cors',
+                    credentials: 'omit'
+                  });
+                  if (!response.ok) {
+                    throw new Error(`Failed to fetch staged image: ${response.status}`);
+                  }
+                  blob = await response.blob();
+                }
+                let extension = 'jpg';
+                if (blob.type) {
+                  if (blob.type.includes('png')) extension = 'png';
+                  else if (blob.type.includes('webp')) extension = 'webp';
+                  else if (blob.type.includes('gif')) extension = 'gif';
+                  else if (blob.type.includes('jpeg')) extension = 'jpg';
+                }
+                zip.file(`${sanitizedName}-image-${imageNumber}-staged.${extension}`, blob);
+              } catch (error) {
+                console.error(`Failed to fetch staged image ${imageNumber}:`, error);
+              }
+            })()
+          );
+        }
+      });
+
+      await Promise.all(imagePromises);
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const url = window.URL.createObjectURL(zipBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${sanitizedName}-images-${new Date().toISOString().split('T')[0]}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Failed to download all images:', error);
+      alert('Failed to download images. Please try again.');
+    } finally {
+      setIsDownloadingAll(false);
     }
   };
 
@@ -1512,6 +1645,49 @@ export default function PropertyDetails() {
                         
                         return (
                           <div style={{ position: 'relative', width: '100%', height: '700px', borderRadius: '12px', overflow: 'hidden', border: '1px solid #e5e7eb', background: '#f8fafc' }}>
+                            {/* Download button - positioned dynamically based on whether image is staged */}
+                            {stagingImageIndex !== selectedImageIdx && (
+                              <button
+                                onClick={() => {
+                                  const displayUrl = viewPreferences[selectedImageIdx] && stagedUrl 
+                                    ? stagedUrl 
+                                    : originalUrl;
+                                  handleDownloadImage(displayUrl, selectedImageIdx);
+                                }}
+                                style={{
+                                  position: 'absolute',
+                                  top: '12px',
+                                  right: stagedUrl ? '112px' : '62px',
+                                  width: '42px',
+                                  height: '42px',
+                                  border: '1px solid rgba(0,0,0,0.55)',
+                                  borderRadius: '10px',
+                                  background: 'rgba(255,255,255,0.85)',
+                                  color: '#2563eb',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  transition: 'all 0.2s ease',
+                                  backdropFilter: 'blur(4px)',
+                                  WebkitBackdropFilter: 'blur(4px)',
+                                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.12)',
+                                  zIndex: 3,
+                                  padding: 0
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.background = 'rgba(37, 99, 235, 0.12)';
+                                  e.currentTarget.style.transform = 'scale(1.05)';
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.background = 'rgba(255,255,255,0.85)';
+                                  e.currentTarget.style.transform = 'scale(1)';
+                                }}
+                                title="Download image"
+                              >
+                                <Download size={18} />
+                              </button>
+                            )}
                             <StagedImage
                               originalUrl={originalUrl}
                               stagedUrl={stagedUrl}
@@ -1526,6 +1702,7 @@ export default function PropertyDetails() {
                                 }));
                               }}
                               onStage={async () => {
+                                setStagingImageIndex(selectedImageIdx);
                                 if (!property) return;
                                 try {
                                   // Always use original URL for staging
@@ -1611,6 +1788,8 @@ export default function PropertyDetails() {
                                 } catch (e: any) {
                                   const errorMessage = e.message || 'Failed to stage image. The AI service may be temporarily unavailable. Please try again in a moment.';
                                   throw new Error(errorMessage);
+                                } finally {
+                                  setStagingImageIndex(null);
                                 }
                               }}
                               className="property-main-image"
@@ -1625,51 +1804,6 @@ export default function PropertyDetails() {
                          gap: '8px',
                          height: '700px'
                        }}>
-                         {/* Upload button as fixed mini card (always visible) */}
-                         <div 
-                           onClick={() => fileInputRef.current?.click()}
-                           style={{
-                             width: '100%',
-                             height: '100px',
-                             borderRadius: '12px',
-                             border: '2px dashed #cbd5e1',
-                             display: 'flex',
-                             alignItems: 'center',
-                             justifyContent: 'center',
-                             cursor: 'pointer',
-                             transition: 'all 0.2s',
-                             backgroundColor: '#f8fafc',
-                             flexShrink: 0
-                           }}
-                           onMouseOver={(e) => {
-                             e.currentTarget.style.borderColor = '#2563eb';
-                             e.currentTarget.style.backgroundColor = '#eff6ff';
-                           }}
-                           onMouseOut={(e) => {
-                             e.currentTarget.style.borderColor = '#cbd5e1';
-                             e.currentTarget.style.backgroundColor = '#f8fafc';
-                           }}
-                         >
-                           <input
-                             ref={fileInputRef}
-                             type="file"
-                             multiple
-                             accept="image/*,video/*"
-                             style={{ display: 'none' }}
-                             onChange={(e) => handleUploadPropertyMedia(e.target.files)}
-                           />
-                           {uploadingMedia ? (
-                             <div style={{ textAlign: 'center', color: '#2563eb' }}>
-                               <div style={{ fontSize: '12px', fontWeight: '500' }}>Uploading...</div>
-                             </div>
-                           ) : (
-                             <div style={{ textAlign: 'center', color: '#64748b' }}>
-                               <Plus size={24} style={{ marginBottom: '4px' }} />
-                               <div style={{ fontSize: '11px', fontWeight: '500' }}>Add Photo</div>
-                             </div>
-                           )}
-                         </div>
-
                          {/* Scrollable list of thumbnails */}
                          <div style={{
                            overflowY: 'auto',
@@ -1720,6 +1854,44 @@ export default function PropertyDetails() {
                                      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} 
                                    />
                                  </div>
+                                 {/* Download button on thumbnail - matching delete button style */}
+                                 <button
+                                   onClick={(e) => {
+                                     e.stopPropagation();
+                                     const downloadUrl = shouldShowStaged && stagedUrl ? stagedUrl : originalUrl;
+                                     handleDownloadImage(downloadUrl, idx);
+                                   }}
+                                   style={{
+                                     position: 'absolute',
+                                     top: '8px',
+                                     right: '40px',
+                                     width: '28px',
+                                     height: '28px',
+                                     borderRadius: '10px',
+                                     border: '1px solid rgba(0,0,0,0.55)',
+                                     background: 'rgba(255,255,255,0.85)',
+                                     display: 'flex',
+                                     alignItems: 'center',
+                                     justifyContent: 'center',
+                                     cursor: 'pointer',
+                                     zIndex: 10,
+                                     transition: 'all 0.2s ease',
+                                     boxShadow: '0 2px 8px rgba(0, 0, 0, 0.12)',
+                                     color: '#2563eb',
+                                     padding: 0,
+                                   }}
+                                   onMouseEnter={(e) => {
+                                     e.currentTarget.style.background = 'rgba(37, 99, 235, 0.12)';
+                                     e.currentTarget.style.transform = 'scale(1.05)';
+                                   }}
+                                   onMouseLeave={(e) => {
+                                     e.currentTarget.style.background = 'rgba(255,255,255,0.85)';
+                                     e.currentTarget.style.transform = 'scale(1)';
+                                   }}
+                                   title="Download image"
+                                 >
+                                   <Download size={16} />
+                                 </button>
                                  {/* Delete button on thumbnail */}
                                  <button
                                    onClick={async (e) => {
@@ -1821,6 +1993,120 @@ export default function PropertyDetails() {
                                </div>
                              );
                            })}
+                         </div>
+
+                         {/* Buttons row - Add Photo and Download All side by side */}
+                         <div style={{
+                           display: 'flex',
+                           flexDirection: 'row',
+                           gap: '8px',
+                           flexShrink: 0
+                         }}>
+                           {/* Upload button */}
+                           <div 
+                             onClick={() => fileInputRef.current?.click()}
+                             style={{
+                               flex: 1,
+                               height: '100px',
+                               borderRadius: '12px',
+                               border: '2px dashed #cbd5e1',
+                               display: 'flex',
+                               alignItems: 'center',
+                               justifyContent: 'center',
+                               cursor: 'pointer',
+                               transition: 'all 0.2s',
+                               backgroundColor: '#f8fafc'
+                             }}
+                             onMouseOver={(e) => {
+                               e.currentTarget.style.borderColor = '#2563eb';
+                               e.currentTarget.style.backgroundColor = '#eff6ff';
+                             }}
+                             onMouseOut={(e) => {
+                               e.currentTarget.style.borderColor = '#cbd5e1';
+                               e.currentTarget.style.backgroundColor = '#f8fafc';
+                             }}
+                           >
+                             <input
+                               ref={fileInputRef}
+                               type="file"
+                               multiple
+                               accept="image/*,video/*"
+                               style={{ display: 'none' }}
+                               onChange={(e) => handleUploadPropertyMedia(e.target.files)}
+                             />
+                             {uploadingMedia ? (
+                               <div style={{ textAlign: 'center', color: '#2563eb' }}>
+                                 <div style={{ fontSize: '12px', fontWeight: '500' }}>Uploading...</div>
+                               </div>
+                             ) : (
+                               <div style={{ textAlign: 'center', color: '#64748b' }}>
+                                 <Plus size={24} style={{ marginBottom: '4px' }} />
+                                 <div style={{ fontSize: '11px', fontWeight: '500' }}>Add Photo</div>
+                               </div>
+                             )}
+                           </div>
+
+                           {/* Download All button */}
+                           {(property as any).images && (property as any).images.length > 0 && (
+                             <div 
+                               onClick={isDownloadingAll ? undefined : handleDownloadAll}
+                               style={{
+                                 flex: 1,
+                                 height: '100px',
+                                 borderRadius: '12px',
+                                 border: '2px solid #2563eb',
+                                 display: 'flex',
+                                 flexDirection: 'column',
+                                 alignItems: 'center',
+                                 justifyContent: 'center',
+                                 cursor: isDownloadingAll ? 'wait' : 'pointer',
+                                 transition: 'all 0.2s',
+                                 backgroundColor: isDownloadingAll ? '#dbeafe' : '#eff6ff',
+                                 position: 'relative',
+                                 opacity: isDownloadingAll ? 0.7 : 1
+                               }}
+                               onMouseOver={(e) => {
+                                 if (!isDownloadingAll) {
+                                   e.currentTarget.style.borderColor = '#1d4ed8';
+                                   e.currentTarget.style.backgroundColor = '#dbeafe';
+                                   e.currentTarget.style.transform = 'translateY(-2px)';
+                                   e.currentTarget.style.boxShadow = '0 4px 12px rgba(37, 99, 235, 0.2)';
+                                 }
+                               }}
+                               onMouseOut={(e) => {
+                                 if (!isDownloadingAll) {
+                                   e.currentTarget.style.borderColor = '#2563eb';
+                                   e.currentTarget.style.backgroundColor = '#eff6ff';
+                                   e.currentTarget.style.transform = 'translateY(0)';
+                                   e.currentTarget.style.boxShadow = 'none';
+                                 }
+                               }}
+                             >
+                               {isDownloadingAll ? (
+                                 <>
+                                   <RotateCcw size={24} className="spin" style={{ color: '#2563eb', marginBottom: '4px' }} />
+                                   <div style={{ fontSize: '11px', fontWeight: '600', color: '#2563eb', textAlign: 'center' }}>
+                                     Preparing...
+                                   </div>
+                                 </>
+                               ) : (
+                                 <>
+                                   <Download size={24} style={{ color: '#2563eb', marginBottom: '4px' }} />
+                                   <div style={{ fontSize: '11px', fontWeight: '600', color: '#2563eb', textAlign: 'center' }}>
+                                     Download All
+                                   </div>
+                                   <div style={{ fontSize: '9px', color: '#60a5fa', marginTop: '2px', textAlign: 'center' }}>
+                                     {(() => {
+                                       const originalCount = (property as any).images.length;
+                                       const stagedCount = Object.keys(stagedImages).length;
+                                       const totalFiles = originalCount + stagedCount;
+                                       return `${totalFiles} file${totalFiles !== 1 ? 's' : ''}`;
+                                     })()}
+                                   </div>
+                                 </>
+                               )}
+                             </div>
+                           )}
                          </div>
                        </div>
                     </div>
