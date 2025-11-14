@@ -1473,6 +1473,19 @@ class ApiClient {
     return response.data;
   }
 
+  // Delete media from property
+  async deletePropertyMedia(propertyId: number, imageUrl?: string, videoUrl?: string): Promise<void> {
+    try {
+      const payload: any = {};
+      if (imageUrl) payload.image_url = imageUrl;
+      if (videoUrl) payload.video_url = videoUrl;
+      await this.api.post(`/properties/${propertyId}/delete-media/`, payload);
+    } catch (error: any) {
+      console.error('Failed to delete property media:', error);
+      throw error;
+    }
+  }
+
   // ===== PUBLIC LISTING ENDPOINTS (No Auth Required) =====
 
   // Get public listing by slug

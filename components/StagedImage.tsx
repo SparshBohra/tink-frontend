@@ -26,9 +26,10 @@ export default function StagedImage({
   const [showStaged, setShowStaged] = useState(showStagedByDefault && !!propStagedUrl);
   const [error, setError] = useState<string | null>(null);
 
-  // Update showStaged when prop changes
+  // Update showStaged when prop changes - ensure it's always synced
   useEffect(() => {
-    setShowStaged(showStagedByDefault && !!propStagedUrl);
+    const shouldShowStaged = showStagedByDefault === true && !!propStagedUrl;
+    setShowStaged(shouldShowStaged);
   }, [propStagedUrl, showStagedByDefault]);
 
   const handleStage = async () => {

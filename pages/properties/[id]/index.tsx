@@ -493,6 +493,16 @@ export default function PropertyDetails() {
   const handleEditListingSuccess = async (refreshedListing?: any) => {
     setShowEditListingModal(false);
     setEditingListing(null);
+    // Refresh property data to get updated images (including staged images)
+    if (property?.id) {
+      try {
+        const refreshedProperty = await apiClient.getProperty(property.id);
+        setProperty(refreshedProperty);
+        console.log('✅ Refreshed property data after listing edit');
+      } catch (err) {
+        console.error('Failed to refresh property data:', err);
+      }
+    }
     // Refresh listings to get updated data (including newly uploaded media)
     try {
       const listingsResponse = await apiClient.getListings();
