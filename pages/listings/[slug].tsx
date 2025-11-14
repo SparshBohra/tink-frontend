@@ -34,8 +34,51 @@ interface PublicListingPageProps {
   error?: string;
 }
 
-export default function PublicListingPage({ listing, error }: PublicListingPageProps) {
+export default function PublicListingPage({ listing: initialListing, error: initialError }: PublicListingPageProps) {
   const router = useRouter();
+  const [listing, setListing] = useState<PropertyListing | null>(initialListing || null);
+  const [error, setError] = useState<string | null>(initialError || null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Fetch fresh listing data on client-side when page loads
+  useEffect(() => {
+    const fetchListing = async () => {
+      if (!router.query.slug) return;
+      
+      try {
+        setIsLoading(true);
+        const slug = Array.isArray(router.query.slug) ? router.query.slug[0] : router.query.slug;
+        const freshListing = await publicApiRequest(`/properties/public/listings/${slug}/`);
+        setListing(freshListing);
+        setError(null);
+      } catch (err: any) {
+        console.error('Error fetching listing:', err);
+        // Keep initial listing if fresh fetch fails
+        if (!initialListing) {
+          setError(err.message || 'Failed to load listing');
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    // Only fetch if we have a slug and we're on client side
+    if (router.isReady && router.query.slug) {
+      fetchListing();
+    }
+  }, [router.isReady, router.query.slug]);
+
+  // Debug log to verify data
+  useEffect(() => {
+    console.log('🏠 Public Listing Page Data:', {
+      listing_id: listing?.id,
+      property_details: listing?.property_details,
+      amenities: listing?.property_details?.amenities,
+      utilities_included: listing?.property_details?.utilities_included,
+      pet_policy: listing?.property_details?.pet_policy,
+      smoking_policy: listing?.property_details?.smoking_policy,
+    });
+  }, [listing]);
   const [showApplicationForm, setShowApplicationForm] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
@@ -228,6 +271,31 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
       'all_pets': 'All Pets Welcome',
     };
     return policies[policy] || policy;
+  };
+
+  // Safely format pet policy for display and hide if effectively "none"
+  const getPetPolicyDisplay = (rawPolicy: any): string | null => {
+    if (!rawPolicy) return null;
+
+    // Handle array form (e.g. ['Cats', 'Dogs'] or ['None'])
+    if (Array.isArray(rawPolicy)) {
+      const normalized = rawPolicy
+        .map((p) => (typeof p === 'string' ? p.trim() : ''))
+        .filter((p) => p && p.toLowerCase() !== 'none');
+
+      if (normalized.length === 0) return null;
+      if (normalized.length === 1) return formatPetPolicy(normalized[0]);
+      return normalized.map((p) => formatPetPolicy(p)).join(', ');
+    }
+
+    // Handle simple string code form
+    if (typeof rawPolicy === 'string') {
+      const policy = rawPolicy.trim();
+      if (!policy || policy === 'no_pets' || policy === 'not_allowed') return null;
+      return formatPetPolicy(policy);
+    }
+
+    return null;
   };
 
   return (
@@ -682,8 +750,9 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
                     { label: 'Bathrooms', value: listing.property_details?.bathrooms, icon: <Droplets style={{ width: '1rem', height: '1rem' }} /> },
                     { label: 'Square Footage', value: listing.property_details?.square_footage ? `${listing.property_details.square_footage} sq ft` : null, icon: <Home style={{ width: '1rem', height: '1rem' }} /> },
                     { label: 'Max Occupancy', value: listing.property_details?.max_occupancy ? `${listing.property_details.max_occupancy} ${listing.property_details.max_occupancy === 1 ? 'person' : 'people'}` : null, icon: <Users style={{ width: '1rem', height: '1rem' }} /> },
+                    { label: 'Neighborhood', value: (listing.property_details as any)?.neighborhood, icon: <MapPin style={{ width: '1rem', height: '1rem' }} /> },
                     { label: 'Available From', value: listing.available_from ? formatUTCDate(listing.available_from) : null, icon: <Calendar style={{ width: '1rem', height: '1rem' }} /> },
-                    { label: 'Pet Policy', value: listing.property_details?.pet_policy ? formatPetPolicy(listing.property_details.pet_policy) : null, icon: <Shield style={{ width: '1rem', height: '1rem' }} /> },
+                    { label: 'Pet Policy', value: getPetPolicyDisplay((listing.property_details as any)?.pet_policy), icon: <Shield style={{ width: '1rem', height: '1rem' }} /> },
                     { label: 'Smoking', value: listing.property_details?.smoking_allowed !== undefined ? (listing.property_details.smoking_allowed ? 'Allowed' : 'Not Allowed') : null, icon: <Wind style={{ width: '1rem', height: '1rem' }} /> }
                   ].filter(item => item.value !== null && item.value !== undefined && item.value !== 'N/A' && item.value !== '').map((item, index) => (
                     <div key={index} style={{
@@ -754,8 +823,22 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
               )}
 
               {/* Utilities & Amenities */}
-              {((listing.property_details?.utilities_included && listing.property_details.utilities_included.length > 0) || 
-                (listing.property_details?.amenities && listing.property_details.amenities.length > 0)) && (
+              {(() => {
+                const metadata = (listing as any).listing_metadata || {};
+                const utilities =
+                  (listing.property_details?.utilities_included && listing.property_details.utilities_included.length > 0)
+                    ? listing.property_details.utilities_included
+                    : (metadata.utilities_included || []);
+                const amenities =
+                  (listing.property_details?.amenities && listing.property_details.amenities.length > 0)
+                    ? listing.property_details.amenities
+                    : (metadata.amenities || []);
+
+                if ((!utilities || utilities.length === 0) && (!amenities || amenities.length === 0)) {
+                  return null;
+                }
+
+                return (
                 <div style={{
                   backgroundColor: 'white',
                   borderRadius: '12px',
@@ -763,8 +846,8 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
                   border: '1px solid #e5e7eb',
                   boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
                 }}>
-            {listing.property_details?.utilities_included && listing.property_details.utilities_included.length > 0 && (
-                    <div style={{ marginBottom: listing.property_details?.amenities && listing.property_details.amenities.length > 0 ? '1.5rem' : 0 }}>
+            {utilities && utilities.length > 0 && (
+                    <div style={{ marginBottom: amenities && amenities.length > 0 ? '1.5rem' : 0 }}>
                       <div style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -786,7 +869,7 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
                         flexWrap: 'wrap',
                         gap: '0.5rem'
                       }}>
-                  {listing.property_details.utilities_included.map((utility, index) => (
+                  {utilities.map((utility: string, index: number) => (
                           <span key={index} style={{
                             backgroundColor: '#fef3c7',
                             color: '#92400e',
@@ -803,7 +886,7 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
                     </div>
             )}
 
-            {listing.property_details?.amenities && listing.property_details.amenities.length > 0 && (
+            {amenities && amenities.length > 0 && (
                     <div>
                       <div style={{
                         display: 'flex',
@@ -826,7 +909,7 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
                         flexWrap: 'wrap',
                         gap: '0.5rem'
                       }}>
-                  {listing.property_details.amenities.map((amenity, index) => (
+                  {amenities.map((amenity: string, index: number) => (
                           <span key={index} style={{
                             backgroundColor: '#dcfce7',
                             color: '#166534',
@@ -843,7 +926,8 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
                     </div>
                   )}
                 </div>
-            )}
+                );
+              })()}
 
               {/* Room Details */}
             {listing.listing_type === 'rooms' && listing.available_room_details && listing.available_room_details.length > 0 && (
@@ -1156,7 +1240,8 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
   }
 
   try {
-    // Corrected endpoint path (API_BASE_URL already includes '/api')
+    // Initial server-side fetch for better SEO and faster initial load
+    // Client-side will immediately fetch fresh data for real-time updates
     const listing = await publicApiRequest(`/properties/public/listings/${slug}/`);
     
     return {

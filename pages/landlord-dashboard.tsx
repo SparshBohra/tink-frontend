@@ -62,6 +62,7 @@ function LandlordDashboard() {
   // Real data state
   const [properties, setProperties] = useState<Property[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
+  const [listings, setListings] = useState<any[]>([]);
   const [managers, setManagers] = useState<Manager[]>([]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
@@ -117,12 +118,13 @@ function LandlordDashboard() {
         setDataError(null);
         
         // Fetch all data in parallel
-        const [propertiesResponse, applicationsResponse, managersResponse, vendorsResponse, roomsResponse] = await Promise.all([
+        const [propertiesResponse, applicationsResponse, managersResponse, vendorsResponse, roomsResponse, listingsResponse] = await Promise.all([
           apiClient.getProperties(),
           apiClient.getApplications({ status: 'pending' }), // Only get pending applications
           apiClient.getManagers(),
           expenseApi.getVendors().catch(() => []), // Get vendors, fallback to empty array on error
-          apiClient.getRooms()
+          apiClient.getRooms(),
+          apiClient.getListings().catch(() => ({ results: [] })) // Get listings, fallback to empty array on error
         ]);
         
         setProperties(propertiesResponse.results || []);
@@ -130,6 +132,7 @@ function LandlordDashboard() {
         setManagers(managersResponse.results || []);
         setVendors(vendorsResponse || []);
         setRooms(roomsResponse.results || []);
+        setListings(listingsResponse.results || []);
         
       } catch (error: any) {
         console.error('Failed to fetch dashboard data:', error);
@@ -140,6 +143,7 @@ function LandlordDashboard() {
         setManagers([]);
         setVendors([]);
         setRooms([]);
+        setListings([]);
       } finally {
         setDataLoading(false);
       }
@@ -342,18 +346,6 @@ function LandlordDashboard() {
       link: '/properties'
     },
     { 
-      title: 'Accounting',
-      subtitle: 'Financial reports and analytics',
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <line x1="12" y1="1" x2="12" y2="23"/>
-          <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-        </svg>
-      ), 
-      color: 'green',
-      link: '/accounting'
-    },
-    { 
       title: 'Add Property',
       subtitle: 'Expand your portfolio',
       icon: (
@@ -364,19 +356,6 @@ function LandlordDashboard() {
       ), 
       color: 'orange',
       link: '/properties/add'
-    },
-    { 
-      title: 'Payment Setup',
-      subtitle: 'Connect Stripe to accept payments',
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
-          <line x1="1" y1="10" x2="23" y2="10"/>
-          <path d="M7 15h.01M11 15h4"/>
-        </svg>
-      ), 
-      color: 'purple',
-      link: '/stripe-connect'
     }
   ];
   
@@ -736,26 +715,24 @@ function LandlordDashboard() {
               bgColor: '#d1fae5'
             },
             {
-              title: 'Vendors',
-              value: statsLoading ? '...' : vendorsCount,
-              subtitle: 'Active vendors',
-              label: statsLoading ? 'Loading...' : 'service providers',
-              change: `+${(typeof vendorsCount === 'number' ? vendorsCount : 0) > 0 ? '1' : '0'}`,
-              changeType: 'positive',
-              icon: <Wrench style={{ width: '1.25rem', height: '1.25rem' }} />,
+              title: 'Active Listings',
+              value: statsLoading ? '...' : listings?.length || 0,
+              subtitle: 'Published listings',
+              label: statsLoading ? 'Loading...' : 'across properties',
+              change: '+0',
+              changeType: 'neutral',
+              icon: <Briefcase style={{ width: '1.25rem', height: '1.25rem' }} />,
               color: '#7c3aed',
               bgColor: '#e9d5ff'
             },
             {
-              title: 'Monthly Revenue',
-              value: statsLoading ? '...' : revenueValue,
-              subtitle: metrics.revenue.subtitle,
-              label: statsLoading ? 'Loading...' : 
-                     dashboardStats && dashboardStats.leases.active > 0 ? 
-                     `${dashboardStats.leases.active} active leases` : 'No active leases',
-              change: metrics.revenue.change,
-              changeType: metrics.revenue.changeType,
-              icon: <DollarSign style={{ width: '1.25rem', height: '1.25rem' }} />,
+              title: 'Applications',
+              value: statsLoading ? '...' : applications?.length || 0,
+              subtitle: 'Pending review',
+              label: statsLoading ? 'Loading...' : applications?.filter((app: any) => app.status === 'pending').length || 0,
+              change: '+0',
+              changeType: 'neutral',
+              icon: <Zap style={{ width: '1.25rem', height: '1.25rem' }} />,
               color: '#ea580c',
               bgColor: '#fed7aa'
             }
@@ -819,7 +796,7 @@ function LandlordDashboard() {
         {/* Properties & Quick Actions Grid */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+          gridTemplateColumns: 'repeat(4, 1fr)',
           gap: '1.5rem',
           marginBottom: '2rem'
         }}>
@@ -1111,519 +1088,11 @@ function LandlordDashboard() {
             </div>
           </div>
         </div>
-
-        {/* Rent History Section */}
-        <div style={{
-          backgroundColor: 'white',
-          borderRadius: '12px',
-          padding: '1.5rem',
-          border: '1px solid #e5e7eb',
-          boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
-          marginBottom: '2rem',
-          transition: 'all 0.2s ease'
-        }}
-        onMouseOver={(e) => {
-          e.currentTarget.style.transform = 'translateY(-2px)';
-          e.currentTarget.style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.1)';
-        }}
-        onMouseOut={(e) => {
-          e.currentTarget.style.transform = 'translateY(0)';
-          e.currentTarget.style.boxShadow = '0 1px 3px 0 rgba(0, 0, 0, 0.1)';
-        }}>
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'flex-start',
-            marginBottom: '1.5rem'
-          }}>
-            <div>
-              <h2 style={{
-                fontSize: '1.25rem',
-                fontWeight: '700',
-                color: '#111827',
-                margin: '0 0 0.25rem 0'
-              }}>
-                Rent History
-              </h2>
-              <p style={{
-                fontSize: '0.875rem',
-                color: '#6b7280',
-                margin: 0
-              }}>
-                Recent rent collection logs and payment history
-              </p>
-            </div>
-            <Link href="/accounting">
-              <button style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.5rem 1rem',
-                backgroundColor: '#2563eb',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                fontSize: '0.875rem',
-                fontWeight: '500',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
-              onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
-              onClick={() => router.push('/accounting?tab=rentroll')}>
-                View All
-              </button>
-            </Link>
-          </div>
-          
-          {/* Summary Cards */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-            gap: '1rem',
-            marginBottom: '1.5rem'
-          }}>
-            <div style={{
-              backgroundColor: '#f0fdf4',
-              border: '1px solid #bbf7d0',
-              borderRadius: '8px',
-              padding: '1rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.75rem'
-            }}>
-              <div style={{
-                width: '2.5rem',
-                height: '2.5rem',
-                backgroundColor: '#16a34a',
-                borderRadius: '8px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'white'
-              }}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                  </svg>
-                </div>
-              <div>
-                <div style={{ fontSize: '1.25rem', fontWeight: '700', color: '#111827', marginBottom: '0.25rem' }}>
-                    {paymentLoading ? '...' : `$${paymentSummary?.summary.current_month_total_dollars?.toLocaleString() || '0'}`}
-                  </div>
-                <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>Collected This Month</div>
-                </div>
-              </div>
-
-            <div style={{
-              backgroundColor: '#fef3c7',
-              border: '1px solid #fde68a',
-              borderRadius: '8px',
-              padding: '1rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.75rem'
-            }}>
-              <div style={{
-                width: '2.5rem',
-                height: '2.5rem',
-                backgroundColor: '#f59e0b',
-                borderRadius: '8px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'white'
-              }}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="12" cy="12" r="10"/>
-                    <polyline points="12,6 12,12 16,14"/>
-                  </svg>
-                </div>
-              <div>
-                <div style={{ fontSize: '1.25rem', fontWeight: '700', color: '#111827', marginBottom: '0.25rem' }}>
-                    {paymentLoading ? '...' : `${paymentSummary?.summary.pending_payments || 0} payments`}
-                  </div>
-                <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>Pending Collection</div>
-                </div>
-              </div>
-
-            <div style={{
-              backgroundColor: '#fef2f2',
-              border: '1px solid #fecaca',
-              borderRadius: '8px',
-              padding: '1rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.75rem'
-            }}>
-              <div style={{
-                width: '2.5rem',
-                height: '2.5rem',
-                backgroundColor: '#dc2626',
-                borderRadius: '8px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'white'
-              }}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="12" cy="12" r="10"/>
-                    <line x1="15" y1="9" x2="9" y2="15"/>
-                    <line x1="9" y1="9" x2="15" y2="15"/>
-                  </svg>
-                </div>
-              <div>
-                <div style={{ fontSize: '1.25rem', fontWeight: '700', color: '#111827', marginBottom: '0.25rem' }}>
-                    {paymentLoading ? '...' : `${paymentSummary?.summary.failed_payments || 0} failed`}
-                  </div>
-                <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>Failed Payments</div>
-                </div>
-              </div>
-            </div>
-
-          {/* Table Section */}
-          <div>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '1rem'
-            }}>
-              <h3 style={{
-                fontSize: '1rem',
-                fontWeight: '600',
-                color: '#111827',
-                margin: 0
-              }}>
-                Recent Rent Collections
-              </h3>
-              <div style={{
-                display: 'flex',
-                gap: '1rem',
-                alignItems: 'center',
-                flexWrap: 'wrap'
-              }}>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem'
-                }}>
-                  <label style={{
-                    fontSize: '0.875rem',
-                    fontWeight: '500',
-                    color: '#374151'
-                  }}>
-                    Property:
-                  </label>
-                    <select 
-                      value={rentHistoryPropertyFilter}
-                      onChange={(e) => setRentHistoryPropertyFilter(e.target.value)}
-                    style={{
-                      padding: '0.375rem 0.75rem',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      backgroundColor: 'white',
-                      fontSize: '0.875rem',
-                      color: '#374151',
-                      cursor: 'pointer'
-                    }}
-                    >
-                      <option value="all">All Properties</option>
-                      {properties?.map((property) => (
-                        <option key={property.id} value={property.id}>
-                          {property.address}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem'
-                }}>
-                  <label style={{
-                    fontSize: '0.875rem',
-                    fontWeight: '500',
-                    color: '#374151'
-                  }}>
-                    Status:
-                  </label>
-                    <select 
-                      value={rentHistoryStatusFilter}
-                      onChange={(e) => setRentHistoryStatusFilter(e.target.value)}
-                    style={{
-                      padding: '0.375rem 0.75rem',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      backgroundColor: 'white',
-                      fontSize: '0.875rem',
-                      color: '#374151',
-                      cursor: 'pointer'
-                    }}
-                    >
-                      <option value="all">All Status</option>
-                      <option value="collected">Collected</option>
-                      <option value="pending">Pending</option>
-                      <option value="overdue">Overdue</option>
-                    </select>
-                  </div>
-                  
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem'
-                }}>
-                  <label style={{
-                    fontSize: '0.875rem',
-                    fontWeight: '500',
-                    color: '#374151'
-                  }}>
-                    Time Period:
-                  </label>
-                    <select 
-                      value={rentHistoryTimeFilter}
-                      onChange={(e) => setRentHistoryTimeFilter(e.target.value)}
-                    style={{
-                      padding: '0.375rem 0.75rem',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      backgroundColor: 'white',
-                      fontSize: '0.875rem',
-                      color: '#374151',
-                      cursor: 'pointer'
-                    }}
-                    >
-                      <option value="all">All Time</option>
-                      <option value="this-month">This Month</option>
-                      <option value="last-month">Last Month</option>
-                      <option value="last-3-months">Last 3 Months</option>
-                      <option value="this-year">This Year</option>
-                    </select>
-                  </div>
-                  
-                  <button 
-                    onClick={() => {
-                      setRentHistoryPropertyFilter('all');
-                      setRentHistoryStatusFilter('all');
-                      setRentHistoryTimeFilter('all');
-                    }}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.375rem',
-                    padding: '0.375rem 0.75rem',
-                    backgroundColor: '#f3f4f6',
-                    color: '#374151',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '6px',
-                    fontSize: '0.875rem',
-                    fontWeight: '500',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease'
-                  }}
-                  onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#e5e7eb'}
-                  onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-                      <path d="M3 3v5h5"/>
-                    </svg>
-                    Reset
-                  </button>
-                </div>
-              </div>
-
-            {/* Table */}
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{
-                width: '100%',
-                borderCollapse: 'collapse',
-                fontSize: '0.875rem'
-              }}>
-                  <thead>
-                  <tr style={{ backgroundColor: '#f9fafb' }}>
-                    <th style={{
-                      padding: '0.75rem',
-                      textAlign: 'center',
-                      fontWeight: '600',
-                      color: '#374151',
-                      borderBottom: '1px solid #e5e7eb'
-                    }}>
-                      Date
-                    </th>
-                    <th style={{
-                      padding: '0.75rem',
-                      textAlign: 'center',
-                      fontWeight: '600',
-                      color: '#374151',
-                      borderBottom: '1px solid #e5e7eb'
-                    }}>
-                      Tenant
-                    </th>
-                    <th style={{
-                      padding: '0.75rem',
-                      textAlign: 'center',
-                      fontWeight: '600',
-                      color: '#374151',
-                      borderBottom: '1px solid #e5e7eb'
-                    }}>
-                      Property
-                    </th>
-                    <th style={{
-                      padding: '0.75rem',
-                      textAlign: 'center',
-                      fontWeight: '600',
-                      color: '#374151',
-                      borderBottom: '1px solid #e5e7eb'
-                    }}>
-                      Amount
-                    </th>
-                    <th style={{
-                      padding: '0.75rem',
-                      textAlign: 'center',
-                      fontWeight: '600',
-                      color: '#374151',
-                      borderBottom: '1px solid #e5e7eb'
-                    }}>
-                      Status
-                    </th>
-                    <th style={{
-                      padding: '0.75rem',
-                      textAlign: 'center',
-                      fontWeight: '600',
-                      color: '#374151',
-                      borderBottom: '1px solid #e5e7eb'
-                    }}>
-                      Period
-                    </th>
-                    <th style={{
-                      padding: '0.75rem',
-                      textAlign: 'center',
-                      fontWeight: '600',
-                      color: '#374151',
-                      borderBottom: '1px solid #e5e7eb'
-                    }}>
-                      Method
-                    </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {paymentLoading ? (
-                      <tr>
-                      <td colSpan={7} style={{
-                        padding: '2rem',
-                        textAlign: 'center',
-                        color: '#6b7280',
-                        fontStyle: 'italic'
-                      }}>
-                        Loading payment history...
-                      </td>
-                      </tr>
-                    ) : paymentError ? (
-                      <tr>
-                      <td colSpan={7} style={{
-                        padding: '2rem',
-                        textAlign: 'center',
-                        color: '#dc2626',
-                        fontStyle: 'italic'
-                      }}>
-                        Failed to load payments
-                      </td>
-                      </tr>
-                    ) : filteredPaymentHistory?.length ? (
-                      filteredPaymentHistory.map((payment) => {
-                        const paymentDate = new Date(payment.payment_date);
-                        const tenantName = payment.tenant_name || 'Unknown Tenant';
-                        const initials = tenantName.split(' ').map(n => n[0]).join('').toUpperCase();
-                        const statusClass = payment.status === 'succeeded' ? 'collected' : 
-                                          payment.status === 'pending' ? 'pending' : 'overdue';
-                        const statusText = payment.status === 'succeeded' ? 'Collected' :
-                                         payment.status === 'pending' ? 'Pending' : 'Failed';
-                        
-                        return (
-                        <tr key={payment.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                          <td style={{ padding: '1rem 0.75rem', textAlign: 'center' }}>
-                            {paymentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                          </td>
-                          <td style={{ padding: '1rem 0.75rem', textAlign: 'center' }}>
-                            <div style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '0.5rem'
-                            }}>
-                              <div style={{
-                                width: '2rem',
-                                height: '2rem',
-                                backgroundColor: '#2563eb',
-                                borderRadius: '50%',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: 'white',
-                                fontSize: '0.75rem',
-                                fontWeight: '600'
-                              }}>
-                                {initials}
-                              </div>
-                                <span>{tenantName}</span>
-                              </div>
-                            </td>
-                          <td style={{ padding: '1rem 0.75rem', textAlign: 'center' }}>
-                            {payment.property_name || 'Property'}
-                          </td>
-                          <td style={{ padding: '1rem 0.75rem', textAlign: 'center', fontWeight: '600' }}>
-                            ${payment.amount_dollars}
-                          </td>
-                          <td style={{ padding: '1rem 0.75rem', textAlign: 'center' }}>
-                            <div style={{ display: 'flex', justifyContent: 'center' }}>
-                              <span style={{
-                                padding: '0.25rem 0.5rem',
-                                borderRadius: '4px',
-                                fontSize: '0.75rem',
-                                fontWeight: '600',
-                                backgroundColor: statusClass === 'collected' ? '#d1fae5' : 
-                                               statusClass === 'pending' ? '#fef3c7' : '#fef2f2',
-                                color: statusClass === 'collected' ? '#065f46' : 
-                                       statusClass === 'pending' ? '#92400e' : '#dc2626'
-                              }}>
-                                {statusText}
-                              </span>
-                            </div>
-                          </td>
-                          <td style={{ padding: '1rem 0.75rem', textAlign: 'center' }}>
-                            {payment.rent_period_start ? 
-                                 `${new Date(payment.rent_period_start).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}` : 
-                             'N/A'}
-                          </td>
-                          <td style={{ padding: '1rem 0.75rem', textAlign: 'center' }}>
-                            Stripe
-                          </td>
-                          </tr>
-                        );
-                      })
-                    ) : (
-                      <tr>
-                      <td colSpan={7} style={{
-                        padding: '2rem',
-                        textAlign: 'center',
-                        color: '#6b7280',
-                        fontStyle: 'italic'
-                      }}>
-                        No payments found
-                      </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-            </div>
-          </div>
-        </div>
         
         {/* Applications and Vendors Grid */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+          gridTemplateColumns: 'repeat(4, 1fr)',
           gap: '1.5rem',
           marginBottom: '2rem'
         }}>
@@ -1809,8 +1278,9 @@ function LandlordDashboard() {
               )}
             </div>
           </div>
+        </div>
 
-          {/* My Vendors Section - Takes 1 column */}
+        {/* MVP: My Vendors Section - Hidden for Phase 1 
           <div style={{
             backgroundColor: 'white',
             borderRadius: '12px',
@@ -2004,6 +1474,7 @@ function LandlordDashboard() {
             </button>
           </div>
         </div>
+        */}
       </div>
       
       {/* Application Detail Modal */}

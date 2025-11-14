@@ -242,11 +242,11 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
   ];
 
   useEffect(() => {
-    // Only fetch properties if not in edit mode, or if we need them for room selection
-    if (!editMode) {
-      fetchProperties();
-    } else if (editMode && existingListing) {
-      // In edit mode, fetch property data to get staged images
+    // Fetch properties in both create and edit mode
+    fetchProperties();
+    
+    if (editMode && existingListing) {
+      // In edit mode, also fetch property data to get staged images
       const propertyId = typeof existingListing.property_ref === 'object' 
         ? existingListing.property_ref?.id 
         : existingListing.property_ref;
@@ -1869,6 +1869,67 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
 
   const selectedProperty = properties.find(p => p.id === parseInt(formData.property_ref));
 
+  // Auto-populate amenities and utilities from property data when creating a new listing
+  useEffect(() => {
+    if (!editMode && selectedProperty && formData.property_ref) {
+      const propertyAmenities = (selectedProperty as any)?.amenities || [];
+      const propertyUtilities = (selectedProperty as any)?.utilities_included || [];
+      
+      // Auto-populate amenities and utilities from scraped data
+      if (propertyAmenities.length > 0) {
+        handleInputChange('amenities', propertyAmenities);
+      }
+      if (propertyUtilities.length > 0) {
+        handleInputChange('utilities_included', propertyUtilities);
+      }
+    }
+  }, [selectedProperty, formData.property_ref, editMode]);
+
+  // Also auto-select scraped amenities when propertyData is loaded (for edit mode)
+  useEffect(() => {
+    if (editMode && propertyData && isFormDataPopulated) {
+      const propertyAmenities = (propertyData as any)?.amenities || [];
+      const propertyUtilities = (propertyData as any)?.utilities_included || [];
+      
+      // Merge scraped amenities with existing form data amenities (don't overwrite user selections)
+      if (propertyAmenities.length > 0) {
+        const mergedAmenities = Array.from(new Set([...formData.amenities, ...propertyAmenities]));
+        if (mergedAmenities.length > formData.amenities.length) {
+          handleInputChange('amenities', mergedAmenities);
+        }
+      }
+      if (propertyUtilities.length > 0) {
+        const mergedUtilities = Array.from(new Set([...formData.utilities_included, ...propertyUtilities]));
+        if (mergedUtilities.length > formData.utilities_included.length) {
+          handleInputChange('utilities_included', mergedUtilities);
+        }
+      }
+    }
+  }, [propertyData, editMode, isFormDataPopulated]);
+
+  // Generate a better default listing title when property is selected
+  useEffect(() => {
+    if (!editMode && selectedProperty && !formData.title) {
+      // Generate a better title based on property details
+      const prop = selectedProperty;
+      const bedrooms = (prop as any)?.bedrooms;
+      const bathrooms = (prop as any)?.bathrooms;
+      
+      let title = '';
+      
+      // Format: "Beautiful 2BR/1BA in [City]" or "[Property Name] - [City]"
+      if (bedrooms && bathrooms) {
+        const city = prop.city || 'Prime Location';
+        title = `Beautiful ${bedrooms}BR/${bathrooms}BA in ${city}`;
+      } else {
+        const city = prop.city || '';
+        title = `${prop.name}${city ? ' - ' + city : ''}`;
+      }
+      
+      handleInputChange('title', title);
+    }
+  }, [selectedProperty, editMode, formData.title]);
+
   // Enhanced validation logic for edit mode
   const isFormValid = editMode ? true : (
     formData.property_ref && 
@@ -1951,12 +2012,6 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
                   ))}
                 </select>
             </div>
-          )}
-          {/* Debug info */}
-          {editMode && (
-            <small style={{ color: '#666', fontSize: '12px' }}>
-              Debug: property_ref = "{formData.property_ref}", properties loaded = {properties.length}, existingListing.property_ref = {existingListing?.property_ref}
-            </small>
           )}
               </div>
 
@@ -2461,64 +2516,105 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
     );
   };
 
-  const renderDetailsTab = () => (
-    <>
-      <div className={styles.sectionHeader}>
-        <h3>Property Details</h3>
-        <p>Provide detailed information about amenities, policies, and terms.</p>
+  const renderDetailsTab = () => {
+    // Get amenities from property data (scraped) or existing form data
+    const propertyAmenities = (propertyData as any)?.amenities || (selectedProperty as any)?.amenities || [];
+    const propertyUtilities = (propertyData as any)?.utilities_included || (selectedProperty as any)?.utilities_included || [];
+    
+    // Combine property amenities with form data amenities (to allow custom additions)
+    const allAmenities = Array.from(new Set([...propertyAmenities, ...formData.amenities]));
+    const allUtilities = Array.from(new Set([...propertyUtilities, ...formData.utilities_included]));
+    
+    // Add standard amenities if not already in the list
+    const standardAmenities = ['Parking', 'Laundry', 'Gym', 'Pool', 'Balcony', 'Garden', 'Elevator', 'Security', 
+      'Furnished', 'Dishwasher', 'Microwave', 'Air Conditioning', 'Heating', 'Fireplace'];
+    const combinedAmenities = Array.from(new Set([...allAmenities, ...standardAmenities]));
+    
+    const standardUtilities = ['Water', 'Electricity', 'Gas', 'Internet', 'Cable TV', 'Trash', 'Heating', 'Air Conditioning'];
+    const combinedUtilities = Array.from(new Set([...allUtilities, ...standardUtilities]));
+    
+    return (
+      <>
+        <div className={styles.sectionHeader}>
+          <h3>Property Details</h3>
+          <p>Manage amenities and policies for this listing.</p>
         </div>
 
-      <div className={styles.formSection}>
-        <div className={styles.formGroup}>
-          <label>Utilities Included</label>
-          <div className={styles.tagGrid}>
-            {utilityOptions.map(utility => (
-              <button key={utility} type="button" className={`${styles.tagOption} ${formData.utilities_included.includes(utility) ? styles.selected : ''}`} onClick={() => handleArrayToggle('utilities_included', utility)}>
-                {utility}
-              </button>
-            ))}
+        <div className={styles.formSection}>
+          <div className={styles.formGroup}>
+            <label>Utilities Included</label>
+            <div className={styles.tagGrid}>
+              {combinedUtilities.map(utility => (
+                <button 
+                  key={utility} 
+                  type="button" 
+                  className={`${styles.tagOption} ${formData.utilities_included.includes(utility) ? styles.selected : ''}`} 
+                  onClick={() => handleArrayToggle('utilities_included', utility)}
+                >
+                  {utility}
+                  {formData.utilities_included.includes(utility) && (
+                    <X size={14} style={{ marginLeft: '6px' }} />
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className={styles.formGroup}>
+            <label>Amenities</label>
+            <div className={styles.tagGrid}>
+              {combinedAmenities.map(amenity => (
+                <button 
+                  key={amenity} 
+                  type="button" 
+                  className={`${styles.tagOption} ${formData.amenities.includes(amenity) ? styles.selected : ''}`} 
+                  onClick={() => handleArrayToggle('amenities', amenity)}
+                >
+                  {amenity}
+                  {formData.amenities.includes(amenity) && (
+                    <X size={14} style={{ marginLeft: '6px' }} />
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className={styles.formGroup}>
+            <label htmlFor="pet_policy">Pet Policy</label>
+            <div className={styles.selectWrapper}>
+              <select 
+                id="pet_policy" 
+                value={formData.pet_policy || 'no_pets'} 
+                onChange={(e) => handleInputChange('pet_policy', e.target.value)}
+              >
+                <option value="no_pets">No Pets Allowed</option>
+                <option value="cats_only">Cats Only</option>
+                <option value="small_dogs">Small Dogs Only</option>
+                <option value="cats_and_dogs">Cats and Dogs Allowed</option>
+                <option value="pets_allowed">All Pets Allowed</option>
+                <option value="pets_negotiable">Pets Negotiable</option>
+              </select>
+            </div>
+          </div>
+
+          <div className={styles.formGroup}>
+            <label htmlFor="smoking_policy">Smoking Policy</label>
+            <div className={styles.selectWrapper}>
+              <select 
+                id="smoking_policy" 
+                value={formData.smoking_policy} 
+                onChange={(e) => handleInputChange('smoking_policy', e.target.value)}
+              >
+                <option value="no_smoking">No Smoking</option>
+                <option value="smoking_allowed">Smoking Allowed</option>
+                <option value="designated_areas">Designated Areas Only</option>
+              </select>
+            </div>
           </div>
         </div>
-
-        <div className={styles.formGroup}>
-          <label>Amenities</label>
-          <div className={styles.tagGrid}>
-            {amenityOptions.map(amenity => (
-              <button key={amenity} type="button" className={`${styles.tagOption} ${formData.amenities.includes(amenity) ? styles.selected : ''}`} onClick={() => handleArrayToggle('amenities', amenity)}>
-                {amenity}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className={styles.formGroup}>
-          <label htmlFor="pet_policy">Pet Policy</label>
-          <textarea id="pet_policy" value={formData.pet_policy} onChange={(e) => handleInputChange('pet_policy', e.target.value)} placeholder="Describe your pet policy (e.g., 'Pets allowed with deposit')" rows={3} />
-        </div>
-
-        <div className={styles.formGroup}>
-          <label htmlFor="smoking_policy">Smoking Policy</label>
-          <div className={styles.selectWrapper}>
-            <select id="smoking_policy" value={formData.smoking_policy} onChange={(e) => handleInputChange('smoking_policy', e.target.value)}>
-              <option value="no_smoking">No Smoking</option>
-              <option value="smoking_allowed">Smoking Allowed</option>
-              <option value="designated_areas">Designated Areas Only</option>
-            </select>
-          </div>
-        </div>
-
-        <div className={styles.formGroup}>
-          <label htmlFor="lease_terms">Lease Terms</label>
-          <textarea id="lease_terms" value={formData.lease_terms} onChange={(e) => handleInputChange('lease_terms', e.target.value)} placeholder="Describe lease terms, minimum duration, renewal options, etc." rows={4} />
-        </div>
-
-        <div className={styles.formGroup}>
-          <label htmlFor="pricing_notes">Pricing Notes</label>
-          <textarea id="pricing_notes" value={formData.pricing_notes} onChange={(e) => handleInputChange('pricing_notes', e.target.value)} placeholder="Additional pricing information, deposits, fees, etc." rows={3} />
-        </div>
-      </div>
-    </>
-  );
+      </>
+    );
+  };
 
   const renderApplicationTab = () => (
     <>
@@ -2870,28 +2966,74 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
 
         <div className={styles.modalFooter}>
           <div className={styles.footerLeft}>
-            <span className={styles.formProgress}>Step {currentStep} of {tabs.length}: {tabs[currentStep - 1].label}</span>
-            {activeTab === 'contact' && !isFormValid && !editMode && (
-              <div style={{ fontSize: '12px', color: '#dc2626', marginTop: '4px' }}>
-                Missing: {[
-                  !formData.property_ref && 'Property',
-                  !formData.title && 'Title', 
-                  !formData.description && 'Description',
-                  !formData.available_from && 'Available Date',
-                  formData.listing_type === 'rooms' && formData.available_rooms.length === 0 && 'Select Rooms'
-                ].filter(Boolean).join(', ')}
-              </div>
-            )}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <span className={styles.formProgress}>
+                <span style={{ fontWeight: '600', color: '#374151' }}>Step {currentStep}</span>
+                <span style={{ color: '#9ca3af', margin: '0 4px' }}>/</span>
+                <span style={{ color: '#6b7280' }}>{tabs.length}</span>
+                <span style={{ color: '#9ca3af', margin: '0 8px' }}>•</span>
+                <span style={{ color: '#374151' }}>{tabs[currentStep - 1].label}</span>
+              </span>
+              {activeTab === 'contact' && !isFormValid && !editMode && (
+                <div style={{ fontSize: '12px', color: '#dc2626' }}>
+                  Missing: {[
+                    !formData.property_ref && 'Property',
+                    !formData.title && 'Title', 
+                    !formData.description && 'Description',
+                    !formData.available_from && 'Available Date',
+                    formData.listing_type === 'rooms' && formData.available_rooms.length === 0 && 'Select Rooms'
+                  ].filter(Boolean).join(', ')}
+                </div>
+              )}
+            </div>
           </div>
           <div className={styles.footerRight}>
-            <button className={`${styles.btn} ${styles.btnSecondary}`} onClick={onClose}>Cancel</button>
+            <button 
+              type="button"
+              className={`${styles.btn} ${styles.btnSecondary}`} 
+              onClick={onClose}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                minWidth: '80px'
+              }}
+            >
+              Cancel
+            </button>
             {currentStep > 1 && (
-              <button className={`${styles.btn} ${styles.btnSecondary}`} onClick={handleBack}>Back</button>
-            )}
-            <button className={`${styles.btn} ${styles.btnPrimary}`} onClick={activeTab === 'contact' ? handleSubmit : handleNext} disabled={loading || (activeTab === 'contact' && !isFormValid)}>
-                {loading ? (editMode ? 'Updating...' : 'Creating...') : 
-                 activeTab === 'contact' ? (editMode ? 'Update Listing' : 'Create Listing') : 'Next'}
+              <button 
+                type="button"
+                className={`${styles.btn} ${styles.btnSecondary}`} 
+                onClick={handleBack}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  minWidth: '80px'
+                }}
+              >
+                Back
               </button>
+            )}
+            <button 
+              type="button"
+              className={`${styles.btn} ${styles.btnPrimary}`} 
+              onClick={activeTab === 'contact' ? handleSubmit : handleNext} 
+              disabled={loading || (activeTab === 'contact' && !isFormValid)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                minWidth: '120px'
+              }}
+            >
+              {loading ? (editMode ? 'Updating...' : 'Creating...') : 
+               activeTab === 'contact' ? (editMode ? 'Update Listing' : 'Create Listing') : 'Next'}
+            </button>
           </div>
         </div>
       </div>

@@ -1216,14 +1216,6 @@ function Properties() {
                   bgColor: '#fff7ed',
                   iconColor: '#ea580c',
                   action: () => router.push('/tenants')
-                },
-                {
-                  title: 'Generate Reports',
-                  subtitle: 'Create Financial Reports',
-                  icon: Download,
-                  bgColor: '#faf5ff',
-                  iconColor: '#9333ea',
-                  action: downloadPropertiesReport
                 }
               ].map((action, index) => (
                 <div key={index}

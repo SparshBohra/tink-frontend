@@ -17,6 +17,7 @@ import RentTypeConversionWizard from '../../../components/RentTypeConversionWiza
 import RoomCountEditor from '../../../components/RoomCountEditor';
 import RoomDeletionModal from '../../../components/RoomDeletionModal';
 import EditPropertyModal from '../../../components/EditPropertyModal';
+import EditRoomModal from '../../../components/EditRoomModal';
 import StagedImage from '../../../components/StagedImage';
 import { 
   ArrowLeft, 
@@ -88,6 +89,8 @@ export default function PropertyDetails() {
   const [showAllHistory, setShowAllHistory] = useState(false);
   const [paymentHistory, setPaymentHistory] = useState<any[]>([]);
   const [showEditPropertyModal, setShowEditPropertyModal] = useState(false);
+  const [showEditRoomModal, setShowEditRoomModal] = useState(false);
+  const [editingRoom, setEditingRoom] = useState<Room | null>(null);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [selectedImageIdx, setSelectedImageIdx] = useState(0);
   const [isStaging, setIsStaging] = useState(false);
@@ -200,6 +203,37 @@ export default function PropertyDetails() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showManageListingDropdown]);
+
+  // Set default history tab based on available data
+  useEffect(() => {
+    if (!property) return;
+
+    const hasPriceHistory = Array.isArray((property as any).price_history) && 
+                           (property as any).price_history.length > 0;
+    
+    const propertyId = typeof id === 'string' ? parseInt(id) : id;
+    const hasTenantHistory = leases && leases.length > 0 && 
+                            leases.some((lease: any) => {
+                              const leasePropertyId = typeof lease.property_ref === 'object' 
+                                ? lease.property_ref?.id 
+                                : lease.property_ref;
+                              return leasePropertyId === propertyId;
+                            });
+
+    // If both available, default to tenant history
+    if (hasPriceHistory && hasTenantHistory) {
+      setActiveHistoryTab('tenant');
+    }
+    // If only price history available, default to price
+    else if (hasPriceHistory && !hasTenantHistory) {
+      setActiveHistoryTab('price');
+    }
+    // If only tenant history available, default to tenant
+    else if (!hasPriceHistory && hasTenantHistory) {
+      setActiveHistoryTab('tenant');
+    }
+    // Otherwise, keep default (tenant)
+  }, [property, leases, id]);
 
   const fetchPropertyData = async () => {
     // Add guard here to prevent running with an invalid ID
@@ -906,10 +940,17 @@ export default function PropertyDetails() {
     return (
         <tr key={room.id} className="room-row">
             <td style={{ textAlign: 'left' }}>
-                <Link href={`/properties/${id}/edit-room/${room.id}`} className="room-link">
+                <button 
+                  onClick={() => {
+                    setEditingRoom(room);
+                    setShowEditRoomModal(true);
+                  }}
+                  className="room-link"
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', padding: 0 }}
+                >
                     <div className="room-name">{room.name}</div>
                     <div className="room-type">{room.room_type}</div>
-                </Link>
+                </button>
       </td>
             <td style={{ textAlign: 'center' }}>
                 {isActuallyOccupied ? (
@@ -963,7 +1004,10 @@ export default function PropertyDetails() {
                         </svg>
                     </button>
                     <button 
-                        onClick={() => router.push(`/properties/${id}/edit-room/${room.id}`)}
+                        onClick={() => {
+                          setEditingRoom(room);
+                          setShowEditRoomModal(true);
+                        }}
                         className="btn-action edit"
                         title="Edit Room"
                     >
@@ -999,9 +1043,19 @@ export default function PropertyDetails() {
       </td>
       <td>
         {lease.room ? (
-          <Link href={`/properties/${id}/edit-room/${lease.room}`} className="room-link">
+          <button 
+            onClick={() => {
+              const room = rooms.find(r => r.id === lease.room);
+              if (room) {
+                setEditingRoom(room);
+                setShowEditRoomModal(true);
+              }
+            }}
+            className="room-link"
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'inherit', textDecoration: 'underline' }}
+          >
             {getRoomName(lease.room)}
-          </Link>
+          </button>
         ) : (
           '— Whole Property —'
         )}
@@ -2915,8 +2969,8 @@ export default function PropertyDetails() {
                     </div>
             </div>
 
-            {/* Lease Details - Only for per_property rent type */}
-            {property?.rent_type === 'per_property' && (
+            {/* MVP: Lease Details - Hidden for Phase 1 */}
+            {false && property?.rent_type === 'per_property' && (
               <div className="section-card">
                 <div className="section-header">
                   <div className="section-title-group">
@@ -3412,6 +3466,24 @@ export default function PropertyDetails() {
           onClose={() => setShowEditPropertyModal(false)}
           onSuccess={() => {
             setShowEditPropertyModal(false);
+            fetchPropertyData();
+          }}
+        />
+      )}
+
+      {/* Edit Room Modal */}
+      {showEditRoomModal && editingRoom && property && (
+        <EditRoomModal
+          room={editingRoom}
+          property={property}
+          isOpen={showEditRoomModal}
+          onClose={() => {
+            setShowEditRoomModal(false);
+            setEditingRoom(null);
+          }}
+          onSuccess={() => {
+            setShowEditRoomModal(false);
+            setEditingRoom(null);
             fetchPropertyData();
           }}
         />

@@ -382,10 +382,13 @@ export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarPr
 
         <div className="topbar-right">
           <div className="action-buttons">
-            <button className="action-btn">
-              <span className="btn-icon"><MessagesIcon /></span>
-              <span className="btn-label">Messages</span>
-            </button>
+            {/* MVP: Messages button - Hidden for Phase 1 */}
+            {false && (
+              <button className="action-btn">
+                <span className="btn-icon"><MessagesIcon /></span>
+                <span className="btn-label">Messages</span>
+              </button>
+            )}
             
             <div className="notifications-container" ref={notificationsRef}>
               <button 
