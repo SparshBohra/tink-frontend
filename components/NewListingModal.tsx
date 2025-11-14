@@ -4,7 +4,7 @@ import { Property, Room } from '../lib/types';
 import styles from './NewListingModal.module.css';
 import { getMediaUrl } from '../lib/utils';
 import StagedImage from './StagedImage';
-import { Wand2, GripVertical, X, Plus, Trash2, Download, RotateCcw, RefreshCw } from 'lucide-react';
+import { Wand2, GripVertical, X, Plus, Trash2, Download, RotateCcw, RefreshCw, Eye, EyeOff } from 'lucide-react';
 import JSZip from 'jszip';
 
 interface NewListingModalProps {
@@ -124,8 +124,10 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
   const [stagingImageId, setStagingImageId] = useState<string | null>(null);
   // View preferences for staged images
   const [viewPreferences, setViewPreferences] = useState<{[key: string]: boolean}>({});
-  // Uploaded images that go to Available Property Images first
-  const [uploadedAvailableImages, setUploadedAvailableImages] = useState<MediaFile[]>([]);
+  // Hidden images (excluded from listing)
+  const [hiddenImageUrls, setHiddenImageUrls] = useState<Set<string>>(new Set());
+  // Landlord contact defaults
+  const [landlordProfile, setLandlordProfile] = useState<{ contact_email?: string; contact_phone?: string } | null>(null);
   
   // Helper function to normalize URLs for comparison
   const normalizeUrl = (url: string): string => {
@@ -144,6 +146,27 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
     const filename2 = normalized2.split('/').pop() || '';
     return filename1 && filename2 && filename1 === filename2;
   };
+
+  // Load landlord profile to provide default contact email/phone
+  useEffect(() => {
+    let isMounted = true;
+    const loadLandlordProfile = async () => {
+      try {
+        const profile = await apiClient.getLandlordProfile();
+        if (!isMounted || !profile) return;
+        setLandlordProfile({
+          contact_email: profile.contact_email,
+          contact_phone: profile.contact_phone,
+        });
+      } catch (err) {
+        console.error('Failed to load landlord profile for contact defaults:', err);
+      }
+    };
+    loadLandlordProfile();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
   
   // Form data
   const [formData, setFormData] = useState({
@@ -184,6 +207,17 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
     seo_description: '',
     marketing_tags: [] as string[],
   });
+
+  // Once landlord profile and/or listing data are loaded, ensure contact fields
+  // default to landlord's signup details if they are still empty.
+  useEffect(() => {
+    if (!landlordProfile) return;
+    setFormData(prev => ({
+      ...prev,
+      contact_email: prev.contact_email || landlordProfile.contact_email || '',
+      contact_phone: prev.contact_phone || landlordProfile.contact_phone || '',
+    }));
+  }, [landlordProfile, isFormDataPopulated]);
 
   const tabs = [
     { id: 'basic', label: 'Basic Info', icon: HomeIcon },
@@ -318,12 +352,10 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
       setFormData(newFormData);
       setIsFormDataPopulated(true); // Mark form data as populated
       
-      // Set application mode based on existing settings
-      const hasCustomSettings = (existingListing.application_form_config?.global_settings?.application_fee || 0) > 0 ||
-                                existingListing.application_form_config?.steps?.background_check?.enabled ||
-                                existingListing.application_form_config?.steps?.employment_info?.enabled ||
-                                (existingListing.application_form_config?.global_settings?.required_documents || []).length > 0;
-      setApplicationMode(hasCustomSettings ? 'manual' : 'default');
+      // Application settings:
+      // Always start in "default" mode when opening the edit listing modal.
+      // If the user wants custom/manual configuration, they must explicitly switch tabs.
+      setApplicationMode('default');
       
       console.log('✅ Form data has been set. property_ref in form data:', newFormData.property_ref);
 
@@ -515,15 +547,92 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
         }
       }
       
-      if (mediaToLoad.length > 0) {
-        // Ensure at least one image is featured
+      // Load ALL property images (not just kept_property_images)
+      // Initialize hiddenImageUrls based on kept_property_images
+      if (propertyData && (propertyData as any).images && Array.isArray((propertyData as any).images)) {
+        const allPropertyImages = (propertyData as any).images;
+        const keptUrls = new Set<string>();
+        // Local hidden set used for initial featured-image calculation
+        const hiddenUrls = new Set<string>();
+
+        // If we have explicit kept_property_images in metadata, honor them.
+        // Otherwise, default to "everything visible" (hiddenUrls stays empty).
+        if (keptFromMetadata.length > 0) {
+          keptFromMetadata.forEach((item: any) => {
+            const url = normalizeUrl(item.url || item.file_url || '');
+            const originalUrl = normalizeUrl(item.originalUrl || url);
+            keptUrls.add(url);
+            keptUrls.add(originalUrl);
+          });
+
+          allPropertyImages.forEach((img: any) => {
+            const imgUrl = typeof img === 'string' ? img : (img?.url || img?.file_url || '');
+            const originalUrl = typeof img === 'object' ? (img?.originalUrl || imgUrl) : imgUrl;
+            const normalizedUrl = normalizeUrl(imgUrl);
+            const normalizedOriginalUrl = normalizeUrl(originalUrl);
+            if (!keptUrls.has(normalizedUrl) && !keptUrls.has(normalizedOriginalUrl)) {
+              hiddenUrls.add(normalizedUrl);
+              hiddenUrls.add(normalizedOriginalUrl);
+            }
+          });
+        }
+
+        // Persist hidden set to state so UI knows which ones are hidden
+        setHiddenImageUrls(hiddenUrls);
+        
+        // Load ALL property images as mediaFiles
+        const allImagesAsMedia = allPropertyImages.map((img: any, index: number) => {
+          const imgUrl = typeof img === 'string' ? img : (img?.url || img?.file_url || '');
+          const stagedUrl = typeof img === 'object' ? (img.staged_url || null) : null;
+          const originalUrl = typeof img === 'object' ? (img?.originalUrl || imgUrl) : imgUrl;
+          
+          // Check if this image is in kept_property_images to determine is_primary
+          const normalizedUrl = normalizeUrl(imgUrl);
+          const normalizedOriginalUrl = normalizeUrl(originalUrl);
+          const isInKept = keptUrls.has(normalizedUrl) || keptUrls.has(normalizedOriginalUrl);
+          const keptItem = keptFromMetadata.find((item: any) => {
+            const itemUrl = normalizeUrl(item.url || item.file_url || '');
+            const itemOriginalUrl = normalizeUrl(item.originalUrl || itemUrl);
+            return itemUrl === normalizedUrl || itemUrl === normalizedOriginalUrl || 
+                   itemOriginalUrl === normalizedUrl || itemOriginalUrl === normalizedOriginalUrl;
+          });
+          
+          return {
+            id: `property-image-${index}`,
+            file: null as any,
+            url: stagedUrl || imgUrl,
+            originalUrl: originalUrl,
+            staged_url: stagedUrl,
+            caption: typeof img === 'object' ? (img.caption || '') : (keptItem?.caption || ''),
+            is_primary: keptItem?.is_primary || (isInKept && index === 0 && !keptFromMetadata.some((k: any) => k.is_primary)),
+            uploading: false
+          };
+        });
+        
+        // Ensure at least one visible image is featured
+        const visibleImages = allImagesAsMedia.filter((m: MediaFile) => {
+          const imgUrl = normalizeUrl(m.url);
+          const originalUrl = normalizeUrl(m.originalUrl || m.url);
+          return !hiddenUrls.has(imgUrl) && !hiddenUrls.has(originalUrl);
+        });
+        if (visibleImages.length > 0 && !visibleImages.some((m: MediaFile) => m.is_primary)) {
+          visibleImages[0].is_primary = true;
+          const firstVisibleIndex = allImagesAsMedia.findIndex((m: MediaFile) => m.id === visibleImages[0].id);
+          if (firstVisibleIndex >= 0) {
+            allImagesAsMedia[firstVisibleIndex].is_primary = true;
+          }
+        }
+        
+        setMediaFiles(allImagesAsMedia);
+        console.log('✅ Loaded ALL property images:', allImagesAsMedia.length, 'Hidden:', hiddenUrls.size);
+      } else if (mediaToLoad.length > 0) {
+        // Fallback: use kept_property_images if property data not available
         const hasFeatured = mediaToLoad.some(m => m.is_primary);
         if (!hasFeatured && mediaToLoad.length > 0) {
           mediaToLoad[0].is_primary = true;
         }
-        
         setMediaFiles(mediaToLoad);
-        console.log('✅ Final media files set:', mediaToLoad);
+        console.log('✅ Final media files set (fallback):', mediaToLoad);
         
         // Load view preferences from localStorage
         try {
@@ -669,7 +778,8 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
           is_primary: false,
           uploading: false
         };
-        setUploadedAvailableImages(prev => [...prev, newMedia]);
+        // Images are now directly added to mediaFiles
+        setMediaFiles(prev => [...prev, newMedia]);
       }
     });
     
@@ -1011,28 +1121,8 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
 
   // Staging handlers
   const handleStageImage = async (mediaId: string, index: number) => {
-    // Check both mediaFiles (listing images) and available images
-    let media = mediaFiles.find(m => m.id === mediaId);
-    if (!media) {
-      // Try to find in available images
-      const availablePropertyImages = editMode && propertyData ? getAvailablePropertyImages() : [];
-      const allAvailableImages = [
-        ...availablePropertyImages.map((img: any) => ({
-          ...img,
-          isUploaded: false
-        })),
-        ...uploadedAvailableImages.map(img => ({
-          id: img.id,
-          url: img.url,
-          originalUrl: img.originalUrl,
-          staged_url: img.staged_url || null,
-          caption: img.caption || '',
-          file: img.file,
-          isUploaded: true
-        }))
-      ];
-      media = allAvailableImages.find((m: any) => m.id === mediaId);
-    }
+    // Find media in mediaFiles
+    const media = mediaFiles.find(m => m.id === mediaId);
     if (!media) return;
 
     // Clear any previous error for this image
@@ -1107,8 +1197,8 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
               : { ...m, isStaging: false }
           ));
         } else {
-          // Update uploadedAvailableImages if it's there
-          setUploadedAvailableImages(prev => prev.map(m => 
+          // Update mediaFiles directly
+          setMediaFiles(prev => prev.map(m => 
             m.id === mediaId 
               ? { ...m, staged_url: data.staged_url, originalUrl: m.originalUrl || m.url, isStaging: false }
               : m
@@ -1425,7 +1515,7 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
         // Find media to delete (exist in backend but not matched in current mediaFiles)
         // IMPORTANT: Only delete ListingMedia objects, NOT property images
         // Property images should only be removed from kept_property_images, not deleted
-        const mediaToDelete = existingMediaIds.filter(id => {
+        const mediaToDelete = existingMediaIds.filter((id: string) => {
           const existingMedia = (existingListing?.media || []).find((m: any) => m.id?.toString() === id);
           if (!existingMedia) return false;
           
@@ -1509,7 +1599,7 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
         // Mark staged URLs for deletion for removed media
         for (const mediaId of allExistingMediaIds) {
           if (!currentMediaIds.has(mediaId)) {
-            stagedMediaUpdates[mediaId] = null;
+            stagedMediaUpdates[mediaId as string] = null;
           }
         }
         
@@ -1563,16 +1653,22 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
         // Handle kept_property_images (for property images without ListingMedia)
         if (isUsingPropertyImages) {
           try {
-            // Build kept_property_images array from current mediaFiles (excluding new uploads)
+            // Build kept_property_images array from visible images only (excluding hidden and new uploads)
             const keptImages = mediaFiles
-              .filter(m => !m.file) // Only existing images
+              .filter(m => {
+                // Only existing images (not new uploads)
+                if (m.file) return false;
+                // Only visible images (not hidden)
+                const imgUrl = normalizeUrl(m.url);
+                const originalUrl = normalizeUrl(m.originalUrl || m.url);
+                return !hiddenImageUrls.has(imgUrl) && !hiddenImageUrls.has(originalUrl);
+              })
               .map((media, index) => {
                 // Ensure we're saving the original URL (not processed)
-                // media.url should already be the original URL from when it was loaded
-                const originalUrl = media.url || '';
+                const originalUrl = media.originalUrl || media.url || '';
                 const stagedUrl = media.staged_url || null;
                 
-                console.log(`[kept_property_images] Saving image ${index}:`, {
+                console.log(`[kept_property_images] Saving visible image ${index}:`, {
                   id: media.id,
                   url: originalUrl?.substring(0, 100),
                   staged_url: stagedUrl?.substring(0, 100) || null,
@@ -1581,7 +1677,7 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
                 
                 return {
                   id: media.id?.toString() || `kept-${index}`,
-                  url: originalUrl, // Save original URL (will be processed by getMediaUrl when displaying)
+                  url: originalUrl, // Save original URL
                   staged_url: stagedUrl,
                   caption: media.caption || '',
                   display_order: index,
@@ -2026,1093 +2122,343 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
     </>
   );
 
-  // Get available property images that aren't in the listing
-  const getAvailablePropertyImages = () => {
-    if (!propertyData || !propertyData.images || !Array.isArray(propertyData.images)) {
-      return [];
-    }
-    
-    // Get URLs currently in the listing - compare both originalUrl and url
-    const currentUrls = new Set<string>();
-    mediaFiles
-      .filter(m => !m.file) // Only existing images (not newly uploaded)
-      .forEach(m => {
-        // Normalize URLs for comparison
-        const url = normalizeUrl(m.url || '');
-        const originalUrl = normalizeUrl(m.originalUrl || '');
-        if (url) currentUrls.add(url);
-        if (originalUrl && originalUrl !== url) currentUrls.add(originalUrl);
-      });
-    
-    // Filter property images to only those not in listing
-    return propertyData.images
-      .map((img: any, index: number) => {
-        const imgUrl = typeof img === 'string' ? img : (img?.url || img?.file_url || '');
-        const originalUrl = typeof img === 'object' ? (img?.originalUrl || imgUrl) : imgUrl;
-        
-        return {
-          id: `property-img-${index}`,
-          url: imgUrl,
-          originalUrl: originalUrl,
-          staged_url: typeof img === 'object' ? (img.staged_url || null) : null,
-          caption: typeof img === 'object' ? (img.caption || '') : '',
-          originalIndex: index
-        };
-      })
-      .filter((img: any) => {
-        // Check if this image URL or originalUrl is in listing
-        const normalizedUrl = normalizeUrl(img.url);
-        const normalizedOriginalUrl = normalizeUrl(img.originalUrl || img.url);
-        return !currentUrls.has(normalizedUrl) && !currentUrls.has(normalizedOriginalUrl);
-      });
-  };
-
-  // Restore property image to listing
-  const handleRestorePropertyImage = (propertyImage: any) => {
-    // Preserve original URL - use originalUrl if available, otherwise url
-    const originalUrl = propertyImage.originalUrl || propertyImage.url;
-    
-    const newMediaFile: MediaFile = {
-      id: `property-image-${Date.now()}-${propertyImage.originalIndex}`,
-      file: null as any,
-      url: propertyImage.staged_url || propertyImage.url, // Display staged if available
-      originalUrl: originalUrl, // Always preserve original
-      staged_url: propertyImage.staged_url || null,
-      caption: propertyImage.caption || '',
-      is_primary: mediaFiles.length === 0, // Make primary if it's the first image
-      uploading: false
-    };
-    
-    setMediaFiles(prev => [...prev, newMediaFile]);
-    
-    // If using property images, update kept_property_images immediately
-    if (editMode && existingListing?.id) {
-      const updatedMediaFiles = [...mediaFiles, newMediaFile];
-      updateKeptPropertyImages(updatedMediaFiles);
-    }
-  };
-
-  // Add uploaded image from available to listing
-  const handleAddUploadedImageToListing = (uploadedImage: MediaFile) => {
-    const newMediaFile: MediaFile = {
-      ...uploadedImage,
-      id: `listing-${Date.now()}-${Math.random()}`,
-      is_primary: mediaFiles.length === 0, // Make primary if it's the first image
-    };
-    
-    setMediaFiles(prev => [...prev, newMediaFile]);
-    
-    // Remove from uploaded available images
-    setUploadedAvailableImages(prev => prev.filter(img => img.id !== uploadedImage.id));
-    
-    // If using property images, update kept_property_images immediately
-    if (editMode && existingListing?.id) {
-      const updatedMediaFiles = [...mediaFiles, newMediaFile];
-      updateKeptPropertyImages(updatedMediaFiles);
-    }
-  };
 
   const renderMediaTab = () => {
-    const availablePropertyImages = editMode && propertyData ? getAvailablePropertyImages() : [];
-    // Combine property images and uploaded images
-    const allAvailableImages = [
-      ...availablePropertyImages.map((img: any) => ({
-        ...img,
-        isUploaded: false
-      })),
-      ...uploadedAvailableImages.map(img => ({
-        id: img.id,
-        url: img.url,
-        originalUrl: img.originalUrl,
-        staged_url: img.staged_url || null,
-        caption: img.caption || '',
-        file: img.file,
-        isUploaded: true
-      }))
-    ];
+    // Filter to only visible images (not hidden) for count
+    const visibleImages = mediaFiles.filter((media) => {
+      const imgUrl = normalizeUrl(media.url);
+      const originalUrl = normalizeUrl(media.originalUrl || media.url);
+      return !hiddenImageUrls.has(imgUrl) && !hiddenImageUrls.has(originalUrl);
+    });
     
     return (
-    <>
-      <div className={styles.sectionHeader}>
-        <h3>Photos & Media</h3>
-              <p>Add high-quality photos to showcase your property. Upload images to add them to available images, then add them to your listing.</p>
-            </div>
-      
-      <div className={styles.formSection}>
-              {/* Upload and Download All buttons at TOP - smaller height */}
-              <div className={styles.formGroup} style={{ marginTop: '0' }}>
-                <div style={{
-                  display: 'flex',
-                  gap: '1rem',
-                  width: '100%'
-                }}>
-                  {/* Upload button - smaller */}
-                  <div 
-                    onClick={() => document.getElementById('media-upload')?.click()}
-                    style={{
-                      flex: 1,
-                      padding: '0.75rem',
-                      borderRadius: '12px',
-                      border: '2px dashed #cbd5e1',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                      backgroundColor: '#f8fafc',
-                      minHeight: '70px'
-                    }}
-                    onMouseOver={(e) => {
-                      e.currentTarget.style.borderColor = '#2563eb';
-                      e.currentTarget.style.backgroundColor = '#eff6ff';
-                    }}
-                    onMouseOut={(e) => {
-                      e.currentTarget.style.borderColor = '#cbd5e1';
-                      e.currentTarget.style.backgroundColor = '#f8fafc';
-                    }}
-                  >
-                    <input 
-                      type="file" 
-                      accept="image/*" 
-                      multiple 
-                      onChange={handleFileUpload} 
-                      className={styles.fileInput} 
-                      id="media-upload" 
-                      style={{ display: 'none' }}
-                    />
-                    <UploadIcon />
-                    <div style={{ fontSize: '11px', fontWeight: '600', color: '#2563eb', textAlign: 'center' }}>
-                      Upload Photos
-              </div>
-          </div>
-
-                  {/* Download All button - smaller */}
-                  <div 
-                    onClick={isDownloadingAll ? undefined : handleDownloadAll}
-                    style={{
-                      flex: 1,
-                      padding: '0.75rem',
-                      borderRadius: '12px',
-                      border: '2px solid #2563eb',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      cursor: isDownloadingAll ? 'wait' : 'pointer',
-                      transition: 'all 0.2s',
-                      backgroundColor: isDownloadingAll ? '#dbeafe' : '#eff6ff',
-                      minHeight: '70px'
-                    }}
-                    onMouseOver={(e) => {
-                      if (!isDownloadingAll) {
-                        e.currentTarget.style.borderColor = '#1d4ed8';
-                        e.currentTarget.style.backgroundColor = '#dbeafe';
-                        e.currentTarget.style.transform = 'translateY(-2px)';
-                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(37, 99, 235, 0.2)';
-                      }
-                    }}
-                    onMouseOut={(e) => {
-                      if (!isDownloadingAll) {
-                        e.currentTarget.style.borderColor = '#2563eb';
-                        e.currentTarget.style.backgroundColor = '#eff6ff';
-                        e.currentTarget.style.transform = 'translateY(0)';
-                        e.currentTarget.style.boxShadow = 'none';
-                      }
-                    }}
-                  >
-                    {isDownloadingAll ? (
-                      <>
-                        <RotateCcw size={20} style={{ color: '#2563eb', marginBottom: '2px', animation: 'spin 1s linear infinite' }} />
-                        <div style={{ fontSize: '11px', fontWeight: '600', color: '#2563eb', textAlign: 'center' }}>
-                          Preparing...
+      <React.Fragment>
+        <div className={styles.sectionHeader}>
+          <h3>Photos & Media</h3>
+          <p>
+            Images are synced from the properties page. Hide images to exclude them from the listing.
+            Edit images on the properties page.
+          </p>
         </div>
-                      </>
-                    ) : (
-                      <>
-                        <Download size={20} style={{ color: '#2563eb', marginBottom: '2px' }} />
-                        <div style={{ fontSize: '11px', fontWeight: '600', color: '#2563eb', textAlign: 'center' }}>
-                          Download All
-                        </div>
-                        <div style={{ fontSize: '9px', color: '#60a5fa', marginTop: '1px', textAlign: 'center' }}>
-                          {(() => {
-                            // Count unique images from both available and listing
-                            const uniqueImages = new Set();
-                            // Add available images
-                            allAvailableImages.forEach(img => uniqueImages.add(img.id));
-                            // Add listing images
-                            mediaFiles.forEach(img => uniqueImages.add(img.id));
-                            
-                            const originalCount = uniqueImages.size;
-                            const stagedCount = mediaFiles.filter(m => m.staged_url).length;
-                            const totalFiles = originalCount + stagedCount;
-                            return `${totalFiles} file${totalFiles !== 1 ? 's' : ''}`;
-                          })()}
-                        </div>
-                      </>
-                    )}
-                  </div>
+        
+        <div className={styles.formSection}>
+        {/* Download All button */}
+        <div className={styles.formGroup} style={{ marginTop: '0' }}>
+          <div 
+            onClick={isDownloadingAll ? undefined : handleDownloadAll}
+            style={{
+              padding: '0.75rem',
+              borderRadius: '12px',
+              border: '2px solid #2563eb',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: isDownloadingAll ? 'wait' : 'pointer',
+              transition: 'all 0.2s',
+              backgroundColor: isDownloadingAll ? '#dbeafe' : '#eff6ff',
+              minHeight: '70px'
+            }}
+            onMouseOver={(e) => {
+              if (!isDownloadingAll) {
+                e.currentTarget.style.borderColor = '#1d4ed8';
+                e.currentTarget.style.backgroundColor = '#dbeafe';
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(37, 99, 235, 0.2)';
+              }
+            }}
+            onMouseOut={(e) => {
+              if (!isDownloadingAll) {
+                e.currentTarget.style.borderColor = '#2563eb';
+                e.currentTarget.style.backgroundColor = '#eff6ff';
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = 'none';
+              }
+            }}
+          >
+            {isDownloadingAll ? (
+              <>
+                <RotateCcw size={20} style={{ color: '#2563eb', marginBottom: '2px', animation: 'spin 1s linear infinite' }} />
+                <div style={{ fontSize: '11px', fontWeight: '600', color: '#2563eb', textAlign: 'center' }}>
+                  Preparing...
                 </div>
-              </div>
+              </>
+            ) : (
+              <>
+                <Download size={20} style={{ color: '#2563eb', marginBottom: '2px' }} />
+                <div style={{ fontSize: '11px', fontWeight: '600', color: '#2563eb', textAlign: 'center' }}>
+                  Download All
+                </div>
+                <div style={{ fontSize: '9px', color: '#60a5fa', marginTop: '1px', textAlign: 'center' }}>
+                  {(() => {
+                    const visibleCount = visibleImages.length;
+                    const stagedCount = visibleImages.filter(m => m.staged_url).length;
+                    const totalFiles = visibleCount + stagedCount;
+                    return `${totalFiles} file${totalFiles !== 1 ? 's' : ''}`;
+                  })()}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
 
-              {/* Available Property Images Section - ALWAYS SHOWN */}
-          <div className={styles.mediaPreview} style={{ marginTop: '1rem' }}>
-            <div style={{ marginBottom: '1.5rem' }}>
-              <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '16px', fontWeight: '600', color: '#111827' }}>
-                Available Property Images ({allAvailableImages.length})
-              </h4>
-              <p style={{ margin: '0', fontSize: '0.875rem', color: '#6b7280' }}>
-                Click on any image to add it to your listing. You can also delete images you don't need.
-              </p>
-            </div>
-            <div className={styles.mediaGrid}>
-              {allAvailableImages.map((media: any, index: number) => {
-                const displayUrl = media.staged_url || media.url || media.originalUrl;
-                const shouldShowStaged = viewPreferences[media.id!] && !!media.staged_url;
-                const originalUrl = media.originalUrl || media.url;
-                const stagedUrl = media.staged_url;
-                
-                return (
-                  <div 
-                    key={media.id} 
-                    className={styles.mediaItem}
-                    style={{ 
-                      opacity: 1,
-                      cursor: 'default'
-                    }}
-                  >
+        {/* Listing Images - ALL property images */}
+        <div className={styles.mediaPreview} style={{ marginTop: '1rem' }}>
+          <div style={{ marginBottom: '1.5rem' }}>
+            <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '16px', fontWeight: '600', color: '#111827' }}>
+              Listing Images ({visibleImages.length})
+            </h4>
+            <p style={{ margin: '0', fontSize: '0.875rem', color: '#6b7280' }}>
+              Drag to reorder. Hide images to exclude them from the listing. Edit images on the properties page.
+            </p>
+          </div>
+          <div className={styles.mediaGrid}>
+            {mediaFiles.map((media, index) => {
+              const imgUrl = normalizeUrl(media.url);
+              const originalUrl = normalizeUrl(media.originalUrl || media.url);
+              const isHidden = hiddenImageUrls.has(imgUrl) || hiddenImageUrls.has(originalUrl);
+              
+              return (
+                <div 
+                  key={media.id} 
+                  className={styles.mediaItem}
+                  draggable={!isHidden}
+                  onDragStart={() => !isHidden && handleDragStart(index)}
+                  onDragOver={(e) => !isHidden && handleDragOver(e, index)}
+                  onDragEnd={handleDragEnd}
+                  style={{ 
+                    opacity: draggedIndex === index ? 0.5 : (isHidden ? 0.4 : 1),
+                    cursor: isHidden ? 'default' : 'move',
+                    position: 'relative'
+                  }}
+                >
+                  {/* Grey overlay for hidden images */}
+                  {isHidden && (
+                    <div style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      backgroundColor: 'rgba(107, 114, 128, 0.7)',
+                      zIndex: 5,
+                      borderRadius: '8px',
+                      pointerEvents: 'none'
+                    }} />
+                  )}
+                  
                   <div className={styles.mediaImage}>
-                      <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-                        <StagedImage
-                          originalUrl={getMediaUrl(originalUrl)}
-                          stagedUrl={stagedUrl ? getMediaUrl(stagedUrl) : null}
-                          mediaId={media.id!}
-                          alt={`Available image ${index + 1}`}
-                          showStagedByDefault={viewPreferences[media.id!] === true}
-                          key={`staged-available-${media.id}-${viewPreferences[media.id!]}`}
-                          onToggleView={(mediaId, showStaged) => {
-                            setViewPreferences(prev => {
-                              const updated = {
-                                ...prev,
-                                [mediaId]: showStaged
-                              };
-                              if (editMode && existingListing?.id) {
-                                try {
-                                  localStorage.setItem(`listing-${existingListing.id}-view-preferences`, JSON.stringify(updated));
-                                } catch (e) {
-                                  console.error('Failed to save view preferences:', e);
-                                }
-                              }
-                              return updated;
-                            });
-                          }}
-                          onStage={async () => {
-                            await handleStageImage(media.id!, index);
-                          }}
-                        />
-                        <style jsx global>{`
-                          .staged-image-wrapper .staged-actions {
-                            display: none !important;
-                          }
-                          .staged-image-wrapper .staged-badge {
-                            display: none !important;
-                          }
-                          .staged-image-wrapper .staging-overlay {
-                            display: flex !important;
-                          }
-                        `}</style>
-
-                        {/* Action buttons - top right */}
-                        <div style={{
-                          position: 'absolute',
-                          top: '12px',
-                          right: '12px',
-                          display: 'flex',
-                          gap: '6px',
-                          zIndex: 10,
-                          alignItems: 'center'
-                        }}>
-                          {/* Download button */}
-                          <button
-                            onClick={() => handleDownloadImage(media, index)}
-                            disabled={stagingImageId === media.id}
-                            style={{
-                              width: '32px',
-                              height: '32px',
-                              minWidth: '32px',
-                              minHeight: '32px',
-                              borderRadius: '8px',
-                              border: '1px solid rgba(0,0,0,0.55)',
-                              background: 'rgba(255,255,255,0.85)',
-                              color: '#2563eb',
-                              cursor: stagingImageId === media.id ? 'not-allowed' : 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              transition: 'all 0.2s ease',
-                              backdropFilter: 'blur(4px)',
-                              WebkitBackdropFilter: 'blur(4px)',
-                              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.12)',
-                              padding: 0,
-                              opacity: stagingImageId === media.id ? 0.5 : 1,
-                              flexShrink: 0
-                            }}
-                            onMouseEnter={(e) => {
-                              if (stagingImageId !== media.id) {
-                                e.currentTarget.style.background = 'rgba(37, 99, 235, 0.12)';
-                                e.currentTarget.style.transform = 'scale(1.05)';
-                              }
-                            }}
-                            onMouseLeave={(e) => {
-                              if (stagingImageId !== media.id) {
-                                e.currentTarget.style.background = 'rgba(255,255,255,0.85)';
-                                e.currentTarget.style.transform = 'scale(1)';
-                              }
-                            }}
-                            title="Download image"
-                          >
-                            <Download size={16} strokeWidth={2.5} style={{ display: 'block', flexShrink: 0 }} />
-                          </button>
-
-                          {/* Delete button */}
-                          <button
-                            onClick={async () => {
-                              const warningMessage = 'Are you sure you want to delete this image?\n\n⚠️ WARNING: This action cannot be undone. You will not be able to restore this image if deleted.';
-                              const confirmed = window.confirm(warningMessage);
-                              if (!confirmed) return;
-                              
-                              try {
-                                // Get property ID
-                                const propertyId = propertyData?.id || selectedPropertyId;
-                                if (!propertyId) {
-                                  console.error('No property ID available for deletion');
-                                  alert('Error: Unable to delete image. Property ID not found.');
-                                  return;
-                                }
-                                
-                                // Get the image URL to delete
-                                const imageUrl = media.originalUrl || media.url;
-                                if (!imageUrl) {
-                                  console.error('No image URL found');
-                                  alert('Error: Unable to delete image. Image URL not found.');
-                                  return;
-                                }
-                                
-                                // Call backend API to delete from property
-                                await apiClient.deletePropertyMedia(propertyId, imageUrl);
-                                
-                                // Remove from uploaded available images if it's there
-                                setUploadedAvailableImages(prev => prev.filter(img => img.id !== media.id));
-                                
-                                // IMPORTANT: Also remove from listing images if it somehow got there
-                                // This ensures the image is completely removed and doesn't appear in listing
-                                const normalizedDeletedUrl = imageUrl.split('?')[0];
-                                const updatedMediaFiles = mediaFiles.filter(m => {
-                                  const mUrl = (m.originalUrl || m.url || '').split('?')[0];
-                                  return mUrl !== normalizedDeletedUrl;
-                                });
-                                
-                                // If we removed an image from listing, ensure first image is featured
-                                if (updatedMediaFiles.length > 0 && !updatedMediaFiles.some(m => m.is_primary)) {
-                                  updatedMediaFiles[0].is_primary = true;
-                                }
-                                setMediaFiles(updatedMediaFiles);
-                                
-                                // Update kept_property_images in listing metadata to remove deleted image
-                                if (editMode && existingListing?.id) {
-                                  try {
-                                    await updateKeptPropertyImages(updatedMediaFiles);
-                                    console.log('✅ Updated kept_property_images after deletion');
-                                  } catch (err) {
-                                    console.error('Failed to update kept_property_images:', err);
-                                  }
-                                }
-                                
-                                // Refresh property data to reflect the deletion
-                                if (propertyData?.id) {
-                                  try {
-                                    const refreshedProperty = await apiClient.getProperty(propertyData.id);
-                                    setPropertyData(refreshedProperty);
-                                  } catch (err) {
-                                    console.error('Failed to refresh property data:', err);
-                                  }
-                                }
-                              } catch (error: any) {
-                                console.error('Failed to delete image:', error);
-                                alert(`Failed to delete image: ${error.response?.data?.error || error.message || 'Unknown error'}`);
-                              }
-                            }}
-                            disabled={stagingImageId === media.id}
-                            style={{
-                              width: '32px',
-                              height: '32px',
-                              minWidth: '32px',
-                              minHeight: '32px',
-                              borderRadius: '8px',
-                              border: '1px solid rgba(0,0,0,0.55)',
-                              background: 'rgba(255,255,255,0.85)',
-                              color: '#ef4444',
-                              cursor: stagingImageId === media.id ? 'not-allowed' : 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              transition: 'all 0.2s ease',
-                              backdropFilter: 'blur(4px)',
-                              WebkitBackdropFilter: 'blur(4px)',
-                              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.12)',
-                              padding: 0,
-                              flexShrink: 0,
-                              opacity: stagingImageId === media.id ? 0.5 : 1
-                            }}
-                            onMouseEnter={(e) => {
-                              if (stagingImageId !== media.id) {
-                                e.currentTarget.style.background = 'rgba(239,68,68,0.12)';
-                                e.currentTarget.style.transform = 'scale(1.05)';
-                              }
-                            }}
-                            onMouseLeave={(e) => {
-                              if (stagingImageId !== media.id) {
-                                e.currentTarget.style.background = 'rgba(255,255,255,0.85)';
-                                e.currentTarget.style.transform = 'scale(1)';
-                              }
-                            }}
-                            title="Delete image"
-                          >
-                            <Trash2 size={16} strokeWidth={2.5} style={{ display: 'block', flexShrink: 0 }} />
-                          </button>
-
-                          {/* Toggle view button (if staged) */}
-                          {media.staged_url && (
-                            <button
-                              onClick={() => {
-                                if (stagingImageId === media.id) return;
-                                // Toggle: if currently showing staged (true or undefined), show original (false)
-                                // If currently showing original (false), show staged (true)
-                                const currentPreference = viewPreferences[media.id!];
-                                const newShowStaged = currentPreference === false ? true : false;
-                                setViewPreferences(prev => {
-                                  const updated = {
-                                    ...prev,
-                                    [media.id!]: newShowStaged
-                                  };
-                                  if (editMode && existingListing?.id) {
-                                    try {
-                                      localStorage.setItem(`listing-${existingListing.id}-view-preferences`, JSON.stringify(updated));
-                                    } catch (e) {
-                                      console.error('Failed to save view preferences:', e);
-                                    }
-                                  }
-                                  return updated;
-                                });
-                              }}
-                              disabled={stagingImageId === media.id}
-                              style={{
-                                width: '32px',
-                                height: '32px',
-                                minWidth: '32px',
-                                minHeight: '32px',
-                                borderRadius: '8px',
-                                border: '1px solid rgba(0,0,0,0.55)',
-                                background: 'rgba(255,255,255,0.85)',
-                                color: '#111827',
-                                cursor: stagingImageId === media.id ? 'not-allowed' : 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                transition: 'all 0.2s ease',
-                                backdropFilter: 'blur(4px)',
-                                WebkitBackdropFilter: 'blur(4px)',
-                                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.12)',
-                                padding: 0,
-                                opacity: stagingImageId === media.id ? 0.5 : 1,
-                                flexShrink: 0
-                              }}
-                              onMouseEnter={(e) => {
-                                if (stagingImageId !== media.id) {
-                                  e.currentTarget.style.background = 'rgba(17,24,39,0.1)';
-                                  e.currentTarget.style.transform = 'scale(1.05)';
-                                }
-                              }}
-                              onMouseLeave={(e) => {
-                                if (stagingImageId !== media.id) {
-                                  e.currentTarget.style.background = 'rgba(255,255,255,0.85)';
-                                  e.currentTarget.style.transform = 'scale(1)';
-                                }
-                              }}
-                              title={viewPreferences[media.id!] ? "View original photo" : "View staged photo"}
-                            >
-                              <RefreshCw size={16} strokeWidth={2.5} style={{ display: 'block', flexShrink: 0 }} />
-                            </button>
-                          )}
-
-                          {/* AI Stage button */}
-                          <button
-                            onClick={async () => {
-                              await handleStageImage(media.id!, index);
-                            }}
-                            disabled={stagingImageId === media.id}
-                            style={{
-                              width: '32px',
-                              height: '32px',
-                              minWidth: '32px',
-                              minHeight: '32px',
-                              borderRadius: '8px',
-                              border: '1px solid rgba(0,0,0,0.65)',
-                              background: 'rgba(17, 24, 39, 0.9)',
-                              color: '#ffffff',
-                              cursor: stagingImageId === media.id ? 'not-allowed' : 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              transition: 'all 0.2s ease',
-                              backdropFilter: 'blur(4px)',
-                              WebkitBackdropFilter: 'blur(4px)',
-                              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.12)',
-                              padding: 0,
-                              opacity: stagingImageId === media.id ? 0.6 : 1,
-                              flexShrink: 0
-                            }}
-                            onMouseEnter={(e) => {
-                              if (stagingImageId !== media.id) {
-                                e.currentTarget.style.background = 'rgba(17, 24, 39, 0.4)';
-                                e.currentTarget.style.transform = 'scale(1.05)';
-                              }
-                            }}
-                            onMouseLeave={(e) => {
-                              if (stagingImageId !== media.id) {
-                                e.currentTarget.style.background = 'rgba(17, 24, 39, 0.9)';
-                                e.currentTarget.style.transform = 'scale(1)';
-                              }
-                            }}
-                            title={media.staged_url ? "Regenerate with AI" : "Stage with AI"}
-                          >
-                            {stagingImageId === media.id ? (
-                              <RefreshCw size={16} strokeWidth={2.5} style={{ animation: 'spin 1s linear infinite', display: 'block', flexShrink: 0 }} />
-                            ) : (
-                              <Wand2 size={16} strokeWidth={2.5} style={{ display: 'block', flexShrink: 0 }} />
-                            )}
-                          </button>
-                        </div>
-                      </div>
-                  </div>
-                  <div className={styles.mediaControls} style={{ display: 'flex', flexDirection: 'column', gap: '12px', position: 'relative' }}>
-                      <input 
-                        type="text" 
-                        placeholder="Add caption..." 
-                        value={media.caption || ''} 
-                        onChange={(e) => {
-                          const updated = { ...media, caption: e.target.value };
-                          setUploadedAvailableImages(prev => prev.map(img => img.id === media.id ? updated : img));
-                        }}
+                    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                      <StagedImage
+                        originalUrl={getMediaUrl(media.originalUrl || media.url)}
+                        stagedUrl={media.staged_url ? getMediaUrl(media.staged_url) : null}
+                        mediaId={media.id!}
+                        alt={`Property image ${index + 1}`}
+                        showStagedByDefault={viewPreferences[media.id!] === true}
+                        key={`staged-${media.id}-${viewPreferences[media.id!]}`}
+                        onToggleView={async () => {}} // No toggle in edit modal
+                        onStage={async () => {}} // No staging in edit modal
                       />
-                    <div className={styles.mediaActions} style={{ display: 'flex', gap: '8px', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <button 
-                          type="button" 
-                          onClick={() => {
-                            if (media.isUploaded) {
-                              handleAddUploadedImageToListing(media);
-                            } else {
-                              handleRestorePropertyImage(media);
-                            }
-                          }}
+                      <style jsx global>{`
+                        .staged-image-wrapper .staged-actions {
+                          display: none !important;
+                        }
+                        .staged-image-wrapper .staged-badge {
+                          display: none !important;
+                        }
+                      `}</style>
+
+                      {/* Action buttons - top right: Download and Hide only */}
+                      <div style={{
+                        position: 'absolute',
+                        top: '12px',
+                        right: '12px',
+                        display: 'flex',
+                        gap: '6px',
+                        zIndex: 10,
+                        alignItems: 'center'
+                      }}>
+                        {/* Download button */}
+                        <button
+                          onClick={() => handleDownloadImage(media, index)}
                           style={{
-                            flex: 1,
+                            width: '32px',
                             height: '32px',
-                            padding: '0 16px',
+                            minWidth: '32px',
+                            minHeight: '32px',
                             borderRadius: '8px',
-                            border: 'none',
-                            background: '#22c55e',
-                            color: 'white',
+                            border: '1px solid rgba(0,0,0,0.55)',
+                            background: 'rgba(255,255,255,0.85)',
+                            color: '#2563eb',
                             cursor: 'pointer',
-                            fontWeight: '500',
-                            fontSize: '12px',
-                            transition: 'all 0.2s ease',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.background = '#16a34a';
-                            e.currentTarget.style.transform = 'scale(1.02)';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.background = '#22c55e';
-                            e.currentTarget.style.transform = 'scale(1)';
-                          }}
-                        >
-                          Add to Listing
-                        </button>
-                        {/* AI Staged indicator - only show if viewing staged version */}
-                        {media.staged_url && viewPreferences[media.id!] && (
-                          <div style={{
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
+                            transition: 'all 0.2s ease',
+                            backdropFilter: 'blur(4px)',
+                            WebkitBackdropFilter: 'blur(4px)',
+                            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.12)',
+                            padding: 0,
+                            flexShrink: 0
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = 'rgba(37, 99, 235, 0.12)';
+                            e.currentTarget.style.transform = 'scale(1.05)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'rgba(255,255,255,0.85)';
+                            e.currentTarget.style.transform = 'scale(1)';
+                          }}
+                          title="Download image"
+                        >
+                          <Download size={16} strokeWidth={2.5} style={{ display: 'block', flexShrink: 0 }} />
+                        </button>
+
+                        {/* Hide/Show button */}
+                        <button
+                          onClick={() => {
+                            const imgUrl = normalizeUrl(media.url);
+                            const originalUrl = normalizeUrl(media.originalUrl || media.url);
+                            const newHiddenUrls = new Set(hiddenImageUrls);
+                            
+                            if (isHidden) {
+                              // Show image - remove from hidden set
+                              newHiddenUrls.delete(imgUrl);
+                              newHiddenUrls.delete(originalUrl);
+                            } else {
+                              // Hide image - add to hidden set
+                              newHiddenUrls.add(imgUrl);
+                              newHiddenUrls.add(originalUrl);
+                              
+                              // If hiding featured image, make first visible image featured
+                              if (media.is_primary) {
+                                const visibleImages = mediaFiles.filter((m, idx) => {
+                                  const mUrl = normalizeUrl(m.url);
+                                  const mOriginalUrl = normalizeUrl(m.originalUrl || m.url);
+                                  return idx !== index && !newHiddenUrls.has(mUrl) && !newHiddenUrls.has(mOriginalUrl);
+                                });
+                                if (visibleImages.length > 0) {
+                                  const firstVisibleIndex = mediaFiles.findIndex(m => m.id === visibleImages[0].id);
+                                  if (firstVisibleIndex >= 0) {
+                                    setMediaFiles(prev => prev.map((m, idx) => ({
+                                      ...m,
+                                      is_primary: idx === firstVisibleIndex
+                                    })));
+                                  }
+                                }
+                              }
+                            }
+                            
+                            setHiddenImageUrls(newHiddenUrls);
+                          }}
+                          style={{
                             width: '32px',
                             height: '32px',
-                            backgroundColor: 'rgba(17, 24, 39, 0.1)',
-                            borderRadius: '6px',
-                            cursor: 'default'
+                            minWidth: '32px',
+                            minHeight: '32px',
+                            borderRadius: '8px',
+                            border: '1px solid rgba(0,0,0,0.55)',
+                            background: isHidden ? 'rgba(107, 114, 128, 0.85)' : 'rgba(255,255,255,0.85)',
+                            color: isHidden ? '#ffffff' : '#6b7280',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'all 0.2s ease',
+                            backdropFilter: 'blur(4px)',
+                            WebkitBackdropFilter: 'blur(4px)',
+                            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.12)',
+                            padding: 0,
+                            flexShrink: 0
                           }}
-                          title="AI Staged"
-                          >
-                            <Wand2 size={16} strokeWidth={2.5} style={{ color: '#111827' }} />
-                          </div>
-                        )}
-                        {/* Drag handle */}
-                        <div style={{
-                          backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                          color: 'white',
-                          padding: '6px 8px',
-                          borderRadius: '6px',
-                          cursor: 'grab',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          width: '32px',
-                          height: '32px',
-                          flexShrink: 0,
-                          transition: 'all 0.2s ease'
-                        }}
-                        onMouseDown={(e) => {
-                          e.currentTarget.style.cursor = 'grabbing';
-                          e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
-                        }}
-                        onMouseUp={(e) => {
-                          e.currentTarget.style.cursor = 'grab';
-                          e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.6)';
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.6)';
-                        }}
-                        title="Drag to reorder"
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = isHidden ? 'rgba(107, 114, 128, 1)' : 'rgba(107, 114, 128, 0.12)';
+                            e.currentTarget.style.transform = 'scale(1.05)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = isHidden ? 'rgba(107, 114, 128, 0.85)' : 'rgba(255,255,255,0.85)';
+                            e.currentTarget.style.transform = 'scale(1)';
+                          }}
+                          title={isHidden ? "Show in listing" : "Hide from listing"}
                         >
-                          <GripVertical size={16} strokeWidth={2.5} />
-                        </div>
-                    </div>
-                  </div>
-                </div>
-                );
-              })}
-            </div>
-          </div>
-
-
-        {/* Listing Images Section */}
-        {mediaFiles.length > 0 && (
-          <div className={styles.mediaPreview} style={{ marginTop: '2rem' }}>
-            <div style={{ marginBottom: '1.5rem' }}>
-              <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '16px', fontWeight: '600', color: '#111827' }}>
-                Listing Images ({mediaFiles.length})
-              </h4>
-              <p style={{ margin: '0', fontSize: '0.875rem', color: '#6b7280' }}>
-                Drag and reorder images to change their order. This order will be reflected on the public listing page.
-              </p>
-            </div>
-            <div className={styles.mediaGrid}>
-              {mediaFiles.map((media, index) => {
-                const displayUrl = media.staged_url || media.url;
-                const isStaged = !!media.staged_url;
-                
-                return (
-                  <div 
-                    key={media.id} 
-                    className={styles.mediaItem}
-                    draggable
-                    onDragStart={() => handleDragStart(index)}
-                    onDragOver={(e) => handleDragOver(e, index)}
-                    onDragEnd={handleDragEnd}
-                    style={{ 
-                      opacity: draggedIndex === index ? 0.5 : 1,
-                      cursor: 'move'
-                    }}
-                  >
-                  <div className={styles.mediaImage}>
-                      <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-                        {/* Use StagedImage component - hide its built-in buttons */}
-                        <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-                          <StagedImage
-                            originalUrl={getMediaUrl(media.originalUrl || media.url)}
-                            stagedUrl={media.staged_url ? getMediaUrl(media.staged_url) : null}
-                            mediaId={media.id!}
-                            alt={`Property image ${index + 1}`}
-                            showStagedByDefault={viewPreferences[media.id!] === true}
-                            key={`staged-${media.id}-${viewPreferences[media.id!]}`}
-                            onToggleView={(mediaId, showStaged) => {
-                              setViewPreferences(prev => {
-                                const updated = {
-                                  ...prev,
-                                  [mediaId]: showStaged
-                                };
-                                // Persist to localStorage
-                                if (editMode && existingListing?.id) {
-                                  try {
-                                    localStorage.setItem(`listing-${existingListing.id}-view-preferences`, JSON.stringify(updated));
-                                  } catch (e) {
-                                    console.error('Failed to save view preferences:', e);
-                                  }
-                                }
-                                return updated;
-                              });
-                            }}
-                            onStage={async () => {
-                              await handleStageImage(media.id!, index);
-                            }}
-                          />
-                          {/* Hide StagedImage's built-in buttons and badges using CSS */}
-                          {/* Keep the staging overlay animation visible */}
-                          <style jsx global>{`
-                            .staged-image-wrapper .staged-actions {
-                              display: none !important;
-                            }
-                            .staged-image-wrapper .staged-badge {
-                              display: none !important;
-                            }
-                            /* Ensure staging overlay is visible */
-                            .staged-image-wrapper .staging-overlay {
-                              display: flex !important;
-                            }
-                          `}</style>
-                  </div>
-                        
-                        
-                        {/* All action buttons in a row at top right - aligned with badges */}
-                        <div style={{
-                          position: 'absolute',
-                          top: '12px',
-                          right: '12px',
-                          display: 'flex',
-                          gap: '6px',
-                          zIndex: 10,
-                          alignItems: 'center'
-                        }}>
-                          {/* Download button */}
-                          <button
-                            onClick={() => handleDownloadImage(media, index)}
-                            disabled={stagingImageId === media.id}
-                            style={{
-                              width: '32px',
-                              height: '32px',
-                              minWidth: '32px',
-                              minHeight: '32px',
-                              borderRadius: '8px',
-                              border: '1px solid rgba(0,0,0,0.55)',
-                              background: 'rgba(255,255,255,0.85)',
-                              color: '#2563eb',
-                              cursor: stagingImageId === media.id ? 'not-allowed' : 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              transition: 'all 0.2s ease',
-                              backdropFilter: 'blur(4px)',
-                              WebkitBackdropFilter: 'blur(4px)',
-                              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.12)',
-                              padding: 0,
-                              opacity: stagingImageId === media.id ? 0.5 : 1,
-                              flexShrink: 0
-                            }}
-                            onMouseEnter={(e) => {
-                              if (stagingImageId !== media.id) {
-                                e.currentTarget.style.background = 'rgba(37, 99, 235, 0.12)';
-                                e.currentTarget.style.transform = 'scale(1.05)';
-                              }
-                            }}
-                            onMouseLeave={(e) => {
-                              if (stagingImageId !== media.id) {
-                                e.currentTarget.style.background = 'rgba(255,255,255,0.85)';
-                                e.currentTarget.style.transform = 'scale(1)';
-                              }
-                            }}
-                            title="Download image"
-                          >
-                            <Download size={16} strokeWidth={2.5} style={{ display: 'block', flexShrink: 0 }} />
-                          </button>
-                          
-                          {/* Remove from Listing button - X icon */}
-                          <button
-                            onClick={async () => {
-                              if (stagingImageId === media.id) return;
-                              
-                              // Check if this is the featured image
-                              const wasFeatured = media.is_primary;
-                              
-                              // Remove from listing - don't add to uploadedAvailableImages
-                              // The image will automatically appear in availablePropertyImages
-                              // since getAvailablePropertyImages filters out images in mediaFiles
-                              const updatedMediaFiles = mediaFiles.filter(m => m.id !== media.id);
-                              
-                              // If we removed the featured image and there are remaining images, make first one featured
-                              if (wasFeatured && updatedMediaFiles.length > 0) {
-                                updatedMediaFiles[0].is_primary = true;
-                                
-                                // Update backend immediately if in edit mode
-                                if (editMode && existingListing?.id) {
-                                  try {
-                                    // Update kept_property_images with new primary
-                                    await updateKeptPropertyImages(updatedMediaFiles);
-                                    
-                                    // If using ListingMedia, update primary status
-                                    const firstImage = updatedMediaFiles[0];
-                                    const match = (existingListing.media || []).find((m: any) =>
-                                      m.id?.toString() === firstImage.id || (m.file_url === firstImage.url)
-                                    );
-                                    if (match?.id) {
-                                      await apiClient.updateListingMedia(match.id, { is_primary: true });
-                                    }
-                                  } catch (err) {
-                                    console.error('Failed to update primary image:', err);
-                                  }
-                                }
-                              }
-                              
-                              setMediaFiles(updatedMediaFiles);
-                            }}
-                            disabled={stagingImageId === media.id}
-                            style={{
-                              width: '32px',
-                              height: '32px',
-                              minWidth: '32px',
-                              minHeight: '32px',
-                              borderRadius: '8px',
-                              border: '1px solid rgba(0,0,0,0.55)',
-                              background: 'rgba(255,255,255,0.85)',
-                              color: '#ef4444',
-                              cursor: stagingImageId === media.id ? 'not-allowed' : 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              transition: 'all 0.2s ease',
-                              backdropFilter: 'blur(4px)',
-                              WebkitBackdropFilter: 'blur(4px)',
-                              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.12)',
-                              padding: 0,
-                              flexShrink: 0,
-                              opacity: stagingImageId === media.id ? 0.5 : 1,
-                              fontSize: '18px',
-                              fontWeight: 'bold',
-                              lineHeight: 1
-                            }}
-                            onMouseEnter={(e) => {
-                              if (stagingImageId !== media.id) {
-                                e.currentTarget.style.background = 'rgba(239,68,68,0.12)';
-                                e.currentTarget.style.transform = 'scale(1.05)';
-                              }
-                            }}
-                            onMouseLeave={(e) => {
-                              if (stagingImageId !== media.id) {
-                                e.currentTarget.style.background = 'rgba(255,255,255,0.85)';
-                                e.currentTarget.style.transform = 'scale(1)';
-                              }
-                            }}
-                            title="Remove from public listing images"
-                          >
-                            ✕
-                          </button>
-                          
-                          {/* Toggle view button (if staged) */}
-                          {media.staged_url && (
-                            <button
-                              onClick={() => {
-                                if (stagingImageId === media.id) return;
-                                // Toggle: if currently showing staged (true or undefined), show original (false)
-                                // If currently showing original (false), show staged (true)
-                                const currentPreference = viewPreferences[media.id!];
-                                const newShowStaged = currentPreference === false ? true : false;
-                                setViewPreferences(prev => {
-                                  const updated = {
-                                    ...prev,
-                                    [media.id!]: newShowStaged
-                                  };
-                                  // Persist to localStorage
-                                  if (editMode && existingListing?.id) {
-                                    try {
-                                      localStorage.setItem(`listing-${existingListing.id}-view-preferences`, JSON.stringify(updated));
-                                    } catch (e) {
-                                      console.error('Failed to save view preferences:', e);
-                                    }
-                                  }
-                                  return updated;
-                                });
-                              }}
-                              disabled={stagingImageId === media.id}
-                              style={{
-                                width: '32px',
-                                height: '32px',
-                                minWidth: '32px',
-                                minHeight: '32px',
-                                borderRadius: '8px',
-                                border: '1px solid rgba(0,0,0,0.55)',
-                                background: 'rgba(255,255,255,0.85)',
-                                color: '#111827',
-                                cursor: stagingImageId === media.id ? 'not-allowed' : 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                transition: 'all 0.2s ease',
-                                backdropFilter: 'blur(4px)',
-                                WebkitBackdropFilter: 'blur(4px)',
-                                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.12)',
-                                padding: 0,
-                                opacity: stagingImageId === media.id ? 0.5 : 1,
-                                flexShrink: 0
-                              }}
-                              onMouseEnter={(e) => {
-                                if (stagingImageId !== media.id) {
-                                  e.currentTarget.style.background = 'rgba(17,24,39,0.1)';
-                                  e.currentTarget.style.transform = 'scale(1.05)';
-                                }
-                              }}
-                              onMouseLeave={(e) => {
-                                if (stagingImageId !== media.id) {
-                                  e.currentTarget.style.background = 'rgba(255,255,255,0.85)';
-                                  e.currentTarget.style.transform = 'scale(1)';
-                                }
-                              }}
-                              title={viewPreferences[media.id!] ? "View original photo" : "View staged photo"}
-                            >
-                              <RefreshCw size={16} strokeWidth={2.5} style={{ display: 'block', flexShrink: 0 }} />
-                            </button>
+                          {isHidden ? (
+                            <EyeOff size={16} strokeWidth={2.5} style={{ display: 'block', flexShrink: 0 }} />
+                          ) : (
+                            <Eye size={16} strokeWidth={2.5} style={{ display: 'block', flexShrink: 0 }} />
                           )}
-                          
-                          {/* AI Stage button */}
-                          <button
-                            onClick={async () => {
-                              await handleStageImage(media.id!, index);
-                            }}
-                            disabled={stagingImageId === media.id}
-                            style={{
-                              width: '32px',
-                              height: '32px',
-                              minWidth: '32px',
-                              minHeight: '32px',
-                              borderRadius: '8px',
-                              border: '1px solid rgba(0,0,0,0.65)',
-                              background: 'rgba(17, 24, 39, 0.9)',
-                              color: '#ffffff',
-                              cursor: stagingImageId === media.id ? 'not-allowed' : 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              transition: 'all 0.2s ease',
-                              backdropFilter: 'blur(4px)',
-                              WebkitBackdropFilter: 'blur(4px)',
-                              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.12)',
-                              padding: 0,
-                              opacity: stagingImageId === media.id ? 0.6 : 1,
-                              flexShrink: 0
-                            }}
-                            onMouseEnter={(e) => {
-                              if (stagingImageId !== media.id) {
-                                e.currentTarget.style.background = 'rgba(17, 24, 39, 0.4)';
-                                e.currentTarget.style.transform = 'scale(1.05)';
-                              }
-                            }}
-                            onMouseLeave={(e) => {
-                              if (stagingImageId !== media.id) {
-                                e.currentTarget.style.background = 'rgba(17, 24, 39, 0.9)';
-                                e.currentTarget.style.transform = 'scale(1)';
-                              }
-                            }}
-                            title={media.staged_url ? "Regenerate with AI" : "Stage with AI"}
-                          >
-                            {stagingImageId === media.id ? (
-                              <RefreshCw size={16} strokeWidth={2.5} style={{ animation: 'spin 1s linear infinite', display: 'block', flexShrink: 0 }} />
-                            ) : (
-                              <Wand2 size={16} strokeWidth={2.5} style={{ display: 'block', flexShrink: 0 }} />
-                            )}
-                          </button>
+                        </button>
+                      </div>
                     </div>
-                        
                   </div>
-                </div>
+                  
+                  {/* Controls section */}
                   <div className={styles.mediaControls} style={{ display: 'flex', flexDirection: 'column', gap: '12px', position: 'relative' }}>
-                      <input 
-                        type="text" 
-                        placeholder="Add caption..." 
-                        value={media.caption} 
-                        onChange={(e) => handleMediaUpdate(media.id!, { caption: e.target.value })} 
-                      />
                     <div className={styles.mediaActions} style={{ display: 'flex', gap: '8px', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flex: 1 }}>
-                          <button 
-                            type="button" 
-                            onClick={() => setPrimaryImage(media.id!)} 
-                            className={`${styles.btn} ${styles.btnSm} ${media.is_primary ? styles.btnPrimary : styles.btnSecondary}`}
-                          >
-                            {media.is_primary ? 'Featured' : 'Set as Featured'}
-                          </button>
-                          {/* AI Staged indicator - just the icon with tooltip */}
-                          {media.staged_url && (
-                            <div style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              width: '32px',
-                              height: '32px',
-                              backgroundColor: 'rgba(17, 24, 39, 0.1)',
-                              borderRadius: '6px',
-                              cursor: 'default',
-                              transition: 'all 0.2s ease'
-                            }}
-                            title="AI Staged"
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.backgroundColor = 'rgba(17, 24, 39, 0.2)';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.backgroundColor = 'rgba(17, 24, 39, 0.1)';
-                            }}
-                            >
-                              <Wand2 size={16} strokeWidth={2.5} style={{ color: '#111827' }} />
-                            </div>
-                          )}
-                        </div>
-                        {/* Drag handle - right aligned with similar styling */}
-                        <div style={{
-                          backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                          color: 'white',
-                          padding: '6px 8px',
-                          borderRadius: '6px',
-                          cursor: 'grab',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          width: '32px',
-                          height: '32px',
-                          flexShrink: 0,
-                          transition: 'all 0.2s ease'
-                        }}
-                        onMouseDown={(e) => {
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flex: 1 }}>
+                        {/* Featured button */}
+                        <button 
+                          type="button" 
+                          onClick={() => setPrimaryImage(media.id!)} 
+                          className={`${styles.btn} ${styles.btnSm} ${media.is_primary ? styles.btnPrimary : styles.btnSecondary}`}
+                          disabled={isHidden}
+                          style={{ opacity: isHidden ? 0.5 : 1 }}
+                        >
+                          {media.is_primary ? 'Featured' : 'Set as Featured'}
+                        </button>
+                      </div>
+                      {/* Drag handle */}
+                      <div style={{
+                        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                        color: 'white',
+                        padding: '6px 8px',
+                        borderRadius: '6px',
+                        cursor: isHidden ? 'not-allowed' : 'grab',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: '32px',
+                        height: '32px',
+                        flexShrink: 0,
+                        transition: 'all 0.2s ease',
+                        opacity: isHidden ? 0.5 : 1
+                      }}
+                      onMouseDown={(e) => {
+                        if (!isHidden) {
                           e.currentTarget.style.cursor = 'grabbing';
                           e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
-                        }}
-                        onMouseUp={(e) => {
+                        }
+                      }}
+                      onMouseUp={(e) => {
+                        if (!isHidden) {
                           e.currentTarget.style.cursor = 'grab';
                           e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.6)';
-                        }}
-                        onMouseEnter={(e) => {
+                        }
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isHidden) {
                           e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
-                        }}
-                        onMouseLeave={(e) => {
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isHidden) {
                           e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.6)';
-                        }}
-                        title="Drag to reorder"
-                        >
-                          <GripVertical size={16} strokeWidth={2.5} />
-                        </div>
+                        }
+                      }}
+                      title={isHidden ? "Cannot drag hidden images" : "Drag to reorder"}
+                      >
+                        <GripVertical size={16} strokeWidth={2.5} />
+                      </div>
                     </div>
                   </div>
                 </div>
-                );
-              })}
-              </div>
-            </div>
-          )}
+              );
+            })}
+          </div>
         </div>
-    </>
-  );
+        {/* Close formSection wrapper */}
+        </div>
+      </React.Fragment>
+    );
   };
 
   const renderDetailsTab = () => (

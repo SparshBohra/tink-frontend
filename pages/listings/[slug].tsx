@@ -39,6 +39,14 @@ export default function PublicListingPage({ listing, error }: PublicListingPageP
   const [showApplicationForm, setShowApplicationForm] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
+  // When listing/media changes, ensure the featured image is the main image.
+  // We treat the image with is_primary === true as the featured image.
+  useEffect(() => {
+    if (!listing || !listing.media || listing.media.length === 0) return;
+    const featuredIndex = listing.media.findIndex(m => m.is_primary);
+    setCurrentImageIndex(featuredIndex >= 0 ? featuredIndex : 0);
+  }, [listing]);
+
   // Debug modal state
   React.useEffect(() => {
     console.log('Modal state changed:', showApplicationForm ? 'OPEN' : 'CLOSED');
