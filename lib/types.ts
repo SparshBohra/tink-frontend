@@ -35,6 +35,8 @@ export interface Tenant {
   emergency_contact_name?: string;
   emergency_contact_phone?: string;
   current_address?: string;
+  current_property_name?: string;
+  current_room_name?: string;
   created_at: string;
   updated_at: string;
 }

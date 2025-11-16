@@ -5,6 +5,7 @@ import { useRouter } from 'next/router';
 import DashboardLayout from '../components/DashboardLayout';
 import { withAuth } from '../lib/auth-context';
 import { useAuth } from '../lib/auth-context';
+import { useTheme } from '../lib/theme-context';
 import ApplicationDetailModal from '../components/ApplicationDetailModal';
 import { Application, Property, Room, DashboardStats, Manager, PaymentSummaryResponse, PaymentHistoryResponse, Vendor } from '../lib/types';
 import { apiClient, expenseApi } from '../lib/api';
@@ -43,7 +44,30 @@ const useCounterAnimation = (targetValue: number, _duration = 0, isRevenue = fal
 
 function LandlordDashboard() {
   const { user, isLandlord, isManager, isAdmin } = useAuth();
+  const { isDarkMode } = useTheme();
   const router = useRouter();
+  
+  // Theme-aware color helpers
+  const getCardBg = () => isDarkMode ? '#18181b' : 'white';
+  const getCardBorder = () => isDarkMode ? '#3f3f46' : '#e5e7eb';
+  const getTextPrimary = () => isDarkMode ? '#fafafa' : '#111827';
+  const getTextSecondary = () => isDarkMode ? '#a1a1aa' : '#6b7280';
+  const getTextMuted = () => isDarkMode ? '#a1a1aa' : '#94a3b8';
+  const getTableHeaderBg = () => isDarkMode ? '#27272a' : '#f9fafb';
+  const getTableHeaderText = () => isDarkMode ? '#a1a1aa' : '#374151';
+  const getTableBorder = () => isDarkMode ? '#3f3f46' : '#e5e7eb';
+  const getTableText = () => isDarkMode ? '#e4e4e7' : '#374151';
+  const getIconBg = (color: string) => {
+    if (!isDarkMode) return color;
+    const bgMap: { [key: string]: string } = {
+      '#dbeafe': 'rgba(59, 130, 246, 0.2)',
+      '#d1fae5': 'rgba(34, 197, 94, 0.2)',
+      '#e9d5ff': 'rgba(139, 92, 246, 0.2)',
+      '#fed7aa': 'rgba(249, 115, 22, 0.2)'
+    };
+    return bgMap[color] || color;
+  };
+  
   const [loading, setLoading] = useState(false);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
   const [statsLoading, setStatsLoading] = useState(true);
@@ -560,12 +584,12 @@ function LandlordDashboard() {
       <div className="dashboard-container">
         {/* Custom Header */}
         <div style={{
-          backgroundColor: 'white',
+          backgroundColor: getCardBg(),
           borderRadius: '12px',
           padding: '2rem',
           marginBottom: '1.5rem',
-          border: '1px solid #e5e7eb',
-          boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
+          border: `1px solid ${getCardBorder()}`,
+          boxShadow: isDarkMode ? '0 1px 3px 0 rgba(0, 0, 0, 0.3)' : '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
         }}>
           <div style={{
             display: 'flex',
@@ -580,19 +604,19 @@ function LandlordDashboard() {
               <div style={{
                 width: '3rem',
                 height: '3rem',
-                backgroundColor: '#dbeafe',
+                backgroundColor: getIconBg('#dbeafe'),
                 borderRadius: '12px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
               }}>
-                <Home style={{ width: '1.5rem', height: '1.5rem', color: '#2563eb' }} />
+                <Home style={{ width: '1.5rem', height: '1.5rem', color: isDarkMode ? '#60a5fa' : '#2563eb' }} />
               </div>
               <div>
                 <h1 style={{
                   fontSize: '1.875rem',
                   fontWeight: '700',
-                  color: '#111827',
+                  color: getTextPrimary(),
                   margin: '0 0 0.25rem 0'
                 }}>
                   Landlord Dashboard
@@ -602,7 +626,7 @@ function LandlordDashboard() {
                    alignItems: 'center',
                    gap: '0.5rem',
                    fontSize: '1rem',
-                   color: '#6b7280',
+                   color: getTextSecondary(),
                    margin: 0
                  }}>
                    <span className="welcome-message">{welcomeMessage}</span>
@@ -610,11 +634,11 @@ function LandlordDashboard() {
               </div>
             </div>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center', minWidth: 180 }}>
-                <span style={{ display: 'flex', alignItems: 'center', fontSize: '13px', color: '#94a3b8', fontWeight: 500, letterSpacing: 0.2, marginBottom: 2 }}>
-                <Calendar style={{ width: '1rem', height: '1rem', marginRight: '0.375rem' }} />
+                <span style={{ display: 'flex', alignItems: 'center', fontSize: '13px', color: getTextMuted(), fontWeight: 500, letterSpacing: 0.2, marginBottom: 2 }}>
+                <Calendar style={{ width: '1rem', height: '1rem', marginRight: '0.375rem', color: getTextMuted() }} />
                   {weekday}
                 </span>
-                <span style={{ fontSize: '17px', color: '#334155', fontWeight: 600, letterSpacing: 0.1, lineHeight: 1.3, textAlign: 'right', width: '100%' }}>
+                <span style={{ fontSize: '17px', color: isDarkMode ? '#e4e4e7' : '#334155', fontWeight: 600, letterSpacing: 0.1, lineHeight: 1.3, textAlign: 'right', width: '100%' }}>
                   {dateString}
                 </span>
             </div>
@@ -738,20 +762,20 @@ function LandlordDashboard() {
             }
           ].map((metric, index) => (
             <div key={index} style={{
-              backgroundColor: 'white',
+              backgroundColor: getCardBg(),
               borderRadius: '12px',
               padding: '1.5rem',
-              border: '1px solid #e5e7eb',
-              boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+              border: `1px solid ${getCardBorder()}`,
+              boxShadow: isDarkMode ? '0 1px 3px 0 rgba(0, 0, 0, 0.3)' : '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
               transition: 'all 0.2s ease'
             }}
             onMouseOver={(e) => {
               e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.1)';
+              e.currentTarget.style.boxShadow = isDarkMode ? '0 8px 25px rgba(0, 0, 0, 0.5)' : '0 8px 25px rgba(0, 0, 0, 0.1)';
             }}
             onMouseOut={(e) => {
               e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = '0 1px 3px 0 rgba(0, 0, 0, 0.1)';
+              e.currentTarget.style.boxShadow = isDarkMode ? '0 1px 3px 0 rgba(0, 0, 0, 0.3)' : '0 1px 3px 0 rgba(0, 0, 0, 0.1)';
             }}>
               <div style={{
                 display: 'flex',
@@ -762,7 +786,7 @@ function LandlordDashboard() {
                 <h3 style={{
                   fontSize: '0.875rem',
                   fontWeight: '600',
-                  color: '#6b7280',
+                  color: getTextSecondary(),
                   margin: 0,
                   textTransform: 'uppercase',
                   letterSpacing: '0.025em'
@@ -770,7 +794,7 @@ function LandlordDashboard() {
                   {metric.title}
                 </h3>
                 <div style={{
-                  backgroundColor: metric.bgColor,
+                  backgroundColor: getIconBg(metric.bgColor),
                   borderRadius: '8px',
                   padding: '0.5rem',
                   color: metric.color
@@ -781,7 +805,7 @@ function LandlordDashboard() {
               <div style={{
                 fontSize: '2rem',
                 fontWeight: '700',
-                color: '#111827',
+                color: getTextPrimary(),
                 marginBottom: '0.25rem',
                 lineHeight: 1
               }}>
@@ -802,11 +826,11 @@ function LandlordDashboard() {
         }}>
           {/* My Properties Section - Takes 3 columns */}
           <div style={{
-            backgroundColor: 'white',
+            backgroundColor: getCardBg(),
             borderRadius: '12px',
             padding: '1.5rem',
-            border: '1px solid #e5e7eb',
-            boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+            border: `1px solid ${getCardBorder()}`,
+            boxShadow: isDarkMode ? '0 1px 3px 0 rgba(0, 0, 0, 0.3)' : '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
             gridColumn: 'span 3',
             transition: 'all 0.2s ease'
           }}
@@ -828,14 +852,14 @@ function LandlordDashboard() {
                 <h2 style={{
                   fontSize: '1.25rem',
                   fontWeight: '700',
-                  color: '#111827',
+                  color: getTextPrimary(),
                   margin: '0 0 0.25rem 0'
                 }}>
                   My Properties
                 </h2>
                 <p style={{
                   fontSize: '0.875rem',
-                  color: '#6b7280',
+                  color: getTextSecondary(),
                   margin: 0
                 }}>
                   Manage and monitor your property portfolio
@@ -875,12 +899,12 @@ function LandlordDashboard() {
                 justifyContent: 'center',
                 padding: '3rem 1rem',
                 textAlign: 'center',
-                color: '#6b7280'
+                color: getTextSecondary()
               }}>
-                <h3 style={{ margin: '0 0 0.5rem 0', color: '#111827', fontWeight: 700, fontSize: '1.125rem' }}>
+                <h3 style={{ margin: '0 0 0.5rem 0', color: getTextPrimary(), fontWeight: 700, fontSize: '1.125rem' }}>
                   Add your first property
                 </h3>
-                <p style={{ margin: '0 0 1rem 0' }}>Start by creating a property to manage rooms, leases, and payments.</p>
+                <p style={{ margin: '0 0 1rem 0', color: getTextSecondary() }}>Start by creating a property to manage rooms, leases, and payments.</p>
                 <Link href="/properties/add">
                   <button
                     style={{
@@ -912,13 +936,13 @@ function LandlordDashboard() {
                   fontSize: '0.875rem'
                 }}>
                   <thead>
-                    <tr style={{ backgroundColor: '#f9fafb' }}>
-                      <th style={{ padding: '0.75rem', textAlign: 'center', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Property</th>
-                      <th style={{ padding: '0.75rem', textAlign: 'center', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Status</th>
-                      <th style={{ padding: '0.75rem', textAlign: 'center', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Occupancy</th>
-                      <th style={{ padding: '0.75rem', textAlign: 'center', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Rent</th>
-                      <th style={{ padding: '0.75rem', textAlign: 'center', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Tasks</th>
-                      <th style={{ padding: '0.75rem', textAlign: 'center', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Actions</th>
+                    <tr style={{ backgroundColor: getTableHeaderBg() }}>
+                      <th style={{ padding: '0.75rem', textAlign: 'center', fontWeight: '600', color: getTableHeaderText(), borderBottom: `1px solid ${getTableBorder()}` }}>Property</th>
+                      <th style={{ padding: '0.75rem', textAlign: 'center', fontWeight: '600', color: getTableHeaderText(), borderBottom: `1px solid ${getTableBorder()}` }}>Status</th>
+                      <th style={{ padding: '0.75rem', textAlign: 'center', fontWeight: '600', color: getTableHeaderText(), borderBottom: `1px solid ${getTableBorder()}` }}>Occupancy</th>
+                      <th style={{ padding: '0.75rem', textAlign: 'center', fontWeight: '600', color: getTableHeaderText(), borderBottom: `1px solid ${getTableBorder()}` }}>Rent</th>
+                      <th style={{ padding: '0.75rem', textAlign: 'center', fontWeight: '600', color: getTableHeaderText(), borderBottom: `1px solid ${getTableBorder()}` }}>Tasks</th>
+                      <th style={{ padding: '0.75rem', textAlign: 'center', fontWeight: '600', color: getTableHeaderText(), borderBottom: `1px solid ${getTableBorder()}` }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -927,34 +951,46 @@ function LandlordDashboard() {
                         const revenueData = getPropertyRevenue(property);
                         const status = getPropertyStatus(property);
                         const tasks = getPropertyTasks(property);
+                        const isActive = status.toLowerCase() === 'active';
                         return (
-                        <tr key={property.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                        <tr key={property.id} style={{ borderBottom: `1px solid ${getTableBorder()}` }}>
                           <td style={{ padding: '1rem 0.75rem', textAlign: 'center' }}>
-                            <div style={{ fontWeight: '600', color: '#2563eb', cursor: 'pointer' }} onClick={() => router.push(`/properties/${property.id}`)}>
+                            <div style={{ fontWeight: '600', color: isDarkMode ? '#60a5fa' : '#2563eb', cursor: 'pointer' }} onClick={() => router.push(`/properties/${property.id}`)}>
                             {property.name}
                           </div>
                         </td>
                           <td style={{ padding: '1rem 0.75rem', textAlign: 'center' }}>
                             <div style={{ display: 'flex', justifyContent: 'center' }}>
-                              <span style={{ padding: '0.25rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '600', backgroundColor: status.toLowerCase() === 'active' ? '#d1fae5' : '#fef2f2', color: status.toLowerCase() === 'active' ? '#065f46' : '#dc2626' }}>{status}</span>
+                              <span style={{ 
+                                padding: '0.25rem 0.5rem', 
+                                borderRadius: '4px', 
+                                fontSize: '0.75rem', 
+                                fontWeight: '600', 
+                                backgroundColor: isActive 
+                                  ? (isDarkMode ? 'rgba(34, 197, 94, 0.2)' : '#d1fae5')
+                                  : (isDarkMode ? 'rgba(239, 68, 68, 0.2)' : '#fef2f2'), 
+                                color: isActive 
+                                  ? (isDarkMode ? '#4ade80' : '#065f46')
+                                  : (isDarkMode ? '#f87171' : '#dc2626')
+                              }}>{status}</span>
                             </div>
                         </td>
                           <td style={{ padding: '1rem 0.75rem', textAlign: 'center' }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem' }}>
-                              <Users style={{ width: '1rem', height: '1rem', color: '#6b7280' }} />
-                              <span style={{ fontWeight: '600' }}>{occupancyData.occupancy}</span>
-                              <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>({occupancyData.occupancyPercent}%)</span>
+                              <Users style={{ width: '1rem', height: '1rem', color: getTextSecondary() }} />
+                              <span style={{ fontWeight: '600', color: getTableText() }}>{occupancyData.occupancy}</span>
+                              <span style={{ fontSize: '0.75rem', color: getTextSecondary() }}>({occupancyData.occupancyPercent}%)</span>
                           </div>
                         </td>
                           <td style={{ padding: '1rem 0.75rem', textAlign: 'center' }}>
-                            <div style={{ fontWeight: '600' }}>
+                            <div style={{ fontWeight: '600', color: getTableText() }}>
                               ${revenueData.revenue.toLocaleString()}
                           </div>
                         </td>
                           <td style={{ padding: '1rem 0.75rem', textAlign: 'center' }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem' }}>
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2"><path d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                              <span style={{ fontWeight: '600' }}>{tasks} pending</span>
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={isDarkMode ? '#a1a1aa' : '#f59e0b'} strokeWidth="2"><path d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                              <span style={{ fontWeight: '600', color: getTableText() }}>{tasks} pending</span>
                           </div>
                         </td>
                           <td style={{ padding: '1rem 0.75rem', textAlign: 'center' }}>
@@ -976,22 +1012,22 @@ function LandlordDashboard() {
 
            {/* Quick Actions Section - Takes 1 column */}
            <div style={{
-             backgroundColor: 'white',
+             backgroundColor: getCardBg(),
              borderRadius: '12px',
              padding: '1.5rem',
-             border: '1px solid #e5e7eb',
-             boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+             border: `1px solid ${getCardBorder()}`,
+             boxShadow: isDarkMode ? '0 1px 3px 0 rgba(0, 0, 0, 0.3)' : '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
              height: 'fit-content',
              gridColumn: 'span 1',
              transition: 'all 0.2s ease'
            }}
            onMouseOver={(e) => {
              e.currentTarget.style.transform = 'translateY(-2px)';
-             e.currentTarget.style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.1)';
+             e.currentTarget.style.boxShadow = isDarkMode ? '0 8px 25px rgba(0, 0, 0, 0.5)' : '0 8px 25px rgba(0, 0, 0, 0.1)';
            }}
            onMouseOut={(e) => {
              e.currentTarget.style.transform = 'translateY(0)';
-             e.currentTarget.style.boxShadow = '0 1px 3px 0 rgba(0, 0, 0, 0.1)';
+             e.currentTarget.style.boxShadow = isDarkMode ? '0 1px 3px 0 rgba(0, 0, 0, 0.3)' : '0 1px 3px 0 rgba(0, 0, 0, 0.1)';
            }}>
              <div style={{
                marginBottom: '1.5rem'
@@ -999,14 +1035,14 @@ function LandlordDashboard() {
                <h2 style={{
                  fontSize: '1.25rem',
                  fontWeight: '700',
-                 color: '#111827',
+                 color: getTextPrimary(),
                  margin: '0 0 0.25rem 0'
                }}>
                  Quick Actions
                </h2>
                <p style={{
                  fontSize: '0.875rem',
-                 color: '#6b7280',
+                 color: getTextSecondary(),
                  margin: 0
                }}>
                  Frequently used actions
@@ -1018,7 +1054,23 @@ function LandlordDashboard() {
                flexDirection: 'column',
                gap: '0.75rem'
              }}>
-              {quickActions.map((action, index) => (
+              {quickActions.map((action, index) => {
+                const getActionBg = () => {
+                  if (isDarkMode) return '#27272a';
+                  return action.color === 'blue' ? '#eff6ff' : 
+                         action.color === 'green' ? '#f0fdf4' : 
+                         action.color === 'orange' ? '#fff7ed' : '#faf5ff';
+                };
+                const getActionIconBg = () => {
+                  if (isDarkMode) {
+                    return action.color === 'blue' ? 'rgba(59, 130, 246, 0.2)' :
+                           action.color === 'green' ? 'rgba(34, 197, 94, 0.2)' :
+                           'rgba(249, 115, 22, 0.2)';
+                  }
+                  return action.color === 'blue' ? '#dbeafe' : 
+                         action.color === 'green' ? '#d1fae5' : '#fed7aa';
+                };
+                return (
                 <div 
                   key={index} 
                    style={{
@@ -1026,41 +1078,41 @@ function LandlordDashboard() {
                      alignItems: 'center',
                      gap: '0.75rem',
                      padding: '1rem',
-                     backgroundColor: action.color === 'blue' ? '#eff6ff' : 
-                                      action.color === 'green' ? '#f0fdf4' : 
-                                      action.color === 'orange' ? '#fff7ed' : '#faf5ff',
-                     border: '1px solid #e5e7eb',
+                     backgroundColor: getActionBg(),
+                     border: `1px solid ${getCardBorder()}`,
                      borderRadius: '8px',
                      cursor: 'pointer',
                      transition: 'all 0.2s ease'
                    }}
                   onClick={() => router.push(action.link)}
                    onMouseOver={(e) => {
+                     if (!isDarkMode) {
                      e.currentTarget.style.backgroundColor = action.color === 'blue' ? '#dbeafe' : 
                                                             action.color === 'green' ? '#dcfce7' : 
                                                             action.color === 'orange' ? '#fed7aa' : '#e9d5ff';
                      e.currentTarget.style.borderColor = action.color === 'blue' ? '#2563eb' : 
                                                          action.color === 'green' ? '#059669' : 
                                                          action.color === 'orange' ? '#ea580c' : '#7c3aed';
+                     } else {
+                       e.currentTarget.style.backgroundColor = '#3f3f46';
+                     }
                    }}
                    onMouseOut={(e) => {
-                     e.currentTarget.style.backgroundColor = action.color === 'blue' ? '#eff6ff' : 
-                                                            action.color === 'green' ? '#f0fdf4' : 
-                                                            action.color === 'orange' ? '#fff7ed' : '#faf5ff';
-                     e.currentTarget.style.borderColor = '#e5e7eb';
+                     e.currentTarget.style.backgroundColor = getActionBg();
+                     e.currentTarget.style.borderColor = getCardBorder();
                    }}
                  >
                    <div style={{
                      width: '2.5rem',
                      height: '2.5rem',
-                     backgroundColor: action.color === 'blue' ? '#dbeafe' : 
-                                      action.color === 'green' ? '#d1fae5' : '#fed7aa',
+                     backgroundColor: getActionIconBg(),
                      borderRadius: '8px',
                      display: 'flex',
                      alignItems: 'center',
                      justifyContent: 'center',
-                     color: action.color === 'blue' ? '#2563eb' : 
-                            action.color === 'green' ? '#059669' : '#ea580c'
+                     color: action.color === 'blue' ? (isDarkMode ? '#60a5fa' : '#2563eb') : 
+                            action.color === 'green' ? (isDarkMode ? '#4ade80' : '#059669') : 
+                            (isDarkMode ? '#fb923c' : '#ea580c')
                    }}>
                      {action.color === 'blue' ? <Home style={{ width: '1.25rem', height: '1.25rem' }} /> :
                       action.color === 'green' ? <DollarSign style={{ width: '1.25rem', height: '1.25rem' }} /> :
@@ -1070,21 +1122,21 @@ function LandlordDashboard() {
                      <h3 style={{
                        fontSize: '0.875rem',
                        fontWeight: '600',
-                       color: '#111827',
+                       color: getTextPrimary(),
                        margin: '0 0 0.125rem 0'
                      }}>
                        {action.title}
                      </h3>
                      <p style={{
                        fontSize: '0.75rem',
-                       color: '#6b7280',
+                       color: getTextSecondary(),
                        margin: 0
                      }}>
                        {action.subtitle}
                      </p>
                   </div>
                 </div>
-              ))}
+              )})}
             </div>
           </div>
         </div>
@@ -1098,21 +1150,21 @@ function LandlordDashboard() {
         }}>
           {/* Recent Applications Section - Takes 3 columns */}
           <div style={{
-            backgroundColor: 'white',
+            backgroundColor: getCardBg(),
             borderRadius: '12px',
             padding: '1.5rem',
-            border: '1px solid #e5e7eb',
-            boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+            border: `1px solid ${getCardBorder()}`,
+            boxShadow: isDarkMode ? '0 1px 3px 0 rgba(0, 0, 0, 0.3)' : '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
             gridColumn: 'span 3',
             transition: 'all 0.2s ease'
           }}
           onMouseOver={(e) => {
             e.currentTarget.style.transform = 'translateY(-2px)';
-            e.currentTarget.style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.1)';
+            e.currentTarget.style.boxShadow = isDarkMode ? '0 8px 25px rgba(0, 0, 0, 0.5)' : '0 8px 25px rgba(0, 0, 0, 0.1)';
           }}
           onMouseOut={(e) => {
             e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.boxShadow = '0 1px 3px 0 rgba(0, 0, 0, 0.1)';
+            e.currentTarget.style.boxShadow = isDarkMode ? '0 1px 3px 0 rgba(0, 0, 0, 0.3)' : '0 1px 3px 0 rgba(0, 0, 0, 0.1)';
           }}>
             <div style={{
               display: 'flex',
@@ -1124,14 +1176,14 @@ function LandlordDashboard() {
                 <h2 style={{
                   fontSize: '1.25rem',
                   fontWeight: '700',
-                  color: '#111827',
+                  color: getTextPrimary(),
                   margin: '0 0 0.25rem 0'
                 }}>
                   Recent Applications
                 </h2>
                 <p style={{
                   fontSize: '0.875rem',
-                  color: '#6b7280',
+                  color: getTextSecondary(),
                   margin: 0
                 }}>
                   Latest tenant applications requiring review
@@ -1169,7 +1221,7 @@ function LandlordDashboard() {
                 <div style={{
                   gridColumn: '1 / -1',
                   textAlign: 'center',
-                  color: '#6b7280',
+                  color: getTextSecondary(),
                   padding: '2rem 1rem'
                 }}>
                   No recent applications to display.
@@ -1177,19 +1229,19 @@ function LandlordDashboard() {
               ) : (
                 applications.slice(0, 3).map((application) => (
                   <div key={application.id} style={{
-                    backgroundColor: '#f8fafc',
-                    border: '1px solid #e5e7eb',
+                    backgroundColor: isDarkMode ? '#27272a' : '#f8fafc',
+                    border: `1px solid ${getCardBorder()}`,
                     borderRadius: '8px',
                     padding: '1rem',
                     transition: 'all 0.2s ease'
                   }}
                   onMouseOver={(e) => {
-                    e.currentTarget.style.backgroundColor = '#f1f5f9';
+                    e.currentTarget.style.backgroundColor = isDarkMode ? '#3f3f46' : '#f1f5f9';
                     e.currentTarget.style.borderColor = '#2563eb';
                   }}
                   onMouseOut={(e) => {
-                    e.currentTarget.style.backgroundColor = '#f8fafc';
-                    e.currentTarget.style.borderColor = '#e5e7eb';
+                    e.currentTarget.style.backgroundColor = isDarkMode ? '#27272a' : '#f8fafc';
+                    e.currentTarget.style.borderColor = getCardBorder();
                   }}>
                     <div style={{
                       display: 'flex',
@@ -1216,8 +1268,8 @@ function LandlordDashboard() {
                         borderRadius: '4px',
                         fontSize: '0.75rem',
                         fontWeight: '600',
-                        backgroundColor: '#fef3c7',
-                        color: '#92400e'
+                        backgroundColor: isDarkMode ? 'rgba(239, 68, 68, 0.2)' : '#fee2e2',
+                        color: isDarkMode ? '#f87171' : '#dc2626'
                       }}>
                         PENDING REVIEW
                       </span>
@@ -1227,7 +1279,7 @@ function LandlordDashboard() {
                       <h3 style={{
                         fontSize: '1rem',
                         fontWeight: '600',
-                        color: '#111827',
+                        color: getTextPrimary(),
                         margin: '0 0 0.5rem 0'
                       }}>
                         {application.tenant_name}
@@ -1237,10 +1289,10 @@ function LandlordDashboard() {
                         alignItems: 'center',
                         gap: '0.375rem',
                         fontSize: '0.75rem',
-                        color: '#6b7280',
+                        color: getTextSecondary(),
                         marginBottom: '0.25rem'
                       }}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={getTextSecondary()} strokeWidth="2">
                           <circle cx="12" cy="12" r="10"/>
                           <polyline points="12,6 12,12 16,14"/>
                         </svg>
@@ -1248,7 +1300,7 @@ function LandlordDashboard() {
                       </div>
                       <div style={{
                         fontSize: '0.75rem',
-                        color: '#374151'
+                        color: getTableText()
                       }}>
                         <span style={{ fontWeight: '500' }}>Property:</span> {getPropertyName(application)}
                       </div>
@@ -1277,8 +1329,8 @@ function LandlordDashboard() {
                 ))
               )}
             </div>
+            </div>
           </div>
-        </div>
 
         {/* MVP: My Vendors Section - Hidden for Phase 1 
           <div style={{
@@ -1486,14 +1538,13 @@ function LandlordDashboard() {
         onClose={handleCloseModal}
         onApprove={handleApprove}
         onReject={handleReject}
-        onAssignRoom={handleAssignRoom}
       />
       
       <style jsx>{`
         .dashboard-container {
           width: 100%;
           padding: 12px 16px 16px 16px; /* Further reduced padding */
-          background: #f8fafc;
+          background: transparent;
           min-height: calc(100vh - 72px); /* Updated for new topbar height */
           box-sizing: border-box;
           position: relative;
@@ -2797,7 +2848,30 @@ function LandlordDashboard() {
         .revenue-cell { }
 
         /* Dark Mode Styles */
-        :global(.dark-mode) .dashboard-container { background: transparent; }
+        :global(.dark-mode) .dashboard-container { 
+          background: transparent !important; 
+        }
+        
+        /* Dark mode for tables */
+        :global(.dark-mode) table thead tr {
+          background-color: #27272a !important;
+        }
+        
+        :global(.dark-mode) table thead th {
+          background-color: #27272a !important;
+          color: #a1a1aa !important;
+          border-bottom-color: #3f3f46 !important;
+        }
+        
+        :global(.dark-mode) table tbody td {
+          color: #e4e4e7 !important;
+          border-bottom-color: #3f3f46 !important;
+        }
+        
+        :global(.dark-mode) table tbody tr:hover {
+          background-color: #27272a !important;
+        }
+        
         :global(.dark-mode) .metric-card, 
         :global(.dark-mode) .tasks-section, 
         :global(.dark-mode) .quick-actions-section, 
@@ -2807,44 +2881,65 @@ function LandlordDashboard() {
         :global(.dark-mode) .action-card,
         :global(.dark-mode) .application-card,
         :global(.dark-mode) .team-member-row {
-          background: #111111 !important;
-          border: 1px solid #333333 !important;
+          background: #18181b !important;
+          border: 1px solid #3f3f46 !important;
           box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4) !important;
+        }
+        
+        /* Dark mode for h1, h2, h3, p elements */
+        :global(.dark-mode) h1,
+        :global(.dark-mode) h2,
+        :global(.dark-mode) h3 {
+          color: #fafafa !important;
+        }
+        
+        :global(.dark-mode) p {
+          color: #e4e4e7 !important;
+        }
+        
+        :global(.dark-mode) span {
+          color: inherit;
         }
         :global(.dark-mode) .metric-card:hover,
         :global(.dark-mode) .action-card:hover,
         :global(.dark-mode) .application-card:hover,
         :global(.dark-mode) .team-member-row:hover {
-          background: #222222 !important;
-          border-color: #ffffff !important;
+          background: #27272a !important;
+          border-color: #3f3f46 !important;
         }
         :global(.dark-mode) .tasks-table th, 
         :global(.dark-mode) .properties-table th {
-          background-color: #1a1a1a !important;
-          border-bottom: 1px solid #333333 !important;
+          background-color: #27272a !important;
+          border-bottom: 1px solid #3f3f46 !important;
+          color: #a1a1aa !important;
         }
         :global(.dark-mode) .tasks-table td, 
         :global(.dark-mode) .properties-table td {
-          background-color: #111111 !important;
-          border-bottom: 1px solid #333333 !important;
+          background-color: #18181b !important;
+          border-bottom: 1px solid #3f3f46 !important;
+          color: #e4e4e7 !important;
         }
         :global(.dark-mode) .tasks-table tbody tr:hover, 
         :global(.dark-mode) .properties-table tbody tr:hover {
-          background-color: #222222 !important;
+          background-color: #27272a !important;
+        }
+        :global(.dark-mode) .tasks-table tbody tr:hover td {
+          background-color: #27272a !important;
         }
         :global(.dark-mode) .add-task-btn,
         :global(.dark-mode) .view-all-btn,
         :global(.dark-mode) .review-btn,
         :global(.dark-mode) .contact-btn-small {
-            background: #1a1a1a !important;
-            border: 1px solid #333333 !important;
+            background: #2563eb !important;
+            border: 1px solid #2563eb !important;
+            color: white !important;
         }
         :global(.dark-mode) .add-task-btn:hover,
         :global(.dark-mode) .view-all-btn:hover,
         :global(.dark-mode) .review-btn:hover,
         :global(.dark-mode) .contact-btn-small:hover {
-            background: #2a2a2a !important;
-            border-color: #ffffff !important;
+            background: #1d4ed8 !important;
+            border-color: #1d4ed8 !important;
         }
         :global(.dark-mode) .priority-badge,
         :global(.dark-mode) .status-badge {
@@ -2864,8 +2959,175 @@ function LandlordDashboard() {
         :global(.dark-mode) .action-card.orange .action-icon { background: rgba(249, 115, 22, 0.3); }
         :global(.dark-mode) .tasks-cell .task-count { background: rgba(139, 92, 246, 0.3); }
         :global(.dark-mode) select {
-          background-color: #111111 !important;
-          border-color: #333333 !important;
+          background-color: #27272a !important;
+          border-color: #3f3f46 !important;
+          color: #e4e4e7 !important;
+        }
+        
+        /* Professional Dark Mode - Comprehensive Coverage */
+        
+        /* Dashboard header card - first child */
+        :global(.dark-mode) .dashboard-container > div:first-child {
+          background-color: #18181b !important;
+          border-color: #3f3f46 !important;
+        }
+        
+        /* All cards with rounded corners */
+        :global(.dark-mode) .dashboard-container > div,
+        :global(.dark-mode) .dashboard-container > div > div > div {
+          background-color: #18181b !important;
+          border-color: #3f3f46 !important;
+        }
+        
+        /* Typography - All headings */
+        :global(.dark-mode) .dashboard-container h1,
+        :global(.dark-mode) .dashboard-container h2,
+        :global(.dark-mode) .dashboard-container h3 {
+          color: #fafafa !important;
+        }
+        
+        /* Large metric values (2rem font size) */
+        :global(.dark-mode) .dashboard-container > div > div > div > div > div {
+          color: #fafafa !important;
+        }
+        
+        /* Metric titles */
+        :global(.dark-mode) .dashboard-container h3 {
+          color: #a1a1aa !important;
+        }
+        
+        /* Paragraphs and subtitles */
+        :global(.dark-mode) .dashboard-container p {
+          color: #a1a1aa !important;
+        }
+        
+        /* Table styling - comprehensive */
+        :global(.dark-mode) .dashboard-container table thead tr {
+          background-color: #27272a !important;
+        }
+        
+        :global(.dark-mode) .dashboard-container table thead th {
+          background-color: #27272a !important;
+          color: #a1a1aa !important;
+          border-bottom-color: #3f3f46 !important;
+        }
+        
+        :global(.dark-mode) .dashboard-container table tbody tr {
+          border-bottom-color: #3f3f46 !important;
+        }
+        
+        :global(.dark-mode) .dashboard-container table tbody td {
+          color: #e4e4e7 !important;
+        }
+        
+        :global(.dark-mode) .dashboard-container table tbody tr:hover {
+          background-color: #27272a !important;
+        }
+        
+        :global(.dark-mode) .dashboard-container table tbody tr:hover td {
+          background-color: #27272a !important;
+        }
+        
+        /* Property name links (blue) */
+        :global(.dark-mode) .dashboard-container table tbody td div[style*="fontWeight"] {
+          color: #60a5fa !important;
+        }
+        
+        /* Status badges */
+        :global(.dark-mode) .dashboard-container table tbody td span {
+          border: 1px solid transparent;
+        }
+        
+        /* Rent values and other numbers */
+        :global(.dark-mode) .dashboard-container table tbody td div[style*="fontWeight: '600'"] {
+          color: #e4e4e7 !important;
+        }
+        
+        /* Quick action cards - all variants */
+        :global(.dark-mode) .dashboard-container > div > div > div:last-child > div > div {
+          background-color: #27272a !important;
+          border-color: #3f3f46 !important;
+        }
+        
+        /* Quick action card headings */
+        :global(.dark-mode) .dashboard-container > div > div > div:last-child h3 {
+          color: #fafafa !important;
+        }
+        
+        /* Quick action card paragraphs */
+        :global(.dark-mode) .dashboard-container > div > div > div:last-child p {
+          color: #a1a1aa !important;
+        }
+        
+        /* Icon containers in quick actions */
+        :global(.dark-mode) .dashboard-container > div > div > div:last-child > div > div > div:first-child {
+          background-color: rgba(59, 130, 246, 0.2) !important;
+        }
+        
+        /* All SVG icons - ensure visibility */
+        :global(.dark-mode) .dashboard-container svg {
+          opacity: 0.9;
+        }
+        
+        /* Buttons - keep blue buttons visible */
+        :global(.dark-mode) .dashboard-container button {
+          color: inherit;
+        }
+        
+        :global(.dark-mode) .dashboard-container button[style*="backgroundColor"] {
+          background-color: #2563eb !important;
+          color: white !important;
+        }
+        
+        :global(.dark-mode) .dashboard-container button[style*="backgroundColor"]:hover {
+          background-color: #1d4ed8 !important;
+        }
+        
+        /* Date and time text */
+        :global(.dark-mode) .dashboard-container > div:first-child span {
+          color: #a1a1aa !important;
+        }
+        
+        /* Welcome message */
+        :global(.dark-mode) .dashboard-container .welcome-message {
+          color: #a1a1aa !important;
+        }
+        
+        /* Icon in header */
+        :global(.dark-mode) .dashboard-container > div:first-child > div > div:first-child > div:first-child {
+          background-color: rgba(59, 130, 246, 0.2) !important;
+        }
+        
+        /* Error and loading alerts */
+        :global(.dark-mode) .dashboard-container > div[style*="backgroundColor: '#fee2e2'"] {
+          background-color: rgba(239, 68, 68, 0.15) !important;
+          border-color: rgba(239, 68, 68, 0.3) !important;
+          color: #fca5a5 !important;
+        }
+        
+        :global(.dark-mode) .dashboard-container > div[style*="backgroundColor: '#f0f9ff'"] {
+          background-color: rgba(59, 130, 246, 0.15) !important;
+          border-color: rgba(59, 130, 246, 0.3) !important;
+          color: #93c5fd !important;
+        }
+        
+        /* Ensure notification badges stay red */
+        :global(.dark-mode) .dashboard-container span[style*="PENDING"],
+        :global(.dark-mode) .dashboard-container span[style*="pending"] {
+          background-color: rgba(239, 68, 68, 0.2) !important;
+          color: #f87171 !important;
+        }
+        
+        /* Ensure no white borders on cards and containers */
+        :global(.dark-mode) .dashboard-container > div,
+        :global(.dark-mode) .dashboard-container > div > div > div {
+          border-color: #3f3f46 !important;
+        }
+        
+        /* Keep blue buttons blue with proper border */
+        :global(.dark-mode) .dashboard-container button[style*="backgroundColor: '#2563eb'"],
+        :global(.dark-mode) .dashboard-container button[style*="backgroundColor: #2563eb"] {
+          border-color: #2563eb !important;
         }
 
         /* Dark mode styles for Properties Filter Controls */

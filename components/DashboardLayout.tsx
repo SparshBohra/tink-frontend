@@ -93,6 +93,14 @@ export default function DashboardLayout({
             pointer-events: none;
           }
 
+          :global(.dark-mode) .dashboard-layout {
+            background: #0f0f0f !important;
+          }
+
+          :global(.dark-mode) .dashboard-layout::before {
+            background: none !important;
+          }
+
           .main-content {
             margin-left: 240px;
             margin-top: 72px;
@@ -384,16 +392,23 @@ export default function DashboardLayout({
 
         /* Dark Mode Styles */
         :global(.dark-mode) .dashboard-layout {
-          background: var(--bg-primary, #0a0a0a);
+          background: #0f0f0f !important;
         }
 
         :global(.dark-mode) .dashboard-layout::before {
-          background: none;
+          background: none !important;
         }
 
-        :global(.dark-mode) .page-title,
+        :global(.dark-mode) .page-title {
+          color: #fafafa !important;
+        }
+
         :global(.dark-mode) .page-subtitle {
-          color: var(--text-primary, #ffffff) !important;
+          color: #a1a1aa !important;
+        }
+
+        :global(.dark-mode) .page-content {
+          color: #e4e4e7;
         }
       `}</style>
     </>

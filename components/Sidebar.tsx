@@ -213,10 +213,6 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
   };
 
   const handleNavigation = (path: string) => {
-    if (path === '/settings' || path === '/support') {
-      router.push('/settings');
-      return;
-    }
     setShowPropertiesDropdown(false);
     setShowPeopleDropdown(false);
     router.push(path);
@@ -684,7 +680,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         {/* Settings & Support */}
         <div className="sidebar-bottom">
           <button
-            onClick={() => handleNavigation('/settings')}
+            onClick={() => handleNavigation('/app/settings')}
             className="nav-item"
           >
             <span className="nav-icon"><SettingsIcon /></span>
@@ -692,7 +688,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
           </button>
 
           <button
-            onClick={() => handleNavigation('/support')}
+            onClick={() => handleNavigation('/app/support')}
             className="nav-item"
           >
             <span className="nav-icon"><SupportIcon /></span>
@@ -1241,45 +1237,78 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
 
         /* Dark Mode Styles */
         :global(.dark-mode) .sidebar {
-          background: #111111;
-          border-right: 1px solid #333333 !important;
+          background: #18181b !important;
+          border-right: 1px solid #3f3f46 !important;
         }
         :global(.dark-mode) .sidebar-header {
-          background: transparent;
-          border-bottom: 1px solid #333333 !important;
+          background: transparent !important;
+          border-bottom: 1px solid #3f3f46 !important;
         }
         :global(.dark-mode) .sidebar-nav::-webkit-scrollbar-track {
-          background: transparent;
+          background: transparent !important;
         }
         :global(.dark-mode) .sidebar-nav::-webkit-scrollbar-thumb {
-          background: #333;
+          background: #3f3f46 !important;
+        }
+        :global(.dark-mode) .nav-item {
+          color: #e4e4e7 !important;
         }
         :global(.dark-mode) .nav-item.active {
-          background: #222222 !important;
+          background: #27272a !important;
+          color: #fafafa !important;
         }
         :global(.dark-mode) .nav-item:hover {
-          background: #222222 !important;
+          background: #27272a !important;
+        }
+        :global(.dark-mode) .nav-item.active .nav-icon {
+          color: #60a5fa !important;
+        }
+        :global(.dark-mode) .nav-badge {
+          background: #27272a !important;
+          color: #fafafa !important;
         }
         :global(.dark-mode) .properties-dropdown,
         :global(.dark-mode) .people-dropdown {
-          background: #111111 !important;
-          border: 1px solid #333333 !important;
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+          background: #18181b !important;
+          border: 1px solid #3f3f46 !important;
+          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5) !important;
+        }
+        :global(.dark-mode) .dropdown-option {
+          color: #e4e4e7 !important;
         }
         :global(.dark-mode) .dropdown-option:hover {
-          background: #222222 !important;
+          background: #27272a !important;
+          color: #fafafa !important;
+        }
+        :global(.dark-mode) .coming-soon-item {
+          color: #71717a !important;
+        }
+        :global(.dark-mode) .coming-soon-item:hover {
+          background: rgba(255, 255, 255, 0.05) !important;
+          color: #a1a1aa !important;
+        }
+        :global(.dark-mode) .coming-soon-label {
+          color: #71717a !important;
         }
         :global(.dark-mode) .sidebar-bottom,
         :global(.dark-mode) .sidebar-user {
-          border-top: 1px solid #333333 !important;
+          border-top: 1px solid #3f3f46 !important;
+        }
+        :global(.dark-mode) .user-name {
+          color: #fafafa !important;
+        }
+        :global(.dark-mode) .user-role {
+          color: #a1a1aa !important;
         }
         :global(.dark-mode) .logout-btn,
         :global(.dark-mode) .logout-btn-collapsed {
-          background: #222222 !important;
+          background: #27272a !important;
+          color: #e4e4e7 !important;
         }
         :global(.dark-mode) .logout-btn:hover,
         :global(.dark-mode) .logout-btn-collapsed:hover {
-          background: #ef4444 !important;
+          background: rgba(239, 68, 68, 0.2) !important;
+          color: #fca5a5 !important;
         }
 
         /* Responsive adjustments */

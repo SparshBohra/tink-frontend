@@ -296,7 +296,7 @@ class ApiClient {
   }
 
   async updateProfile(userData: Partial<User>): Promise<User> {
-    const response = await this.api.put('/profile/', userData);
+    const response = await this.api.patch('/auth/profile/', userData);
     return response.data;
   }
 

@@ -4,18 +4,11 @@ import { useAuth } from '../lib/auth-context';
 import { useTheme } from '../lib/theme-context';
 import { apiClient } from '../lib/api';
 import { GlobalSearchResponse, SearchTenantResult, SearchPropertyResult, SearchApplicationResult } from '../lib/types';
+import NotificationsModal, { Notification } from './NotificationsModal';
 
 interface TopBarProps {
   onSidebarToggle: () => void;
   isSidebarCollapsed: boolean;
-}
-
-interface Notification {
-  id: number;
-  text: string;
-  time: string;
-  type: 'info' | 'warning' | 'success' | 'error';
-  read?: boolean;
 }
 
 // Icon Components
@@ -43,6 +36,9 @@ const TrendingUpIcon = () => (
 const TargetIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>
 );
+const HelpCircleIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+);
 
 export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarProps) {
   const router = useRouter();
@@ -54,6 +50,7 @@ export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarPr
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showNotificationsModal, setShowNotificationsModal] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   
@@ -167,18 +164,24 @@ export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarPr
       try {
         const notificationsData: Notification[] = [];
         
+        // Load read state from localStorage
+        const readNotificationsKey = `notifications_read_${user?.id || 'default'}`;
+        const readNotifications = JSON.parse(localStorage.getItem(readNotificationsKey) || '[]') as number[];
+        
         // Fetch pending applications and add to notifications
         if (isLandlord() || isManager()) {
           try {
             const applications = await apiClient.getPendingApplications();
             if (Array.isArray(applications) && applications.length > 0) {
               applications.forEach((app: any, index: number) => {
+                const notificationId = app.id || (1000 + index);
                 notificationsData.push({
-                  id: app.id || (1000 + index),
+                  id: notificationId,
                   text: `New application received for ${app.property_name || 'property'} - ${app.tenant_name || `Applicant ${app.tenant || 'Unknown'}`}`,
                   time: getRelativeTime(app.created_at || new Date()),
+                  created_at: app.created_at || new Date().toISOString(),
                   type: 'info',
-                  read: false
+                  read: readNotifications.includes(notificationId)
                 });
               });
             }
@@ -236,9 +239,28 @@ export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarPr
     return 'Good evening';
   };
 
+  const markNotificationAsRead = (id: number) => {
+    setNotifications(prev => {
+      const updated = prev.map(n => n.id === id ? { ...n, read: true } : n);
+      // Persist to localStorage
+      const readNotificationsKey = `notifications_read_${user?.id || 'default'}`;
+      const readIds = updated.filter(n => n.read).map(n => n.id);
+      localStorage.setItem(readNotificationsKey, JSON.stringify(readIds));
+      setUnreadCount(updated.filter(n => !n.read).length);
+      return updated;
+    });
+  };
+
   const markAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-    setUnreadCount(0);
+    setNotifications(prev => {
+      const updated = prev.map(n => ({ ...n, read: true }));
+      // Persist to localStorage
+      const readNotificationsKey = `notifications_read_${user?.id || 'default'}`;
+      const readIds = updated.map(n => n.id);
+      localStorage.setItem(readNotificationsKey, JSON.stringify(readIds));
+      setUnreadCount(0);
+      return updated;
+    });
   };
 
   const handleLogout = async () => {
@@ -251,7 +273,7 @@ export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarPr
   };
 
   const handleSettings = () => {
-    router.push('/settings');
+    router.push('/app/settings');
     setShowUserMenu(false);
   };
 
@@ -414,12 +436,26 @@ export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarPr
                   </div>
                   <div className="notifications-list">
                     {notifications.length > 0 ? (
-                      notifications.map((notif) => (
-                        <div key={notif.id} className={`notification-item ${notif.type} ${notif.read ? 'read' : 'unread'}`}>
+                      notifications.slice(0, 5).map((notif) => (
+                        <div 
+                          key={notif.id} 
+                          className={`notification-item ${notif.read ? 'read' : 'unread'}`}
+                          onClick={() => !notif.read && markNotificationAsRead(notif.id)}
+                          style={{ cursor: notif.read ? 'default' : 'pointer' }}
+                        >
                           <div className="notification-content">
-                            <p>{notif.text}</p>
+                            <p style={{ margin: 0, fontWeight: notif.read ? '400' : '500' }}>{notif.text}</p>
                             <span className="notification-time">{notif.time}</span>
                           </div>
+                          {!notif.read && (
+                            <span style={{
+                              width: '8px',
+                              height: '8px',
+                              borderRadius: '50%',
+                              backgroundColor: '#2563eb',
+                              flexShrink: 0,
+                            }} />
+                          )}
                         </div>
                       ))
                     ) : (
@@ -432,11 +468,29 @@ export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarPr
                     )}
                   </div>
                   <div className="notifications-footer">
-                    <button className="view-all-btn">View all notifications</button>
+                    <button 
+                      className="view-all-btn"
+                      onClick={() => {
+                        setShowNotifications(false);
+                        setShowNotificationsModal(true);
+                      }}
+                    >
+                      View all notifications
+                    </button>
                   </div>
                 </div>
               )}
             </div>
+
+            {/* Support Button */}
+            <button 
+              className="action-btn"
+              onClick={() => router.push('/app/support')}
+              title="Support & Help"
+            >
+              <span className="btn-icon"><HelpCircleIcon /></span>
+              <span className="btn-label">Support</span>
+            </button>
           </div>
 
           <div className="user-menu" ref={userMenuRef}>
@@ -465,12 +519,6 @@ export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarPr
                 </div>
                 <div className="user-dropdown-divider"></div>
                 <div className="user-dropdown-items">
-                  <button className="user-dropdown-item" onClick={toggleDarkMode}>
-                    <span className="dropdown-icon">
-                      {isDarkMode ? <SunIcon /> : <MoonIcon />}
-                    </span>
-                    <span>{isDarkMode ? 'Light Mode' : 'Dark Mode'}</span>
-                  </button>
                   <button className="user-dropdown-item" onClick={handleSettings}>
                     <span className="dropdown-icon"><SettingsIcon /></span>
                     <span>Settings</span>
@@ -794,42 +842,43 @@ export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarPr
         }
 
         .notification-item {
-          padding: 16px 24px;
-          border-bottom: 1px solid #f9fafb;
+          padding: 12px 16px;
+          border-bottom: 1px solid #f1f5f9;
           cursor: pointer;
           transition: background 0.2s ease;
           position: relative;
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 12px;
         }
 
         .notification-item:hover {
-          background: #f9fafb;
+          background: #f8f9fa;
         }
 
         .notification-item:last-child {
           border-bottom: none;
         }
 
-        .notification-item.unread {
-          background: rgba(102, 126, 234, 0.02);
+        .notification-item.read {
+          background: #ffffff;
         }
 
-        .notification-item.unread::before {
-          content: '';
-          position: absolute;
-          left: 8px;
-          top: 50%;
-          transform: translateY(-50%);
-          width: 6px;
-          height: 6px;
-          background: #667eea;
-          border-radius: 50%;
+        .notification-item.unread {
+          background: #eff6ff;
+        }
+
+        .notification-content {
+          flex: 1;
+          min-width: 0;
         }
 
         .notification-content p {
           font-size: 14px;
-          color: #374151;
+          color: #1e293b;
           margin: 0 0 4px 0;
-          line-height: 1.4;
+          line-height: 1.5;
         }
 
         .notification-time {
@@ -1061,57 +1110,155 @@ export default function TopBar({ onSidebarToggle, isSidebarCollapsed }: TopBarPr
 
         /* Dark Mode Styles */
         :global(.dark-mode) .topbar {
-          background: rgba(10, 10, 10, 0.85); /* near-black transparent */
+          background: #1a1a1f !important;
           backdrop-filter: blur(20px);
-          border-bottom: 1px solid #333333 !important;
+          border-bottom: 1px solid #2d2d35 !important;
         }
+        
+        :global(.dark-mode) .greeting-text {
+          color: #e4e4e7 !important;
+        }
+        
         :global(.dark-mode) .search-input {
-          background: #1a1a1a !important;
-          border-color: #333333 !important;
+          background: #27272a !important;
+          border-color: #3f3f46 !important;
+          color: #e4e4e7 !important;
         }
+        
+        :global(.dark-mode) .search-input::placeholder {
+          color: #71717a !important;
+        }
+        
         :global(.dark-mode) .search-input:focus {
-          background: #222222 !important;
-          border-color: #ffffff !important;
+          background: #2d2d35 !important;
+          border-color: #52525b !important;
           box-shadow: none !important;
         }
+        
         :global(.dark-mode) .action-btn {
           background: transparent !important;
-          border: 1px solid #333333 !important;
+          border: 1px solid #3f3f46 !important;
+          color: #fafafa !important;
         }
+        
         :global(.dark-mode) .action-btn:hover {
-          background: #222222 !important;
-          border-color: #ffffff !important;
+          background: #27272a !important;
+          border-color: #52525b !important;
         }
+        
+        :global(.dark-mode) .btn-label {
+          color: #fafafa !important;
+        }
+        
         :global(.dark-mode) .user-info:hover {
-          background: #222222 !important;
+          background: #27272a !important;
         }
+        
         :global(.dark-mode) .user-dropdown,
         :global(.dark-mode) .notifications-dropdown {
-          background: #111111 !important;
-          border: 1px solid #333333 !important;
-          box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4) !important;
+          background: #18181b !important;
+          border: 1px solid #3f3f46 !important;
+          box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.3) !important;
         }
+        
+        :global(.dark-mode) .notifications-header h3 {
+          color: #fafafa !important;
+        }
+        
+        :global(.dark-mode) .mark-all-read {
+          color: #60a5fa !important;
+        }
+        
+        :global(.dark-mode) .mark-all-read:hover {
+          color: #93c5fd !important;
+        }
+        
         :global(.dark-mode) .user-dropdown-divider,
         :global(.dark-mode) .notifications-header,
-        :global(.dark-mode) .notifications-footer,
+        :global(.dark-mode) .notifications-footer {
+          border-color: #3f3f46 !important;
+        }
+        
         :global(.dark-mode) .notification-item {
-          border-color: #333333 !important;
+          border-color: #3f3f46 !important;
         }
-        :global(.dark-mode) .user-dropdown-item:hover,
-        :global(.dark-mode) .notification-item:hover,
+        
+        :global(.dark-mode) .notification-item.read {
+          background: #18181b !important;
+        }
+        
+        :global(.dark-mode) .notification-item.unread {
+          background: rgba(59, 130, 246, 0.15) !important;
+        }
+        
+        :global(.dark-mode) .notification-item:hover {
+          background: #27272a !important;
+        }
+        
+        :global(.dark-mode) .notification-item.unread:hover {
+          background: rgba(59, 130, 246, 0.25) !important;
+        }
+        
+        :global(.dark-mode) .notification-content p {
+          color: #e4e4e7 !important;
+        }
+        
+        :global(.dark-mode) .notification-time {
+          color: #a1a1aa !important;
+        }
+        
+        :global(.dark-mode) .view-all-btn {
+          color: #60a5fa !important;
+        }
+        
         :global(.dark-mode) .view-all-btn:hover {
-          background: #222222 !important;
+          background: #27272a !important;
+          color: #93c5fd !important;
         }
+        
+        :global(.dark-mode) .user-dropdown-item {
+          color: #e4e4e7 !important;
+        }
+        
+        :global(.dark-mode) .user-dropdown-item:hover {
+          background: #27272a !important;
+        }
+        
         :global(.dark-mode) .user-dropdown-item.logout:hover {
           background: rgba(239, 68, 68, 0.2) !important;
+          color: #fca5a5 !important;
         }
-        :global(.dark-mode) .notification-item.unread {
-          background: rgba(59, 130, 246, 0.1) !important;
+        
+        :global(.dark-mode) .user-name-dropdown {
+          color: #fafafa !important;
         }
-        :global(.dark-mode) .notification-item.unread::before {
-          background: #3b82f6 !important;
+        
+        :global(.dark-mode) .user-role-dropdown {
+          color: #d4d4d8 !important;
+        }
+        
+        :global(.dark-mode) .user-name {
+          color: #fafafa !important;
+        }
+        
+        :global(.dark-mode) .user-role {
+          color: #d4d4d8 !important;
+        }
+        
+        :global(.dark-mode) .notification-badge {
+          background: #ef4444 !important;
+          color: white !important;
         }
       `}</style>
+
+      {/* Notifications Modal */}
+      <NotificationsModal
+        isOpen={showNotificationsModal}
+        onClose={() => setShowNotificationsModal(false)}
+        notifications={notifications}
+        onMarkAsRead={markNotificationAsRead}
+        onMarkAllAsRead={markAllAsRead}
+      />
     </>
   );
 } 

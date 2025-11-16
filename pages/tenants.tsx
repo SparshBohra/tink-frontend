@@ -1181,7 +1181,7 @@ function Tenants() {
                           fontWeight: '600',
                           color: '#374151',
                           borderBottom: '1px solid #e5e7eb'
-                        }}>Emergency Contact</th>
+                        }}>Property</th>
                         <th style={{
                           padding: '0.75rem 1rem',
                           textAlign: 'center',
@@ -1248,24 +1248,60 @@ function Tenants() {
                             textAlign: 'left',
                             borderBottom: '1px solid #f3f4f6'
                           }}>
-                              {tenant.emergency_contact_name ? (
+                              {tenant.current_property_name ? (
                                 <div>
-                                <div style={{
-                                  fontSize: '0.875rem',
-                                  color: '#374151',
-                                  marginBottom: '0.25rem'
-                                }}>{tenant.emergency_contact_name}</div>
-                                <div style={{
-                                  fontSize: '0.75rem',
-                                  color: '#6b7280'
-                                }}>{tenant.emergency_contact_phone ? phoneUtils.displayPhoneNumber(tenant.emergency_contact_phone) : 'No phone'}</div>
+                                  {(() => {
+                                    // Find property ID by matching name
+                                    const property = properties.find(p => p.name === tenant.current_property_name);
+                                    const propertyId = property?.id;
+                                    
+                                    return propertyId ? (
+                                      <span 
+                                        onClick={() => router.push(`/app/properties/${propertyId}`)}
+                                        style={{
+                                          fontSize: '0.875rem',
+                                          color: '#2563eb',
+                                          fontWeight: '500',
+                                          cursor: 'pointer',
+                                          textDecoration: 'none',
+                                          display: 'inline-block'
+                                        }}
+                                        onMouseOver={(e) => {
+                                          e.currentTarget.style.color = '#1d4ed8';
+                                          e.currentTarget.style.textDecoration = 'underline';
+                                        }}
+                                        onMouseOut={(e) => {
+                                          e.currentTarget.style.color = '#2563eb';
+                                          e.currentTarget.style.textDecoration = 'none';
+                                        }}
+                                      >
+                                        {tenant.current_property_name}
+                                      </span>
+                                    ) : (
+                                      <span style={{
+                                        fontSize: '0.875rem',
+                                        color: '#374151'
+                                      }}>
+                                        {tenant.current_property_name}
+                                      </span>
+                                    );
+                                  })()}
+                                  {tenant.current_room_name && (
+                                    <div style={{
+                                      fontSize: '0.75rem',
+                                      color: '#6b7280',
+                                      marginTop: '0.25rem'
+                                    }}>
+                                      {tenant.current_room_name}
+                                    </div>
+                                  )}
                                 </div>
                               ) : (
                               <span style={{
                                 fontSize: '0.875rem',
                                 color: '#9ca3af',
                                 fontStyle: 'italic'
-                              }}>Not provided</span>
+                              }}>Not assigned</span>
                               )}
                             </td>
 
