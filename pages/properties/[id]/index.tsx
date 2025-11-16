@@ -18,6 +18,7 @@ import RoomCountEditor from '../../../components/RoomCountEditor';
 import RoomDeletionModal from '../../../components/RoomDeletionModal';
 import EditPropertyModal from '../../../components/EditPropertyModal';
 import EditRoomModal from '../../../components/EditRoomModal';
+import ApplicationDetailModal from '../../../components/ApplicationDetailModal';
 import StagedImage from '../../../components/StagedImage';
 import { 
   ArrowLeft, 
@@ -91,6 +92,9 @@ export default function PropertyDetails() {
   const [showEditPropertyModal, setShowEditPropertyModal] = useState(false);
   const [showEditRoomModal, setShowEditRoomModal] = useState(false);
   const [editingRoom, setEditingRoom] = useState<Room | null>(null);
+  const [isTenantDetailModalOpen, setIsTenantDetailModalOpen] = useState(false);
+  const [selectedTenantForDetail, setSelectedTenantForDetail] = useState<any>(null);
+  const [selectedApplicationForDetail, setSelectedApplicationForDetail] = useState<any>(null);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [selectedImageIdx, setSelectedImageIdx] = useState(0);
   const [isStaging, setIsStaging] = useState(false);
@@ -501,6 +505,23 @@ export default function PropertyDetails() {
       if (property?.rent_type === 'per_room') {
         setSelectedRoomsForListing(rooms.map(r => r.id));
       }
+    }
+  };
+
+  const handleViewTenantDetails = async (tenant: any) => {
+    try {
+      // Fetch tenant's applications to show in detail modal
+      const applications = await apiClient.getTenantApplications(tenant.id);
+      if (applications && applications.length > 0) {
+        setSelectedApplicationForDetail(applications[0]);
+        setSelectedTenantForDetail(tenant);
+        setIsTenantDetailModalOpen(true);
+      } else {
+        alert('No application found for this tenant.');
+      }
+    } catch (error: any) {
+      console.error('Failed to fetch tenant applications:', error);
+      alert('Could not load tenant details.');
     }
   };
 
@@ -1696,7 +1717,7 @@ export default function PropertyDetails() {
                     <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr', gap: '8px' }}>
                       {/* Large primary image - using StagedImage component */}
                       {property.images && property.images.length > 0 && (() => {
-                        const img = (property as any).images[selectedImageIdx];
+                             const img = (property as any).images[selectedImageIdx];
                         if (!img) return null;
                         
                         // Get original URL - always preserve original
@@ -1858,7 +1879,7 @@ export default function PropertyDetails() {
                               }}
                               className="property-main-image"
                             />
-                          </div>
+                       </div>
                         );
                       })()}
                        {/* Thumbnails - scrollable within main image height */}
@@ -1870,14 +1891,14 @@ export default function PropertyDetails() {
                        }}>
                          {/* Scrollable list of thumbnails */}
                          <div style={{
-                           overflowY: 'auto',
+                         overflowY: 'auto',
                            flex: 1,
                            display: 'flex',
                            flexDirection: 'column',
                            gap: '8px',
-                           paddingRight: (property as any).images.length > 5 ? '4px' : '0'
-                         }}>
-                           {(property as any).images.map((img: any, idx: number) => {
+                         paddingRight: (property as any).images.length > 5 ? '4px' : '0'
+                       }}>
+                         {(property as any).images.map((img: any, idx: number) => {
                              // Use staged URL if available, otherwise original
                              const stagedUrl = stagedImages[idx];
                              const originalUrl = typeof img === 'string' 
@@ -1886,26 +1907,26 @@ export default function PropertyDetails() {
                              // Use the stored view preference if available, otherwise show staged if available
                              const shouldShowStaged = viewPreferences[idx] !== false && !!stagedUrl;
                              const displayUrl = shouldShowStaged ? getMediaUrl(stagedUrl) : getMediaUrl(originalUrl || '');
-                             const fallback = typeof img === 'object' ? img?.originalUrl : undefined;
-                             const isActive = selectedImageIdx === idx;
+                           const fallback = typeof img === 'object' ? img?.originalUrl : undefined;
+                           const isActive = selectedImageIdx === idx;
                              
-                             return (
-                               <div 
-                                 key={idx}
-                                 style={{ 
-                                   position: 'relative', 
-                                   width: '100%', 
-                                   paddingBottom: '66%', 
-                                   borderRadius: '8px', 
-                                   overflow: 'hidden', 
-                                   border: isActive ? '2px solid #2563eb' : '1px solid #e5e7eb', 
-                                   background: '#f8fafc',
-                                   flexShrink: 0,
-                                   cursor: 'pointer',
-                                   boxShadow: isActive ? '0 0 0 3px rgba(37, 99, 235, 0.15)' : 'none'
-                                 }}
-                                 title="Click to view"
-                               >
+                           return (
+                             <div 
+                               key={idx}
+                               style={{ 
+                                 position: 'relative', 
+                                 width: '100%', 
+                                 paddingBottom: '66%', 
+                                 borderRadius: '8px', 
+                                 overflow: 'hidden', 
+                                 border: isActive ? '2px solid #2563eb' : '1px solid #e5e7eb', 
+                                 background: '#f8fafc',
+                                 flexShrink: 0,
+                                 cursor: 'pointer',
+                                 boxShadow: isActive ? '0 0 0 3px rgba(37, 99, 235, 0.15)' : 'none'
+                               }}
+                               title="Click to view"
+                             >
                                  <div
                                    onClick={() => setSelectedImageIdx(idx)}
                                    style={{ position: 'absolute', inset: 0 }}
@@ -2054,9 +2075,9 @@ export default function PropertyDetails() {
                                      <span>AI</span>
                                    </div>
                                  )}
-                               </div>
-                             );
-                           })}
+                             </div>
+                           );
+                         })}
                          </div>
 
                          {/* Buttons row - Add Photo and Download All side by side */}
@@ -2269,8 +2290,8 @@ export default function PropertyDetails() {
 
                   {/* Amenities list - only show if amenities exist */}
                   {Array.isArray((property as any).amenities) && (property as any).amenities.length > 0 && (
-                    <div>
-                      <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#111827', marginBottom: '0.75rem' }}>Amenities</div>
+                  <div>
+                    <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#111827', marginBottom: '0.75rem' }}>Amenities</div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                         {(property as any).amenities.slice(0, 20).map((a: string, i: number) => (
                           <span key={i} style={{
@@ -2396,7 +2417,7 @@ export default function PropertyDetails() {
                                     <span>{String(entry)}</span>
                                   )}
                                 </span>
-                              </div>
+                  </div>
                             ))}
                           </div>
                         </div>
@@ -2595,8 +2616,8 @@ export default function PropertyDetails() {
                         id: property.id,
                         unit: property.name,
                         unitType: 'Entire Property',
-                        isVacant: leases.filter((l: any) => l.status === 'active' && (l.property_ref === property.id || l.property === (property as any).id)).length === 0,
-                        activeLease: leases.find((l: any) => l.status === 'active' && (l.property_ref === property.id || l.property === property.id)),
+                        isVacant: !(property as any).current_tenants || (property as any).current_tenants.length === 0,
+                        currentTenants: (property as any).current_tenants || [],
                         monthlyRent: property.monthly_rent
                       }
                     ]}
@@ -2612,9 +2633,24 @@ export default function PropertyDetails() {
                           <StatusBadge status={unit.isVacant ? 'vacant' : 'occupied'} text={unit.isVacant ? 'Vacant' : 'Occupied'} />
                         </td>
                         <td style={{ textAlign: 'center', color: '#374151' }}>
-                          {unit.activeLease ? (
+                          {unit.currentTenants && unit.currentTenants.length > 0 ? (
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
-                              {(unit.activeLease as any).tenants?.map((t: any) => t.full_name).join(', ') || '-'}
+                              {unit.currentTenants.map((t: any, idx: number) => (
+                                <span
+                                  key={idx}
+                                  onClick={() => handleViewTenantDetails(t)}
+                                  style={{
+                                    cursor: 'pointer',
+                                    color: '#2563eb',
+                                    textDecoration: 'underline',
+                                    fontWeight: '500'
+                                  }}
+                                  onMouseOver={(e) => e.currentTarget.style.color = '#1d4ed8'}
+                                  onMouseOut={(e) => e.currentTarget.style.color = '#2563eb'}
+                                >
+                                  {t.name || t.full_name}
+                                </span>
+                              ))}
                             </div>
                           ) : '-'}
                         </td>
@@ -2622,9 +2658,9 @@ export default function PropertyDetails() {
                           {unit.monthlyRent ? `$${parseFloat(unit.monthlyRent).toFixed(2)}` : '-'}
                         </td>
                         <td style={{ textAlign: 'center', color: '#374151' }}>
-                          {unit.activeLease ? (
+                          {unit.currentTenants && unit.currentTenants.length > 0 ? (
                             <div style={{ fontSize: '0.875rem' }}>
-                              {new Date(unit.activeLease.start_date).toLocaleDateString()} - {new Date(unit.activeLease.end_date).toLocaleDateString()}
+                              {unit.currentTenants[0].move_in_date || '-'}
                             </div>
                           ) : '-'}
                         </td>
@@ -2976,7 +3012,7 @@ export default function PropertyDetails() {
                   <div className="section-title-group">
                     <h2 className="section-title">Lease Details</h2>
                     <p className="section-subtitle">This property is leased as a whole unit</p>
-                  </div>
+          </div>
                 </div>
                 {propertyLevelLease ? (
                   <div className="lease-details">
@@ -3485,6 +3521,29 @@ export default function PropertyDetails() {
             setShowEditRoomModal(false);
             setEditingRoom(null);
             fetchPropertyData();
+          }}
+        />
+      )}
+
+      {/* Tenant Detail Modal */}
+      {isTenantDetailModalOpen && selectedApplicationForDetail && property && (
+        <ApplicationDetailModal
+          isOpen={isTenantDetailModalOpen}
+          application={selectedApplicationForDetail}
+          properties={property ? [property] : []}
+          rooms={rooms}
+          onClose={() => {
+            setIsTenantDetailModalOpen(false);
+            setSelectedApplicationForDetail(null);
+            setSelectedTenantForDetail(null);
+          }}
+          onApprove={async (applicationId: number) => {
+            // Handle approve if needed
+            await fetchPropertyData();
+          }}
+          onReject={async (applicationId: number) => {
+            // Handle reject if needed
+            await fetchPropertyData();
           }}
         />
       )}

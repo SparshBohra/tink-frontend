@@ -243,7 +243,7 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
 
   useEffect(() => {
     // Fetch properties in both create and edit mode
-    fetchProperties();
+      fetchProperties();
     
     if (editMode && existingListing) {
       // In edit mode, also fetch property data to get staged images
@@ -2188,15 +2188,15 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
     
     return (
       <React.Fragment>
-        <div className={styles.sectionHeader}>
-          <h3>Photos & Media</h3>
+      <div className={styles.sectionHeader}>
+        <h3>Photos & Media</h3>
           <p>
             Images are synced from the properties page. Hide images to exclude them from the listing.
             Edit images on the properties page.
           </p>
-        </div>
-        
-        <div className={styles.formSection}>
+            </div>
+      
+      <div className={styles.formSection}>
         {/* Download All button */}
         <div className={styles.formGroup} style={{ marginTop: '0' }}>
           <div 
@@ -2236,7 +2236,7 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
                 <RotateCcw size={20} style={{ color: '#2563eb', marginBottom: '2px', animation: 'spin 1s linear infinite' }} />
                 <div style={{ fontSize: '11px', fontWeight: '600', color: '#2563eb', textAlign: 'center' }}>
                   Preparing...
-                </div>
+              </div>
               </>
             ) : (
               <>
@@ -2266,8 +2266,8 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
             <p style={{ margin: '0', fontSize: '0.875rem', color: '#6b7280' }}>
               Drag to reorder. Hide images to exclude them from the listing. Edit images on the properties page.
             </p>
-          </div>
-          <div className={styles.mediaGrid}>
+            </div>
+            <div className={styles.mediaGrid}>
             {mediaFiles.map((media, index) => {
               const imgUrl = normalizeUrl(media.url);
               const originalUrl = normalizeUrl(media.originalUrl || media.url);
@@ -2442,7 +2442,7 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
                             <Eye size={16} strokeWidth={2.5} style={{ display: 'block', flexShrink: 0 }} />
                           )}
                         </button>
-                      </div>
+                  </div>
                     </div>
                   </div>
                   
@@ -2460,7 +2460,7 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
                         >
                           {media.is_primary ? 'Featured' : 'Set as Featured'}
                         </button>
-                      </div>
+                </div>
                       {/* Drag handle */}
                       <div style={{
                         backgroundColor: 'rgba(0, 0, 0, 0.6)',
@@ -2502,9 +2502,9 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
                       title={isHidden ? "Cannot drag hidden images" : "Drag to reorder"}
                       >
                         <GripVertical size={16} strokeWidth={2.5} />
-                      </div>
-                    </div>
-                  </div>
+              </div>
+            </div>
+        </div>
                 </div>
               );
             })}
@@ -2534,16 +2534,16 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
     const combinedUtilities = Array.from(new Set([...allUtilities, ...standardUtilities]));
     
     return (
-      <>
-        <div className={styles.sectionHeader}>
-          <h3>Property Details</h3>
+    <>
+      <div className={styles.sectionHeader}>
+        <h3>Property Details</h3>
           <p>Manage amenities and policies for this listing.</p>
         </div>
 
-        <div className={styles.formSection}>
-          <div className={styles.formGroup}>
-            <label>Utilities Included</label>
-            <div className={styles.tagGrid}>
+      <div className={styles.formSection}>
+        <div className={styles.formGroup}>
+          <label>Utilities Included</label>
+          <div className={styles.tagGrid}>
               {combinedUtilities.map(utility => (
                 <button 
                   key={utility} 
@@ -2551,18 +2551,18 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
                   className={`${styles.tagOption} ${formData.utilities_included.includes(utility) ? styles.selected : ''}`} 
                   onClick={() => handleArrayToggle('utilities_included', utility)}
                 >
-                  {utility}
+                {utility}
                   {formData.utilities_included.includes(utility) && (
                     <X size={14} style={{ marginLeft: '6px' }} />
                   )}
-                </button>
-              ))}
-            </div>
+              </button>
+            ))}
           </div>
+        </div>
 
-          <div className={styles.formGroup}>
-            <label>Amenities</label>
-            <div className={styles.tagGrid}>
+        <div className={styles.formGroup}>
+          <label>Amenities</label>
+          <div className={styles.tagGrid}>
               {combinedAmenities.map(amenity => (
                 <button 
                   key={amenity} 
@@ -2570,17 +2570,17 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
                   className={`${styles.tagOption} ${formData.amenities.includes(amenity) ? styles.selected : ''}`} 
                   onClick={() => handleArrayToggle('amenities', amenity)}
                 >
-                  {amenity}
+                {amenity}
                   {formData.amenities.includes(amenity) && (
                     <X size={14} style={{ marginLeft: '6px' }} />
                   )}
-                </button>
-              ))}
-            </div>
+              </button>
+            ))}
           </div>
+        </div>
 
-          <div className={styles.formGroup}>
-            <label htmlFor="pet_policy">Pet Policy</label>
+        <div className={styles.formGroup}>
+          <label htmlFor="pet_policy">Pet Policy</label>
             <div className={styles.selectWrapper}>
               <select 
                 id="pet_policy" 
@@ -2595,25 +2595,25 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
                 <option value="pets_negotiable">Pets Negotiable</option>
               </select>
             </div>
-          </div>
+        </div>
 
-          <div className={styles.formGroup}>
-            <label htmlFor="smoking_policy">Smoking Policy</label>
-            <div className={styles.selectWrapper}>
+        <div className={styles.formGroup}>
+          <label htmlFor="smoking_policy">Smoking Policy</label>
+          <div className={styles.selectWrapper}>
               <select 
                 id="smoking_policy" 
                 value={formData.smoking_policy} 
                 onChange={(e) => handleInputChange('smoking_policy', e.target.value)}
               >
-                <option value="no_smoking">No Smoking</option>
-                <option value="smoking_allowed">Smoking Allowed</option>
-                <option value="designated_areas">Designated Areas Only</option>
-              </select>
-            </div>
+              <option value="no_smoking">No Smoking</option>
+              <option value="smoking_allowed">Smoking Allowed</option>
+              <option value="designated_areas">Designated Areas Only</option>
+            </select>
           </div>
         </div>
-      </>
-    );
+      </div>
+    </>
+  );
   };
 
   const renderApplicationTab = () => (
@@ -2974,17 +2974,17 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
                 <span style={{ color: '#9ca3af', margin: '0 8px' }}>•</span>
                 <span style={{ color: '#374151' }}>{tabs[currentStep - 1].label}</span>
               </span>
-              {activeTab === 'contact' && !isFormValid && !editMode && (
+            {activeTab === 'contact' && !isFormValid && !editMode && (
                 <div style={{ fontSize: '12px', color: '#dc2626' }}>
-                  Missing: {[
-                    !formData.property_ref && 'Property',
-                    !formData.title && 'Title', 
-                    !formData.description && 'Description',
-                    !formData.available_from && 'Available Date',
-                    formData.listing_type === 'rooms' && formData.available_rooms.length === 0 && 'Select Rooms'
-                  ].filter(Boolean).join(', ')}
-                </div>
-              )}
+                Missing: {[
+                  !formData.property_ref && 'Property',
+                  !formData.title && 'Title', 
+                  !formData.description && 'Description',
+                  !formData.available_from && 'Available Date',
+                  formData.listing_type === 'rooms' && formData.available_rooms.length === 0 && 'Select Rooms'
+                ].filter(Boolean).join(', ')}
+              </div>
+            )}
             </div>
           </div>
           <div className={styles.footerRight}>
@@ -3031,9 +3031,9 @@ const NewListingModal = ({ onClose, onSuccess, editMode = false, existingListing
                 minWidth: '120px'
               }}
             >
-              {loading ? (editMode ? 'Updating...' : 'Creating...') : 
-               activeTab === 'contact' ? (editMode ? 'Update Listing' : 'Create Listing') : 'Next'}
-            </button>
+                {loading ? (editMode ? 'Updating...' : 'Creating...') : 
+                 activeTab === 'contact' ? (editMode ? 'Update Listing' : 'Create Listing') : 'Next'}
+              </button>
           </div>
         </div>
       </div>

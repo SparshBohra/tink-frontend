@@ -779,6 +779,25 @@ class ApiClient {
     await this.api.delete(`/tenants/applications/${id}/`);
   }
 
+  async checkTenantConflicts(propertyId: number, startDate: string, endDate: string, roomId?: number) {
+    const response = await this.api.post('/tenants/applications/check_conflicts/', {
+      property_id: propertyId,
+      room_id: roomId,
+      start_date: startDate,
+      end_date: endDate
+    });
+    return response.data;
+  }
+
+  async moveOutTenant(occupancyId: number, moveOutDate: string, notes: string = '') {
+    const response = await this.api.post('/tenants/applications/move_out_tenant/', {
+      occupancy_id: occupancyId,
+      move_out_date: moveOutDate,
+      notes
+    });
+    return response.data;
+  }
+
   async decideApplication(id: number, decisionData: {
     decision: 'approve' | 'reject';
     // Required fields for approval
@@ -792,13 +811,15 @@ class ApiClient {
     rejection_reason?: string;
   }): Promise<Application> {
     try {
-      console.log(`Deciding on application ${id} with data:`, decisionData);
-          const response = await this.api.post(`/tenants/applications/${id}/decide/`, decisionData);
-      console.log('Application decision successful:', response.data);
-    return response.data;
+      console.log(`🔵 Deciding on application ${id} with data:`, JSON.stringify(decisionData, null, 2));
+      const response = await this.api.post(`/tenants/applications/${id}/decide/`, decisionData);
+      console.log('✅ Application decision successful:', response.data);
+      return response.data;
     } catch (error: any) {
-      console.error(`Application decision failed for ID ${id}:`, error);
-      console.error('Error response:', error.response?.data);
+      console.error(`❌ Application decision failed for ID ${id}`);
+      console.error('Full error:', error);
+      console.error('Error response status:', error.response?.status);
+      console.error('Error response data:', error.response?.data);
       
       if (error.response?.status === 404) {
         // Fallback mechanism for 404 errors

@@ -1,5 +1,5 @@
 // A comment to force re-linting
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import DashboardLayout from '../../components/DashboardLayout';
@@ -27,6 +27,8 @@ import PropertyRoomManagement from '../../components/PropertyRoomManagement';
 import ApplicationDetailModal from '../../components/ApplicationDetailModal';
 import ImprovedLeaseGenerationModal from '../../components/ImprovedLeaseGenerationModal';
 import ViewingManagementModal from '../../components/ViewingManagementModal';
+import AssignToPropertyModal from '../../components/AssignToPropertyModal';
+import MoveOutModal from '../../components/MoveOutModal';
 
 function Applications() {
   const router = useRouter();
@@ -66,6 +68,7 @@ function Applications() {
   const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false);
   const [selectedApplicationForApproval, setSelectedApplicationForApproval] = useState<Application | null>(null);
   const [selectedPropertyForApproval, setSelectedPropertyForApproval] = useState<Property | null>(null);
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   
   // Add state for viewing management modal
   const [isViewingManagementOpen, setIsViewingManagementOpen] = useState(false);
@@ -74,19 +77,8 @@ function Applications() {
   // Add state for move-out modal
   const [isMoveOutModalOpen, setIsMoveOutModalOpen] = useState(false);
   const [selectedApplicationForMoveOut, setSelectedApplicationForMoveOut] = useState<Application | null>(null);
-  const [moveOutDate, setMoveOutDate] = useState('');
-  const [depositReturn, setDepositReturn] = useState('');
-  const [moveOutCalculations, setMoveOutCalculations] = useState<{
-    monthsRemaining: number;
-    daysRemaining: number;
-    rentForgo: number;
-    depositReturned: number;
-    totalForgo: number;
-  } | null>(null);
-
-  useEffect(() => {
-    fetchData();
-  }, []);
+  const [selectedTenantForMoveOut, setSelectedTenantForMoveOut] = useState<any>(null);
+  const [selectedOccupancyId, setSelectedOccupancyId] = useState<number | undefined>(undefined);
 
   // Add visibility change listener to refresh data when user returns to this page
   useEffect(() => {
@@ -157,7 +149,7 @@ function Applications() {
     }
   };
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -245,7 +237,11 @@ function Applications() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
   
   const handlePropertyFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value;
@@ -330,18 +326,22 @@ function Applications() {
         }
       }
 
-      // Original qualification logic for pending applications
+      // Simplified qualification for MVP
       const startDate = new Date();
       const endDate = new Date();
       endDate.setFullYear(startDate.getFullYear() + 1);
 
+      const rentAmount = typeof application.rent_budget === 'string' 
+        ? parseFloat(application.rent_budget) 
+        : (application.rent_budget || 0);
+      
       const decisionData = {
         decision: 'approve' as const,
-        decision_notes: 'Quick qualified - moved to shortlisted',
+        decision_notes: 'Approved - moved to shortlisted',
         start_date: startDate.toISOString().split('T')[0],
         end_date: endDate.toISOString().split('T')[0],
-        monthly_rent: (application.rent_budget || '1000').toString(),
-        security_deposit: ((application.rent_budget || 1000) * 2).toString(),
+        monthly_rent: rentAmount > 0 ? rentAmount.toString() : '0',
+        security_deposit: rentAmount > 0 ? (rentAmount * 2).toString() : '0',
       };
 
       // Call the API to decide on application
@@ -355,6 +355,7 @@ function Applications() {
       
     } catch (error: any) {
       console.error('Qualification error:', error);
+      console.error('Error details:', error.response?.data);
       
       // Check if this is a 404 error (endpoint not implemented)
       if (error.message.includes('404') || error.message.includes('not found')) {
@@ -363,10 +364,11 @@ function Applications() {
         try {
           // Fallback: Update application status directly to approved
           const app = applications.find(app => app.id === applicationId);
+          const rentAmount = typeof app?.rent_budget === 'string' ? parseFloat(app.rent_budget) : (app?.rent_budget || 1000);
           await apiClient.updateApplication(applicationId, {
             status: 'approved',
-            monthly_rent: app?.rent_budget || 1000,
-            security_deposit: (app?.rent_budget || 1000) * 2
+            monthly_rent: rentAmount,
+            security_deposit: rentAmount * 2
           } as any);
           
           // Refresh data to show the updated status
@@ -383,8 +385,9 @@ function Applications() {
         // Handle other types of errors
         let errorMessage = 'Failed to qualify application';
         
-        if (error.message.includes('400')) {
-          errorMessage = `❌ Invalid Data: ${error.message}\n\nPlease check the application data and try again.`;
+        if (error.response?.status === 400) {
+          const backendErrors = error.response?.data;
+          errorMessage = `❌ Invalid Data: ${JSON.stringify(backendErrors)}`;
         } else if (error.message.includes('500')) {
           errorMessage = `❌ Server Error: ${error.message}\n\nPlease try again or contact support.`;
         } else {
@@ -824,46 +827,38 @@ function Applications() {
     };
   };
 
-  const handleMoveOut = (application: Application) => {
-    setSelectedApplicationForMoveOut(application);
-    setIsMoveOutModalOpen(true);
-    setMoveOutDate(new Date().toISOString().split('T')[0]); // Default to today
-    const calculations = calculateMoveOutImpact(application, new Date().toISOString().split('T')[0]);
-    setMoveOutCalculations(calculations);
-  };
-
-  const handleMoveOutDateChange = (date: string) => {
-    if (!selectedApplicationForMoveOut) return;
-    setMoveOutDate(date);
-    const calculations = calculateMoveOutImpact(selectedApplicationForMoveOut, date);
-    setMoveOutCalculations(calculations);
-  };
-
-  const handleConfirmMoveOut = async () => {
-    if (!selectedApplicationForMoveOut || !selectedApplicationForMoveOut.lease) return;
-    
+  const handleMoveOut = async (application: Application) => {
     try {
-      await apiClient.processMoveout(selectedApplicationForMoveOut.lease.id, {
-        move_out_date: moveOutDate,
-        move_out_condition: 'Manager-processed move-out from applications',
-        cleaning_charges: 0,
-        damage_charges: 0,
-        deposit_returned: parseFloat(selectedApplicationForMoveOut.lease.security_deposit.toString())
-      });
+      // Fetch tenant detail to get occupancy info
+      const tenantDetail = await apiClient.getTenant(application.tenant);
       
-      // Refresh data to show updated status
-      await fetchData();
+      // Get active occupancy ID from tenant detail
+      const occupancies = (tenantDetail as any).occupancies || [];
+      const activeOccupancy = occupancies.find((occ: any) => 
+        occ.property_ref === application.property_ref && !occ.move_out_date
+      );
       
-      // Close modal
-      setIsMoveOutModalOpen(false);
-      setSelectedApplicationForMoveOut(null);
-      setMoveOutCalculations(null);
-      
-      alert('Move-out processed successfully!');
+      if (activeOccupancy) {
+        setSelectedOccupancyId(activeOccupancy.id);
+        setSelectedApplicationForMoveOut(application);
+        setSelectedTenantForMoveOut(tenantDetail);
+        setIsMoveOutModalOpen(true);
+      } else {
+        alert('No active occupancy found for this tenant.');
+      }
     } catch (error: any) {
-      console.error('Failed to process move-out:', error);
-      alert(`Failed to process move-out: ${error.message}`);
+      console.error('Failed to fetch tenant occupancy:', error);
+      alert('Could not load tenant occupancy information.');
     }
+  };
+
+  const handleMoveOutSuccess = async () => {
+    // Refresh data to show updated status
+    await fetchData();
+    setIsMoveOutModalOpen(false);
+    setSelectedApplicationForMoveOut(null);
+    setSelectedTenantForMoveOut(null);
+    setSelectedOccupancyId(undefined);
   };
 
   const formatDate = (dateString: string | null) => {
@@ -1267,6 +1262,79 @@ function Applications() {
     setSelectedApplicationForLease(application);
     setIsLeaseGenerationOpen(true);
   };
+
+  const handleAssignToProperty = useCallback((application: Application) => {
+    console.log('handleAssignToProperty called with:', application);
+    setSelectedApplicationForAssignment(application);
+    setIsAssignModalOpen(true);
+  }, []);
+
+  const handleAssignSubmit = async (data: { rent: number; deposit: number; startDate: string; endDate: string }) => {
+    if (!selectedApplicationForAssignment) return;
+
+    try {
+      await apiClient.updateApplication(selectedApplicationForAssignment.id, {
+        status: 'active',
+        decision_notes: `Assigned to property. Rent: ${data.rent}, Deposit: ${data.deposit}, Term: ${data.startDate} to ${data.endDate}`
+      } as any);
+      
+      setApplications(prev => prev.map(app => 
+        app.id === selectedApplicationForAssignment.id ? { ...app, status: 'active' as const } : app
+      ));
+      
+      setIsAssignModalOpen(false);
+      setSelectedApplicationForAssignment(null);
+      await fetchData();
+      alert('Tenant assigned successfully!');
+    } catch (error: any) {
+      console.error('Failed to assign tenant:', error);
+      alert(`❌ Failed to assign tenant: ${error.message || 'Unknown error'}`);
+    }
+  };
+
+  const handleBackToPending = useCallback(async (applicationId: number) => {
+    console.log('handleBackToPending called with:', applicationId);
+    if (!confirm('Are you sure you want to move this application back to Pending?')) {
+      return;
+    }
+
+    try {
+      await apiClient.updateApplication(applicationId, { status: 'pending' } as any);
+
+      setApplications(prevApps =>
+        prevApps.map(app =>
+          app.id === applicationId
+            ? { ...app, status: 'pending' as const }
+            : app
+        )
+      );
+
+      await fetchData();
+      alert('Application moved back to Pending.');
+    } catch (error: any) {
+      console.error('Failed to move application back to pending:', error);
+      alert(`❌ Failed to revert application: ${error.message || 'Unknown error'}`);
+    }
+  }, [fetchData]);
+
+  // Debug: Log handlers to verify they're defined
+  useEffect(() => {
+    console.log('🔍 Handler Debug:', {
+      handleAssignToProperty: typeof handleAssignToProperty,
+      handleBackToPending: typeof handleBackToPending,
+      handleAssignToPropertyValue: handleAssignToProperty,
+      handleBackToPendingValue: handleBackToPending,
+      areFunctions: typeof handleAssignToProperty === 'function' && typeof handleBackToPending === 'function'
+    });
+    console.log('🚀 BEFORE RENDERING ApplicationKanban:', {
+      handleAssignToProperty: typeof handleAssignToProperty,
+      handleBackToPending: typeof handleBackToPending,
+      handleAssignToPropertyIsFunction: typeof handleAssignToProperty === 'function',
+      handleBackToPendingIsFunction: typeof handleBackToPending === 'function',
+      handleAssignToPropertyValue: handleAssignToProperty,
+      handleBackToPendingValue: handleBackToPending
+    });
+  }, [handleAssignToProperty, handleBackToPending]);
 
   const handleActivateLease = async (application: Application) => {
     try {
@@ -1698,8 +1766,13 @@ function Applications() {
             onEditLease={handleEditLease}
             onDownloadLease={handleDownloadLease}
             onMoveOut={handleMoveOut}
+            onAssignToProperty={handleAssignToProperty}
+            onBackToPending={handleBackToPending}
             getPropertyName={getPropertyName}
             formatDate={formatDate}
+            setIsAssignModalOpen={setIsAssignModalOpen}
+            setSelectedApplicationForAssignment={setSelectedApplicationForAssignment}
+            onRefresh={fetchData}
             extraActions={(
               <>
                   <button 
@@ -1713,59 +1786,24 @@ function Applications() {
                       cursor: loading ? 'not-allowed' : 'pointer'
                     }}
                   >
-                    <svg 
-                      width="16" 
-                      height="16" 
-                      viewBox="0 0 24 24" 
-                      fill="none" 
-                      stroke="currentColor" 
-                      strokeWidth="2"
-                      style={{
-                        animation: loading ? 'spin 1s linear infinite' : 'none'
-                      }}
-                    >
-                    <polyline points="23 4 23 10 17 10" />
-                    <polyline points="1 20 1 14 7 14" />
-                    <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15" />
-                    </svg>
-                    {loading ? 'Refreshing...' : 'Refresh'}
+                    {loading ? (
+                      <span className="spinner" />
+                    ) : (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-refresh-cw"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg>
+                    )}
+                    Refresh
                   </button>
-                  <button 
-                    onClick={downloadApplicationsReport} 
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      padding: '0.5rem 1rem',
-                      backgroundColor: '#2563eb',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '6px',
-                      fontSize: '0.875rem',
-                      fontWeight: '500',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease'
-                    }}
-                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
-                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
-                    title="Download a comprehensive report of all applications with analytics and insights"
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                    <polyline points="7,10 12,15 17,10" />
-                    <path d="M12 15V3" />
-                    </svg>
-                    Download Report
+                  <button onClick={() => setIsViewingManagementOpen(true)} className="btn primary">
+                    Viewings ({viewingsCount})
                   </button>
               </>
             )}
-                      />
+        />
 
         {/* Legacy pending & processed application tables removed – all workflow management is now handled via the Kanban board */}
       </div>
 
-      {/* Modal removed - applications are now created through listings */}
-
+      {/* Modals */}
       {isConflictModalOpen && (
         <ConflictResolutionModal
           conflictingApplications={conflictingApplications}
@@ -1814,7 +1852,6 @@ function Applications() {
           }}
           onApprove={handleQuickApprove}
           onReject={handleReject}
-          onAssignRoom={openRoomAssignmentModal}
         />
       )}
 
@@ -1900,218 +1937,30 @@ function Applications() {
         />
       )}
 
-      {/* Move-out Confirmation Modal */}
-      {isMoveOutModalOpen && selectedApplicationForMoveOut && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }}>
-          <div style={{
-            backgroundColor: 'white',
-            borderRadius: '12px',
-            padding: '2rem',
-            maxWidth: '500px',
-            width: '90%',
-            maxHeight: '90vh',
-            overflow: 'auto',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
-          }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '1rem',
-              marginBottom: '1.5rem'
-            }}>
-              <div style={{
-                width: '3rem',
-                height: '3rem',
-                backgroundColor: '#fef2f2',
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                <LogOut style={{ width: '1.5rem', height: '1.5rem', color: '#dc2626' }} />
-              </div>
-              <div>
-                <h2 style={{
-                  fontSize: '1.5rem',
-                  fontWeight: '700',
-                  color: '#111827',
-                  margin: 0
-                }}>
-                  Process Move-Out
-                </h2>
-                <p style={{
-                  fontSize: '0.875rem',
-                  color: '#6b7280',
-                  margin: '0.25rem 0 0 0'
-                }}>
-                  {selectedApplicationForMoveOut.tenant_name} - {selectedApplicationForMoveOut.property_name}
-                </p>
-              </div>
-            </div>
+      {/* Move-out Modal */}
+      {isMoveOutModalOpen && selectedTenantForMoveOut && (
+        <MoveOutModal
+          isOpen={isMoveOutModalOpen}
+          tenant={selectedTenantForMoveOut}
+          occupancyId={selectedOccupancyId}
+          onClose={() => {
+            setIsMoveOutModalOpen(false);
+            setSelectedApplicationForMoveOut(null);
+            setSelectedTenantForMoveOut(null);
+            setSelectedOccupancyId(undefined);
+          }}
+          onSuccess={handleMoveOutSuccess}
+        />
+      )}
 
-            <div style={{
-              backgroundColor: '#f9fafb',
-              borderRadius: '8px',
-              padding: '1rem',
-              marginBottom: '1.5rem'
-            }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                marginBottom: '0.75rem'
-              }}>
-                <Calendar style={{ width: '1rem', height: '1rem', color: '#6b7280' }} />
-                <span style={{
-                  fontSize: '0.875rem',
-                  fontWeight: '600',
-                  color: '#374151'
-                }}>
-                  Move-out Date
-                </span>
-              </div>
-              <input
-                type="date"
-                value={moveOutDate}
-                onChange={(e) => handleMoveOutDateChange(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '6px',
-                  fontSize: '0.875rem'
-                }}
-              />
-            </div>
-
-            {moveOutCalculations && (
-              <div style={{
-                backgroundColor: '#fef3c7',
-                borderRadius: '8px',
-                padding: '1rem',
-                marginBottom: '1.5rem',
-                border: '1px solid #fbbf24'
-              }}>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  marginBottom: '0.75rem'
-                }}>
-                  <Calculator style={{ width: '1rem', height: '1rem', color: '#d97706' }} />
-                  <span style={{
-                    fontSize: '0.875rem',
-                    fontWeight: '600',
-                    color: '#92400e'
-                  }}>
-                    Financial Impact
-                  </span>
-                </div>
-                
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
-                  gap: '1rem',
-                  fontSize: '0.875rem'
-                }}>
-                  <div>
-                    <div style={{ color: '#6b7280', marginBottom: '0.25rem' }}>
-                      Time Remaining
-                    </div>
-                    <div style={{ fontWeight: '600', color: '#374151' }}>
-                      {moveOutCalculations.monthsRemaining} months, {moveOutCalculations.daysRemaining} days
-                    </div>
-                  </div>
-                  <div>
-                    <div style={{ color: '#6b7280', marginBottom: '0.25rem' }}>
-                      Rent Forgo
-                    </div>
-                    <div style={{ fontWeight: '600', color: '#dc2626' }}>
-                      ${moveOutCalculations.rentForgo.toFixed(2)}
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{
-                  marginTop: '0.75rem',
-                  paddingTop: '0.75rem',
-                  borderTop: '1px solid #fbbf24'
-                }}>
-                  <div style={{ color: '#6b7280', marginBottom: '0.25rem', fontSize: '0.875rem' }}>
-                    Total Days Lost: {moveOutCalculations.totalDaysRemaining}
-                  </div>
-                  <div style={{ color: '#6b7280', fontSize: '0.75rem' }}>
-                    Lease ends on: {selectedApplicationForMoveOut.lease?.end_date ? formatDate(selectedApplicationForMoveOut.lease.end_date) : 'N/A'}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div style={{
-              display: 'flex',
-              gap: '0.75rem',
-              justifyContent: 'flex-end'
-            }}>
-              <button
-                onClick={() => {
-                  setIsMoveOutModalOpen(false);
-                  setSelectedApplicationForMoveOut(null);
-                  setMoveOutCalculations(null);
-                }}
-                style={{
-                  padding: '0.75rem 1.5rem',
-                  backgroundColor: '#f8fafc',
-                  color: '#374151',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '6px',
-                  fontSize: '0.875rem',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.backgroundColor = '#f1f5f9';
-                  e.currentTarget.style.borderColor = '#94a3b8';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.backgroundColor = '#f8fafc';
-                  e.currentTarget.style.borderColor = '#cbd5e1';
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleConfirmMoveOut}
-                style={{
-                  padding: '0.75rem 1.5rem',
-                  backgroundColor: '#dc2626',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  fontSize: '0.875rem',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#b91c1c'}
-                onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
-              >
-                Confirm Move-Out
-              </button>
-            </div>
-          </div>
-        </div>
+      {selectedApplicationForAssignment && (
+        <AssignToPropertyModal
+          isOpen={isAssignModalOpen}
+          onClose={() => setIsAssignModalOpen(false)}
+          onSave={handleAssignSubmit}
+          application={selectedApplicationForAssignment}
+          property={properties.find(p => p.id === selectedApplicationForAssignment.property_ref) || null}
+        />
       )}
 
       <style jsx>{`
@@ -2150,7 +1999,7 @@ function Applications() {
 
         .header-right {
           display: flex;
-          align-items: center;
+          alignItems: center;
           gap: 12px;
         }
 

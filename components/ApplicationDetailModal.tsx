@@ -32,7 +32,7 @@ interface ApplicationDetailModalProps {
   onClose: () => void;
   onApprove: (applicationId: number, propertyId: number) => void;
   onReject: (applicationId: number) => void;
-  onAssignRoom: (application: Application) => void;
+  // onAssignRoom: (application: Application) => void; // MVP simplification
 }
 
 interface TimelineEvent {
@@ -53,7 +53,7 @@ const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
   onClose,
   onApprove,
   onReject,
-  onAssignRoom
+  // onAssignRoom // MVP simplification
 }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'timeline' | 'documents'>('overview');
   const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
@@ -1020,66 +1020,49 @@ const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
             <>
               <button
                 onClick={() => onApprove(application.id, application.property_ref)}
-                disabled={availableRooms.length === 0}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.5rem',
                   padding: '0.5rem 0.75rem',
-                  backgroundColor: availableRooms.length === 0 ? '#f3f4f6' : '#16a34a',
-                  color: availableRooms.length === 0 ? '#9ca3af' : 'white',
-                  border: availableRooms.length === 0 ? '1px solid #e5e7eb' : 'none',
+                  backgroundColor: '#2563eb',
+                  color: 'white',
+                  border: 'none',
                   borderRadius: '6px',
                   fontSize: '0.875rem',
                   fontWeight: '500',
-                  cursor: availableRooms.length === 0 ? 'not-allowed' : 'pointer',
+                  cursor: 'pointer',
                   transition: 'all 0.2s ease'
                 }}
-                onMouseOver={(e) => {
-                  if (availableRooms.length > 0) {
-                    e.currentTarget.style.backgroundColor = '#15803d';
-                  }
-                }}
-                onMouseOut={(e) => {
-                  if (availableRooms.length > 0) {
-                    e.currentTarget.style.backgroundColor = '#16a34a';
-                  }
-                }}
+                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
+                onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
               >
                 <CheckCircle size={14} />
-                Approve Application
+                Shortlist
               </button>
-              <button
+              {/* MVP Simplification: Assign Room button removed from this modal */}
+              {/* <button
                 onClick={() => onAssignRoom(application)}
-                disabled={availableRooms.length === 0}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.5rem',
                   padding: '0.5rem 0.75rem',
-                  backgroundColor: availableRooms.length === 0 ? '#f3f4f6' : '#2563eb',
-                  color: availableRooms.length === 0 ? '#9ca3af' : 'white',
-                  border: availableRooms.length === 0 ? '1px solid #e5e7eb' : 'none',
+                  backgroundColor: '#f97316',
+                  color: 'white',
+                  border: 'none',
                   borderRadius: '6px',
                   fontSize: '0.875rem',
                   fontWeight: '500',
-                  cursor: availableRooms.length === 0 ? 'not-allowed' : 'pointer',
+                  cursor: 'pointer',
                   transition: 'all 0.2s ease'
                 }}
-                onMouseOver={(e) => {
-                  if (availableRooms.length > 0) {
-                    e.currentTarget.style.backgroundColor = '#1d4ed8';
-                  }
-                }}
-                onMouseOut={(e) => {
-                  if (availableRooms.length > 0) {
-                    e.currentTarget.style.backgroundColor = '#2563eb';
-                  }
-                }}
+                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#ea580c'}
+                onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#f97316'}
               >
                 <Home size={14} />
                 Assign Room
-              </button>
+              </button> */}
               <button
                 onClick={() => onReject(application.id)}
                 style={{

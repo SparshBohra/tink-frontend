@@ -3,18 +3,12 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { useAuth } from '../lib/auth-context';
-import { phoneUtils } from '../lib/utils';
-import USPhoneInput, { validateUSPhone, getUSPhoneError, toE164Format } from '../components/USPhoneInput';
-import MapboxAddressAutocomplete from '../components/MapboxAddressAutocomplete';
 
 export default function LandlordSignup() {
   const router = useRouter();
   const { signupLandlord, error, clearError } = useAuth();
   const [formData, setFormData] = useState({
-    org_name: '',
-    contact_email: '',
-    contact_phone: '',
-    address: '',
+    registration_code: '',
     full_name: '',
     username: '',
     password: '',
@@ -22,39 +16,35 @@ export default function LandlordSignup() {
   });
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
-  const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [codeError, setCodeError] = useState<string | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
     clearError();
-  };
-
-  const handlePhoneChange = (value: string) => {
-    setFormData(prev => ({ ...prev, contact_phone: value }));
     
-    // Only validate if there's a value (since phone is optional)
-    if (value.trim()) {
-      const phoneErrorMsg = getUSPhoneError(value);
-      setPhoneError(phoneErrorMsg);
-    } else {
-      setPhoneError(null);
+    // Validate registration code
+    if (name === 'registration_code') {
+      if (value && value !== 'SquareFtBeta') {
+        setCodeError('Invalid registration code');
+      } else {
+        setCodeError(null);
+      }
     }
-    
-    clearError();
-  };
-
-  // Handle address selection from Mapbox - full address will be set via onChange
-  const handleAddressSelect = (addressComponents: any) => {
-    // The full address is already set via onChange when usePlaceName=true
-    // This is just for any additional processing if needed
-    clearError();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setSuccess(null);
+    setCodeError(null);
+
+    // Validate registration code
+    if (formData.registration_code !== 'SquareFtBeta') {
+      setCodeError('Invalid registration code. Please enter the correct code.');
+      setLoading(false);
+      return;
+    }
 
     if (formData.password !== formData.password_confirm) {
       // This should be handled by the auth context, but as a fallback:
@@ -105,72 +95,33 @@ export default function LandlordSignup() {
 
           {/* Signup Form */}
           <form onSubmit={handleSubmit} className="signup-form">
-            {/* Organization Information */}
+            {/* Registration Code */}
             <div className="form-section">
-              <h3 className="section-title">Organization Information</h3>
+              <h3 className="section-title">Registration</h3>
               
               <div className="form-group">
-                <label htmlFor="org_name" className="form-label">Organization Name *</label>
+                <label htmlFor="registration_code" className="form-label">Registration Code *</label>
                 <input 
-                  id="org_name" 
-                  name="org_name" 
+                  id="registration_code" 
+                  name="registration_code" 
                   type="text" 
-                  value={formData.org_name} 
+                  value={formData.registration_code} 
                   onChange={handleChange} 
-                  placeholder="e.g., Premium Properties LLC"
+                  placeholder="Enter registration code"
                   required 
                   disabled={loading} 
-                  className="form-input" 
+                  className={`form-input ${codeError ? 'input-error' : ''}`}
                 />
-              </div>
-
-              <div className="form-row">
-                <div className="form-group">
-                  <label htmlFor="contact_email" className="form-label">Business Email *</label>
-                  <input 
-                    id="contact_email" 
-                    name="contact_email" 
-                    type="email" 
-                    value={formData.contact_email} 
-                    onChange={handleChange} 
-                    placeholder="business@company.com"
-                    required 
-                    disabled={loading} 
-                    className="form-input" 
-                  />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="contact_phone" className="form-label">Business Phone</label>
-                  <USPhoneInput 
-                    id="contact_phone" 
-                    name="contact_phone" 
-                    value={formData.contact_phone} 
-                    onChange={handlePhoneChange} 
-                    placeholder="(555) 123-4567"
-                    disabled={loading} 
-                    error={phoneError}
-                  />
-                  {formData.contact_phone && !phoneError && (
-                    <div className="field-success">
-                      ✓ Valid phone number
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="address" className="form-label">Business Address</label>
-                <MapboxAddressAutocomplete
-                  id="address"
-                  name="address"
-                  value={formData.address}
-                  onChange={(value) => setFormData(prev => ({ ...prev, address: value }))}
-                  onAddressSelect={handleAddressSelect}
-                  placeholder="123 Business St, City, State"
-                  disabled={loading}
-                  className="form-input"
-                  usePlaceName={true}
-                />
+                {codeError && (
+                  <div className="field-error">
+                    {codeError}
+                  </div>
+                )}
+                {formData.registration_code && !codeError && formData.registration_code === 'SquareFtBeta' && (
+                  <div className="field-success">
+                    ✓ Valid registration code
+                  </div>
+                )}
               </div>
             </div>
 
@@ -481,6 +432,23 @@ export default function LandlordSignup() {
           font-size: 14px;
           margin-top: 6px;
           font-weight: 600;
+        }
+
+        .field-error {
+          color: #dc2626;
+          font-size: 14px;
+          margin-top: 6px;
+          font-weight: 500;
+        }
+
+        .input-error {
+          border-color: #dc2626 !important;
+          background-color: #fef2f2;
+        }
+
+        .input-error:focus {
+          border-color: #dc2626 !important;
+          box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
         }
 
         @media (max-width: 640px) {

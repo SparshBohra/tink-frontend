@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import StatusBadge from './StatusBadge';
 import StatusProgressIndicator from './StatusProgressIndicator';
-import { Application } from '../lib/types';
+import { Application, Property, Room } from '../lib/types'; // Assuming Property is exported from types
+import { apiClient } from '../lib/api';
+import AssignToPropertyModal from './AssignToPropertyModal';
 import { 
   FileText, 
   Clock, 
@@ -41,19 +43,23 @@ interface ApplicationKanbanProps {
   onEditLease?: (application: Application) => void;
   onDownloadLease?: (application: Application) => void;
   onMoveOut?: (application: Application) => void; /* New prop for move-out functionality */
+  onAssignToProperty?: (application: Application) => void; /* New prop for direct assignment to property */
+  onBackToPending?: (applicationId: number) => void; /* New prop to revert to pending */
   getPropertyName: (propertyId: number) => string;
   formatDate: (date: string | null) => string;
   extraActions?: React.ReactNode;
+  // Add setters and refresh function for fallback handlers
+  setIsAssignModalOpen?: (isOpen: boolean) => void;
+  setSelectedApplicationForAssignment?: (application: Application | null) => void;
+  onRefresh?: () => void;
 }
 
 type Column = { keys: string[]; title: string };
 
 const STATUS_COLUMNS: Column[] = [
-  { keys: ['pending', 'rejected'], title: 'Pending Review' },
-  { keys: ['approved', 'viewing_scheduled'], title: 'Shortlisted' },
-  { keys: ['viewing_completed', 'processing', 'room_assigned'], title: 'Generate Lease' },
-  { keys: ['lease_ready', 'lease_created', 'lease_signed'], title: 'Lease Process' },
-  { keys: ['moved_in', 'active'], title: 'Active Tenants' },
+  { keys: ['pending', 'rejected'], title: 'Pending' },
+  { keys: ['approved', 'viewing_scheduled', 'viewing_completed', 'processing', 'room_assigned'], title: 'Shortlisted' },
+  { keys: ['moved_in', 'active'], title: 'Active' },
 ];
 
 // Helper function to get card colors based on status (matching StatusBadge colors)
@@ -132,11 +138,92 @@ export default function ApplicationKanban({
   onEditLease,
   onDownloadLease,
   onMoveOut,
+  onAssignToProperty: parentOnAssignToProperty, // Rename to avoid conflict
+  onBackToPending: parentOnBackToPending, // Rename to avoid conflict
   getPropertyName,
   formatDate,
   extraActions,
+  // Destructure new props
+  setIsAssignModalOpen,
+  setSelectedApplicationForAssignment,
+  onRefresh,
 }: ApplicationKanbanProps) {
   const [sortSettings, setSortSettings] = useState<Record<string, 'default' | 'date' | 'name'>>({});
+  const [isLocalAssignModalOpen, setIsLocalAssignModalOpen] = useState(false);
+  const [selectedAppForAssignment, setSelectedAppForAssignment] = useState<Application | null>(null);
+  const [selectedPropertyForAssignment, setSelectedPropertyForAssignment] = useState<Property | null>(null);
+
+  // Log received props for debugging
+  console.log('🔵 ApplicationKanban received props:', {
+    setIsAssignModalOpen: typeof setIsAssignModalOpen,
+    setSelectedApplicationForAssignment: typeof setSelectedApplicationForAssignment,
+    onRefresh: typeof onRefresh,
+    parentOnAssignToProperty: typeof parentOnAssignToProperty,
+    parentOnBackToPending: typeof parentOnBackToPending
+  });
+
+  // Fallback handler for when props aren't passed correctly by Next.js dev server
+  const onAssignToProperty = async (application: Application) => {
+    console.log('TEMP HANDLER: Assigning to property', application);
+    if (parentOnAssignToProperty) {
+      parentOnAssignToProperty(application);
+    } else if (setSelectedApplicationForAssignment && setIsAssignModalOpen) {
+      // Fallback logic to open the modal directly
+      console.log('Opening modal via fallback handlers');
+      setSelectedApplicationForAssignment(application);
+      setIsAssignModalOpen(true);
+    } else {
+      // Use local modal as fallback
+      console.log('Opening local assignment modal for', application.id);
+      try {
+        const propData = await apiClient.getProperty(application.property_ref);
+        setSelectedPropertyForAssignment(propData);
+        setSelectedAppForAssignment(application);
+        setIsLocalAssignModalOpen(true);
+      } catch (error) {
+        console.error('Failed to fetch property details for modal:', error);
+        alert('Could not load property details to open assignment modal.');
+      }
+    }
+  };
+
+  const handleLocalAssignSubmit = async (data: { rent: number; deposit: number; startDate: string; endDate: string }) => {
+    if (!selectedAppForAssignment) return;
+    try {
+      await apiClient.updateApplication(selectedAppForAssignment.id, {
+        status: 'moved_in',
+        decision_notes: `Assigned to property. Rent: ${data.rent}, Deposit: ${data.deposit}, Term: ${data.startDate} to ${data.endDate}`
+      } as any);
+      
+      setIsLocalAssignModalOpen(false);
+      setSelectedAppForAssignment(null);
+      setSelectedPropertyForAssignment(null); // Clear property data after assignment
+      if (onRefresh) onRefresh();
+      alert('Tenant assigned successfully!');
+    } catch (error: any) {
+      alert(`Error: ${error.message}`);
+    }
+  };
+
+  const onBackToPending = async (applicationId: number) => {
+    console.log('TEMP HANDLER: Moving back to pending', applicationId);
+    if (parentOnBackToPending) {
+      parentOnBackToPending(applicationId);
+    } else {
+      // Fallback logic with auto-refresh
+      if (confirm('Are you sure you want to move this application back to Pending?')) {
+        try {
+          await apiClient.updateApplication(applicationId, { status: 'pending' } as any);
+          if (onRefresh) {
+            onRefresh(); // Refresh the data in the parent component automatically
+          }
+          // No alert - just refresh silently
+        } catch (error: any) {
+          alert(`Error: ${error.message}`);
+        }
+      }
+    }
+  };
 
   // Sorting function
   const sortApplications = (apps: Application[], sortType: 'default' | 'date' | 'name') => {
@@ -213,16 +300,12 @@ export default function ApplicationKanban({
   // Helper function to get stage descriptions
   const getStageDescription = (title: string): string => {
     switch (title) {
-      case 'Pending Review':
-        return 'New applications waiting for initial screening and approval decision';
+      case 'Pending':
+        return 'New applications waiting for initial review and decision';
       case 'Shortlisted':
-        return 'Shortlisted applicants ready for property viewing scheduling and completion';
-      case 'Generate Lease':
-        return 'Viewing completed - ready for lease generation (room assignment can be edited during lease creation)';
-      case 'Lease Process':
-        return 'Room assigned and lease documents in preparation, generation, or signing process';
-      case 'Active Tenants':
-        return 'Completed applications - active tenants';
+        return 'Approved applicants ready for viewing or direct assignment to property';
+      case 'Active':
+        return 'Tenants assigned to properties and actively renting';
       default:
         return '';
     }
@@ -467,22 +550,13 @@ export default function ApplicationKanban({
                       boxShadow: '0 1px 2px rgba(59, 130, 246, 0.1)'
                     }}>
                       {app.status === 'pending' && 'Awaiting Review'}
-                      {app.status === 'approved' && 'Shortlisted'}
                       {app.status === 'rejected' && 'Application Rejected'}
+                      {app.status === 'approved' && 'Shortlisted'}
                       {app.status === 'viewing_scheduled' && 'Viewing Scheduled'}
                       {app.status === 'viewing_completed' && 'Viewing Completed'}
-                      {app.status === 'processing' && 'Processing Application'}
+                      {app.status === 'processing' && 'Ready for Assignment'}
                       {app.status === 'room_assigned' && 'Room Assigned'}
-                      {app.status === 'lease_ready' && 'Lease Ready'}
-                      {app.status === 'lease_created' && (
-                            app.lease?.status === 'draft' ? 'Draft Lease Created' :
-                            app.lease?.status === 'sent_to_tenant' ? 'Sent to Tenant' :
-                            app.lease?.status === 'signed' ? 'Lease Signed' :
-                            app.lease?.status === 'active' ? 'Lease Active' :
-                            'Lease Generated'
-                          )}
-                          {app.status === 'lease_signed' && 'Lease Signed'}
-                      {app.status === 'moved_in' && 'Tenant Moved In'}
+                      {app.status === 'moved_in' && 'Active Tenant'}
                       {app.status === 'active' && 'Active Tenant'}
                     </div>
                     <div style={{
@@ -614,18 +688,26 @@ export default function ApplicationKanban({
                         </>
                       )}
 
-                      {/* Qualified actions */}
+                      {/* Shortlisted actions - approved, viewing_scheduled, viewing_completed, processing, room_assigned */}
                       {app.status === 'approved' && (
                         <>
                           <button className="btn-sm primary" onClick={() => onSetupViewing && onSetupViewing(app)}>
                             Schedule Viewing
                           </button>
                           <button 
-                            className="btn-sm secondary" 
-                            onClick={() => onSkipViewing && onSkipViewing(app.id)}
-                            title="Skip viewing and move directly to room assignment"
+                            className="btn-sm success" 
+                            onClick={() => onAssignToProperty(app)}
+                            title="Assign tenant directly to property"
                           >
-                            Skip Viewing
+                            <Home style={{ width: '0.75rem', height: '0.75rem' }} />
+                            Assign to Property
+                          </button>
+                          <button 
+                            className="btn-sm secondary" 
+                            onClick={() => onBackToPending(app.id)}
+                            title="Revert application to pending status"
+                          >
+                            Back to Pending
                           </button>
                         </>
                       )}
@@ -639,71 +721,45 @@ export default function ApplicationKanban({
                           <button className="btn-sm secondary" onClick={() => onRescheduleViewing && onRescheduleViewing(app)}>
                             Reschedule
                           </button>
+                          <button 
+                            className="btn-sm success" 
+                            onClick={() => onAssignToProperty(app)}
+                            title="Assign tenant directly to property"
+                          >
+                            <Home style={{ width: '0.75rem', height: '0.75rem' }} />
+                            Assign to Property
+                          </button>
+                          <button 
+                            className="btn-sm secondary" 
+                            onClick={() => onBackToPending(app.id)}
+                            title="Revert application to pending status"
+                          >
+                            Back to Pending
+                          </button>
                         </>
                       )}
 
-                      {/* Viewing Complete actions */}
-                      {(app.status === 'viewing_completed' || app.status === 'processing') && (
+                      {/* Viewing Complete and other shortlisted statuses */}
+                      {(app.status === 'viewing_completed' || app.status === 'processing' || app.status === 'room_assigned') && (
                         <>
                           <button 
                             className="btn-sm success" 
-                            onClick={() => onGenerateLease && onGenerateLease(app)}
-                            title="Generate lease for this applicant (room assignment can be edited during lease generation)"
+                            onClick={() => onAssignToProperty(app)}
+                            title="Assign tenant directly to property"
                           >
-                            Generate Lease
+                            <Home style={{ width: '0.75rem', height: '0.75rem' }} />
+                            Assign to Property
                           </button>
-                        </>
-                      )}
-
-                      {/* Room Assigned actions */}
-                      {app.status === 'room_assigned' && (
-                        <>
-                          <button className="btn-sm success" onClick={() => onGenerateLease && onGenerateLease(app)}>
-                            Generate Lease
+                          <button 
+                            className="btn-sm secondary" 
+                            onClick={() => onBackToPending(app.id)}
+                            title="Revert application to pending status"
+                          >
+                            Back to Pending
                           </button>
-                          <button className="btn-sm secondary" onClick={() => onAssignRoom(app)}>
-                            Change Room
-                          </button>
-                        </>
-                      )}
-
-                      {/* Lease Process actions */}
-                      {(app.status === 'lease_created' || app.status === 'lease_signed') && (
-                        <>
-                          <button className="btn-sm primary" onClick={() => onReview(app)}>
-                            View Lease
-                          </button>
-                          {/* Show different buttons based on lease status */}
-                          {app.lease?.status === 'draft' && (
-                            <>
-                              <button className="btn-sm success" onClick={() => onSendToTenant && onSendToTenant(app)}>
-                                Send to Tenant
-                              </button>
-                              <button className="btn-sm secondary" onClick={() => onEditLease && onEditLease(app)}>
-                                Edit Lease
-                              </button>
-                              <button className="btn-sm outline" onClick={() => onDownloadLease && onDownloadLease(app)}>
-                                Download Lease
-                              </button>
-                            </>
-                          )}
-                          {app.lease?.status === 'sent_to_tenant' && (
-                            <div className="status-text">
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{display: 'inline', marginRight: '6px', color: '#10b981'}}>
-                                <line x1="22" y1="2" x2="11" y2="13"/>
-                                <polygon points="22,2 15,22 11,13 2,9 22,2"/>
-                              </svg>
-                              Sent to Tenant - Awaiting Signature
-                            </div>
-                          )}
-                          {app.lease?.status === 'signed' && (
-                            <button className="btn-sm success" onClick={() => onActivateLease && onActivateLease(app)}>
-                              Activate Lease
-                            </button>
-                          )}
-                          {app.lease?.status === 'active' && (
-                            <button className="btn-sm success" onClick={() => onActivateLease && onActivateLease(app)}>
-                              Schedule Move-in
+                          {app.status === 'room_assigned' && (
+                            <button className="btn-sm secondary" onClick={() => onAssignRoom(app)}>
+                              Change Room
                             </button>
                           )}
                         </>
@@ -722,16 +778,6 @@ export default function ApplicationKanban({
                         </button>
                           )}
                         </>
-                      )}
-
-                      {/* Message button - available on all cards except rejected */}
-                      {app.status !== 'rejected' && (
-                        <button className="btn-sm message" onClick={() => onMessage && onMessage(app)}>
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                          </svg>
-                          Message
-                        </button>
                       )}
 
                       {/* Delete button - available if application can be deleted */}
@@ -1134,6 +1180,21 @@ export default function ApplicationKanban({
           background: #e2e8f0;
         }
       `}</style>
+
+      {/* Local Assignment Modal Fallback */}
+      {selectedAppForAssignment && (
+        <AssignToPropertyModal
+          isOpen={isLocalAssignModalOpen}
+          onClose={() => {
+            setIsLocalAssignModalOpen(false);
+            setSelectedAppForAssignment(null);
+            setSelectedPropertyForAssignment(null);
+          }}
+          onSave={handleLocalAssignSubmit}
+          application={selectedAppForAssignment}
+          property={selectedPropertyForAssignment}
+        />
+      )}
     </div>
   );
 } 

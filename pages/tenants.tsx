@@ -8,6 +8,7 @@ import { useAuth, withAuth } from '../lib/auth-context';
 import { apiClient } from '../lib/api';
 import { Tenant, TenantFormData, Application, Lease, Property, Room } from '../lib/types';
 import ApplicationDetailModal from '../components/ApplicationDetailModal';
+import MoveOutModal from '../components/MoveOutModal';
 import { phoneUtils } from '../lib/utils';
 import USPhoneInput, { validateUSPhone, getUSPhoneError, toE164Format } from '../components/USPhoneInput';
 
@@ -36,6 +37,10 @@ function Tenants() {
   const [isApplicationDetailOpen, setIsApplicationDetailOpen] = useState(false);
   const [selectedApplicationForDetail, setSelectedApplicationForDetail] = useState<Application | null>(null);
   
+  // Move Out Modal State
+  const [isMoveOutModalOpen, setIsMoveOutModalOpen] = useState(false);
+  const [selectedTenantForMoveOut, setSelectedTenantForMoveOut] = useState<Tenant | null>(null);
+  const [selectedOccupancyId, setSelectedOccupancyId] = useState<number | undefined>(undefined);
 
   
   // Phone validation states
@@ -187,6 +192,52 @@ function Tenants() {
     setShowDeleteModal(false);
     setTenantToDelete(null);
     setDeleteLoading(false);
+  };
+
+  const handleViewDetails = async (tenant: Tenant) => {
+    try {
+      // Fetch tenant's applications to show in detail modal
+      const applications = await apiClient.getTenantApplications(tenant.id);
+      if (applications && applications.length > 0) {
+        setSelectedApplicationForDetail(applications[0]);
+        setIsApplicationDetailOpen(true);
+      } else {
+        alert('No application found for this tenant.');
+      }
+    } catch (error: any) {
+      console.error('Failed to fetch tenant applications:', error);
+      alert('Could not load tenant details.');
+    }
+  };
+
+  const handleMoveOut = async (tenant: Tenant) => {
+    try {
+      // Fetch tenant detail to get occupancy info
+      const tenantDetail = await apiClient.getTenant(tenant.id);
+      
+      // Get active occupancy ID from tenant detail
+      // The backend should return occupancies in the detail response
+      const occupancies = (tenantDetail as any).occupancies || [];
+      const activeOccupancy = occupancies.find((occ: any) => !occ.move_out_date);
+      
+      if (activeOccupancy) {
+        setSelectedOccupancyId(activeOccupancy.id);
+        setSelectedTenantForMoveOut(tenant);
+        setIsMoveOutModalOpen(true);
+      } else {
+        alert('No active occupancy found for this tenant.');
+      }
+    } catch (error: any) {
+      console.error('Failed to fetch tenant occupancy:', error);
+      alert('Could not load tenant occupancy information.');
+    }
+  };
+
+  const handleMoveOutSuccess = () => {
+    fetchTenants(); // Refresh tenant list
+    setIsMoveOutModalOpen(false);
+    setSelectedTenantForMoveOut(null);
+    setSelectedOccupancyId(undefined);
   };
 
   const handleViewApplications = async (tenantId: number) => {
@@ -1162,20 +1213,14 @@ function Tenants() {
                             textAlign: 'left',
                             borderBottom: '1px solid #f3f4f6'
                           }}>
-                            <Link href={`/tenants/${tenant.id}`}>
-                              <div style={{
-                                fontSize: '0.875rem',
-                                fontWeight: '500',
-                                color: '#374151',
-                                cursor: 'pointer',
-                                marginBottom: '0.25rem',
-                                transition: 'color 0.2s ease'
-                              }}
-                              onMouseOver={(e) => e.currentTarget.style.color = '#1f2937'}
-                              onMouseOut={(e) => e.currentTarget.style.color = '#374151'}>
-                                {tenant.full_name}
-                              </div>
-                              </Link>
+                            <div style={{
+                              fontSize: '0.875rem',
+                              fontWeight: '500',
+                              color: '#374151',
+                              marginBottom: '0.25rem'
+                            }}>
+                              {tenant.full_name}
+                            </div>
                             <div style={{
                               fontSize: '0.75rem',
                               color: '#6b7280'
@@ -1258,7 +1303,7 @@ function Tenants() {
                               gap: '0.5rem'
                             }}>
                               <button 
-                                onClick={() => router.push(`/tenants/${tenant.id}`)}
+                                onClick={() => handleViewDetails(tenant)}
                                 style={{
                                   display: 'flex',
                                   alignItems: 'center',
@@ -1277,44 +1322,39 @@ function Tenants() {
                                 onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
                               >
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                                  </svg>
-                                  Manage
-                                </button>
-                                <button 
-                                  onClick={() => handleDeleteTenant(tenant.id, tenant.full_name)} 
+                                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                  <circle cx="12" cy="12" r="3"/>
+                                </svg>
+                                View Details
+                              </button>
+                              <button 
+                                onClick={() => handleMoveOut(tenant)}
                                 style={{
                                   display: 'flex',
                                   alignItems: 'center',
-                                  justifyContent: 'center',
-                                  width: '2.25rem',
-                                  height: '2.25rem',
-                                  backgroundColor: '#fef2f2',
-                                  color: '#dc2626',
-                                  border: '1px solid #fecaca',
+                                  gap: '0.375rem',
+                                  padding: '0.5rem 0.875rem',
+                                  backgroundColor: '#ef4444',
+                                  color: 'white',
+                                  border: 'none',
                                   borderRadius: '6px',
+                                  fontSize: '0.8125rem',
+                                  fontWeight: '500',
                                   cursor: 'pointer',
                                   transition: 'all 0.2s ease'
                                 }}
-                                onMouseOver={(e) => {
-                                  e.currentTarget.style.backgroundColor = '#fee2e2';
-                                  e.currentTarget.style.borderColor = '#fca5a5';
-                                }}
-                                onMouseOut={(e) => {
-                                  e.currentTarget.style.backgroundColor = '#fef2f2';
-                                  e.currentTarget.style.borderColor = '#fecaca';
-                                }}
-                                  title="Delete tenant"
-                                >
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                                  <path d="M3 6h18"/>
-                                  <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
-                                  <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
-                                  </svg>
-                                </button>
-                              </div>
-                            </td>
+                                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
+                                onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#ef4444'}
+                              >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                                  <polyline points="16 17 21 12 16 7"/>
+                                  <line x1="21" y1="12" x2="9" y2="12"/>
+                                </svg>
+                                Move Out
+                              </button>
+                            </div>
+                          </td>
                           </tr>
                         ))}
                       </tbody>
@@ -3132,7 +3172,21 @@ function Tenants() {
           }}
           onApprove={handleQuickApprove}
           onReject={handleReject}
-          onAssignRoom={handleAssignRoom}
+        />
+      )}
+
+      {/* Move Out Modal */}
+      {isMoveOutModalOpen && selectedTenantForMoveOut && (
+        <MoveOutModal
+          isOpen={isMoveOutModalOpen}
+          tenant={selectedTenantForMoveOut}
+          occupancyId={selectedOccupancyId}
+          onClose={() => {
+            setIsMoveOutModalOpen(false);
+            setSelectedTenantForMoveOut(null);
+            setSelectedOccupancyId(undefined);
+          }}
+          onSuccess={handleMoveOutSuccess}
         />
       )}
 
