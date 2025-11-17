@@ -152,8 +152,8 @@ export default function EditRoomModal({ room, property, isOpen, onClose, onSucce
           <button className={styles.closeButton} onClick={onClose}>
             <CloseIcon />
           </button>
-        </div>
-
+              </div>
+              
         <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
           {fetchLoading ? (
             <div style={{ padding: '1.5rem', textAlign: 'center' }}>
@@ -175,7 +175,7 @@ export default function EditRoomModal({ room, property, isOpen, onClose, onSucce
             </div>
           ) : (
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-              {error && (
+          {error && (
                 <div style={{
                   padding: '10px 14px',
                   backgroundColor: '#fef2f2',
@@ -186,66 +186,66 @@ export default function EditRoomModal({ room, property, isOpen, onClose, onSucce
                   fontSize: '0.875rem'
                 }}>
                   {error}
-                </div>
-              )}
-
+            </div>
+          )}
+          
               <div className={styles.formSection} style={{ flex: 1, gap: '16px' }}>
                 <div className={styles.formGroup}>
                   <label className={styles.formLabel} style={{ marginBottom: '6px' }}>
                     Room Name <span style={{ color: '#dc2626' }}>*</span>
                   </label>
-                  <input
-                    type="text"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleChange}
+                    <input
+                      type="text"
+                      name="name"
+                      value={formData.name}
+                      onChange={handleChange}
                     className={styles.formInput}
                     placeholder="e.g., Master Bedroom, Room A"
                     maxLength={100}
-                    required
-                  />
-                </div>
+                      required
+                    />
+                  </div>
 
                 <div className={styles.formGroup}>
                   <label className={styles.formLabel} style={{ marginBottom: '6px' }}>
                     Room Type <span style={{ color: '#dc2626' }}>*</span>
                   </label>
-                  <select
-                    name="room_type"
-                    value={formData.room_type}
-                    onChange={handleChange}
+                    <select
+                      name="room_type"
+                      value={formData.room_type}
+                      onChange={handleChange}
                     className={styles.formInput}
-                    required
+                      required
                   >
                     {ROOM_TYPES.map(type => (
                       <option key={type.value} value={type.value}>
                         {type.label}
                       </option>
                     ))}
-                  </select>
+                    </select>
                   <div style={{ fontSize: '0.7rem', color: '#6b7280', marginTop: '3px' }}>
                     {ROOM_TYPES.find(t => t.value === formData.room_type)?.description}
                   </div>
-                </div>
+                  </div>
 
                 <div className={styles.formGroup}>
                   <label className={styles.formLabel} style={{ marginBottom: '6px' }}>
                     Max Capacity <span style={{ color: '#dc2626' }}>*</span>
                   </label>
-                  <input
-                    type="number"
-                    name="max_capacity"
+                    <input
+                      type="number"
+                      name="max_capacity"
                     value={formData.max_capacity}
                     onChange={(e) => setFormData(prev => ({ ...prev, max_capacity: parseInt(e.target.value) || 1 }))}
                     className={styles.formInput}
-                    min="1"
-                    max="10"
+                      min="1"
+                      max="10"
                     required
-                  />
+                    />
                   <div style={{ fontSize: '0.7rem', color: '#6b7280', marginTop: '3px' }}>
                     Maximum number of occupants (1-10)
                   </div>
-                </div>
+                  </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   <div className={styles.formGroup}>
@@ -321,8 +321,8 @@ export default function EditRoomModal({ room, property, isOpen, onClose, onSucce
                       </button>
                     )}
                   </div>
+                  </div>
                 </div>
-              </div>
 
               <div className={styles.modalFooter} style={{ justifyContent: 'flex-end' }}>
                 <div className={styles.footerRight}>
@@ -344,9 +344,9 @@ export default function EditRoomModal({ room, property, isOpen, onClose, onSucce
                 </div>
               </div>
             </form>
-          )}
-        </div>
-      </div>
-    </div>
+                )}
+              </div>
+            </div>
+          </div>
   );
 }

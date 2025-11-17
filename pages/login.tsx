@@ -6,7 +6,7 @@ import Link from 'next/link';
 
 export default function Login() {
   const router = useRouter();
-  const { login, isAuthenticated, loading, error, clearError } = useAuth();
+  const { login, isAuthenticated, loading, error, clearError, user } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -16,6 +16,29 @@ export default function Login() {
   useEffect(() => {
     clearError();
   }, [clearError]);
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (!loading && isAuthenticated && user) {
+      // Redirect based on user role
+      switch (user.role) {
+        case 'admin':
+          router.push('/admin-dashboard');
+          break;
+        case 'owner':
+          router.push('/landlord-dashboard');
+          break;
+        case 'manager':
+          router.push('/manager-dashboard');
+          break;
+        case 'tenant':
+          router.push('/tenant-dashboard');
+          break;
+        default:
+          router.push('/landlord-dashboard');
+      }
+    }
+  }, [loading, isAuthenticated, user, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -8,7 +8,6 @@ export default function LandlordSignup() {
   const router = useRouter();
   const { signupLandlord, error, clearError } = useAuth();
   const [formData, setFormData] = useState({
-    registration_code: '',
     full_name: '',
     username: '',
     password: '',
@@ -16,35 +15,17 @@ export default function LandlordSignup() {
   });
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
-  const [codeError, setCodeError] = useState<string | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
     clearError();
-    
-    // Validate registration code
-    if (name === 'registration_code') {
-      if (value && value !== 'SquareFtBeta') {
-        setCodeError('Invalid registration code');
-      } else {
-        setCodeError(null);
-      }
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setSuccess(null);
-    setCodeError(null);
-
-    // Validate registration code
-    if (formData.registration_code !== 'SquareFtBeta') {
-      setCodeError('Invalid registration code. Please enter the correct code.');
-      setLoading(false);
-      return;
-    }
 
     if (formData.password !== formData.password_confirm) {
       // This should be handled by the auth context, but as a fallback:
@@ -95,36 +76,6 @@ export default function LandlordSignup() {
 
           {/* Signup Form */}
           <form onSubmit={handleSubmit} className="signup-form">
-            {/* Registration Code */}
-            <div className="form-section">
-              <h3 className="section-title">Registration</h3>
-              
-              <div className="form-group">
-                <label htmlFor="registration_code" className="form-label">Registration Code *</label>
-                <input 
-                  id="registration_code" 
-                  name="registration_code" 
-                  type="text" 
-                  value={formData.registration_code} 
-                  onChange={handleChange} 
-                  placeholder="Enter registration code"
-                  required 
-                  disabled={loading} 
-                  className={`form-input ${codeError ? 'input-error' : ''}`}
-                />
-                {codeError && (
-                  <div className="field-error">
-                    {codeError}
-                  </div>
-                )}
-                {formData.registration_code && !codeError && formData.registration_code === 'SquareFtBeta' && (
-                  <div className="field-success">
-                    ✓ Valid registration code
-                  </div>
-                )}
-              </div>
-            </div>
-
             {/* Personal Account Information */}
             <div className="form-section">
               <h3 className="section-title">Your Personal Account</h3>

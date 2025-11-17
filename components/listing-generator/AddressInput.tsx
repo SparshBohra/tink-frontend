@@ -34,12 +34,9 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
   const router = useRouter();
   const [address, setAddress] = useState('');
   const [isScrolled, setIsScrolled] = useState(false);
-  const [titleLine1, setTitleLine1] = useState('');
-  const [titleLine2, setTitleLine2] = useState('');
   const [currentListingIndex, setCurrentListingIndex] = useState(0);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const [loadedLogos, setLoadedLogos] = useState<Set<string>>(new Set());
   const [showLoading, setShowLoading] = useState(false);
   const [isApiLoading, setIsApiLoading] = useState(true);
   const [loadedPhotos, setLoadedPhotos] = useState<Map<number, Set<number>>>(new Map());
@@ -123,15 +120,6 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
         '/landingPage/house4/house4d.webp',
       ]
     },
-  ];
-
-  const logoData = [
-    { name: 'Realtor.com', imgSrc: '/media/Realtor.com_logo.png', text: 'Realtor.com', color: '#D93025', width: 140, fontSize: 20, maxHeight: 32 },
-    { name: 'Trulia', imgSrc: '/media/trulia-png.webp', text: 'Trulia', color: '#FF6B2C', width: 95, fontSize: 24, maxHeight: 32 },
-    { name: 'HotPads', imgSrc: '/media/hotpads_logo2.jpg', text: 'HotPads', color: '#7AB800', width: 150, fontSize: 22, maxHeight: 40 },
-    { name: 'Apartments.com', imgSrc: '/media/Apartments.webp', text: 'Apartments.com', color: '#2D3748', width: 200, fontSize: 20, maxHeight: 40 },
-    { name: 'craigslist', imgSrc: '/media/Craigslist.svg.png', text: 'craigslist', color: '#8B2FC9', width: 160, fontSize: 24, maxHeight: 40 },
-    { name: 'Zillow', imgSrc: '/media/zillow.png', text: 'Zillow', color: '#006AFF', width: 105, fontSize: 24, maxHeight: 32 },
   ];
 
   // Get API URL based on environment
@@ -306,15 +294,6 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
     setShowLoading(false);
   };
 
-  const heroTitles = [
-    'AI meets Real Estate',
-    'Manage your Square Feet',
-    'One address every platform',
-    'Less managing more earning',
-    'Make your move easy',
-    'Automate the landlord life'
-  ];
-
   // Scroll detection
   useEffect(() => {
     const handleScroll = () => {
@@ -344,16 +323,6 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Preload logo images
-  useEffect(() => {
-    logoData.forEach((logo) => {
-      const img = new Image();
-      img.src = logo.imgSrc;
-      img.onload = () => {
-        setLoadedLogos((prev) => new Set(prev).add(logo.name));
-      };
-    });
-  }, []);
 
   // Photo carousel within same listing (slide left/right animation)
   useEffect(() => {
@@ -383,100 +352,6 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
     return () => clearInterval(listingInterval);
   }, []);
 
-  // Typing animation for two-line hero titles
-  useEffect(() => {
-    // Initialize with first title already displayed
-    const firstTitle = splitTitle(heroTitles[0]);
-    setTitleLine1(firstTitle.line1);
-    setTitleLine2(firstTitle.line2);
-
-    let currentIndex = 0;
-    let timeout: NodeJS.Timeout;
-    let phase: 'initial-pause' | 'typing-line1' | 'typing-line2' | 'pausing' | 'deleting-line2' | 'deleting-line1' = 'initial-pause';
-    let charIndex = 0;
-
-    const getTypingSpeed = () => {
-      const baseSpeed = 70;
-      const variation = Math.random() * 40 - 20;
-      return baseSpeed + variation;
-    };
-
-    function splitTitle(title: string) {
-      const words = title.split(' ');
-      const line1 = words.slice(0, 2).join(' ');
-      const line2 = words.slice(2).join(' ');
-      return { line1, line2 };
-    }
-
-    const type = () => {
-      const { line1, line2 } = splitTitle(heroTitles[currentIndex]);
-
-      if (phase === 'initial-pause') {
-        // Pause with first title displayed, then start deleting
-        phase = 'pausing';
-        timeout = setTimeout(type, 2500);
-      } else if (phase === 'typing-line1') {
-        if (charIndex < line1.length) {
-          setTitleLine1(line1.substring(0, charIndex + 1));
-          charIndex++;
-          timeout = setTimeout(type, getTypingSpeed());
-        } else {
-          // Line 1 complete, move to line 2
-          charIndex = 0;
-          phase = 'typing-line2';
-          timeout = setTimeout(type, 200);
-        }
-      } else if (phase === 'typing-line2') {
-        if (charIndex < line2.length) {
-          setTitleLine2(line2.substring(0, charIndex + 1));
-          charIndex++;
-          timeout = setTimeout(type, getTypingSpeed());
-        } else {
-          // Line 2 complete, pause
-          phase = 'pausing';
-          timeout = setTimeout(type, 2500);
-        }
-      } else if (phase === 'pausing') {
-        // Start deleting line 2
-        charIndex = line2.length;
-        phase = 'deleting-line2';
-        timeout = setTimeout(type, 50);
-      } else if (phase === 'deleting-line2') {
-        if (charIndex > 0) {
-          charIndex--;
-          setTitleLine2(line2.substring(0, charIndex));
-          timeout = setTimeout(type, 30);
-        } else {
-          // Line 2 deleted, delete line 1
-          setTitleLine2('');
-          charIndex = line1.length;
-          phase = 'deleting-line1';
-          timeout = setTimeout(type, 100);
-        }
-      } else if (phase === 'deleting-line1') {
-        if (charIndex > 0) {
-          charIndex--;
-          setTitleLine1(line1.substring(0, charIndex));
-          timeout = setTimeout(type, 30);
-        } else {
-          // Both lines deleted, move to next title
-          setTitleLine1('');
-          setTitleLine2('');
-          currentIndex = (currentIndex + 1) % heroTitles.length;
-          charIndex = 0;
-          phase = 'typing-line1';
-          timeout = setTimeout(type, 400);
-        }
-      }
-    };
-
-    const initialTimeout = setTimeout(type, 800);
-
-    return () => {
-      clearTimeout(initialTimeout);
-      clearTimeout(timeout);
-    };
-  }, []);
 
   // Progressive image loading - Load images in the background
   useEffect(() => {
@@ -596,8 +471,7 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
         <div className="hero-container">
           <div className="hero-content">
             <h1 className="hero-title-big">
-              <span className="hero-title-line1" dangerouslySetInnerHTML={{ __html: titleLine1.replace(/\bAI\b/g, '<span class="ai-text-highlight">AI</span>') }} />
-              <span className="hero-title-line2" dangerouslySetInnerHTML={{ __html: titleLine2.replace(/\bAI\b/g, '<span class="ai-text-highlight">AI</span>') }} />
+              Stage your property and create a free listing
             </h1>
             <p className="hero-caption">Enter your address to get started</p>
             
@@ -697,40 +571,45 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Logo Slider */}
-        <div className="logo-slider-section">
-          <div className="logo-slider-title">Integrated with leading platforms</div>
-          <div className="logo-slider-container">
-            <div className="logo-slider-track">
-              {logoData.map((logo, index) => (
-                <div key={`logo-${index}`} className="logo-item" style={{ maxHeight: `${logo.maxHeight}px` }}>
-                  {loadedLogos.has(logo.name) ? (
-                    <img src={logo.imgSrc} alt={logo.name} style={{ maxHeight: `${logo.maxHeight}px` }} />
-                  ) : (
-                    <svg width={logo.width} height={logo.maxHeight} viewBox={`0 0 ${logo.width} ${logo.maxHeight}`}>
-                      <text x="10" y={logo.maxHeight - 8} fontFamily="Arial, sans-serif" fontSize={logo.fontSize} fontWeight="700" fill={logo.color}>
-                        {logo.text}
-                      </text>
+          {/* Coming Soon Section - Inside Hero */}
+          <div className="coming-soon-hero-section">
+            <div className="coming-soon-hero-content">
+              <h2 className="coming-soon-hero-title">Your 24/7 AI Property Manager</h2>
+              <p className="coming-soon-hero-description">
+                Automatically handle tenant calls, maintenance requests, and property operations with AI that never sleeps.
+              </p>
+              <div className="coming-soon-hero-features">
+                <div className="coming-soon-hero-feature">
+                  <div className="coming-soon-hero-badge">Coming Soon</div>
+                  <div className="coming-soon-hero-feature-icon">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                      <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+                      <line x1="12" y1="22.08" x2="12" y2="12"/>
                     </svg>
-                  )}
+                  </div>
+                  <h3 className="coming-soon-hero-feature-title">Integrations with Leading Platforms</h3>
+                  <p className="coming-soon-hero-feature-description">
+                    One-click listing to dozens of listing websites including Zillow, Apartments.com, Realtor.com, and more. Publish your property to the largest platforms instantly.
+                  </p>
                 </div>
-              ))}
-              {/* Duplicate for seamless loop */}
-              {logoData.map((logo, index) => (
-                <div key={`logo-dup-${index}`} className="logo-item" style={{ maxHeight: `${logo.maxHeight}px` }}>
-                  {loadedLogos.has(logo.name) ? (
-                    <img src={logo.imgSrc} alt={logo.name} style={{ maxHeight: `${logo.maxHeight}px` }} />
-                  ) : (
-                    <svg width={logo.width} height={logo.maxHeight} viewBox={`0 0 ${logo.width} ${logo.maxHeight}`}>
-                      <text x="10" y={logo.maxHeight - 8} fontFamily="Arial, sans-serif" fontSize={logo.fontSize} fontWeight="700" fill={logo.color}>
-                        {logo.text}
-                      </text>
+                <div className="coming-soon-hero-feature">
+                  <div className="coming-soon-hero-badge">Coming Soon</div>
+                  <div className="coming-soon-hero-feature-icon">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                      <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                      <line x1="12" y1="19" x2="12" y2="23"/>
+                      <line x1="8" y1="23" x2="16" y2="23"/>
                     </svg>
-                  )}
+                  </div>
+                  <h3 className="coming-soon-hero-feature-title">Voice Assistant for Property Management</h3>
+                  <p className="coming-soon-hero-feature-description">
+                    Answers calls 24/7 with no hold time, makes outbound calls, and handles SMS, Email, and WhatsApp. Manages maintenance requests, schedules appointments, and responds to prospects automatically.
+                  </p>
                 </div>
-              ))}
+              </div>
             </div>
           </div>
         </div>
@@ -864,26 +743,20 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
             <div className="step-arrow">→</div>
             <div className="feature-step-compact">
               <div className="step-number-large">2</div>
-              <h4>See listing</h4>
-              <p>AI creates your complete listing</p>
+              <h4>Stage</h4>
+              <p>AI stages your property</p>
             </div>
             <div className="step-arrow">→</div>
             <div className="feature-step-compact">
               <div className="step-number-large">3</div>
-              <h4>Go live</h4>
-              <p>Publish to all platforms instantly</p>
+              <h4>List</h4>
+              <p>AI creates your complete listing</p>
             </div>
             <div className="step-arrow">→</div>
             <div className="feature-step-compact">
               <div className="step-number-large">4</div>
-              <h4>Collect rent</h4>
-              <p>Automated payments & tracking</p>
-            </div>
-            <div className="step-arrow">→</div>
-            <div className="feature-step-compact">
-              <div className="step-number-large">5</div>
-              <h4>AI manages rest</h4>
-              <p>Hands-free property management</p>
+              <h4>Manage properties</h4>
+              <p>Track and organize your listings</p>
             </div>
           </div>
 
@@ -1145,7 +1018,7 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
           max-width: 1200px;
           width: 100%;
           margin: 0 auto;
-          padding: 60px 0 180px;
+          padding: 60px 0 60px;
           display: grid;
           grid-template-columns: 1fr 1fr;
           gap: 60px;
@@ -1168,28 +1041,6 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
           font-weight: 800;
           color: #0f172a;
           letter-spacing: -1.5px;
-          min-height: 140px;
-          max-height: 140px;
-          display: flex;
-          flex-direction: column;
-          gap: 0;
-          width: max-content;
-          max-width: none;
-        }
-
-        .hero-title-line1,
-        .hero-title-line2 {
-          display: block;
-          white-space: nowrap;
-          overflow: visible;
-        }
-
-        .hero-title-line1 {
-          margin-bottom: 8px;
-        }
-
-        .hero-title-line2 {
-          margin-left: 180px;
         }
 
         .hero-caption {
@@ -1556,90 +1407,136 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
           gap: 6px;
         }
 
-        /* Logo Slider - Seamless */
-        .logo-slider-section {
-          position: absolute;
-          bottom: 0;
-          left: 0;
-          right: 0;
-          background: transparent;
-          padding: 40px 0 30px;
-          overflow: hidden;
+        /* Coming Soon Section - Inside Hero */
+        .coming-soon-hero-section {
+          grid-column: 1 / -1;
+          margin-top: 50px;
+          padding-top: 0;
         }
 
-        .logo-slider-title {
+        .coming-soon-hero-content {
+          max-width: 1000px;
+          margin: 0 auto;
+          padding: 0 24px;
           text-align: center;
-          font-size: 12px;
-          font-weight: 600;
-          color: #9ca3af;
-          text-transform: uppercase;
-          letter-spacing: 1.5px;
-          margin-bottom: 32px;
         }
 
-        .logo-slider-container {
+        .coming-soon-hero-title {
+          font-size: 32px;
+          font-weight: 800;
+          color: #0f172a;
+          margin: 0 0 12px;
+          letter-spacing: -0.7px;
+          line-height: 1.2;
+        }
+
+        .coming-soon-hero-description {
+          font-size: 17px;
+          color: #64748b;
+          margin: 0 auto 24px;
+          line-height: 1.6;
+          max-width: 700px;
+        }
+
+        .coming-soon-hero-features {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 24px;
+          margin-top: 24px;
+        }
+
+        .coming-soon-hero-feature {
+          background: white;
+          border-radius: 16px;
+          padding: 32px 28px 36px;
+          border: 2px solid #f1f5f9;
           position: relative;
-          overflow: hidden;
-          mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
+          transition: all 0.3s ease;
+          text-align: center;
         }
 
-        .logo-slider-track {
-          display: flex;
-          gap: 100px;
-          animation: scrollInfinite 40s linear infinite;
-          width: fit-content;
+        .coming-soon-hero-feature:hover {
+          border-color: #1877F2;
+          box-shadow: 0 8px 32px rgba(24, 119, 242, 0.1);
+          transform: translateY(-3px);
         }
 
-        .logo-item {
-          flex-shrink: 0;
+        .coming-soon-hero-badge {
+          position: absolute;
+          top: 16px;
+          right: 16px;
+          background: linear-gradient(135deg, #1877F2 0%, #0056D2 100%);
+          color: white;
+          font-size: 10px;
+          font-weight: 700;
+          padding: 5px 12px;
+          border-radius: 16px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        .coming-soon-hero-feature-icon {
+          width: 64px;
+          height: 64px;
+          margin: 0 auto 20px;
+          background: linear-gradient(135deg, rgba(24, 119, 242, 0.1) 0%, rgba(24, 119, 242, 0.05) 100%);
+          border-radius: 16px;
           display: flex;
           align-items: center;
           justify-content: center;
-          height: 40px;
-          opacity: 0.7;
-          transition: opacity 0.3s, transform 0.3s;
+          color: #1877F2;
         }
 
-        .logo-item img,
-        .logo-item svg {
-          height: auto;
-          width: auto;
-          max-width: 200px;
-          object-fit: contain;
-          animation: fadeIn 0.4s ease-in;
+        .coming-soon-hero-feature-title {
+          font-size: 18px;
+          font-weight: 700;
+          color: #0f172a;
+          margin: 0 0 12px;
+          letter-spacing: -0.2px;
         }
 
-        .logo-item img {
-          filter: grayscale(0%);
+        .coming-soon-hero-feature-description {
+          font-size: 14px;
+          color: #64748b;
+          line-height: 1.6;
+          margin: 0;
+          text-align: left;
         }
 
-        .logo-item:hover {
-          opacity: 1;
-          transform: scale(1.05);
-        }
-
-        @keyframes scrollInfinite {
-          0% {
-            transform: translateX(0);
+        @media (max-width: 768px) {
+          .coming-soon-hero-section {
+            margin-top: 32px;
+            padding-top: 0;
           }
-          100% {
-            transform: translateX(-50%);
-          }
-        }
 
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
+          .coming-soon-hero-title {
+            font-size: 26px;
           }
-          to {
-            opacity: 1;
+
+          .coming-soon-hero-description {
+            font-size: 15px;
+            margin-bottom: 28px;
+          }
+
+          .coming-soon-hero-features {
+            grid-template-columns: 1fr;
+            gap: 20px;
+          }
+
+          .coming-soon-hero-feature {
+            padding: 28px 20px;
+          }
+
+          .coming-soon-hero-feature-icon {
+            width: 56px;
+            height: 56px;
           }
         }
 
         /* Features Section - Centered Dashboard Hero */
         .features-section {
           background: linear-gradient(180deg, #ffffff 0%, #f8fafc 50%, #ffffff 100%);
-          padding: 80px 0 80px;
+          padding: 40px 0 80px;
           position: relative;
         }
 
@@ -2023,7 +1920,7 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
         /* Horizontal Steps */
         .features-steps-horizontal {
           display: grid;
-          grid-template-columns: 1fr auto 1fr auto 1fr auto 1fr auto 1fr;
+          grid-template-columns: 1fr auto 1fr auto 1fr auto 1fr;
           gap: 20px;
           align-items: center;
           margin-bottom: 60px;
