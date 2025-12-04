@@ -530,16 +530,23 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
               </div>
 
               <div className="voice-social-proof">
-                <div className="proof-avatars">
-                  <div className="avatar-circle blue"></div>
-                  <div className="avatar-circle green"></div>
-                  <div className="avatar-circle orange"></div>
-                  <div className="avatar-circle purple"></div>
+                <div className="proof-avatars-container">
+                  <div className="proof-avatars-row">
+                    <img src="https://i.pravatar.cc/150?img=12" alt="Property Manager" className="avatar-img" loading="lazy" />
+                    <img src="https://i.pravatar.cc/150?img=33" alt="Property Manager" className="avatar-img" loading="lazy" />
+                    <img src="https://i.pravatar.cc/150?img=47" alt="Property Manager" className="avatar-img" loading="lazy" />
+                  </div>
+                  <div className="proof-avatars-row">
+                    <img src="https://i.pravatar.cc/150?img=68" alt="Property Manager" className="avatar-img" loading="lazy" />
+                    <img src="https://i.pravatar.cc/150?img=5" alt="Property Manager" className="avatar-img" loading="lazy" />
+                    <img src="https://i.pravatar.cc/150?img=20" alt="Property Manager" className="avatar-img" loading="lazy" />
+                  </div>
                 </div>
                 <div className="proof-text">
-                  <span className="proof-highlight">500+ property managers</span>
                   <span className="proof-dot">•</span>
-                  <span className="proof-highlight">1M+ calls handled</span>
+                  <span className="proof-highlight">Join closed beta with other property managers</span>
+                  <span className="proof-dot">•</span>
+                  <span className="proof-highlight">100+ daily calls handled</span>
                 </div>
               </div>
             </div>
@@ -1803,27 +1810,53 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
         .voice-social-proof {
           display: flex;
           align-items: center;
-          gap: 14px;
+          gap: 16px;
+          flex-wrap: nowrap;
         }
 
-        .proof-avatars {
+        .proof-avatars-container {
           display: flex;
+          flex-direction: column;
           margin-left: 6px;
+          flex-shrink: 0;
         }
 
-        .avatar-circle {
-          width: 28px;
-          height: 28px;
+        .proof-avatars-row {
+          display: flex;
+          margin-bottom: -8px;
+        }
+
+        .proof-avatars-row:last-child {
+          margin-bottom: 0;
+        }
+
+        .avatar-img {
+          width: 32px;
+          height: 32px;
           border-radius: 50%;
           border: 2px solid white;
           margin-left: -10px;
+          object-fit: cover;
           background: #e2e8f0;
+          position: relative;
         }
 
-        .avatar-circle.blue { background: #3b82f6; }
-        .avatar-circle.green { background: #10b981; }
-        .avatar-circle.orange { background: #f59e0b; }
-        .avatar-circle.purple { background: #8b5cf6; }
+        .proof-avatars-row .avatar-img:first-child {
+          margin-left: 0;
+          z-index: 4;
+        }
+
+        .proof-avatars-row .avatar-img:nth-child(2) {
+          z-index: 3;
+        }
+
+        .proof-avatars-row .avatar-img:nth-child(3) {
+          z-index: 2;
+        }
+
+        .proof-avatars-row .avatar-img:nth-child(4) {
+          z-index: 1;
+        }
 
         .proof-text {
           display: flex;
@@ -1831,6 +1864,7 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
           gap: 6px;
           font-size: 13px;
           color: #475569;
+          flex-wrap: wrap;
         }
 
         .proof-highlight {
@@ -2648,7 +2682,7 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
 
           .integrations-text {
             font-size: 13px;
-            text-align: center;
+            text-align: left;
           }
 
           .platform-logos {
@@ -3686,7 +3720,7 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
         .footer {
           background: transparent;
           color: #64748b;
-          padding: 24px 0 0;
+          padding: 16px 0 0;
           border-top: 1px solid #e5e7eb;
         }
 
@@ -3700,40 +3734,40 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 16px;
+          margin-bottom: 12px;
           flex-wrap: wrap;
-          gap: 20px;
+          gap: 16px;
         }
 
         .footer-brand-section {
           display: flex;
           align-items: center;
-          gap: 12px;
+          gap: 10px;
         }
 
         .footer-brand {
-          font-size: 20px;
+          font-size: 18px;
           font-weight: 900;
           color: #1e293b;
         }
 
         .footer-tagline {
-          font-size: 14px;
+          font-size: 13px;
           color: #94a3b8;
           margin: 0;
-          padding-left: 16px;
+          padding-left: 12px;
           border-left: 1px solid #e5e7eb;
         }
 
         .footer-nav {
           display: flex;
-          gap: 20px;
+          gap: 16px;
         }
 
         .footer-nav a {
           color: #64748b;
           text-decoration: none;
-          font-size: 14px;
+          font-size: 13px;
           font-weight: 500;
           transition: color 0.2s;
         }
@@ -3748,8 +3782,8 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
         }
 
         .footer-social-link {
-          width: 36px;
-          height: 36px;
+          width: 32px;
+          height: 32px;
           border-radius: 50%;
           background: #f1f5f9;
           display: flex;
@@ -3768,12 +3802,12 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
 
         .footer-bottom {
           border-top: 1px solid #e5e7eb;
-          padding-top: 12px;
+          padding-top: 8px;
           padding-bottom: 0;
           display: flex;
           justify-content: space-between;
           align-items: center;
-          font-size: 13px;
+          font-size: 12px;
         }
 
         .footer-phone {
