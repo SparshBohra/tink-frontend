@@ -1,8 +1,19 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import NextImage from 'next/image';
+import Script from 'next/script';
+import Head from 'next/head';
 import { MapPin, Building2, Phone, ArrowRight, MessageSquare } from 'lucide-react';
 import LoadingOverlay from './LoadingOverlay';
+
+// Declare Calendly on window for TypeScript
+declare global {
+  interface Window {
+    Calendly?: {
+      initPopupWidget: (options: { url: string }) => void;
+    };
+  }
+}
 
 interface AddressInputProps {
   onSubmit: (address: string) => void;
@@ -70,6 +81,27 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
     }
     // Default to production app domain during SSR to avoid localhost leakage
     return 'https://app.squareft.ai';
+  };
+
+  // Open Calendly popup widget
+  const [isCalendlyOpen, setIsCalendlyOpen] = useState(false);
+  
+  const openCalendly = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Prevent multiple popups from opening
+    if (isCalendlyOpen) return;
+    
+    if (typeof window !== 'undefined' && window.Calendly) {
+      setIsCalendlyOpen(true);
+      window.Calendly.initPopupWidget({
+        url: 'https://calendly.com/dakshhsaraf/30min'
+      });
+      
+      // Reset after a short delay to allow reopening
+      setTimeout(() => setIsCalendlyOpen(false), 1000);
+    }
   };
 
   const propertyListings: PropertyListing[] = [
@@ -409,6 +441,15 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
 
   return (
     <>
+      {/* Calendly Widget Scripts */}
+      <Head>
+        <link href="https://assets.calendly.com/assets/external/widget.css" rel="stylesheet" />
+      </Head>
+      <Script 
+        src="https://assets.calendly.com/assets/external/widget.js" 
+        strategy="lazyOnload"
+      />
+      
       {showLoading && (
         <LoadingOverlay 
           onClose={handleCloseLoading}
@@ -524,7 +565,7 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
                   <Phone className="btn-icon" size={20} />
                   Try Demo Call
                 </a>
-                <button className="btn-secondary-large">
+                <button className="btn-secondary-large" onClick={(e) => openCalendly(e)}>
                   Book Consultation <ArrowRight className="btn-icon-right" size={18} />
                 </button>
               </div>
@@ -1383,7 +1424,7 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
             <h2 className="faq-title">Frequently Asked Questions</h2>
             <p className="faq-subtitle">
               Everything you need to know about SquareFt. Can't find what you're looking for? 
-              <button className="inline-link" onClick={() => window.open('https://calendly.com', '_blank')}>Book a consultation</button>
+              <button className="inline-link" onClick={(e) => openCalendly(e)}>Book a consultation</button>
             </p>
           </div>
 
@@ -1524,7 +1565,7 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
                 </svg>
                 Try Free Listing
             </button>
-              <button className="cta-btn cta-consult" onClick={() => window.open('https://calendly.com', '_blank')}>
+              <button className="cta-btn cta-consult" onClick={(e) => openCalendly(e)}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
                   <line x1="16" y1="2" x2="16" y2="6"/>
