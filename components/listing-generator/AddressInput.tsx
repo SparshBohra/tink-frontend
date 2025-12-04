@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
-import { MapPin, Building2 } from 'lucide-react';
+import NextImage from 'next/image';
+import { MapPin, Building2, Phone, ArrowRight, MessageSquare } from 'lucide-react';
 import LoadingOverlay from './LoadingOverlay';
 
 interface AddressInputProps {
@@ -43,6 +44,8 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
   const [appUrl, setAppUrl] = useState('');
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [activeAiTab, setActiveAiTab] = useState('leasing');
+  const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
   
   // Mapbox autocomplete state
   const [suggestions, setSuggestions] = useState<MapboxFeature[]>([]);
@@ -104,6 +107,7 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
       photos: [
         '/landingPage/house3/house3a.webp',
         '/landingPage/house3/house3b.webp',
+        '/landingPage/house3/house3c.webp',
         '/landingPage/house3/house3c.webp',
       ]
     },
@@ -437,6 +441,16 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
       )}
       
       <div className="landing-container">
+        {/* Blue Blur Orbs - Decorative */}
+        <div className="blur-orb orb-1"></div>
+        <div className="blur-orb orb-2"></div>
+        <div className="blur-orb orb-3"></div>
+        <div className="blur-orb orb-4"></div>
+        <div className="blur-orb orb-5"></div>
+        <div className="blur-orb orb-6"></div>
+        <div className="blur-orb orb-7"></div>
+        <div className="blur-orb orb-8"></div>
+
         {/* Top Navigation */}
         <nav className={`topnav ${isScrolled ? 'scrolled' : ''}`}>
         <div className="brand">
@@ -446,9 +460,20 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
           </div>
         </div>
           <div className="menu">
-            <a href="#how" className="menu-link">About</a>
-            <a href="#agents" className="menu-link">AI Agents</a>
-            <a href="#browse" className="menu-link">FAQ</a>
+            <a 
+              href="#use-cases" 
+              className="menu-link"
+              onClick={(e) => { e.preventDefault(); document.getElementById('use-cases')?.scrollIntoView({ behavior: 'smooth' }); }}
+            >
+              Use Cases
+            </a>
+            <a 
+              href="#faq" 
+              className="menu-link"
+              onClick={(e) => { e.preventDefault(); document.getElementById('faq')?.scrollIntoView({ behavior: 'smooth' }); }}
+            >
+              FAQ
+            </a>
             <a
               href={appUrl ? `${appUrl}/login` : '#'}
               onClick={(e) => { e.preventDefault(); if (appUrl) window.location.href = `${appUrl}/login`; }}
@@ -456,18 +481,74 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
             >
               Login
             </a>
-            <a
-              href={appUrl ? `${appUrl}/landlord-signup` : '#'}
-              onClick={(e) => { e.preventDefault(); if (appUrl) window.location.href = `${appUrl}/landlord-signup`; }}
-              className="menu-link signup"
-            >
-              Sign up
+            <a href="tel:+18573178479" className="menu-link demo-call-nav">
+              <Phone size={16} />
+              Try it out
             </a>
           </div>
       </nav>
 
-      {/* Hero Split Section */}
-      <section className="hero-fullsplit">
+      {/* Voice AI Hero Section (New First Section) */}
+      <section className="voice-ai-hero">
+        <div className="voice-hero-container">
+          {/* Full Width Title */}
+          <h1 className="voice-hero-title-full">
+            Your 24/7 AI <span className="text-highlight">Property Manager</span>
+          </h1>
+          
+          {/* Two Column Layout */}
+          <div className="voice-hero-split">
+            {/* iPhone Image - Left */}
+            <div className="voice-hero-phone">
+              <NextImage 
+                src="/iphone2.tiff" 
+                alt="AI Property Manager Call" 
+                width={340}
+                height={690}
+                className="iphone-image"
+                priority
+              />
+            </div>
+
+            {/* Content - Right */}
+            <div className="voice-hero-content">
+              <h2 className="voice-hero-subtitle">
+                Faster Listings, Easier Leasing
+              </h2>
+              <p className="voice-hero-description">
+                An intelligent voice assistant that handles tenant calls, schedules viewings, and resolves maintenance issues around the clock — so you never miss an opportunity.
+              </p>
+              
+              <div className="voice-hero-actions">
+                <a href="tel:+18573178479" className="btn-primary-large">
+                  <Phone className="btn-icon" size={20} />
+                  Try Demo Call
+                </a>
+                <button className="btn-secondary-large">
+                  Book Consultation <ArrowRight className="btn-icon-right" size={18} />
+                </button>
+              </div>
+
+              <div className="voice-social-proof">
+                <div className="proof-avatars">
+                  <div className="avatar-circle blue"></div>
+                  <div className="avatar-circle green"></div>
+                  <div className="avatar-circle orange"></div>
+                  <div className="avatar-circle purple"></div>
+                </div>
+                <div className="proof-text">
+                  <span className="proof-highlight">500+ property managers</span>
+                  <span className="proof-dot">•</span>
+                  <span className="proof-highlight">1M+ calls handled</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Existing Hero Split Section (Now Second Section) */}
+      <section id="listing-section" className="hero-fullsplit second-section">
         <div className="hero-container">
           <div className="hero-content">
             <h1 className="hero-title-big">
@@ -516,6 +597,22 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
                 </svg>
               </button>
             </form>
+
+            <div className="integrations-coming-soon">
+              <p className="integrations-text">Integration with leading listing platforms coming soon:</p>
+              <div className="platform-logos">
+                <img src="/media/zillow.png" alt="Zillow" className="platform-logo" />
+                <img src="/media/Apartments.webp" alt="Apartments.com" className="platform-logo" />
+                <img src="/media/Realtor.com_logo.png" alt="Realtor.com" className="platform-logo" />
+                <img src="/media/trulia-png.webp" alt="Trulia" className="platform-logo" />
+                <div className="platform-logo fb-marketplace">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="#1877F2">
+                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                  </svg>
+                  <span>Marketplace</span>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className="hero-right">
@@ -572,202 +669,864 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
             </div>
           </div>
 
-          {/* Coming Soon Section - Inside Hero */}
-          <div className="coming-soon-hero-section">
-            <div className="coming-soon-hero-content">
-              <h2 className="coming-soon-hero-title">Your 24/7 AI Property Manager</h2>
-              <p className="coming-soon-hero-description">
-                Automatically handle tenant calls, maintenance requests, and property operations with AI that never sleeps.
-              </p>
-              <div className="coming-soon-hero-features">
-                <div className="coming-soon-hero-feature">
-                  <div className="coming-soon-hero-badge">Coming Soon</div>
-                  <div className="coming-soon-hero-feature-icon">
-                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
-                      <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
-                      <line x1="12" y1="22.08" x2="12" y2="12"/>
+          {/* Coming Soon Section - Removed/Simplified as it's now the main hero */}
+          
+        </div>
+      </section>
+
+      {/* AI Handles Everything Section */}
+      <section className="ai-demo-section">
+        <div className="ai-demo-container">
+          <div className="ai-demo-header">
+            <h2 className="ai-demo-title">AI Handles Everything</h2>
+            <p className="ai-demo-subtitle">Natural conversations. Instant actions. Zero missed opportunities.</p>
+          </div>
+
+          <div className="ai-demo-interface">
+            <div className="ai-demo-tabs">
+              <button 
+                className={`ai-tab ${activeAiTab === 'leasing' ? 'active' : ''}`}
+                onClick={() => setActiveAiTab('leasing')}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+                  <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
                     </svg>
+                Leasing Inquiries
+              </button>
+              <button 
+                className={`ai-tab ${activeAiTab === 'maintenance' ? 'active' : ''}`}
+                onClick={() => setActiveAiTab('maintenance')}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                </svg>
+                Maintenance
+              </button>
+              <button 
+                className={`ai-tab ${activeAiTab === 'tenant' ? 'active' : ''}`}
+                onClick={() => setActiveAiTab('tenant')}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="10"/>
+                  <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+                  <line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+                Tenant Questions
+              </button>
+              <button 
+                className={`ai-tab ${activeAiTab === 'moveinout' ? 'active' : ''}`}
+                onClick={() => setActiveAiTab('moveinout')}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="1" y="3" width="15" height="13"/>
+                  <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/>
+                  <circle cx="5.5" cy="18.5" r="2.5"/>
+                  <circle cx="18.5" cy="18.5" r="2.5"/>
+                </svg>
+                Move In/Out
+              </button>
+              <button 
+                className={`ai-tab ${activeAiTab === 'amenities' ? 'active' : ''}`}
+                onClick={() => setActiveAiTab('amenities')}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                  <polyline points="9 22 9 12 15 12 15 22"/>
+                </svg>
+                Amenities
+              </button>
+              <button 
+                className={`ai-tab ${activeAiTab === 'logistics' ? 'active' : ''}`}
+                onClick={() => setActiveAiTab('logistics')}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                  <line x1="16" y1="2" x2="16" y2="6"/>
+                  <line x1="8" y1="2" x2="8" y2="6"/>
+                  <line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                Logistics
+              </button>
                   </div>
-                  <h3 className="coming-soon-hero-feature-title">Integrations with Leading Platforms</h3>
-                  <p className="coming-soon-hero-feature-description">
-                    One-click listing to dozens of listing websites including Zillow, Apartments.com, Realtor.com, and more. Publish your property to the largest platforms instantly.
-                  </p>
+
+            <div className="ai-demo-content">
+              {/* Leasing Inquiries Tab */}
+              {activeAiTab === 'leasing' && (
+                <>
+                  <div className="ai-conversation-panel">
+                    <div className="caller-info">
+                      <div className="caller-avatar">
+                        <img src="https://randomuser.me/api/portraits/women/44.jpg" alt="Leslie" />
                 </div>
-                <div className="coming-soon-hero-feature">
-                  <div className="coming-soon-hero-badge">Coming Soon</div>
-                  <div className="coming-soon-hero-feature-icon">
-                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-                      <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                      <line x1="12" y1="19" x2="12" y2="23"/>
-                      <line x1="8" y1="23" x2="16" y2="23"/>
-                    </svg>
+                      <div className="caller-details">
+                        <span className="caller-name">Leslie</span>
+                        <span className="caller-divider">|</span>
+                        <span className="caller-property">412 Market Street</span>
+                      </div>
+                      <span className="call-time">3:28 PM <span className="timezone">EST</span></span>
+                    </div>
+
+                    <div className="user-message">
+                      <p>Hello, This apartment seems perfect and I am interested in setting up a showing!</p>
+                    </div>
+
+                    <div className="ai-response-container">
+                      <div className="ai-operator-info">
+                        <div className="audio-wave-icon">
+                          <span></span><span></span><span></span><span></span>
+                        </div>
+                        <span className="operator-name">Lisa</span>
+                        <span className="operator-divider">|</span>
+                        <span className="audio-duration">Audio 01:05</span>
+                      </div>
+
+                      <div className="ai-message">
+                        <p>Hi Leslie, I'd be happy to help with that! We currently have a 1-bedroom on the 3rd floor available at 412 Market Street. It features hardwood floors, in-unit laundry, and a balcony with a city view.</p>
+                        <p>Our next available tour slots are tomorrow at 11 AM, or Friday at 2 PM. Which one works better for you? I'll also email you a brochure and a virtual walk-through video in case you'd like to preview before your visit.</p>
+                      </div>
+                    </div>
+                    
+                    <div className="powered-by">POWERED BY SQUAREFT</div>
                   </div>
-                  <h3 className="coming-soon-hero-feature-title">Voice Assistant for Property Management</h3>
-                  <p className="coming-soon-hero-feature-description">
-                    Answers calls 24/7 with no hold time, makes outbound calls, and handles SMS, Email, and WhatsApp. Manages maintenance requests, schedules appointments, and responds to prospects automatically.
-                  </p>
+
+                  <div className="ai-status-panel">
+                    <div className="audio-player">
+                      <button className="play-button">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M8 5v14l11-7z"/>
+                    </svg>
+                      </button>
+                      <div className="audio-progress">
+                        <div className="audio-bar"></div>
+                  </div>
+                </div>
+
+                    <div className="status-badges">
+                      <div className="status-badge blue">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <circle cx="12" cy="12" r="10"/>
+                          <polyline points="12 6 12 12 16 14"/>
+                        </svg>
+                        Status: In-Progress
+              </div>
+                      <div className="status-badge purple">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                        </svg>
+                        Priority: Routine
+            </div>
+                      <div className="status-badge green">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                          <circle cx="12" cy="12" r="10"/>
+                        </svg>
+                        Sentiment: Positive
+          </div>
+        </div>
+
+                    <div className="action-badges">
+                      <div className="action-badge">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                        Tour Scheduled
+                      </div>
+                      <div className="action-badge">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                        Brochure Sent
+                      </div>
+            </div>
+
+                    <div className="doc-badges">
+                      <div className="doc-badge">Docs: Leasing_Inquiry</div>
+                      <div className="doc-badge">Tour_Scheduling</div>
+                </div>
+                  </div>
+                </>
+              )}
+
+              {/* Maintenance Tab */}
+              {activeAiTab === 'maintenance' && (
+                <>
+                  <div className="ai-conversation-panel">
+                    <div className="caller-info">
+                      <div className="caller-avatar">
+                        <img src="https://randomuser.me/api/portraits/men/32.jpg" alt="Marcus" />
+                      </div>
+                      <div className="caller-details">
+                        <span className="caller-name">Marcus</span>
+                        <span className="caller-divider">|</span>
+                        <span className="caller-property">Unit 4B, Parkview Apartments</span>
+                      </div>
+                      <span className="call-time">11:42 PM <span className="timezone">EST</span></span>
+                    </div>
+
+                    <div className="user-message">
+                      <p>My heater stopped working and it's freezing in here. Can someone come look at it?</p>
+                    </div>
+
+                    <div className="ai-response-container">
+                      <div className="ai-operator-info">
+                        <div className="audio-wave-icon">
+                          <span></span><span></span><span></span><span></span>
+                        </div>
+                        <span className="operator-name">Robbie</span>
+                        <span className="operator-divider">|</span>
+                        <span className="audio-duration">Audio 00:48</span>
+                      </div>
+
+                      <div className="ai-message">
+                        <p>I'm really sorry to hear that, Marcus. I understand how uncomfortable that must be, especially at this hour.</p>
+                        <p>I've flagged this as an urgent maintenance request and our on-call technician Mike will be there within 2 hours. In the meantime, I've sent you a text with portable heater pickup locations nearby if needed.</p>
+                      </div>
+                    </div>
+                    
+                    <div className="powered-by">POWERED BY SQUAREFT</div>
+                  </div>
+
+                  <div className="ai-status-panel">
+                    <div className="audio-player">
+                      <button className="play-button">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M8 5v14l11-7z"/>
+                  </svg>
+                      </button>
+                      <div className="audio-progress">
+                        <div className="audio-bar" style={{width: '45%'}}></div>
                 </div>
               </div>
+
+                    <div className="status-badges">
+                      <div className="status-badge orange">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <circle cx="12" cy="12" r="10"/>
+                          <line x1="12" y1="8" x2="12" y2="12"/>
+                          <line x1="12" y1="16" x2="12.01" y2="16"/>
+                        </svg>
+                        Status: Urgent
+                      </div>
+                      <div className="status-badge red">Priority: High</div>
+                      <div className="status-badge yellow">Sentiment: Concerned</div>
+                    </div>
+
+                    <div className="action-badges">
+                      <div className="action-badge">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                        Technician Dispatched
+                      </div>
+                      <div className="action-badge">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                        SMS Sent
+                      </div>
+                    </div>
+
+                    <div className="doc-badges">
+                      <div className="doc-badge">Docs: Maintenance_Request</div>
+                      <div className="doc-badge">Emergency_Protocol</div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Tenant Questions Tab */}
+              {activeAiTab === 'tenant' && (
+                <>
+                  <div className="ai-conversation-panel">
+                    <div className="caller-info">
+                      <div className="caller-avatar">
+                        <img src="https://randomuser.me/api/portraits/women/68.jpg" alt="Erin" />
+                      </div>
+                      <div className="caller-details">
+                        <span className="caller-name">Erin</span>
+                        <span className="caller-divider">|</span>
+                        <span className="caller-property">Canyon Ridge, Unit 302</span>
+                      </div>
+                      <span className="call-time">2:15 PM <span className="timezone">EST</span></span>
+                    </div>
+
+                    <div className="user-message">
+                      <p>Hi, I need to add my partner to the lease. What's the process for that?</p>
+                    </div>
+
+                    <div className="ai-response-container">
+                      <div className="ai-operator-info">
+                        <div className="audio-wave-icon">
+                          <span></span><span></span><span></span><span></span>
+                        </div>
+                        <span className="operator-name">Frank</span>
+                        <span className="operator-divider">|</span>
+                        <span className="audio-duration">Audio 01:22</span>
+                      </div>
+
+                      <div className="ai-message">
+                        <p>Hi Erin! Great question. Adding a partner to your lease is straightforward. They'll need to complete a standard background check and provide proof of income.</p>
+                        <p>I've just emailed you the "Add Occupant" form. Once your partner fills it out, we typically process these within 3-5 business days. Would you like me to schedule a call with our leasing team to answer any other questions?</p>
+                      </div>
+                    </div>
+                    
+                    <div className="powered-by">POWERED BY SQUAREFT</div>
+                  </div>
+
+                  <div className="ai-status-panel">
+                    <div className="audio-player">
+                      <button className="play-button">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M8 5v14l11-7z"/>
+                    </svg>
+                      </button>
+                      <div className="audio-progress">
+                        <div className="audio-bar" style={{width: '60%'}}></div>
+                  </div>
+                    </div>
+
+                    <div className="status-badges">
+                      <div className="status-badge green">Status: Resolved</div>
+                      <div className="status-badge purple">Priority: Routine</div>
+                      <div className="status-badge green">Sentiment: Neutral</div>
+                    </div>
+
+                    <div className="action-badges">
+                      <div className="action-badge">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                        Form Sent
+                      </div>
+                      <div className="action-badge">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                        Follow-up Scheduled
+                      </div>
+                    </div>
+
+                    <div className="doc-badges">
+                      <div className="doc-badge">Docs: Lease_Amendment</div>
+                      <div className="doc-badge">Add_Occupant_Form</div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Move In/Out Tab */}
+              {activeAiTab === 'moveinout' && (
+                <>
+                  <div className="ai-conversation-panel">
+                    <div className="caller-info">
+                      <div className="caller-avatar">
+                        <img src="https://randomuser.me/api/portraits/men/45.jpg" alt="Jason" />
+                      </div>
+                      <div className="caller-details">
+                        <span className="caller-name">Jason</span>
+                        <span className="caller-divider">|</span>
+                        <span className="caller-property">555 Oak Street, Apt 12</span>
+                      </div>
+                      <span className="call-time">10:30 AM <span className="timezone">EST</span></span>
+                    </div>
+
+                    <div className="user-message">
+                      <p>I'm moving out next month. What do I need to do to get my security deposit back?</p>
+                    </div>
+
+                    <div className="ai-response-container">
+                      <div className="ai-operator-info">
+                        <div className="audio-wave-icon">
+                          <span></span><span></span><span></span><span></span>
+                        </div>
+                        <span className="operator-name">Lisa</span>
+                        <span className="operator-divider">|</span>
+                        <span className="audio-duration">Audio 01:45</span>
+                      </div>
+
+                      <div className="ai-message">
+                        <p>Hi Jason, thanks for letting us know! To ensure a smooth move-out and full deposit return, here's what you'll need:</p>
+                        <p>1) Schedule your move-out inspection (I can book that now), 2) Return all keys and parking passes, 3) Leave the unit in clean, broom-swept condition. I've just texted you our move-out checklist. Would you like to schedule your inspection for the last day of your lease?</p>
+                      </div>
+                    </div>
+                    
+                    <div className="powered-by">POWERED BY SQUAREFT</div>
+                  </div>
+
+                  <div className="ai-status-panel">
+                    <div className="audio-player">
+                      <button className="play-button">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M8 5v14l11-7z"/>
+                            </svg>
+                      </button>
+                      <div className="audio-progress">
+                        <div className="audio-bar" style={{width: '25%'}}></div>
+                          </div>
+                    </div>
+
+                    <div className="status-badges">
+                      <div className="status-badge blue">Status: In-Progress</div>
+                      <div className="status-badge purple">Priority: Routine</div>
+                      <div className="status-badge green">Sentiment: Positive</div>
+                    </div>
+
+                    <div className="action-badges">
+                      <div className="action-badge">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <polyline points="20 6 9 17 4 12"/>
+                            </svg>
+                        Checklist Sent
+                          </div>
+                      <div className="action-badge">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <polyline points="20 6 9 17 4 12"/>
+                            </svg>
+                        Notice Logged
+                          </div>
+                        </div>
+
+                    <div className="doc-badges">
+                      <div className="doc-badge">Docs: Move_Out_Notice</div>
+                      <div className="doc-badge">Inspection_Schedule</div>
+                      </div>
+                          </div>
+                </>
+              )}
+
+              {/* Amenities Tab */}
+              {activeAiTab === 'amenities' && (
+                <>
+                  <div className="ai-conversation-panel">
+                    <div className="caller-info">
+                      <div className="caller-avatar">
+                        <img src="https://randomuser.me/api/portraits/women/22.jpg" alt="Sarah" />
+                        </div>
+                      <div className="caller-details">
+                        <span className="caller-name">Sarah</span>
+                        <span className="caller-divider">|</span>
+                        <span className="caller-property">The Heights, Unit 1804</span>
+                            </div>
+                      <span className="call-time">5:40 PM <span className="timezone">EST</span></span>
+                              </div>
+
+                    <div className="user-message">
+                      <p>Do we have a gym and where is the package room located?</p>
+                            </div>
+
+                    <div className="ai-response-container">
+                      <div className="ai-operator-info">
+                        <div className="audio-wave-icon">
+                          <span></span><span></span><span></span><span></span>
+                          </div>
+                        <span className="operator-name">Frank</span>
+                        <span className="operator-divider">|</span>
+                        <span className="audio-duration">Audio 01:12</span>
+                        </div>
+
+                      <div className="ai-message">
+                        <p>Hi Sarah! Yes, we have a fully equipped fitness center located in Building C, ground floor near the east side entrance. It's open 24/7 and your key fob gives you access.</p>
+                        <p>The package room is right next to the main lobby on the first floor—you'll get an automated text whenever a package arrives. Would you like me to send you a property map showing all amenity locations?</p>
+                            </div>
+                          </div>
+                    
+                    <div className="powered-by">POWERED BY SQUAREFT</div>
+                        </div>
+
+                  <div className="ai-status-panel">
+                    <div className="audio-player">
+                      <button className="play-button">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M8 5v14l11-7z"/>
+                        </svg>
+                      </button>
+                      <div className="audio-progress">
+                        <div className="audio-bar" style={{width: '80%'}}></div>
+                      </div>
+                    </div>
+
+                    <div className="status-badges">
+                      <div className="status-badge green">Status: Resolved</div>
+                      <div className="status-badge purple">Priority: Low</div>
+                      <div className="status-badge green">Sentiment: Neutral</div>
+                  </div>
+
+                    <div className="action-badges">
+                      <div className="action-badge">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                        Map Offered
+                </div>
+              </div>
+
+                    <div className="doc-badges">
+                      <div className="doc-badge">Docs: Amenity_FAQ</div>
+                      <div className="doc-badge">Property_Map</div>
+            </div>
+          </div>
+                </>
+              )}
+
+              {/* Logistics Tab */}
+              {activeAiTab === 'logistics' && (
+                <>
+                  <div className="ai-conversation-panel">
+                    <div className="caller-info">
+                      <div className="caller-avatar">
+                        <img src="https://randomuser.me/api/portraits/men/75.jpg" alt="David" />
+            </div>
+                      <div className="caller-details">
+                        <span className="caller-name">David</span>
+                        <span className="caller-divider">|</span>
+                        <span className="caller-property">888 Oak Avenue</span>
+            </div>
+                      <span className="call-time">9:15 AM <span className="timezone">EST</span></span>
+            </div>
+
+                    <div className="user-message">
+                      <p>I'm moving in next week. Where do I pick up my keys and parking pass?</p>
+            </div>
+
+                    <div className="ai-response-container">
+                      <div className="ai-operator-info">
+                        <div className="audio-wave-icon">
+                          <span></span><span></span><span></span><span></span>
+                        </div>
+                        <span className="operator-name">Lisa</span>
+                        <span className="operator-divider">|</span>
+                        <span className="audio-duration">Audio 01:08</span>
+          </div>
+
+                      <div className="ai-message">
+                        <p>Welcome, David! You can pick up your keys and parking pass from our leasing office at 888 Oak Avenue, Suite 100. Office hours are Monday-Friday 9AM-6PM and Saturday 10AM-4PM.</p>
+                        <p>I've scheduled a key pickup appointment for you on your move-in date at 10 AM. I'll also text you the elevator reservation form for your moving day. Is there anything else you need?</p>
+                      </div>
+                    </div>
+                    
+                    <div className="powered-by">POWERED BY SQUAREFT</div>
+                  </div>
+
+                  <div className="ai-status-panel">
+                    <div className="audio-player">
+                      <button className="play-button">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M8 5v14l11-7z"/>
+              </svg>
+            </button>
+                      <div className="audio-progress">
+                        <div className="audio-bar" style={{width: '55%'}}></div>
+                      </div>
+                    </div>
+
+                    <div className="status-badges">
+                      <div className="status-badge green">Status: Resolved</div>
+                      <div className="status-badge purple">Priority: Routine</div>
+                      <div className="status-badge green">Sentiment: Excited</div>
+                    </div>
+
+                    <div className="action-badges">
+                      <div className="action-badge">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                        Appointment Scheduled
+                      </div>
+                      <div className="action-badge">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                        Forms Sent
+                      </div>
+                    </div>
+
+                    <div className="doc-badges">
+                      <div className="doc-badge">Docs: Move_In_Guide</div>
+                      <div className="doc-badge">Elevator_Reservation</div>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section className="features-section">
-        <div className="container">
-            <div className="features-header">
-              <h2 className="features-main-title">See <span className="title-highlight">SquareFt</span> in action</h2>
-              <p className="features-main-subtitle">
-                Watch how AI transforms your property address into market-ready listings, manages tenant screening, 
-                automates rent collection, and handles maintenance requests—all while you stay hands-free
+      {/* How It Works Section */}
+      <section id="use-cases" className="how-it-works-section">
+        <div className="how-it-works-container">
+          <div className="solutions-grid">
+            
+            {/* Listing Block */}
+            <div className="solution-block">
+              <div className="solution-label">
+                <span className="label-dot"></span>
+                Listing Creation
+              </div>
+              <h2 className="solution-headline">
+                From address to<br/>
+                <span className="headline-accent">market-ready listing</span><br/>
+                in under a minute
+              </h2>
+              <p className="solution-description">
+                Enter any property address. Our AI pulls photos, generates stunning virtual staging, 
+                writes compelling descriptions, and creates a complete listing—ready to attract renters.
               </p>
-            </div>
-
-          <div className="dashboard-showcase">
-            <div className="dashboard-mockup-large">
-              <div className="mockup-browser-bar">
-                <div className="browser-dots">
-                  <span></span>
-                  <span></span>
-                  <span></span>
-                </div>
-                <div className="browser-url">app.squareft.ai/dashboard</div>
-                <div className="browser-actions">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                  </svg>
-                </div>
-              </div>
-              <div className="mockup-video-container">
-                {/* User will add their video/screenshot here */}
-                <div className="video-placeholder">
-                  <div className="video-play-button">
-                    <svg width="64" height="64" viewBox="0 0 24 24" fill="white">
-                      <path d="M8 5v14l11-7z"/>
-                    </svg>
-                  </div>
-                  <div className="video-preview">
-                    <div className="dashboard-preview-content">
-                      <div className="preview-sidebar">
-                        <div className="sidebar-logo">SquareFt</div>
-                        <div className="sidebar-menu">
-                          <div className="menu-item active">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                              <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/>
-                            </svg>
-                            <span>Dashboard</span>
-                          </div>
-                          <div className="menu-item">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-                            </svg>
-                            <span>Listings</span>
-                          </div>
-                          <div className="menu-item">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <circle cx="12" cy="12" r="3"/>
-                              <path d="M12 1v6m0 6v6m7.071-13.071l-4.243 4.243m0 5.656l4.243 4.243m-13.071-13.071l4.243 4.243m0 5.656l-4.243 4.243"/>
-                            </svg>
-                            <span>Integrations</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="preview-main">
-                        <div className="preview-header">
-                          <h3>Your Listings</h3>
-                          <div className="preview-stats">
-                            <span className="stat-card">
-                              <span className="stat-number">12</span>
-                              <span className="stat-label">Total</span>
-                            </span>
-                            <span className="stat-card active">
-                              <span className="stat-number">8</span>
-                              <span className="stat-label">Active</span>
-                            </span>
-                            <span className="stat-card">
-                              <span className="stat-number">4</span>
-                              <span className="stat-label">Draft</span>
-                            </span>
-                          </div>
-                        </div>
-                        <div className="preview-listing-card">
-                          <img src="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=120&h=90&fit=crop&q=80" alt="Property" className="preview-listing-image" />
-                          <div className="preview-listing-details">
-                            <div className="preview-listing-title">350 Rhode Island St, San Francisco</div>
-                            <div className="preview-listing-meta">
-                              <span>4 bd</span>
-                              <span>3 ba</span>
-                              <span>2,400 sqft</span>
-                              <span className="preview-price">$3,200/mo</span>
-                            </div>
-                            <div className="preview-listing-footer">
-                              <span className="preview-status-badge live">● Live</span>
-                              <div className="preview-platform-badges">
-                                <span className="preview-platform">Zillow</span>
-                                <span className="preview-platform">Realtor</span>
-                                <span className="preview-platform">+2</span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="preview-listing-card secondary">
-                          <img src="https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=120&h=90&fit=crop&q=80" alt="Property" className="preview-listing-image" />
-                          <div className="preview-listing-details">
-                            <div className="preview-listing-title">1725 Montgomery St, Apt 203</div>
-                            <div className="preview-listing-meta">
-                              <span>2 bd</span>
-                              <span>2 ba</span>
-                              <span>1,200 sqft</span>
-                              <span className="preview-price">$2,850/mo</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <p className="video-label">💡 Rent collection is trending below average.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="features-steps-horizontal">
-            <div className="feature-step-compact">
-              <div className="step-number-large">1</div>
-              <h4>Enter address</h4>
+              
+              <div className="process-steps">
+                <div className="process-step">
+                  <span className="step-num">01</span>
+                  <div className="step-info">
+                    <h4>Enter Address</h4>
               <p>Type your property address</p>
             </div>
-            <div className="step-arrow">→</div>
-            <div className="feature-step-compact">
-              <div className="step-number-large">2</div>
-              <h4>Stage</h4>
-              <p>AI stages your property</p>
             </div>
-            <div className="step-arrow">→</div>
-            <div className="feature-step-compact">
-              <div className="step-number-large">3</div>
-              <h4>List</h4>
-              <p>AI creates your complete listing</p>
+                <div className="process-step">
+                  <span className="step-num">02</span>
+                  <div className="step-info">
+                    <h4>AI Stages & Writes</h4>
+                    <p>Virtual staging + pro copy</p>
             </div>
-            <div className="step-arrow">→</div>
-            <div className="feature-step-compact">
-              <div className="step-number-large">4</div>
-              <h4>Manage properties</h4>
-              <p>Track and organize your listings</p>
+                </div>
+                <div className="process-step">
+                  <span className="step-num">03</span>
+                  <div className="step-info">
+                    <h4>Publish Free</h4>
+                    <p>Share your listing instantly</p>
+                  </div>
+                </div>
+                <div className="process-step coming-soon-step">
+                  <span className="step-num">04</span>
+                  <div className="step-info">
+                    <h4>Platform Integrations <span className="coming-soon-badge">Coming Soon</span></h4>
+                    <p>Zillow, Apartments.com & more</p>
+                  </div>
             </div>
           </div>
 
-          <div className="features-cta-center">
-            <button className="features-cta-button-large" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-              Start creating your listing
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+              <button className="solution-cta" onClick={() => document.getElementById('listing-section')?.scrollIntoView({ behavior: 'smooth' })}>
+                Try it free - Enter your address
+              </button>
+            </div>
+
+            {/* Operations Block */}
+            <div className="solution-block">
+              <div className="solution-label operations-label">
+                <span className="label-dot operations-dot"></span>
+                Property Operations
+              </div>
+              <h2 className="solution-headline">
+                Never miss a call.<br/>
+                <span className="headline-accent-green">Never lose a lead.</span>
+              </h2>
+              <p className="solution-description">
+                Your AI team handles phone calls around the clock. Leasing inquiries get tours scheduled. 
+                Maintenance issues get triaged and dispatched. You get updates—not interruptions.
+              </p>
+              
+              <div className="process-steps">
+                <div className="process-step">
+                  <span className="step-num ops-num">01</span>
+                  <div className="step-info">
+                    <h4>Leasing Inquiries</h4>
+                    <p>Schedule tours, send applications</p>
+                  </div>
+                </div>
+                <div className="process-step">
+                  <span className="step-num ops-num">02</span>
+                  <div className="step-info">
+                    <h4>Maintenance Dispatch</h4>
+                    <p>Triage issues, dispatch techs</p>
+                  </div>
+                </div>
+                <div className="process-step">
+                  <span className="step-num ops-num">03</span>
+                  <div className="step-info">
+                    <h4>Tenant Support</h4>
+                    <p>Answer questions instantly</p>
+                  </div>
+                </div>
+                <div className="process-step">
+                  <span className="step-num ops-num">04</span>
+                  <div className="step-info">
+                    <h4>Smart Escalation</h4>
+                    <p>Knows when to involve you</p>
+                  </div>
+                </div>
+              </div>
+
+              <a href="tel:+18573178479" className="solution-cta operations-cta-btn">
+                <Phone size={18} />
+                Try a demo call
+              </a>
+            </div>
+            
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ Section */}
+      <section id="faq" className="faq-section">
+        <div className="faq-container">
+          <div className="faq-header">
+            <div className="beta-badge">
+              <span className="beta-pulse"></span>
+              Now Accepting Closed Beta
+            </div>
+            <h2 className="faq-title">Frequently Asked Questions</h2>
+            <p className="faq-subtitle">
+              Everything you need to know about SquareFt. Can't find what you're looking for? 
+              <button className="inline-link" onClick={() => window.open('https://calendly.com', '_blank')}>Book a consultation</button>
+            </p>
+          </div>
+
+          <div className="faq-accordion">
+            <div 
+              className={`faq-item ${expandedFaq === 0 ? 'expanded' : ''}`}
+              onClick={() => setExpandedFaq(expandedFaq === 0 ? null : 0)}
+            >
+              <div className="faq-question">
+                <span>Is SquareFt really free?</span>
+                <svg className="faq-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="6 9 12 15 18 9"/>
               </svg>
+              </div>
+              <div className="faq-answer">
+                <p>Yes! Creating listings is completely free during our closed beta. Enter any property address and get a professional listing with AI-generated descriptions and virtual staging at no cost. We're offering free access to early users to gather feedback and refine the experience.</p>
+              </div>
+            </div>
+
+            <div 
+              className={`faq-item ${expandedFaq === 1 ? 'expanded' : ''}`}
+              onClick={() => setExpandedFaq(expandedFaq === 1 ? null : 1)}
+            >
+              <div className="faq-question">
+                <span>How does the AI voice agent work?</span>
+                <svg className="faq-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
+              </div>
+              <div className="faq-answer">
+                <p>Our AI operators (Lisa for leasing, Robbie for maintenance, Frank for general inquiries) handle incoming calls 24/7. They can schedule tours, answer common questions, triage maintenance requests, and dispatch vendors—all while keeping you informed via text or email summaries.</p>
+              </div>
+            </div>
+
+            <div 
+              className={`faq-item ${expandedFaq === 2 ? 'expanded' : ''}`}
+              onClick={() => setExpandedFaq(expandedFaq === 2 ? null : 2)}
+            >
+              <div className="faq-question">
+                <span>Can I publish listings directly to Zillow or Apartments.com?</span>
+                <svg className="faq-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
+              </div>
+              <div className="faq-answer">
+                <p>Not yet, but it's coming soon! We're actively building integrations with major listing platforms including Zillow, Apartments.com, Realtor.com, and Facebook Marketplace. For now, you can easily copy your listing details or share a direct link.</p>
+              </div>
+            </div>
+
+            <div 
+              className={`faq-item ${expandedFaq === 3 ? 'expanded' : ''}`}
+              onClick={() => setExpandedFaq(expandedFaq === 3 ? null : 3)}
+            >
+              <div className="faq-question">
+                <span>How accurate is the virtual staging?</span>
+                <svg className="faq-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
+              </div>
+              <div className="faq-answer">
+                <p>Our AI generates realistic virtual staging that helps renters visualize empty spaces. While it's designed for marketing purposes, we recommend noting in your listing that images are virtually staged. The staging is optimized for rental properties and includes modern, neutral furnishings.</p>
+              </div>
+            </div>
+
+            <div 
+              className={`faq-item ${expandedFaq === 4 ? 'expanded' : ''}`}
+              onClick={() => setExpandedFaq(expandedFaq === 4 ? null : 4)}
+            >
+              <div className="faq-question">
+                <span>What happens if the AI can't handle a call?</span>
+                <svg className="faq-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
+              </div>
+              <div className="faq-answer">
+                <p>Our AI knows its limits. For complex issues, emergencies, or when a caller specifically requests a human, it will seamlessly escalate to you via text, email, or direct call transfer based on your preferences. You set the escalation rules.</p>
+              </div>
+            </div>
+
+            <div 
+              className={`faq-item ${expandedFaq === 5 ? 'expanded' : ''}`}
+              onClick={() => setExpandedFaq(expandedFaq === 5 ? null : 5)}
+            >
+              <div className="faq-question">
+                <span>How many properties can I manage?</span>
+                <svg className="faq-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
+              </div>
+              <div className="faq-answer">
+                <p>During the closed beta, there are no limits on the number of properties or listings you can create. We're building SquareFt to scale from individual landlords with one unit to property managers with hundreds of doors.</p>
+              </div>
+            </div>
+
+            <div 
+              className={`faq-item ${expandedFaq === 6 ? 'expanded' : ''}`}
+              onClick={() => setExpandedFaq(expandedFaq === 6 ? null : 6)}
+            >
+              <div className="faq-question">
+                <span>Is my data secure?</span>
+                <svg className="faq-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
+              </div>
+              <div className="faq-answer">
+                <p>Absolutely. We use bank-level encryption for all data, never share your information with third parties, and comply with industry security standards. Call recordings are encrypted and only accessible to you.</p>
+              </div>
+            </div>
+
+            <div 
+              className={`faq-item ${expandedFaq === 7 ? 'expanded' : ''}`}
+              onClick={() => setExpandedFaq(expandedFaq === 7 ? null : 7)}
+            >
+              <div className="faq-question">
+                <span>What's included in the closed beta?</span>
+                <svg className="faq-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
+              </div>
+              <div className="faq-answer">
+                <p>Beta users get full access to AI listing creation (virtual staging, descriptions, free hosting) and early access to our AI voice operations. You'll also get direct input into our product roadmap and priority access when we launch platform integrations.</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="faq-cta-section">
+            <h3 className="faq-cta-title">Ready to simplify property management?</h3>
+            <p className="faq-cta-subtitle">Join our closed beta and get free access to AI-powered listings and operations.</p>
+            <div className="faq-cta-buttons">
+              <a href="tel:+18573178479" className="cta-btn cta-demo">
+                <Phone size={18} />
+                Try Demo Call
+              </a>
+              <button className="cta-btn cta-listing" onClick={() => document.getElementById('listing-section')?.scrollIntoView({ behavior: 'smooth' })}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                  <polyline points="9 22 9 12 15 12 15 22"/>
+                </svg>
+                Try Free Listing
             </button>
-            <p className="cta-note">No credit card required • Free to try</p>
+              <button className="cta-btn cta-consult" onClick={() => window.open('https://calendly.com', '_blank')}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                  <line x1="16" y1="2" x2="16" y2="6"/>
+                  <line x1="8" y1="2" x2="8" y2="6"/>
+                  <line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                Book Consultation
+              </button>
+            </div>
           </div>
         </div>
       </section>
@@ -775,72 +1534,43 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
       {/* Footer */}
       <footer className="footer">
         <div className="footer-content">
-          <div className="footer-grid">
-            <div>
+          <div className="footer-main">
+            <div className="footer-brand-section">
               <div className="footer-brand">SquareFt</div>
               <p className="footer-tagline">
-                Create professional real estate listings in minutes with AI-powered automation.
+                AI-powered property management for modern landlords.
               </p>
+            </div>
+
+            <div className="footer-nav">
+              <a href="#use-cases" onClick={(e) => { e.preventDefault(); document.getElementById('use-cases')?.scrollIntoView({ behavior: 'smooth' }); }}>Use Cases</a>
+              <a href="#faq" onClick={(e) => { e.preventDefault(); document.getElementById('faq')?.scrollIntoView({ behavior: 'smooth' }); }}>FAQ</a>
+              <a href="mailto:hello@squareft.io">Contact</a>
+            </div>
+
               <div className="footer-social">
-                <a href="#" className="footer-social-link" aria-label="Twitter">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2c9 5 20 0 20-11.5a4.5 4.5 0 00-.08-.83A7.72 7.72 0 0023 3z"/>
+              <a href="https://instagram.com/squareft" target="_blank" rel="noopener noreferrer" className="footer-social-link" aria-label="Instagram">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+                  <path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"/>
+                  <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" strokeLinecap="round"/>
                   </svg>
                 </a>
-                <a href="#" className="footer-social-link" aria-label="LinkedIn">
+              <a href="https://linkedin.com/company/squareft" target="_blank" rel="noopener noreferrer" className="footer-social-link" aria-label="LinkedIn">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z"/>
                     <circle cx="4" cy="4" r="2"/>
                   </svg>
                 </a>
-                <a href="#" className="footer-social-link" aria-label="Instagram">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <rect x="2" y="2" width="20" height="20" rx="5" ry="5" strokeWidth="2"/>
-                    <path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z" strokeWidth="2"/>
-                    <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" strokeWidth="2" strokeLinecap="round"/>
-                  </svg>
-                </a>
-              </div>
-            </div>
-
-            <div className="footer-column">
-              <h4>Product</h4>
-              <ul className="footer-links">
-                <li><a href="#features">Features</a></li>
-                <li><a href="#pricing">Pricing</a></li>
-                <li><a href="#integrations">Integrations</a></li>
-                <li><a href="#api">API</a></li>
-              </ul>
-            </div>
-
-            <div className="footer-column">
-              <h4>Company</h4>
-              <ul className="footer-links">
-                <li><a href="#about">About</a></li>
-                <li><a href="#blog">Blog</a></li>
-                <li><a href="#careers">Careers</a></li>
-                <li><a href="#contact">Contact</a></li>
-              </ul>
-            </div>
-
-            <div className="footer-column">
-              <h4>Resources</h4>
-              <ul className="footer-links">
-                <li><a href="#help">Help Center</a></li>
-                <li><a href="#docs">Documentation</a></li>
-                <li><a href="#guides">Guides</a></li>
-                <li><a href="#status">Status</a></li>
-              </ul>
             </div>
           </div>
 
           <div className="footer-bottom">
             <div>© 2025 SquareFt. All rights reserved.</div>
-            <div className="footer-bottom-links">
-              <a href="#privacy">Privacy</a>
-              <a href="#terms">Terms</a>
-              <a href="#cookies">Cookies</a>
-            </div>
+            <a href="tel:+18573178479" className="footer-phone">
+              <Phone size={14} />
+              +1 (857) 317-8479
+            </a>
           </div>
         </div>
       </footer>
@@ -850,15 +1580,563 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
           min-height: 100vh;
           background: #fafbfc;
           position: relative;
+          overflow-x: hidden;
         }
 
-        .landing-container::before {
+        /* Blue Blur Orbs - Enhanced */
+        .blur-orb {
+          position: absolute;
+          border-radius: 50%;
+          background: radial-gradient(circle, rgba(24, 119, 242, 0.45) 0%, rgba(24, 119, 242, 0.15) 40%, transparent 70%);
+          pointer-events: none;
+          z-index: 0;
+          mix-blend-mode: multiply;
+        }
+
+        /* Ensure content sits above orbs */
+        .topnav,
+        .voice-ai-hero,
+        .hero-fullsplit,
+        .ai-demo-section,
+        .how-it-works-section,
+        .faq-section,
+        .footer {
+          position: relative;
+          z-index: 1;
+        }
+
+        .orb-1 {
+          width: 700px;
+          height: 700px;
+          top: -150px;
+          right: -200px;
+          filter: blur(100px);
+          opacity: 0.6;
+        }
+
+        .orb-2 {
+          width: 400px;
+          height: 400px;
+          top: 12%;
+          left: -100px;
+          filter: blur(60px);
+          opacity: 0.5;
+        }
+
+        .orb-3 {
+          width: 550px;
+          height: 550px;
+          top: 28%;
+          right: -150px;
+          filter: blur(80px);
+          opacity: 0.55;
+        }
+
+        .orb-4 {
+          width: 650px;
+          height: 650px;
+          top: 42%;
+          left: -180px;
+          filter: blur(90px);
+          opacity: 0.6;
+        }
+
+        .orb-5 {
+          width: 350px;
+          height: 350px;
+          top: 58%;
+          right: 5%;
+          filter: blur(50px);
+          opacity: 0.45;
+        }
+
+        .orb-6 {
+          width: 800px;
+          height: 800px;
+          top: 70%;
+          left: -200px;
+          filter: blur(110px);
+          opacity: 0.5;
+        }
+
+        .orb-7 {
+          width: 250px;
+          height: 250px;
+          top: 22%;
+          left: 25%;
+          filter: blur(40px);
+          opacity: 0.4;
+        }
+
+        .orb-8 {
+          width: 750px;
+          height: 750px;
+          bottom: -200px;
+          right: -150px;
+          filter: blur(100px);
+          opacity: 0.65;
+        }
+
+        /* Voice AI Hero Section */
+        .voice-ai-hero {
+          position: relative;
+          padding-top: 160px;
+          padding-bottom: 0;
+          background: transparent;
+          overflow: hidden;
+        }
+
+        .voice-hero-container {
+          max-width: 1200px;
+          margin: 0 auto;
+          padding: 0 24px;
+          position: relative;
+          z-index: 1;
+        }
+
+        .voice-hero-title-full {
+          font-size: 62px;
+          line-height: 1.1;
+          font-weight: 900;
+          color: #0f172a;
+          margin: 0 0 48px;
+          letter-spacing: -2px;
+          text-align: center;
+        }
+
+        .text-highlight {
+          color: #1877F2;
+        }
+
+        .voice-hero-split {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 40px;
+          align-items: flex-start;
+          max-width: 920px;
+          margin: 0 auto;
+        }
+
+        .voice-hero-phone {
+          display: flex;
+          justify-content: center;
+          align-items: flex-end;
+        }
+
+        .iphone-image {
+          width: 100%;
+          max-width: 340px;
+          height: auto;
+          object-fit: contain;
+          margin-bottom: -60px;
+        }
+
+        .voice-hero-content {
+          max-width: 420px;
+          padding-top: 40px;
+        }
+
+        .voice-hero-subtitle {
+          font-size: 28px;
+          font-weight: 700;
+          color: #0f172a;
+          margin: 0 0 18px;
+          letter-spacing: -0.3px;
+        }
+
+        .voice-hero-description {
+          font-size: 17px;
+          color: #64748b;
+          line-height: 1.7;
+          margin: 0 0 32px;
+        }
+
+        .voice-hero-actions {
+          display: flex;
+          gap: 14px;
+          margin-bottom: 36px;
+        }
+
+        .btn-primary-large {
+          background: #059669;
+          color: white;
+          border: none;
+          padding: 13px 22px;
+          border-radius: 10px;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          box-shadow: 0 4px 14px rgba(5, 150, 105, 0.25);
+          text-decoration: none;
+        }
+
+        .btn-primary-large:hover {
+          background: #047857;
+          transform: translateY(-2px);
+          box-shadow: 0 8px 24px rgba(5, 150, 105, 0.35);
+        }
+
+        .btn-secondary-large {
+          background: #0f172a;
+          color: white;
+          border: none;
+          padding: 13px 22px;
+          border-radius: 10px;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .btn-secondary-large:hover {
+          background: #1e293b;
+          transform: translateY(-2px);
+        }
+
+        .voice-social-proof {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+        }
+
+        .proof-avatars {
+          display: flex;
+          margin-left: 6px;
+        }
+
+        .avatar-circle {
+          width: 28px;
+          height: 28px;
+          border-radius: 50%;
+          border: 2px solid white;
+          margin-left: -10px;
+          background: #e2e8f0;
+        }
+
+        .avatar-circle.blue { background: #3b82f6; }
+        .avatar-circle.green { background: #10b981; }
+        .avatar-circle.orange { background: #f59e0b; }
+        .avatar-circle.purple { background: #8b5cf6; }
+
+        .proof-text {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 13px;
+          color: #475569;
+        }
+
+        .proof-highlight {
+          font-weight: 600;
+          color: #0f172a;
+        }
+        
+        .proof-dot {
+          font-size: 16px;
+          line-height: 0;
+        }
+
+        /* Phone Visual */
+        .voice-hero-visual {
+          position: relative;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+        }
+
+        /* iPhone Device */
+        .iphone-device {
+          position: relative;
+          z-index: 1;
+        }
+
+        .iphone-frame {
+          width: 280px;
+          height: 560px;
+          background: linear-gradient(145deg, #1c1c1e, #0a0a0c);
+          border-radius: 50px;
+          padding: 10px;
+          position: relative;
+          box-shadow: 
+            0 0 0 2px #2c2c2e,
+            0 30px 60px rgba(0, 0, 0, 0.5),
+            inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+        }
+
+        .iphone-notch {
+          position: absolute;
+          top: 10px;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 90px;
+          height: 26px;
+          background: #0a0a0c;
+          border-radius: 0 0 14px 14px;
+          z-index: 10;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+        }
+
+        .notch-speaker {
+          width: 36px;
+          height: 4px;
+          background: #1c1c1e;
+          border-radius: 2px;
+        }
+
+        .notch-camera {
+          width: 6px;
+          height: 6px;
+          background: #1c1c3a;
+          border-radius: 50%;
+          box-shadow: inset 0 0 2px rgba(100, 100, 200, 0.5);
+        }
+
+        .iphone-screen {
+          background: #f8fafc;
+          width: 100%;
+          height: 100%;
+          border-radius: 42px;
+          overflow: hidden;
+          position: relative;
+        }
+
+        .call-screen {
+          height: 100%;
+          display: flex;
+          flex-direction: column;
+          padding: 48px 20px 20px;
+          background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+        }
+
+        .call-header {
+          text-align: center;
+          margin-bottom: 32px;
+        }
+
+        .call-timer {
+          font-size: 14px;
+          font-weight: 600;
+          color: #10b981;
+          letter-spacing: 1px;
+          margin-bottom: 8px;
+        }
+
+        .caller-number-big {
+          font-size: 22px;
+          font-weight: 700;
+          color: #0f172a;
+          letter-spacing: 0.5px;
+          margin-bottom: 4px;
+        }
+
+        .caller-label {
+          font-size: 14px;
+          font-weight: 500;
+          color: #64748b;
+        }
+
+        .chat-container {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+          padding: 8px 0;
+        }
+
+        .chat-msg {
+          display: flex;
+          align-items: flex-start;
+          gap: 8px;
+          animation: msgFade 0.4s ease-out forwards;
+          opacity: 0;
+        }
+
+        .chat-msg.prospect-msg {
+          animation-delay: 0.2s;
+        }
+
+        .chat-msg.ai-response {
+          animation-delay: 0.6s;
+          justify-content: flex-end;
+        }
+
+        @keyframes msgFade {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        .msg-avatar {
+          width: 24px;
+          height: 24px;
+          background: #e2e8f0;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+          margin-top: 20px;
+        }
+
+        .msg-avatar span {
+          font-size: 8px;
+          font-weight: 700;
+          color: white;
+        }
+
+        .msg-avatar.ai-avatar {
+          background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+        }
+
+        .msg-content {
+          display: flex;
+          flex-direction: column;
+          gap: 3px;
+          max-width: 75%;
+        }
+
+        .msg-content.ai-content {
+          align-items: flex-end;
+        }
+
+        .msg-label {
+          font-size: 10px;
+          font-weight: 600;
+          color: #94a3b8;
+          padding-left: 2px;
+          text-transform: uppercase;
+          letter-spacing: 0.3px;
+        }
+
+        .msg-label.ai-label {
+          color: #3b82f6;
+          padding-right: 2px;
+          padding-left: 0;
+        }
+
+        .msg-bubble {
+          background: white;
+          border: 1px solid #e5e7eb;
+          border-radius: 14px;
+          border-top-left-radius: 4px;
+          padding: 10px 14px;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        }
+
+        .msg-bubble p {
+          font-size: 13px;
+          color: #1e293b;
+          margin: 0;
+          line-height: 1.4;
+        }
+
+        .msg-bubble.ai-bubble {
+          background: #3b82f6;
+          border: none;
+          border-top-left-radius: 14px;
+          border-top-right-radius: 4px;
+        }
+
+        .msg-bubble.ai-bubble p {
+          color: white;
+        }
+
+        .call-controls-bar {
+          display: flex;
+          justify-content: center;
+          gap: 40px;
+          padding-top: 20px;
+          padding-bottom: 8px;
+        }
+
+        .ctrl-btn {
+          width: 52px;
+          height: 52px;
+          border-radius: 50%;
+          border: none;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .end-call {
+          background: #ef4444;
+          box-shadow: 0 4px 16px rgba(239, 68, 68, 0.35);
+        }
+
+        .end-call:hover {
+          transform: scale(1.08);
+        }
+
+        .mic-btn {
+          background: linear-gradient(135deg, #60a5fa, #3b82f6);
+          box-shadow: 0 4px 16px rgba(59, 130, 246, 0.35);
+          position: relative;
+        }
+
+        .mic-btn:hover {
+          transform: scale(1.08);
+        }
+
+        .mic-btn.shining::before {
           content: '';
           position: absolute;
-          inset: 0;
-          z-index: 0;
-          background: radial-gradient(circle at 50% 50%, rgba(24, 119, 242, 0.08) 0%, rgba(24, 119, 242, 0.03) 40%, transparent 70%);
-          pointer-events: none;
+          inset: -3px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, rgba(96, 165, 250, 0.5), rgba(59, 130, 246, 0.2));
+          animation: micShine 1.5s ease-in-out infinite;
+          z-index: -1;
+        }
+
+        .mic-btn.shining::after {
+          content: '';
+          position: absolute;
+          inset: -6px;
+          border-radius: 50%;
+          border: 2px solid rgba(59, 130, 246, 0.25);
+          animation: micRing 2s ease-out infinite;
+        }
+
+        @keyframes micShine {
+          0%, 100% { opacity: 0.5; transform: scale(1); }
+          50% { opacity: 1; transform: scale(1.03); }
+        }
+
+        @keyframes micRing {
+          0% { transform: scale(1); opacity: 0.6; }
+          100% { transform: scale(1.3); opacity: 0; }
+        }
+
+        .iphone-home-bar {
+          position: absolute;
+          bottom: 16px;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 100px;
+          height: 4px;
+          background: #1c1c1e;
+          border-radius: 2px;
+        }
+
+        .phone-shadow {
+          position: absolute;
+          bottom: -25px;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 180px;
+          height: 20px;
+          background: radial-gradient(ellipse, rgba(0, 0, 0, 0.25) 0%, transparent 70%);
         }
 
         /* Top Navigation - Seamless Flow */
@@ -871,9 +2149,7 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 20px 0;
-          max-width: 1200px;
-          margin: 0 auto;
+          padding: 20px calc((100% - 1200px) / 2 + 24px);
           background: transparent;
           transition: all 0.3s ease;
         }
@@ -933,7 +2209,7 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
         .menu {
           position: relative;
           display: flex;
-          gap: 4px;
+          gap: 8px;
           align-items: center;
         }
 
@@ -955,11 +2231,10 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
         .menu-link.login {
           color: #1877F2;
           background: transparent;
-          padding: 10px 24px;
+          padding: 10px 16px;
           border-radius: 10px;
           border: none;
           cursor: pointer;
-          margin-left: 8px;
           font-weight: 600;
           text-decoration: none;
         }
@@ -969,49 +2244,131 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
           color: #166FE5;
         }
 
-        .menu-link.signup {
+        /* Nav Dropdown */
+        .nav-dropdown {
+          position: relative;
+        }
+
+        .dropdown-trigger {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          background: none;
+          border: none;
+          cursor: pointer;
+        }
+
+        .dropdown-trigger svg {
+          transition: transform 0.2s;
+        }
+
+        .nav-dropdown:hover .dropdown-trigger svg {
+          transform: rotate(180deg);
+        }
+
+        .dropdown-menu {
+          position: absolute;
+          top: 100%;
+          left: 50%;
+          transform: translateX(-50%) translateY(8px);
+          background: white;
+          border-radius: 12px;
+          box-shadow: 0 10px 40px rgba(0,0,0,0.12);
+          padding: 8px;
+          min-width: 280px;
+          opacity: 0;
+          visibility: hidden;
+          transition: all 0.2s;
+          z-index: 1000;
+        }
+
+        .nav-dropdown:hover .dropdown-menu {
+          opacity: 1;
+          visibility: visible;
+          transform: translateX(-50%) translateY(0);
+        }
+
+        .dropdown-item {
+          display: flex;
+          flex-direction: column;
+          padding: 12px 16px;
+          border-radius: 8px;
+          text-decoration: none;
+          transition: background 0.15s;
+        }
+
+        .dropdown-item:hover {
+          background: #f8fafc;
+        }
+
+        .dropdown-title {
+          font-size: 14px;
+          font-weight: 600;
+          color: #1e293b;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .dropdown-desc {
+          font-size: 12px;
+          color: #64748b;
+          margin-top: 2px;
+        }
+
+        .soon-tag {
+          font-size: 10px;
+          background: #e0e7ff;
+          color: #4f46e5;
+          padding: 2px 6px;
+          border-radius: 4px;
+          font-weight: 600;
+        }
+
+        .coming-soon-item {
+          opacity: 0.7;
+          cursor: default;
+        }
+
+        /* Demo Call - Nav (Blue) */
+        .demo-call-nav {
+          display: flex;
+          align-items: center;
+          gap: 6px;
           color: white;
           background: #1877F2;
-          padding: 10px 28px;
+          padding: 10px 20px;
           border-radius: 10px;
           border: none;
           cursor: pointer;
-          margin-left: 8px;
+          font-size: 14px;
           font-weight: 600;
-          text-decoration: none;
+          transition: all 0.2s;
         }
 
-        .menu-link.signup:hover {
+        .demo-call-nav:hover {
           background: #166FE5;
           transform: translateY(-1px);
           box-shadow: 0 4px 12px rgba(24, 119, 242, 0.25);
         }
 
-        /* Hero Split - Seamless Flow */
+        /* Hero Split - Second Section */
         .hero-fullsplit {
           position: relative;
-          min-height: 100vh;
-          padding-top: 80px;
-          background: 
-            radial-gradient(ellipse 120% 80% at 50% -10%, rgba(248, 250, 252, 0.6), transparent),
-            radial-gradient(circle at 10% 20%, rgba(241, 245, 249, 0.4), transparent 50%),
-            radial-gradient(circle at 90% 30%, rgba(249, 250, 251, 0.4), transparent 50%),
-            #ffffff;
+          min-height: 80vh; /* Adjusted height */
+          padding-top: 40px; /* Reduced top padding */
+          padding-bottom: 80px;
+          background: transparent;
           display: flex;
           align-items: center;
         }
+        
+        .second-section {
+          border-top: 1px solid #f1f5f9;
+        }
 
         .hero-fullsplit::before {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          height: 100%;
-          background: 
-            radial-gradient(circle at 20% 15%, rgba(30, 64, 175, 0.015) 0%, transparent 35%),
-            radial-gradient(circle at 80% 25%, rgba(148, 163, 184, 0.015) 0%, transparent 35%);
-          pointer-events: none;
+          display: none;
         }
 
         .hero-container {
@@ -1051,19 +2408,6 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
           letter-spacing: 0.2px;
           font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
           line-height: 1.5;
-        }
-
-        .ai-highlight {
-          font-weight: 700;
-          color: #000000;
-          font-size: 19px;
-          letter-spacing: 0.5px;
-          text-shadow: 0 0 20px rgba(24, 119, 242, 0.15);
-        }
-
-        .ai-text-highlight {
-          color: #1877F2;
-          font-weight: 800;
         }
 
         .hero-input-wrap {
@@ -1241,6 +2585,86 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
           flex-shrink: 0;
         }
 
+        /* Integrations Coming Soon */
+        .integrations-coming-soon {
+          margin-top: 32px;
+          text-align: center;
+        }
+
+        .integrations-text {
+          font-size: 14px;
+          color: #64748b;
+          margin: 0 0 16px;
+          font-weight: 500;
+        }
+
+        .platform-logos {
+          display: flex;
+          gap: 32px;
+          align-items: left;
+          justify-content: left;
+          flex-wrap: wrap;
+        }
+
+        .platform-logo {
+          height: 28px;
+          width: auto;
+          object-fit: contain;
+          opacity: 0.6;
+          transition: all 0.2s;
+          filter: grayscale(20%);
+        }
+
+        .platform-logo:hover {
+          opacity: 1;
+          filter: grayscale(0%);
+          transform: scale(1.05);
+        }
+
+        .fb-marketplace {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          opacity: 0.6;
+          transition: all 0.2s;
+          height: auto;
+        }
+
+        .fb-marketplace span {
+          font-size: 14px;
+          font-weight: 600;
+          color: #1877F2;
+        }
+
+        .fb-marketplace:hover {
+          opacity: 1;
+          transform: scale(1.05);
+        }
+
+        @media (max-width: 768px) {
+          .integrations-coming-soon {
+            margin-top: 24px;
+          }
+
+          .integrations-text {
+            font-size: 13px;
+            text-align: center;
+          }
+
+          .platform-logos {
+            justify-content: center;
+          }
+
+          .platform-logo {
+            height: 22px;
+          }
+
+          .facebook-logo {
+            height: 22px;
+            width: 22px;
+          }
+        }
+
         /* Property Card */
         .hero-right {
           position: relative;
@@ -1407,631 +2831,862 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
           gap: 6px;
         }
 
-        /* Coming Soon Section - Inside Hero */
-        .coming-soon-hero-section {
-          grid-column: 1 / -1;
-          margin-top: 50px;
-          padding-top: 0;
-        }
-
-        .coming-soon-hero-content {
-          max-width: 1000px;
-          margin: 0 auto;
-          padding: 0 24px;
-          text-align: center;
-        }
-
-        .coming-soon-hero-title {
-          font-size: 32px;
-          font-weight: 800;
-          color: #0f172a;
-          margin: 0 0 12px;
-          letter-spacing: -0.7px;
-          line-height: 1.2;
-        }
-
-        .coming-soon-hero-description {
-          font-size: 17px;
-          color: #64748b;
-          margin: 0 auto 24px;
-          line-height: 1.6;
-          max-width: 700px;
-        }
-
-        .coming-soon-hero-features {
-          display: grid;
-          grid-template-columns: repeat(2, 1fr);
-          gap: 24px;
-          margin-top: 24px;
-        }
-
-        .coming-soon-hero-feature {
-          background: white;
-          border-radius: 16px;
-          padding: 32px 28px 36px;
-          border: 2px solid #f1f5f9;
+        /* AI Handles Everything Section */
+        .ai-demo-section {
+          background: transparent;
+          padding: 100px 0;
           position: relative;
-          transition: all 0.3s ease;
-          text-align: center;
+          overflow: hidden;
         }
 
-        .coming-soon-hero-feature:hover {
-          border-color: #1877F2;
-          box-shadow: 0 8px 32px rgba(24, 119, 242, 0.1);
-          transform: translateY(-3px);
-        }
-
-        .coming-soon-hero-badge {
-          position: absolute;
-          top: 16px;
-          right: 16px;
-          background: linear-gradient(135deg, #1877F2 0%, #0056D2 100%);
-          color: white;
-          font-size: 10px;
-          font-weight: 700;
-          padding: 5px 12px;
-          border-radius: 16px;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-        }
-
-        .coming-soon-hero-feature-icon {
-          width: 64px;
-          height: 64px;
-          margin: 0 auto 20px;
-          background: linear-gradient(135deg, rgba(24, 119, 242, 0.1) 0%, rgba(24, 119, 242, 0.05) 100%);
-          border-radius: 16px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: #1877F2;
-        }
-
-        .coming-soon-hero-feature-title {
-          font-size: 18px;
-          font-weight: 700;
-          color: #0f172a;
-          margin: 0 0 12px;
-          letter-spacing: -0.2px;
-        }
-
-        .coming-soon-hero-feature-description {
-          font-size: 14px;
-          color: #64748b;
-          line-height: 1.6;
-          margin: 0;
-          text-align: left;
-        }
-
-        @media (max-width: 768px) {
-          .coming-soon-hero-section {
-            margin-top: 32px;
-            padding-top: 0;
-          }
-
-          .coming-soon-hero-title {
-            font-size: 26px;
-          }
-
-          .coming-soon-hero-description {
-            font-size: 15px;
-            margin-bottom: 28px;
-          }
-
-          .coming-soon-hero-features {
-            grid-template-columns: 1fr;
-            gap: 20px;
-          }
-
-          .coming-soon-hero-feature {
-            padding: 28px 20px;
-          }
-
-          .coming-soon-hero-feature-icon {
-            width: 56px;
-            height: 56px;
-          }
-        }
-
-        /* Features Section - Centered Dashboard Hero */
-        .features-section {
-          background: linear-gradient(180deg, #ffffff 0%, #f8fafc 50%, #ffffff 100%);
-          padding: 40px 0 80px;
-          position: relative;
-        }
-
-        .features-section::before {
+        .ai-demo-section::before {
           content: '';
           position: absolute;
           top: 0;
           left: 0;
           right: 0;
-          height: 100%;
+          bottom: 0;
           background: 
-            radial-gradient(circle at 50% 20%, rgba(30, 64, 175, 0.02) 0%, transparent 50%),
-            radial-gradient(circle at 20% 60%, rgba(59, 130, 246, 0.015) 0%, transparent 50%),
-            radial-gradient(circle at 80% 70%, rgba(59, 130, 246, 0.015) 0%, transparent 50%);
+            radial-gradient(circle at 20% 20%, rgba(24, 119, 242, 0.05) 0%, transparent 40%),
+            radial-gradient(circle at 80% 80%, rgba(24, 119, 242, 0.03) 0%, transparent 40%);
           pointer-events: none;
         }
 
-        .container {
+        .ai-demo-container {
           max-width: 1200px;
           margin: 0 auto;
-          padding: 0;
+          padding: 0 24px;
           position: relative;
           z-index: 1;
         }
 
-        .features-header {
+        .ai-demo-header {
           text-align: center;
-          margin-bottom: 48px;
+          margin-bottom: 60px;
         }
 
-        .features-main-title {
-          font-size: 44px;
+        .ai-demo-title {
+          font-size: 48px;
           font-weight: 900;
           color: #0f172a;
           margin: 0 0 16px;
-          letter-spacing: -0.8px;
-          line-height: 1.1;
+          letter-spacing: -1px;
         }
 
-        .title-highlight {
-          color: #0F4C75;
-        }
-
-        .features-main-subtitle {
-          font-size: 19px;
+        .ai-demo-subtitle {
+          font-size: 20px;
           color: #64748b;
           margin: 0;
-          line-height: 1.6;
-          max-width: 700px;
-          margin-left: auto;
-          margin-right: auto;
+          font-weight: 400;
         }
 
-        /* Dashboard Showcase */
-        .dashboard-showcase {
-          margin-bottom: 56px;
-        }
-
-        .dashboard-mockup-large {
+        .ai-demo-interface {
           background: white;
           border-radius: 20px;
-          border: 1px solid #e5e7eb;
+          border: 1px solid #e2e8f0;
           overflow: hidden;
-          box-shadow: 0 25px 70px rgba(0, 0, 0, 0.12);
-          transition: all 0.4s ease;
-          max-width: 1100px;
-          margin: 0 auto;
+          box-shadow: 0 25px 80px rgba(0, 0, 0, 0.08);
         }
 
-        .dashboard-mockup-large:hover {
-          transform: translateY(-6px);
-          box-shadow: 0 30px 80px rgba(0, 0, 0, 0.15);
-        }
-
-        .mockup-browser-bar {
-          background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
-          padding: 14px 20px;
-          border-bottom: 1px solid #e5e7eb;
-          display: flex;
-          align-items: center;
-          gap: 16px;
-        }
-
-        .browser-dots {
+        .ai-demo-tabs {
           display: flex;
           gap: 8px;
-        }
-
-        .browser-dots span {
-          width: 12px;
-          height: 12px;
-          border-radius: 50%;
-          background: #cbd5e1;
-        }
-
-        .browser-dots span:nth-child(1) {
-          background: #ef4444;
-        }
-
-        .browser-dots span:nth-child(2) {
-          background: #f59e0b;
-        }
-
-        .browser-dots span:nth-child(3) {
-          background: #10b981;
-        }
-
-        .browser-url {
-          flex: 1;
-          text-align: center;
-          font-size: 13px;
-          color: #64748b;
-          font-weight: 600;
-          background: #ffffff;
-          padding: 6px 16px;
-          border-radius: 8px;
-          border: 1px solid #e5e7eb;
-        }
-
-        .browser-actions {
-          color: #94a3b8;
-        }
-
-        /* Video Container */
-        .mockup-video-container {
+          padding: 20px 24px;
           background: #f8fafc;
-          min-height: 600px;
-          position: relative;
+          border-bottom: 1px solid #e2e8f0;
+          overflow-x: auto;
         }
 
-        .video-placeholder {
-          position: relative;
-          width: 100%;
-          height: 100%;
-          min-height: 600px;
-        }
-
-        .video-play-button {
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          width: 80px;
-          height: 80px;
-          background: rgba(30, 64, 175, 0.9);
-          border-radius: 50%;
+        .ai-tab {
           display: flex;
           align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          transition: all 0.3s;
-          box-shadow: 0 8px 24px rgba(30, 64, 175, 0.3);
-          z-index: 10;
-        }
-
-        .video-play-button:hover {
-          background: rgba(30, 64, 175, 1);
-          transform: translate(-50%, -50%) scale(1.1);
-          box-shadow: 0 12px 32px rgba(30, 64, 175, 0.4);
-        }
-
-        .video-preview {
-          width: 100%;
-          height: 100%;
-          overflow: hidden;
-        }
-
-        .dashboard-preview-content {
-          display: flex;
-          height: 100%;
-          min-height: 600px;
-        }
-
-        .preview-sidebar {
-          width: 200px;
-          background: #0f172a;
-          padding: 24px 16px;
-          display: flex;
-          flex-direction: column;
-          gap: 32px;
-        }
-
-        .sidebar-logo {
-          font-size: 22px;
-          font-weight: 900;
-          color: white;
-          padding-left: 8px;
-        }
-
-        .sidebar-menu {
-          display: flex;
-          flex-direction: column;
           gap: 8px;
+          padding: 10px 20px;
+          background: transparent;
+          border: none;
+          border-radius: 10px;
+          color: #64748b;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s;
+          white-space: nowrap;
         }
 
-        .menu-item {
+        .ai-tab:hover {
+          color: #1e293b;
+          background: #e2e8f0;
+        }
+
+        .ai-tab.active {
+          background: #1877F2;
+          color: white;
+        }
+
+        .ai-demo-content {
+          display: grid;
+          grid-template-columns: 1.4fr 1fr;
+          min-height: 450px;
+        }
+
+        .ai-conversation-panel {
+          padding: 32px;
+          display: flex;
+          flex-direction: column;
+          gap: 24px;
+          background: white;
+        }
+
+        .caller-info {
           display: flex;
           align-items: center;
           gap: 12px;
-          padding: 12px;
-          border-radius: 10px;
-          color: #94a3b8;
-          font-size: 14px;
-          font-weight: 500;
-          transition: all 0.2s;
-          cursor: pointer;
         }
 
-        .menu-item.active {
-          background: rgba(59, 130, 246, 0.15);
-          color: #3b82f6;
+        .caller-avatar {
+          width: 40px;
+          height: 40px;
+          border-radius: 50%;
+          overflow: hidden;
+          border: 2px solid #e2e8f0;
         }
 
-        .menu-item:not(.active):hover {
-          background: rgba(255, 255, 255, 0.05);
+        .caller-avatar img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+
+        .caller-details {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .caller-name {
+          color: #0f172a;
+          font-weight: 700;
+          font-size: 15px;
+        }
+
+        .caller-divider {
           color: #cbd5e1;
         }
 
-        .preview-main {
-          flex: 1;
-          padding: 32px;
-          background: #f8fafc;
-          overflow: auto;
+        .caller-property {
+          color: #64748b;
+          font-size: 14px;
         }
 
-        .preview-header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          margin-bottom: 28px;
+        .call-time {
+          margin-left: auto;
+          color: #64748b;
+          font-size: 14px;
+          font-weight: 600;
         }
 
-        .preview-header h3 {
-          font-size: 24px;
-          font-weight: 800;
-          color: #0f172a;
+        .timezone {
+          color: #94a3b8;
+          font-weight: 400;
+        }
+
+        .user-message {
+          background: #f1f5f9;
+          border-radius: 16px;
+          padding: 18px 22px;
+          border: 1px solid #e2e8f0;
+        }
+
+        .user-message p {
+          color: #334155;
+          font-size: 15px;
+          line-height: 1.6;
           margin: 0;
         }
 
-        .preview-stats {
-          display: flex;
-          gap: 12px;
+        .ai-response-container {
+          flex: 1;
         }
 
-        .stat-card {
-          background: white;
-          padding: 12px 20px;
-          border-radius: 12px;
-          border: 1px solid #e5e7eb;
+        .ai-operator-info {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          margin-bottom: 16px;
+        }
+
+        .audio-wave-icon {
+          display: flex;
+          align-items: center;
+          gap: 2px;
+          height: 20px;
+        }
+
+        .audio-wave-icon span {
+          width: 3px;
+          height: 100%;
+          background: #1877F2;
+          border-radius: 2px;
+          animation: audioWave 1s ease-in-out infinite;
+        }
+
+        .audio-wave-icon span:nth-child(1) { animation-delay: 0s; height: 40%; }
+        .audio-wave-icon span:nth-child(2) { animation-delay: 0.2s; height: 80%; }
+        .audio-wave-icon span:nth-child(3) { animation-delay: 0.4s; height: 60%; }
+        .audio-wave-icon span:nth-child(4) { animation-delay: 0.6s; height: 100%; }
+
+        @keyframes audioWave {
+          0%, 100% { transform: scaleY(1); }
+          50% { transform: scaleY(0.5); }
+        }
+
+        .operator-name {
+          color: #0f172a;
+          font-weight: 700;
+          font-size: 14px;
+        }
+
+        .operator-divider {
+          color: #cbd5e1;
+        }
+
+        .audio-duration {
+          color: #64748b;
+          font-size: 13px;
+        }
+
+        .ai-message {
+          background: linear-gradient(135deg, #1877F2 0%, #0056D2 100%);
+          border-radius: 16px;
+          padding: 24px;
+        }
+
+        .ai-message p {
+          color: white;
+            font-size: 15px;
+          line-height: 1.7;
+          margin: 0 0 16px;
+        }
+
+        .ai-message p:last-child {
+          margin-bottom: 0;
+        }
+
+        .powered-by {
+          color: #94a3b8;
+          font-size: 11px;
+          font-weight: 600;
+          letter-spacing: 1px;
+          text-transform: uppercase;
+          margin-top: auto;
+          text-align: center;
+        }
+
+        .ai-status-panel {
+          background: #f8fafc;
+          padding: 32px;
           display: flex;
           flex-direction: column;
-          align-items: center;
-          gap: 4px;
-          min-width: 70px;
+            gap: 20px;
+          border-left: 1px solid #e2e8f0;
         }
 
-        .stat-card.active {
-          border-color: #1877F2;
-          background: #eff6ff;
-        }
-
-        .stat-number {
-          font-size: 20px;
-          font-weight: 800;
-          color: #0f172a;
-        }
-
-        .stat-label {
-          font-size: 11px;
-          color: #64748b;
-          font-weight: 600;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-        }
-
-        .preview-listing-card {
-          background: white;
-          border: 1px solid #e5e7eb;
-          border-radius: 14px;
-          padding: 16px;
+        .audio-player {
           display: flex;
+          align-items: center;
           gap: 16px;
-          margin-bottom: 12px;
+        }
+
+        .play-button {
+          width: 48px;
+          height: 48px;
+          border-radius: 50%;
+          background: #1877F2;
+          border: none;
+          color: white;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
           transition: all 0.2s;
         }
 
-        .preview-listing-card:hover {
-          border-color: #1877F2;
-          box-shadow: 0 4px 12px rgba(24, 119, 242, 0.08);
+        .play-button:hover {
+          background: #166FE5;
+          transform: scale(1.05);
         }
 
-        .preview-listing-card.secondary {
-          opacity: 0.7;
-        }
-
-        .preview-listing-image {
-          width: 120px;
-          height: 90px;
-          border-radius: 10px;
-          object-fit: cover;
-          flex-shrink: 0;
-        }
-
-        .preview-listing-details {
+        .audio-progress {
           flex: 1;
+          height: 4px;
+          background: #e2e8f0;
+          border-radius: 2px;
+          overflow: hidden;
+        }
+
+        .audio-bar {
+          width: 30%;
+          height: 100%;
+          background: #1877F2;
+          border-radius: 2px;
+        }
+
+        .status-badges, .action-badges, .doc-badges {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+        }
+
+        .status-badge, .action-badge, .doc-badge {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 10px 14px;
+          background: #f1f5f9;
+          border-radius: 8px;
+          font-size: 12px;
+          font-weight: 600;
+          color: #475569;
+          border: 1px solid #e2e8f0;
+        }
+
+        .status-badge.blue {
+          background: #eff6ff;
+          color: #1d4ed8;
+          border-color: #bfdbfe;
+        }
+
+        .status-badge.purple {
+          background: #f5f3ff;
+          color: #7c3aed;
+          border-color: #ddd6fe;
+        }
+
+        .status-badge.green {
+          background: #ecfdf5;
+          color: #059669;
+          border-color: #a7f3d0;
+        }
+
+        .status-badge.green svg {
+          fill: #10b981;
+        }
+
+        .status-badge.orange {
+          background: #fff7ed;
+          color: #ea580c;
+          border-color: #fed7aa;
+        }
+
+        .status-badge.red {
+          background: #fef2f2;
+          color: #dc2626;
+          border-color: #fecaca;
+        }
+
+        .status-badge.yellow {
+          background: #fefce8;
+          color: #ca8a04;
+          border-color: #fef08a;
+        }
+
+        @media (max-width: 1024px) {
+          .ai-demo-content {
+            grid-template-columns: 1fr;
+          }
+
+          .ai-status-panel {
+            border-left: none;
+            border-top: 1px solid #e2e8f0;
+          }
+        }
+
+        @media (max-width: 768px) {
+          .ai-demo-section {
+            padding: 60px 0;
+          }
+
+          .ai-demo-title {
+            font-size: 36px;
+          }
+
+          .ai-demo-subtitle {
+            font-size: 16px;
+          }
+
+          .ai-demo-tabs {
+          padding: 16px;
+          }
+
+          .ai-tab {
+            padding: 8px 14px;
+            font-size: 13px;
+          }
+
+          .ai-conversation-panel {
+            padding: 20px;
+          }
+
+          .ai-status-panel {
+            padding: 20px;
+          }
+        }
+
+        /* How It Works Section */
+        .how-it-works-section {
+          background: transparent;
+          padding: 120px 0;
+          position: relative;
+        }
+
+        .how-it-works-container {
+          max-width: 1200px;
+          margin: 0 auto;
+          padding: 0 24px;
+        }
+
+        .solutions-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 80px;
+        }
+
+        .solution-block {
+          
+        }
+
+        .solution-label {
+          display: inline-flex;
+          align-items: center;
+          gap: 10px;
+          font-size: 13px;
+          font-weight: 700;
+          color: #1877F2;
+          text-transform: uppercase;
+          letter-spacing: 1.5px;
+          margin-bottom: 32px;
+        }
+
+        .label-dot {
+          width: 8px;
+          height: 8px;
+          background: #1877F2;
+          border-radius: 50%;
+        }
+
+        .operations-label {
+          color: #059669;
+        }
+
+        .operations-dot {
+          background: #059669;
+        }
+
+        .solution-headline {
+          font-size: 42px;
+          font-weight: 800;
+          color: #0f172a;
+          line-height: 1.15;
+          margin: 0 0 24px;
+          letter-spacing: -1.5px;
+        }
+
+        .headline-accent {
+          color: #1877F2;
+        }
+
+        .headline-accent-green {
+          color: #059669;
+        }
+
+        .solution-description {
+          font-size: 18px;
+          color: #475569;
+          line-height: 1.7;
+          margin: 0 0 40px;
+        }
+
+        .process-steps {
           display: flex;
           flex-direction: column;
-          gap: 8px;
+          gap: 20px;
+          margin-bottom: 40px;
         }
 
-        .preview-listing-title {
+        .process-step {
+          display: flex;
+          align-items: flex-start;
+          gap: 16px;
+        }
+
+        .step-num {
+          font-size: 11px;
+          font-weight: 800;
+          color: #1877F2;
+          letter-spacing: 1px;
+          min-width: 24px;
+          padding-top: 2px;
+        }
+
+        .ops-num {
+          color: #059669;
+        }
+
+        .step-info h4 {
           font-size: 15px;
           font-weight: 700;
           color: #0f172a;
+          margin: 0 0 4px;
+          display: flex;
+          align-items: center;
+          gap: 10px;
         }
 
-        .preview-listing-meta {
-          display: flex;
-          gap: 16px;
+        .step-info p {
           font-size: 13px;
           color: #64748b;
-          font-weight: 500;
-          align-items: center;
+          margin: 0;
         }
 
-        .preview-price {
-          color: #1877F2;
+        .coming-soon-step {
+          opacity: 0.7;
+        }
+
+        .coming-soon-badge {
+          font-size: 9px;
           font-weight: 700;
-          margin-left: auto;
-        }
-
-        .preview-listing-footer {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-        }
-
-        .preview-status-badge {
-          padding: 4px 10px;
-          border-radius: 6px;
-          font-size: 11px;
-          font-weight: 700;
+          background: linear-gradient(135deg, #1877F2, #0056D2);
+          color: white;
+          padding: 3px 8px;
+          border-radius: 10px;
           text-transform: uppercase;
           letter-spacing: 0.5px;
         }
 
-        .preview-status-badge.live {
-          background: #dcfce7;
-          color: #15803d;
-        }
-
-        .preview-platform-badges {
-          display: flex;
-          gap: 6px;
-        }
-
-        .preview-platform {
-          background: #f1f5f9;
-          padding: 4px 10px;
-          border-radius: 6px;
-          font-size: 11px;
-          font-weight: 600;
-          color: #475569;
-        }
-
-        .video-label {
-          position: absolute;
-          bottom: 20px;
-          left: 50%;
-          transform: translateX(-50%);
-          background: rgba(15, 23, 42, 0.9);
-          color: white;
-          padding: 8px 16px;
-          border-radius: 8px;
-          font-size: 13px;
-          font-weight: 600;
-          backdrop-filter: blur(8px);
-          z-index: 11;
-        }
-
-        /* Horizontal Steps */
-        .features-steps-horizontal {
-          display: grid;
-          grid-template-columns: 1fr auto 1fr auto 1fr auto 1fr;
-          gap: 20px;
+        .solution-cta {
+          display: inline-flex;
           align-items: center;
-          margin-bottom: 60px;
-          max-width: 1200px;
-          margin-left: auto;
-          margin-right: auto;
+          gap: 8px;
+          padding: 14px 28px;
+          background: #0f172a;
+          color: white;
+          border: none;
+          border-radius: 10px;
+          font-size: 15px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s;
         }
 
-        .feature-step-compact {
-          background: white;
-          padding: 32px 24px;
-          border-radius: 16px;
-          border: 2px solid #f1f5f9;
+        .solution-cta:hover {
+          background: #1e293b;
+          transform: translateY(-2px);
+        }
+
+        .operations-cta-btn {
+          background: #059669;
+        }
+
+        .operations-cta-btn:hover {
+          background: #047857;
+        }
+
+        @media (max-width: 1024px) {
+          .solutions-grid {
+            grid-template-columns: 1fr;
+            gap: 80px;
+          }
+
+          .solution-headline {
+            font-size: 36px;
+          }
+        }
+
+        @media (max-width: 768px) {
+          .how-it-works-section {
+            padding: 80px 0;
+          }
+
+          .solution-headline {
+            font-size: 28px;
+          }
+
+          .solution-description {
+            font-size: 16px;
+          }
+        }
+
+
+        /* FAQ Section */
+        .faq-section {
+          background: transparent;
+          padding: 100px 0;
+        }
+
+        .faq-container {
+          max-width: 800px;
+          margin: 0 auto;
+          padding: 0 24px;
+        }
+
+        .faq-header {
           text-align: center;
-          position: relative;
-          transition: all 0.3s ease;
-          min-height: 160px;
+          margin-bottom: 60px;
+        }
+
+        .beta-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 10px;
+          background: linear-gradient(135deg, #059669, #047857);
+          color: white;
+          padding: 10px 20px;
+          border-radius: 30px;
+          font-size: 13px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+          margin-bottom: 24px;
+        }
+
+        .beta-pulse {
+          width: 8px;
+          height: 8px;
+          background: white;
+          border-radius: 50%;
+          animation: betaPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes betaPulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.5; transform: scale(1.2); }
+        }
+
+        .faq-title {
+          font-size: 42px;
+          font-weight: 800;
+          color: #0f172a;
+          margin: 0 0 16px;
+          letter-spacing: -1px;
+        }
+
+        .faq-subtitle {
+          font-size: 18px;
+          color: #64748b;
+          margin: 0;
+          line-height: 1.6;
+        }
+
+        .inline-link {
+          background: none;
+          border: none;
+          color: #1877F2;
+          font-size: 18px;
+          font-weight: 600;
+          cursor: pointer;
+          text-decoration: underline;
+          text-underline-offset: 3px;
+          padding: 0;
+          margin-left: 4px;
+        }
+
+        .inline-link:hover {
+          color: #0056D2;
+        }
+
+        .faq-accordion {
           display: flex;
           flex-direction: column;
-          align-items: center;
-          justify-content: center;
+          gap: 12px;
+          margin-bottom: 60px;
         }
 
-        .feature-step-compact:hover {
+        .faq-item {
+          background: white;
+          border-radius: 12px;
+          border: 1px solid #e2e8f0;
+          overflow: hidden;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .faq-item:hover {
+          border-color: #cbd5e1;
+        }
+
+        .faq-item.expanded {
           border-color: #1877F2;
-          box-shadow: 0 12px 32px rgba(24, 119, 242, 0.12);
-          transform: translateY(-6px);
+          box-shadow: 0 4px 12px rgba(24, 119, 242, 0.1);
         }
 
-        .feature-step-compact:hover .step-number-large {
+        .faq-question {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 20px 24px;
+          gap: 16px;
+        }
+
+        .faq-question span {
+          font-size: 16px;
+          font-weight: 600;
+          color: #0f172a;
+          line-height: 1.4;
+        }
+
+        .faq-chevron {
+          flex-shrink: 0;
+          color: #94a3b8;
+          transition: transform 0.3s ease;
+        }
+
+        .faq-item.expanded .faq-chevron {
+          transform: rotate(180deg);
+          color: #1877F2;
+        }
+
+        .faq-answer {
+          max-height: 0;
+          overflow: hidden;
+          transition: max-height 0.3s ease, padding 0.3s ease;
+        }
+
+        .faq-item.expanded .faq-answer {
+          max-height: 300px;
+        }
+
+        .faq-answer p {
+          padding: 0 24px 20px;
+          margin: 0;
+          font-size: 15px;
+          color: #64748b;
+          line-height: 1.7;
+          border-top: 1px solid #f1f5f9;
+          padding-top: 16px;
+        }
+
+        .faq-cta-section {
+          text-align: center;
+          padding: 60px 0 20px;
+          max-width: 900px;
+          margin: 0 auto;
+        }
+
+        .faq-cta-title {
+          font-size: 32px;
+          font-weight: 800;
+          color: #0f172a;
+          margin: 0 0 12px;
+          letter-spacing: -0.5px;
+        }
+
+        .faq-cta-subtitle {
+          font-size: 17px;
+          color: #64748b;
+          margin: 0 0 36px;
+        }
+
+        .faq-cta-buttons {
+          display: flex;
+          justify-content: center;
+          gap: 16px;
+        }
+
+        .cta-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 10px;
+          padding: 14px 24px;
+          border-radius: 10px;
+          font-size: 15px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s;
+          border: 2px solid transparent;
+        }
+
+        .cta-demo {
+          background: #059669;
+          color: white;
+          border-color: #059669;
+        }
+
+        .cta-demo:hover {
+          background: #047857;
+          border-color: #047857;
+          transform: translateY(-2px);
+        }
+
+        .cta-listing {
+          background: #1877F2;
+          color: white;
+          border-color: #1877F2;
+        }
+
+        .cta-listing:hover {
+          background: #166FE5;
+          border-color: #166FE5;
+          transform: translateY(-2px);
+        }
+
+        .cta-consult {
           background: #0f172a;
           color: white;
           border-color: #0f172a;
         }
 
-        .step-number-large {
-          width: 48px;
-          height: 48px;
-          border-radius: 50%;
-          background: #f8fafc;
-          color: #0f172a;
-          border: 2px solid #e5e7eb;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 22px;
-          font-weight: 900;
-          margin: 0 auto 16px;
-          transition: all 0.3s ease;
-        }
-
-        .feature-step-compact h4 {
-          font-size: 17px;
-          font-weight: 800;
-          color: #0f172a;
-          margin: 0 0 8px;
-          letter-spacing: -0.3px;
-        }
-
-        .feature-step-compact p {
-          font-size: 13px;
-          color: #64748b;
-          line-height: 1.5;
-          margin: 0;
-          font-weight: 500;
-        }
-
-        .step-arrow {
-          font-size: 24px;
-          color: #cbd5e1;
-          font-weight: 300;
-        }
-
-        /* CTA Center */
-        .features-cta-center {
-          text-align: center;
-        }
-
-        .features-cta-button-large {
-          display: inline-flex;
-          align-items: center;
-          gap: 10px;
-          background: #1877F2;
-          color: white;
-          padding: 18px 40px;
-          border-radius: 14px;
-          font-size: 17px;
-          font-weight: 700;
-          border: none;
-          cursor: pointer;
-          transition: all 0.2s;
-          box-shadow: 0 4px 14px rgba(24, 119, 242, 0.25);
-        }
-
-        .features-cta-button-large:hover {
-          background: #166FE5;
+        .cta-consult:hover {
+          background: #1e293b;
+          border-color: #1e293b;
           transform: translateY(-2px);
-          box-shadow: 0 6px 20px rgba(24, 119, 242, 0.35);
         }
 
-        .cta-note {
-          margin-top: 16px;
+        @media (max-width: 768px) {
+          .faq-section {
+            padding: 60px 0;
+          }
+
+          .faq-title {
+            font-size: 32px;
+          }
+
+          .faq-question {
+            padding: 16px 20px;
+          }
+
+          .faq-question span {
+            font-size: 15px;
+          }
+
+          .faq-answer p {
+            padding: 0 20px 16px;
           font-size: 14px;
-          color: #64748b;
+          }
+
+          .faq-cta-section {
+            padding: 40px 0 20px;
+          }
+
+          .faq-cta-title {
+            font-size: 26px;
+          }
+
+          .faq-cta-buttons {
+            flex-direction: column;
+            gap: 12px;
+          }
+
+          .cta-btn {
+            width: 100%;
+            justify-content: center;
+          }
         }
 
         /* Footer */
         .footer {
-          background: white;
+          background: transparent;
           color: #64748b;
-          padding: 60px 0 30px;
+          padding: 24px 0 0;
           border-top: 1px solid #e5e7eb;
         }
 
@@ -2041,34 +3696,60 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
           padding: 0;
         }
 
-        .footer-grid {
-          display: grid;
-          grid-template-columns: 2fr 1fr 1fr 1fr;
-          gap: 60px;
-          margin-bottom: 40px;
+        .footer-main {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 16px;
+          flex-wrap: wrap;
+          gap: 20px;
+        }
+
+        .footer-brand-section {
+          display: flex;
+          align-items: center;
+          gap: 12px;
         }
 
         .footer-brand {
-          font-size: 24px;
+          font-size: 20px;
           font-weight: 900;
           color: #1e293b;
-          margin-bottom: 12px;
         }
 
         .footer-tagline {
-          font-size: 15px;
-          line-height: 1.6;
-          margin-bottom: 20px;
+          font-size: 14px;
+          color: #94a3b8;
+          margin: 0;
+          padding-left: 16px;
+          border-left: 1px solid #e5e7eb;
+        }
+
+        .footer-nav {
+          display: flex;
+          gap: 20px;
+        }
+
+        .footer-nav a {
+          color: #64748b;
+          text-decoration: none;
+          font-size: 14px;
+          font-weight: 500;
+          transition: color 0.2s;
+        }
+
+        .footer-nav a:hover {
+          color: #1877F2;
         }
 
         .footer-social {
           display: flex;
-          gap: 12px;
+          gap: 8px;
         }
 
         .footer-social-link {
-          width: 40px;
-          height: 40px;
+          width: 36px;
+          height: 36px;
           border-radius: 50%;
           background: #f1f5f9;
           display: flex;
@@ -2076,6 +3757,7 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
           justify-content: center;
           color: #64748b;
           transition: all 0.2s;
+          text-decoration: none;
         }
 
         .footer-social-link:hover {
@@ -2084,55 +3766,27 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
           transform: translateY(-2px);
         }
 
-        .footer-column h4 {
-          font-size: 14px;
-          font-weight: 700;
-          color: #1e293b;
-          margin: 0 0 16px;
-          text-transform: uppercase;
-        }
-
-        .footer-links {
-          list-style: none;
-          padding: 0;
-          margin: 0;
-        }
-
-        .footer-links li {
-          margin-bottom: 12px;
-        }
-
-        .footer-links a {
-          color: #64748b;
-          text-decoration: none;
-          font-size: 15px;
-          transition: all 0.2s;
-        }
-
-        .footer-links a:hover {
-          color: #1877F2;
-        }
-
         .footer-bottom {
           border-top: 1px solid #e5e7eb;
-          padding-top: 30px;
+          padding-top: 12px;
+          padding-bottom: 0;
           display: flex;
           justify-content: space-between;
-          font-size: 14px;
+          align-items: center;
+          font-size: 13px;
         }
 
-        .footer-bottom-links {
+        .footer-phone {
           display: flex;
-          gap: 20px;
-        }
-
-        .footer-bottom-links a {
+          align-items: center;
+          gap: 6px;
           color: #64748b;
           text-decoration: none;
+          font-weight: 500;
           transition: color 0.2s;
         }
 
-        .footer-bottom-links a:hover {
+        .footer-phone:hover {
           color: #1877F2;
         }
 
@@ -2152,6 +3806,7 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
         @media (max-width: 1240px) {
           .topnav,
           .hero-container,
+          .voice-hero-container,
           .container,
           .footer-content {
             padding-left: 24px;
@@ -2163,6 +3818,24 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
           .hero-container {
             grid-template-columns: 1fr;
             gap: 50px;
+          }
+
+          .voice-hero-container {
+            grid-template-columns: 1fr;
+            gap: 40px;
+            text-align: center;
+          }
+
+          .voice-hero-content {
+            margin: 0 auto;
+          }
+
+          .voice-hero-actions {
+            justify-content: center;
+          }
+          
+          .voice-social-proof {
+            justify-content: center;
           }
 
           .hero-title-big {
@@ -2210,13 +3883,73 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
             flex-wrap: wrap;
           }
 
-          .footer-grid {
-            grid-template-columns: 1fr 1fr;
-            gap: 40px;
+          .footer-main {
+            flex-direction: column;
+            text-align: center;
+          }
+
+          .footer-brand-section {
+            flex-direction: column;
+          }
+
+          .footer-tagline {
+            border-left: none;
+            padding-left: 0;
           }
         }
 
         @media (max-width: 768px) {
+          .voice-ai-hero {
+            padding-top: 100px;
+            padding-bottom: 60px;
+          }
+
+          .voice-hero-title-full {
+            font-size: 36px;
+            margin-bottom: 40px;
+            letter-spacing: -1px;
+          }
+
+          .voice-hero-split {
+            grid-template-columns: 1fr;
+            gap: 40px;
+          }
+
+          .voice-hero-phone {
+            order: -1;
+          }
+
+          .iphone-image {
+            max-width: 260px;
+          }
+
+          .voice-hero-content {
+            text-align: center;
+            margin: 0 auto;
+          }
+
+          .voice-hero-subtitle {
+            font-size: 24px;
+          }
+
+          .voice-hero-description {
+            font-size: 16px;
+          }
+
+          .voice-hero-actions {
+            flex-direction: column;
+            align-items: center;
+          }
+
+          .btn-primary-large, .btn-secondary-large {
+            width: 100%;
+            justify-content: center;
+          }
+
+          .voice-social-proof {
+            justify-content: center;
+          }
+
           .topnav {
             padding: 16px 20px;
           }
@@ -2235,10 +3968,6 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
           }
 
           .hero-caption {
-            font-size: 16px;
-          }
-
-          .hero-subtitle {
             font-size: 16px;
           }
 
