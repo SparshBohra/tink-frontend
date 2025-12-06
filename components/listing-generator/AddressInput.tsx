@@ -396,53 +396,25 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
   }, []);
 
 
-  // Progressive image loading - Load images in the background
+  // Preload ALL images immediately on mount for instant carousel
   useEffect(() => {
-    const preloadImages = async () => {
-      // First, ensure the first image of the current listing is loaded (priority)
-      const currentListing = propertyListings[currentListingIndex];
-      if (currentListing.photos.length > 0) {
+    // Preload all images from all listings immediately (no delays)
+    propertyListings.forEach((listing, listingIndex) => {
+      listing.photos.forEach((photo, photoIndex) => {
         const img = new Image();
-        img.src = currentListing.photos[0];
-      }
-
-      // Then progressively load remaining images for current and next listings
-      const loadListingImages = (listingIndex: number) => {
-        const listing = propertyListings[listingIndex];
-        listing.photos.forEach((photo, photoIndex) => {
-          setTimeout(() => {
-            const img = new Image();
-            img.src = photo;
-            img.onload = () => {
-              setLoadedPhotos(prev => {
-                const newMap = new Map(prev);
-                const photoSet = newMap.get(listingIndex) || new Set();
-                photoSet.add(photoIndex);
-                newMap.set(listingIndex, photoSet);
-                return newMap;
-              });
-            };
-          }, photoIndex * 500); // Stagger loading by 500ms per image
-        });
-      };
-
-      // Load current listing images
-      loadListingImages(currentListingIndex);
-
-      // Load next 2 listings in advance (background loading)
-      setTimeout(() => {
-        const nextIndex = (currentListingIndex + 1) % propertyListings.length;
-        loadListingImages(nextIndex);
-      }, 2000);
-
-      setTimeout(() => {
-        const nextNextIndex = (currentListingIndex + 2) % propertyListings.length;
-        loadListingImages(nextNextIndex);
-      }, 4000);
-    };
-
-    preloadImages();
-  }, [currentListingIndex]);
+        img.src = photo;
+        img.onload = () => {
+          setLoadedPhotos(prev => {
+            const newMap = new Map(prev);
+            const photoSet = newMap.get(listingIndex) || new Set();
+            photoSet.add(photoIndex);
+            newMap.set(listingIndex, photoSet);
+            return newMap;
+          });
+        };
+      });
+    });
+  }, []); // Only run once on mount
 
   const currentListing = propertyListings[currentListingIndex];
 
@@ -451,6 +423,12 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
       {/* Calendly Widget Scripts */}
       <Head>
         <link href="https://assets.calendly.com/assets/external/widget.css" rel="stylesheet" />
+        {/* Preload first images of each listing for instant carousel */}
+        <link rel="preload" as="image" href="/landingPage/house1/house1a.webp" />
+        <link rel="preload" as="image" href="/landingPage/house1/house1b.webp" />
+        <link rel="preload" as="image" href="/landingPage/house2/house2a.webp" />
+        <link rel="preload" as="image" href="/landingPage/house3/house3a.webp" />
+        <link rel="preload" as="image" href="/landingPage/house4/house4a.webp" />
       </Head>
       <Script 
         src="https://assets.calendly.com/assets/external/widget.js" 
@@ -1652,8 +1630,6 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
           background: #fafbfc;
           position: relative;
           overflow-x: hidden;
-          -webkit-overflow-scrolling: touch;
-          overscroll-behavior-y: none;
         }
 
         /* Blue Blur Orbs - Enhanced */
@@ -2785,7 +2761,6 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
           will-change: transform, opacity;
           backface-visibility: hidden;
           -webkit-backface-visibility: hidden;
-          contain: layout style;
         }
 
         .hero-property-card:hover {
@@ -3527,7 +3502,6 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
         .faq-section {
           background: transparent;
           padding: 100px 0;
-          contain: layout style;
         }
 
         .faq-container {
@@ -3615,7 +3589,6 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
           overflow: hidden;
           cursor: pointer;
           transition: border-color 0.2s, box-shadow 0.2s;
-          contain: layout style;
         }
 
         .faq-item:hover {
@@ -4330,12 +4303,6 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
           
           .faq-chevron {
             transition: transform 0.15s ease;
-          }
-          
-          /* Ensure smooth scrolling on touch devices */
-          .landing-container {
-            -webkit-overflow-scrolling: touch;
-            touch-action: pan-y;
           }
           
           /* Reduce button hover animations on mobile */
