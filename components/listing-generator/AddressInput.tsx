@@ -3,7 +3,7 @@ import { useRouter } from 'next/router';
 import NextImage from 'next/image';
 import Script from 'next/script';
 import Head from 'next/head';
-import { MapPin, Building2, Phone, ArrowRight, MessageSquare } from 'lucide-react';
+import { MapPin, Building2, Phone, ArrowRight, MessageSquare, Menu, X } from 'lucide-react';
 import LoadingOverlay from './LoadingOverlay';
 
 // Declare Calendly on window for TypeScript
@@ -57,6 +57,7 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
   const [errorMessage, setErrorMessage] = useState('');
   const [activeAiTab, setActiveAiTab] = useState('leasing');
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
   // Mapbox autocomplete state
   const [suggestions, setSuggestions] = useState<MapboxFeature[]>([]);
@@ -336,7 +337,7 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
     const handleScroll = () => {
       if (!ticking) {
         requestAnimationFrame(() => {
-          setIsScrolled(window.scrollY > 20);
+      setIsScrolled(window.scrollY > 20);
           ticking = false;
         });
         ticking = true;
@@ -400,18 +401,18 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
   useEffect(() => {
     // Preload all images from all listings immediately (no delays)
     propertyListings.forEach((listing, listingIndex) => {
-      listing.photos.forEach((photo, photoIndex) => {
-        const img = new Image();
-        img.src = photo;
-        img.onload = () => {
-          setLoadedPhotos(prev => {
-            const newMap = new Map(prev);
-            const photoSet = newMap.get(listingIndex) || new Set();
-            photoSet.add(photoIndex);
-            newMap.set(listingIndex, photoSet);
-            return newMap;
-          });
-        };
+        listing.photos.forEach((photo, photoIndex) => {
+            const img = new Image();
+            img.src = photo;
+            img.onload = () => {
+              setLoadedPhotos(prev => {
+                const newMap = new Map(prev);
+                const photoSet = newMap.get(listingIndex) || new Set();
+                photoSet.add(photoIndex);
+                newMap.set(listingIndex, photoSet);
+                return newMap;
+              });
+            };
       });
     });
   }, []); // Only run once on mount
@@ -485,7 +486,8 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
             <span className="brand-tagline">Your AI Property Assistant</span>
           </div>
         </div>
-          <div className="menu">
+          {/* Desktop Menu */}
+          <div className="menu desktop-menu">
             <a 
               href="#use-cases" 
               className="menu-link"
@@ -512,7 +514,65 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
               Try it out
             </a>
           </div>
+          
+          {/* Mobile Hamburger Button */}
+          <button 
+            className="mobile-menu-btn"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+          >
+            {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
       </nav>
+      
+      {/* Mobile Menu Drawer */}
+      {mobileMenuOpen && (
+        <div className="mobile-menu-overlay" onClick={() => setMobileMenuOpen(false)}>
+          <div className="mobile-menu-drawer" onClick={(e) => e.stopPropagation()}>
+            <a 
+              href="#use-cases" 
+              className="mobile-menu-item"
+              onClick={(e) => { 
+                e.preventDefault(); 
+                setMobileMenuOpen(false);
+                document.getElementById('use-cases')?.scrollIntoView({ behavior: 'smooth' }); 
+              }}
+            >
+              Use Cases
+            </a>
+            <a 
+              href="#faq" 
+              className="mobile-menu-item"
+              onClick={(e) => { 
+                e.preventDefault(); 
+                setMobileMenuOpen(false);
+                document.getElementById('faq')?.scrollIntoView({ behavior: 'smooth' }); 
+              }}
+            >
+              FAQ
+            </a>
+            <a
+              href={appUrl ? `${appUrl}/login` : '#'}
+              onClick={(e) => { 
+                e.preventDefault(); 
+                setMobileMenuOpen(false);
+                if (appUrl) window.location.href = `${appUrl}/login`; 
+              }}
+              className="mobile-menu-item"
+            >
+              Login
+            </a>
+            <a 
+              href="tel:+18573178479" 
+              className="mobile-menu-item mobile-menu-cta"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <Phone size={18} />
+              Try AI Property Manager
+            </a>
+          </div>
+        </div>
+      )}
 
       {/* Voice AI Hero Section (New First Section) */}
       <section className="voice-ai-hero">
@@ -527,7 +587,7 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
             {/* iPhone Image - Left */}
             <div className="voice-hero-phone">
               <NextImage 
-                src="/iphone2.tiff" 
+                src="/iphone2.png" 
                 alt="AI Property Manager Call" 
                 width={340}
                 height={690}
@@ -569,10 +629,14 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
                   </div>
                 </div>
                 <div className="proof-text">
-                  <span className="proof-dot">•</span>
-                  <span className="proof-highlight">Join closed beta with other property managers</span>
-                  <span className="proof-dot">•</span>
-                  <span className="proof-highlight">100+ daily calls handled</span>
+                  <div className="proof-item">
+                    <span className="proof-dot">•</span>
+                    <span className="proof-highlight">Join closed beta with other property managers</span>
+                  </div>
+                  <div className="proof-item">
+                    <span className="proof-dot">•</span>
+                    <span className="proof-highlight">100+ daily calls handled</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1902,21 +1966,27 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
 
         .proof-text {
           display: flex;
-          align-items: center;
-          gap: 6px;
+          flex-direction: column;
+          gap: 4px;
           font-size: 13px;
           color: #475569;
-          flex-wrap: wrap;
+        }
+
+        .proof-item {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .proof-dot {
+          color: #059669;
+          font-size: 18px;
+          line-height: 1;
         }
 
         .proof-highlight {
           font-weight: 600;
           color: #0f172a;
-        }
-        
-        .proof-dot {
-          font-size: 16px;
-          line-height: 0;
         }
 
         /* Phone Visual */
@@ -2426,6 +2496,89 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
           background: #166FE5;
           transform: translateY(-1px);
           box-shadow: 0 4px 12px rgba(24, 119, 242, 0.25);
+        }
+
+        /* Mobile Menu Button */
+        .mobile-menu-btn {
+          display: none;
+          background: none;
+          border: none;
+          padding: 8px;
+          cursor: pointer;
+          color: #0f172a;
+          border-radius: 8px;
+          transition: background 0.2s;
+        }
+
+        .mobile-menu-btn:hover {
+          background: #f1f5f9;
+        }
+
+        /* Mobile Menu Overlay */
+        .mobile-menu-overlay {
+          display: none;
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.5);
+          z-index: 200;
+          animation: fadeIn 0.2s ease;
+        }
+
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+
+        /* Mobile Menu Drawer */
+        .mobile-menu-drawer {
+          position: absolute;
+          top: 0;
+          right: 0;
+          width: 280px;
+          max-width: 85%;
+          height: 100%;
+          background: white;
+          padding: 80px 24px 24px;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          box-shadow: -10px 0 40px rgba(0, 0, 0, 0.15);
+          animation: slideInRight 0.3s ease;
+        }
+
+        @keyframes slideInRight {
+          from { transform: translateX(100%); }
+          to { transform: translateX(0); }
+        }
+
+        .mobile-menu-item {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 16px 20px;
+          color: #0f172a;
+          text-decoration: none;
+          font-size: 16px;
+          font-weight: 600;
+          border-radius: 12px;
+          transition: background 0.2s;
+        }
+
+        .mobile-menu-item:hover {
+          background: #f8fafc;
+        }
+
+        .mobile-menu-cta {
+          background: #059669;
+          color: white;
+          margin-top: auto;
+        }
+
+        .mobile-menu-cta:hover {
+          background: #047857;
         }
 
         /* Hero Split - Second Section */
@@ -4038,15 +4191,30 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
           }
 
           .topnav {
-            padding: 16px 20px;
+            padding: 12px 16px;
           }
 
-          .menu {
-            gap: 16px;
-          }
-
-          .menu-link:not(.signin) {
+          /* Hide desktop menu on mobile */
+          .desktop-menu {
             display: none;
+          }
+
+          /* Show hamburger button on mobile */
+          .mobile-menu-btn {
+            display: flex;
+          }
+
+          /* Show mobile menu overlay on mobile */
+          .mobile-menu-overlay {
+            display: block;
+          }
+
+          .brand-logo {
+            height: 48px;
+          }
+
+          .brand-tagline {
+            font-size: 10px;
           }
 
           .hero-title-big {
@@ -4266,6 +4434,18 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
 
         /* Mobile Performance Optimizations */
         @media (max-width: 768px) {
+          /* Enable smooth scrolling on mobile */
+          html, body {
+            -webkit-overflow-scrolling: touch;
+            scroll-behavior: smooth;
+          }
+          
+          /* Simplify nav backdrop filter on mobile for better scrolling */
+          .topnav::before {
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+          }
+          
           /* Disable 3D transforms on mobile for better performance */
           .hero-property-card {
             transform: none !important;
@@ -4281,6 +4461,16 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
             opacity: 0.5;
           }
           
+          /* Disable blur orbs on mobile for better performance */
+          .blur-orb {
+            display: none;
+          }
+          
+          /* Simplify hero-right perspective on mobile */
+          .hero-right {
+            perspective: none;
+          }
+          
           /* Simplify photo transitions on mobile */
           .photo-slide {
             transition: opacity 0.3s ease !important;
@@ -4294,6 +4484,19 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
           .photo-slide.left,
           .photo-slide.right {
             opacity: 0;
+          }
+          
+          /* Reduce photo carousel height on mobile */
+          .photo-carousel-container {
+            min-height: 350px;
+          }
+          
+          .photo-slide {
+            min-height: 350px;
+          }
+          
+          .photo-slide img {
+            min-height: 350px;
           }
           
           /* Faster FAQ transitions on mobile */
@@ -4312,6 +4515,18 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
           .cta-listing:hover,
           .cta-consult:hover {
             transform: none;
+          }
+          
+          /* Simplify box-shadows on mobile */
+          .hero-property-card {
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+          }
+          
+          /* Remove complex animations from cards on mobile */
+          .ai-demo-interface,
+          .solution-block,
+          .faq-item {
+            animation: none;
           }
         }
 

@@ -81,7 +81,6 @@ const steps = [
 ];
 
 const faqs = [
-  { q: 'Does it work on my phone?', a: 'Yes. This mobile page mirrors the main landing with touch-friendly targets, smooth scrolling, and stacked layouts.' },
   { q: 'Is SquareFt really free?', a: 'Creating listings is free during closed beta. You get AI descriptions and virtual staging at no cost.' },
   { q: 'Can I publish to Zillow or Apartments.com?', a: 'Integrations are coming soon. Today you can share links or copy listing details easily.' },
   { q: 'Can it handle maintenance?', a: 'Yes. The AI triages issues, gathers details, and keeps tenants updated while dispatching vendors.' },
@@ -184,15 +183,20 @@ export default function MobileLanding() {
                 <img src="https://i.pravatar.cc/150?img=68" alt="Manager" />
                 <img src="https://i.pravatar.cc/150?img=5" alt="Manager" />
               </div>
-              <p className="proof">
-                Join closed beta with other property managers
-                <br />
-                in 100+ daily calls handled.
-              </p>
+              <div className="proof">
+                <div className="proof-item">
+                  <span className="proof-dot">•</span>
+                  <span>Join closed beta with other property managers</span>
+                </div>
+                <div className="proof-item">
+                  <span className="proof-dot">•</span>
+                  <span>100+ daily calls handled</span>
+                </div>
+              </div>
             </div>
           </div>
           <div className="hero-phone">
-            <img src="/iphone2.tiff" alt="AI Property Manager Call" className="phone-img" />
+            <img src="/iphone2.png" alt="AI Property Manager Call" className="phone-img" />
           </div>
         </section>
 
@@ -1140,9 +1144,24 @@ export default function MobileLanding() {
         }
 
         .proof {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
           font-size: 13px;
           color: #475569;
-          text-align: center;
+          text-align: left;
+        }
+
+        .proof-item {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .proof-dot {
+          color: #059669;
+          font-size: 16px;
+          font-weight: bold;
         }
 
         .hero-phone {
