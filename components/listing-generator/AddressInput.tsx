@@ -330,12 +330,19 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
     setShowLoading(false);
   };
 
-  // Scroll detection
+  // Scroll detection with passive listener and throttling for mobile performance
   useEffect(() => {
+    let ticking = false;
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
+      if (!ticking) {
+        requestAnimationFrame(() => {
+          setIsScrolled(window.scrollY > 20);
+          ticking = false;
+        });
+        ticking = true;
+      }
     };
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
@@ -1440,7 +1447,9 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
               </svg>
               </div>
               <div className="faq-answer">
-                <p>Yes! Creating listings is completely free during our closed beta. Enter any property address and get a professional listing with AI-generated descriptions and virtual staging at no cost. We're offering free access to early users to gather feedback and refine the experience.</p>
+                <div className="faq-answer-inner">
+                  <p>Yes! Creating listings is completely free during our closed beta. Enter any property address and get a professional listing with AI-generated descriptions and virtual staging at no cost. We're offering free access to early users to gather feedback and refine the experience.</p>
+                </div>
               </div>
             </div>
 
@@ -1455,7 +1464,9 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
                 </svg>
               </div>
               <div className="faq-answer">
-                <p>Our AI operators (Lisa for leasing, Robbie for maintenance, Frank for general inquiries) handle incoming calls 24/7. They can schedule tours, answer common questions, triage maintenance requests, and dispatch vendors—all while keeping you informed via text or email summaries.</p>
+                <div className="faq-answer-inner">
+                  <p>Our AI operators (Lisa for leasing, Robbie for maintenance, Frank for general inquiries) handle incoming calls 24/7. They can schedule tours, answer common questions, triage maintenance requests, and dispatch vendors—all while keeping you informed via text or email summaries.</p>
+                </div>
               </div>
             </div>
 
@@ -1470,7 +1481,9 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
                 </svg>
               </div>
               <div className="faq-answer">
-                <p>Not yet, but it's coming soon! We're actively building integrations with major listing platforms including Zillow, Apartments.com, Realtor.com, and Facebook Marketplace. For now, you can easily copy your listing details or share a direct link.</p>
+                <div className="faq-answer-inner">
+                  <p>Not yet, but it's coming soon! We're actively building integrations with major listing platforms including Zillow, Apartments.com, Realtor.com, and Facebook Marketplace. For now, you can easily copy your listing details or share a direct link.</p>
+                </div>
               </div>
             </div>
 
@@ -1485,7 +1498,9 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
                 </svg>
               </div>
               <div className="faq-answer">
-                <p>Our AI generates realistic virtual staging that helps renters visualize empty spaces. While it's designed for marketing purposes, we recommend noting in your listing that images are virtually staged. The staging is optimized for rental properties and includes modern, neutral furnishings.</p>
+                <div className="faq-answer-inner">
+                  <p>Our AI generates realistic virtual staging that helps renters visualize empty spaces. While it's designed for marketing purposes, we recommend noting in your listing that images are virtually staged. The staging is optimized for rental properties and includes modern, neutral furnishings.</p>
+                </div>
               </div>
             </div>
 
@@ -1500,7 +1515,9 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
                 </svg>
               </div>
               <div className="faq-answer">
-                <p>Our AI knows its limits. For complex issues, emergencies, or when a caller specifically requests a human, it will seamlessly escalate to you via text, email, or direct call transfer based on your preferences. You set the escalation rules.</p>
+                <div className="faq-answer-inner">
+                  <p>Our AI knows its limits. For complex issues, emergencies, or when a caller specifically requests a human, it will seamlessly escalate to you via text, email, or direct call transfer based on your preferences. You set the escalation rules.</p>
+                </div>
               </div>
             </div>
 
@@ -1515,7 +1532,9 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
                 </svg>
               </div>
               <div className="faq-answer">
-                <p>During the closed beta, there are no limits on the number of properties or listings you can create. We're building SquareFt to scale from individual landlords with one unit to property managers with hundreds of doors.</p>
+                <div className="faq-answer-inner">
+                  <p>During the closed beta, there are no limits on the number of properties or listings you can create. We're building SquareFt to scale from individual landlords with one unit to property managers with hundreds of doors.</p>
+                </div>
               </div>
             </div>
 
@@ -1530,7 +1549,9 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
                 </svg>
               </div>
               <div className="faq-answer">
-                <p>Absolutely. We use bank-level encryption for all data, never share your information with third parties, and comply with industry security standards. Call recordings are encrypted and only accessible to you.</p>
+                <div className="faq-answer-inner">
+                  <p>Absolutely. We use bank-level encryption for all data, never share your information with third parties, and comply with industry security standards. Call recordings are encrypted and only accessible to you.</p>
+                </div>
               </div>
             </div>
 
@@ -1545,7 +1566,9 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
                 </svg>
               </div>
               <div className="faq-answer">
-                <p>Beta users get full access to AI listing creation (virtual staging, descriptions, free hosting) and early access to our AI voice operations. You'll also get direct input into our product roadmap and priority access when we launch platform integrations.</p>
+                <div className="faq-answer-inner">
+                  <p>Beta users get full access to AI listing creation (virtual staging, descriptions, free hosting) and early access to our AI voice operations. You'll also get direct input into our product roadmap and priority access when we launch platform integrations.</p>
+                </div>
               </div>
             </div>
           </div>
@@ -1629,6 +1652,8 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
           background: #fafbfc;
           position: relative;
           overflow-x: hidden;
+          -webkit-overflow-scrolling: touch;
+          overscroll-behavior-y: none;
         }
 
         /* Blue Blur Orbs - Enhanced */
@@ -2753,8 +2778,14 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
           overflow: hidden;
           box-shadow: 0 25px 70px rgba(20, 35, 27, 0.18);
           animation: slideIn 0.8s ease-out 0.2s backwards;
-          transition: all 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+          transition: transform 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94), 
+                      box-shadow 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                      opacity 0.4s ease-out;
           transform: rotateY(-6deg) rotateX(3deg);
+          will-change: transform, opacity;
+          backface-visibility: hidden;
+          -webkit-backface-visibility: hidden;
+          contain: layout style;
         }
 
         .hero-property-card:hover {
@@ -3496,6 +3527,7 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
         .faq-section {
           background: transparent;
           padding: 100px 0;
+          contain: layout style;
         }
 
         .faq-container {
@@ -3582,7 +3614,8 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
           border: 1px solid #e2e8f0;
           overflow: hidden;
           cursor: pointer;
-          transition: all 0.2s;
+          transition: border-color 0.2s, box-shadow 0.2s;
+          contain: layout style;
         }
 
         .faq-item:hover {
@@ -3612,7 +3645,8 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
         .faq-chevron {
           flex-shrink: 0;
           color: #94a3b8;
-          transition: transform 0.3s ease;
+          transition: transform 0.2s ease;
+          will-change: transform;
         }
 
         .faq-item.expanded .faq-chevron {
@@ -3621,13 +3655,18 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
         }
 
         .faq-answer {
-          max-height: 0;
-          overflow: hidden;
-          transition: max-height 0.3s ease, padding 0.3s ease;
+          display: grid;
+          grid-template-rows: 0fr;
+          transition: grid-template-rows 0.2s ease-out;
+          will-change: grid-template-rows;
         }
 
         .faq-item.expanded .faq-answer {
-          max-height: 300px;
+          grid-template-rows: 1fr;
+        }
+
+        .faq-answer-inner {
+          overflow: hidden;
         }
 
         .faq-answer p {
@@ -4250,6 +4289,108 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
         .error-close-btn:hover {
           transform: translateY(-2px);
           box-shadow: 0 8px 24px rgba(24, 119, 242, 0.3);
+        }
+
+        /* Mobile Performance Optimizations */
+        @media (max-width: 768px) {
+          /* Disable 3D transforms on mobile for better performance */
+          .hero-property-card {
+            transform: none !important;
+            perspective: none;
+          }
+          
+          .hero-property-card:hover {
+            transform: none !important;
+          }
+          
+          .hero-property-card.fading {
+            transform: none !important;
+            opacity: 0.5;
+          }
+          
+          /* Simplify photo transitions on mobile */
+          .photo-slide {
+            transition: opacity 0.3s ease !important;
+            transform: none !important;
+          }
+          
+          .photo-slide.active {
+            opacity: 1;
+          }
+          
+          .photo-slide.left,
+          .photo-slide.right {
+            opacity: 0;
+          }
+          
+          /* Faster FAQ transitions on mobile */
+          .faq-answer {
+            transition: grid-template-rows 0.15s ease-out;
+          }
+          
+          .faq-chevron {
+            transition: transform 0.15s ease;
+          }
+          
+          /* Ensure smooth scrolling on touch devices */
+          .landing-container {
+            -webkit-overflow-scrolling: touch;
+            touch-action: pan-y;
+          }
+          
+          /* Reduce button hover animations on mobile */
+          .btn-primary-large:hover,
+          .btn-secondary-large:hover,
+          .cta-demo:hover,
+          .cta-listing:hover,
+          .cta-consult:hover {
+            transform: none;
+          }
+        }
+
+        /* Reduced motion preference - respect user accessibility settings */
+        @media (prefers-reduced-motion: reduce) {
+          *,
+          *::before,
+          *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+            scroll-behavior: auto !important;
+          }
+          
+          .hero-property-card {
+            transform: none !important;
+          }
+          
+          .photo-slide {
+            transition: none !important;
+          }
+          
+          .faq-answer {
+            transition: none !important;
+          }
+          
+          .faq-chevron {
+            transition: none !important;
+          }
+          
+          .hero-content {
+            animation: none !important;
+          }
+          
+          .chat-msg {
+            animation: none !important;
+            opacity: 1 !important;
+          }
+          
+          .beta-pulse {
+            animation: none !important;
+          }
+          
+          .error-icon-circle {
+            animation: none !important;
+          }
         }
       `}</style>
       </div>
