@@ -279,11 +279,11 @@ function MaintenancePage() {
               </div>
             ) : (
               <div className="table-container">
-                <table className="data-table">
+                <table className="data-table tickets-table">
                   <thead>
                     <tr>
-                      <th>Ticket</th>
-                      <th>Issue</th>
+                      <th className="left-align">Ticket</th>
+                      <th className="left-align">Issue</th>
                       <th>Tenant</th>
                       <th>Created</th>
                       <th>Urgency</th>
@@ -297,11 +297,11 @@ function MaintenancePage() {
                       const statusStyle = getStatusStyle(ticket.status);
                       return (
                         <tr key={ticket.id}>
-                          <td>
+                          <td className="left-align">
                             <div className="primary-text">{ticket.ticket_number}</div>
                             <div className="secondary-text">{ticket.category_display}</div>
                           </td>
-                          <td>
+                          <td className="left-align">
                             <div className="primary-text">{ticket.issue_description.length > 50 ? ticket.issue_description.substring(0, 50) + '...' : ticket.issue_description}</div>
                             <div className="secondary-text">{ticket.property_address.length > 40 ? ticket.property_address.substring(0, 40) + '...' : ticket.property_address}</div>
                           </td>
@@ -361,20 +361,20 @@ function MaintenancePage() {
               </div>
             ) : (
               <div className="table-container">
-                <table className="data-table">
+                <table className="data-table vendors-table">
                   <thead>
                     <tr>
-                      <th>Name</th>
+                      <th className="left-align">Name</th>
                       <th>Phone</th>
                       <th>Role</th>
                       <th>Status</th>
-                      <th style={{ textAlign: 'center' }}>Actions</th>
+                      <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {vendors.map((vendor) => (
                       <tr key={vendor.id}>
-                        <td>
+                        <td className="left-align">
                           <div className="primary-text">{vendor.name}</div>
                           {vendor.email && <div className="secondary-text">{vendor.email}</div>}
                         </td>
@@ -733,6 +733,11 @@ function MaintenancePage() {
 
         .data-table tbody tr:hover { background: #f8fafc; }
         .data-table tbody tr:last-child td { border-bottom: none; }
+
+        .data-table th.left-align,
+        .data-table td.left-align {
+          text-align: left;
+        }
 
         .primary-text {
           font-weight: 600;
