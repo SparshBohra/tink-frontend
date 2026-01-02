@@ -522,8 +522,9 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         ...baseItems,
         { path: '/applications', label: 'Applications', icon: <ApplicationsIcon />, badge: pendingApplicationsCount },
         { path: '/properties', label: 'Properties', icon: <PropertiesIcon />, hasDropdown: true },
-        // Leases, Accounting, Communication hidden for MVP - moved to Coming Soon
         { path: '/tenants', label: 'Tenants', icon: <TenantsIcon /> },
+        { path: '/maintenance', label: 'Maintenance', icon: <VendorsIcon /> },
+        { path: '/communication-log', label: 'Communication', icon: <CommunicationIcon /> },
       ];
     }
 
@@ -532,8 +533,9 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         ...baseItems,
         { path: '/applications', label: 'Applications', icon: <ApplicationsIcon />, badge: pendingApplicationsCount },
         { path: '/properties', label: 'Properties', icon: <PropertiesIcon />, hasDropdown: true },
-        // Leases, Accounting, Communication hidden for MVP - moved to Coming Soon
         { path: '/tenants', label: 'Tenants', icon: <TenantsIcon /> },
+        { path: '/maintenance', label: 'Maintenance', icon: <VendorsIcon /> },
+        { path: '/communication-log', label: 'Communication', icon: <CommunicationIcon /> },
       ];
     }
 
@@ -545,8 +547,6 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
     return [
       { path: '/leases', label: 'Leases', icon: <LeasesIcon />, tooltip: 'Lease management and signing workflows' },
       { path: '/accounting', label: 'Accounting', icon: <AccountingIcon />, tooltip: 'Financial reports and payment tracking' },
-      { path: '/vendors', label: 'Vendors', icon: <VendorsIcon />, tooltip: 'Vendor and service provider management' },
-      { path: '/communication', label: 'Communication', icon: <CommunicationIcon />, tooltip: 'Messaging and notifications' },
     ];
   };
 

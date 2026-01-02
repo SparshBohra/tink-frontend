@@ -2681,6 +2681,198 @@ const expenseApiClient = new ExpenseApiClient(apiClient);
 // Main expense API client
 export const expenseApi = expenseApiClient;
 
+// ============================================================================
+// VAPI Communication & Maintenance API
+// ============================================================================
+
+export interface CommunicationLog {
+  id: number;
+  landlord: number;
+  comm_type: string;
+  comm_type_display: string;
+  phone_number: string;
+  contact_name: string;
+  tenant: number | null;
+  tenant_name: string | null;
+  property_ref: number | null;
+  property_name: string | null;
+  content: string;
+  status: string;
+  status_display: string;
+  duration_seconds: number | null;
+  vapi_call_id: string;
+  assistant_name: string;
+  twilio_sid: string;
+  sms_template: string;
+  metadata: Record<string, any>;
+  created_at: string;
+  is_call: boolean;
+  is_sms: boolean;
+  is_inbound: boolean;
+}
+
+export interface CommunicationSummary {
+  total_calls: number;
+  total_sms: number;
+  inbound_calls: number;
+  outbound_sms: number;
+  sms_by_template: Record<string, number>;
+  calls_by_assistant: Record<string, number>;
+  today_count: number;
+  this_week_count: number;
+  this_month_count: number;
+  total: number;
+}
+
+export interface MaintenanceVendor {
+  id: number;
+  landlord: number;
+  name: string;
+  phone: string;
+  email: string;
+  category: string;
+  category_display: string;
+  is_active: boolean;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MaintenanceTicket {
+  id: number;
+  ticket_number: string;
+  landlord: number;
+  tenant: number | null;
+  property_ref: number | null;
+  caller_name: string;
+  caller_phone: string;
+  property_address: string;
+  unit_number: string;
+  issue_category: string;
+  category_display: string;
+  issue_description: string;
+  urgency: string;
+  urgency_display: string;
+  status: string;
+  status_display: string;
+  scheduled_date: string | null;
+  scheduled_time: string | null;
+  vendor: number | null;
+  vendor_notified: boolean;
+  vapi_call_id: string;
+  conversation_notes: string;
+  created_at: string;
+  updated_at: string;
+  resolved_at: string | null;
+  days_open: number;
+  is_emergency: boolean;
+}
+
+class VAPIApiClient {
+  private apiClient: ApiClient;
+
+  constructor(apiClient: ApiClient) {
+    this.apiClient = apiClient;
+  }
+
+  // Communication Logs
+  async getCommunicationLogs(params?: {
+    type?: 'call' | 'sms';
+    status?: string;
+    phone?: string;
+    tenant_id?: number;
+    days?: number;
+  }): Promise<{ logs: CommunicationLog[]; count: number }> {
+    const queryParams = new URLSearchParams();
+    if (params?.type) queryParams.append('type', params.type);
+    if (params?.status) queryParams.append('status', params.status);
+    if (params?.phone) queryParams.append('phone', params.phone);
+    if (params?.tenant_id) queryParams.append('tenant_id', params.tenant_id.toString());
+    if (params?.days) queryParams.append('days', params.days.toString());
+    const query = queryParams.toString();
+    const response = await this.apiClient['api'].get(`/vapi/communication-logs/${query ? '?' + query : ''}`);
+    return response.data;
+  }
+
+  async getCommunicationSummary(): Promise<CommunicationSummary> {
+    const response = await this.apiClient['api'].get('/vapi/communication-logs/summary/');
+    return response.data;
+  }
+
+  // Maintenance Vendors
+  async getMaintenanceVendors(): Promise<{ vendors: MaintenanceVendor[]; count: number }> {
+    const response = await this.apiClient['api'].get('/vapi/vendors/');
+    return response.data;
+  }
+
+  async createMaintenanceVendor(data: {
+    name: string;
+    phone: string;
+    email?: string;
+    category: string;
+    is_active?: boolean;
+    notes?: string;
+  }): Promise<MaintenanceVendor> {
+    const response = await this.apiClient['api'].post('/vapi/vendors/', data);
+    return response.data;
+  }
+
+  async updateMaintenanceVendor(id: number, data: Partial<{
+    name: string;
+    phone: string;
+    email: string;
+    category: string;
+    is_active: boolean;
+    notes: string;
+  }>): Promise<MaintenanceVendor> {
+    const response = await this.apiClient['api'].put(`/vapi/vendors/${id}/`, data);
+    return response.data;
+  }
+
+  async deleteMaintenanceVendor(id: number): Promise<void> {
+    await this.apiClient['api'].delete(`/vapi/vendors/${id}/`);
+  }
+
+  async toggleMaintenanceVendorActive(id: number): Promise<{ id: number; is_active: boolean; message: string }> {
+    const response = await this.apiClient['api'].post(`/vapi/vendors/${id}/toggle-active/`);
+    return response.data;
+  }
+
+  // Maintenance Tickets
+  async getMaintenanceTickets(params?: {
+    status?: string;
+    category?: string;
+    urgency?: string;
+  }): Promise<{ tickets: MaintenanceTicket[]; count: number }> {
+    const queryParams = new URLSearchParams();
+    if (params?.status) queryParams.append('status', params.status);
+    if (params?.category) queryParams.append('category', params.category);
+    if (params?.urgency) queryParams.append('urgency', params.urgency);
+    const query = queryParams.toString();
+    const response = await this.apiClient['api'].get(`/vapi/maintenance-requests/${query ? '?' + query : ''}`);
+    return response.data;
+  }
+
+  async getMaintenanceTicket(id: number): Promise<MaintenanceTicket> {
+    const response = await this.apiClient['api'].get(`/vapi/maintenance-requests/${id}/`);
+    return response.data;
+  }
+
+  async updateMaintenanceTicket(id: number, data: {
+    status?: string;
+    vendor_id?: number | null;
+    scheduled_date?: string;
+    scheduled_time?: string;
+  }): Promise<MaintenanceTicket> {
+    const response = await this.apiClient['api'].put(`/vapi/maintenance-requests/${id}/`, data);
+    return response.data;
+  }
+}
+
+// Create VAPI API client instance
+const vapiApiClient = new VAPIApiClient(apiClient);
+export const vapiApi = vapiApiClient;
+
 // Backward compatibility - export the old function names
 export async function apiRequest(endpoint: string, options: any = {}) {
   const method = options.method || 'GET';

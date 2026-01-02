@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SquareFt AI - Brochure</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        @page { size: A4; margin: 0; }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body { 
+            font-family: 'Inter', sans-serif; 
+            color: #1e293b; 
+            line-height: 1.6;
+            background: #e2e8f0;
+            padding: 40px 0;
+        }
+        
+        .page {
+            width: 210mm;
+            height: 297mm;
+            padding: 20mm;
+            background: white;
+            margin: 0 auto 20mm;
+            box-shadow: 0 0 30px rgba(0,0,0,0.15);
+            position: relative;
+            overflow: hidden;
+        }
+
+        @media print {
+            body { background: none; padding: 0; }
+            .page { margin: 0; box-shadow: none; page-break-after: always; }
+        }
+
+        /* Header */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .logo { 
+            height: 45px;
+            width: auto;
+        }
+        
+        .contact {
+            text-align: right;
+            font-size: 10pt;
+            color: #475569;
+            font-weight: 600;
+        }
+        
+        .contact a {
+            color: #2563eb;
+            text-decoration: none;
+        }
+
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            border-radius: 16px;
+            padding: 40px;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 35px;
+            margin-bottom: 35px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -20%;
+            width: 400px;
+            height: 400px;
+            background: rgba(59, 130, 246, 0.1);
+            border-radius: 50%;
+        }
+        
+        .hero-content {
+            flex: 1;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .hero h1 {
+            font-size: 28pt;
+            font-weight: 800;
+            line-height: 1.2;
+            margin-bottom: 15px;
+        }
+        
+        .hero p {
+            font-size: 12pt;
+            opacity: 0.95;
+            margin-bottom: 20px;
+            line-height: 1.7;
+        }
+        
+        .hero-stats {
+            display: flex;
+            gap: 25px;
+            font-size: 10pt;
+            font-weight: 600;
+        }
+        
+        .hero-stats span {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .hero-stats span::before {
+            content: '✓';
+            color: #3b82f6;
+            font-size: 14pt;
+        }
+        
+        .hero-image {
+            position: relative;
+            z-index: 1;
+        }
+        
+        .hero-image img {
+            width: 180px;
+            height: auto;
+            filter: drop-shadow(0 20px 40px rgba(0,0,0,0.5));
+        }
+
+        /* Section Styling */
+        .section {
+            margin-bottom: 35px;
+        }
+        
+        .section-label {
+            color: #2563eb;
+            text-transform: uppercase;
+            font-size: 9pt;
+            letter-spacing: 1.5px;
+            font-weight: 800;
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        /* Value Props */
+        .value-props {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 35px;
+        }
+        
+        .value-card {
+            background: #f8fafc;
+            padding: 25px;
+            border-radius: 12px;
+            border-left: 4px solid #2563eb;
+        }
+        
+        .value-card h3 {
+            font-size: 13pt;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 12px;
+        }
+        
+        .value-card p {
+            font-size: 10pt;
+            color: #475569;
+            line-height: 1.7;
+        }
+
+        /* Why Section */
+        .why-section {
+            background: #eff6ff;
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 35px;
+        }
+        
+        .why-section h3 {
+            font-size: 14pt;
+            font-weight: 700;
+            color: #0f172a;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .benefits-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
+        .benefit-item {
+            display: flex;
+            align-items: start;
+            gap: 10px;
+        }
+        
+        .benefit-check {
+            color: #2563eb;
+            font-size: 14pt;
+            font-weight: 800;
+            flex-shrink: 0;
+        }
+        
+        .benefit-text {
+            font-size: 10pt;
+            color: #1e40af;
+            font-weight: 600;
+        }
+
+        /* Comparison Table */
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 9pt;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 35px;
+        }
+        
+        .comparison-table thead {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: white;
+        }
+        
+        .comparison-table th {
+            padding: 12px 10px;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        .comparison-table td {
+            padding: 10px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .comparison-table tbody tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .comparison-table td:first-child {
+            font-weight: 600;
+            color: #0f172a;
+        }
+        
+        .check {
+            color: #16a34a;
+            font-weight: 800;
+            font-size: 12pt;
+        }
+        
+        .cross {
+            color: #dc2626;
+            font-size: 12pt;
+        }
+        
+        .highlight {
+            color: #2563eb;
+            font-weight: 700;
+        }
+
+        .cta-section {
+        background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+        border-radius: 14px;
+        padding: 24px;
+        color: white;
+        margin-bottom: 25px;
+        max-width: 100%;
+    }
+    
+    .cta-section h2 {
+        font-size: 16pt;
+        font-weight: 700;
+        margin-bottom: 16px;
+        text-align: center;
+    }
+    
+    .cta-content {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        border-radius: 12px;
+        padding: 18px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    .cta-label {
+        font-weight: 700;
+        font-size: 10pt;
+        margin-bottom: 5px;
+        color: #bfdbfe;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .phone {
+        font-size: 21pt;
+        font-weight: 800;
+        margin: 8px 0;
+        letter-spacing: 1px;
+        text-align: center;
+        color: #ffffff;
+    }
+
+    .ask-examples {
+        background: rgba(15, 23, 42, 0.2);
+        border-radius: 8px;
+        padding: 12px;
+        margin: 12px 0;
+    }
+
+    /* Grid alignment for labels and text */
+    .example-item {
+        display: grid;
+        grid-template-columns: 85px 1fr; /* Fixed width for labels ensures text alignment */
+        gap: 12px;
+        margin-bottom: 10px;
+        align-items: start;
+        font-size: 9pt;
+        line-height: 1.4;
+    }
+
+    .example-item:last-child {
+        margin-bottom: 0;
+    }
+
+    .example-tag {
+        font-weight: 800;
+        font-size: 6.5pt;
+        background: #ffffff;
+        color: #1e40af;
+        padding: 3px 0;
+        border-radius: 4px;
+        text-align: center;
+        text-transform: uppercase;
+        width: 100%; /* Fills the 85px column */
+    }
+
+    .example-text {
+        padding-top: 1px; /* Fine-tuning vertical alignment with label */
+    }
+    
+    .divider {
+        height: 1px;
+        background: rgba(255, 255, 255, 0.2);
+        margin: 15px 0;
+    }
+    
+    .website-cta {
+        background: white;
+        color: #2563eb;
+        padding: 10px 24px;
+        border-radius: 10px;
+        text-decoration: none;
+        font-weight: 700;
+        font-size: 10pt;
+        display: inline-block;
+    }
+
+        /* Footer */
+        footer {
+            position: absolute;
+            bottom: 15mm;
+            left: 20mm;
+            right: 20mm;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 8pt;
+            color: #64748b;
+        }
+        
+        .footer-tagline {
+            font-weight: 700;
+            color: #2563eb;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+
+<div class="page">
+    <header>
+        <img src="logo1.png" class="logo" alt="SquareFt AI">
+        <div class="contact">
+            <a href="https://squareft.ai">squareft.ai</a><br>
+            +1 (857) 317-8479
+        </div>
+    </header>
+
+    <div class="hero">
+        <div class="hero-content">
+            <h1>Your 24/7 AI<br>Property Manager</h1>
+            <p>An intelligent voice assistant that handles tenant calls, schedules viewings, and resolves maintenance issues around the clock — so you never miss an opportunity.</p>
+            <div class="hero-stats">
+                <span>100+ Daily Calls</span>
+                <span>Closed Beta Access</span>
+            </div>
+        </div>
+        <div class="hero-image">
+            <img src="iphone2.png" alt="AI Assistant Interface">
+        </div>
+    </div>
+
+    <span class="section-label">What We Do</span>
+    <div class="value-props">
+        <div class="value-card">
+            <h3>Fast Listings</h3>
+            <p>Turn addresses into professional listings in minutes. Get properties to market quickly.</p>
+            <p style="margin-top: 12px; font-style: italic; color: #64748b;">Coming soon: Zillow, Apartments.com integrations</p>
+        </div>
+        <div class="value-card">
+            <h3>AI Voice Assistant - 24/7</h3>
+            <p>Once listed, our AI handles leasing inquiries, maintenance requests, tenant questions, and intelligent call routing.</p>
+            <p style="margin-top: 12px; font-weight: 600; color: #1e40af;">Natural conversations. Instant actions. Zero missed opportunities.</p>
+        </div>
+    </div>
+
+    <div class="why-section">
+        <h3>Traditional software makes you do the work. We do it for you.</h3>
+        <div class="benefits-grid">
+            <div class="benefit-item">
+                <div class="benefit-check">✓</div>
+                <div class="benefit-text">No missed calls from prospects</div>
+            </div>
+            <div class="benefit-item">
+                <div class="benefit-check">✓</div>
+                <div class="benefit-text">No after-hours emergencies to handle</div>
+            </div>
+            <div class="benefit-item">
+                <div class="benefit-check">✓</div>
+                <div class="benefit-text">No manual scheduling</div>
+            </div>
+            <div class="benefit-item">
+                <div class="benefit-check">✓</div>
+                <div class="benefit-text">Automated operations that scale</div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div>© 2025 SquareFt. All rights reserved.</div>
+        <div class="footer-tagline">Property management that works while you sleep.</div>
+    </footer>
+</div>
+
+<div class="page">
+    <header>
+        <img src="logo1.png" class="logo" alt="SquareFt AI">
+        <div class="contact">
+            <a href="https://squareft.ai">squareft.ai</a><br>
+            +1 (857) 317-8479
+        </div>
+    </header>
+
+    <div class="section">
+        <span class="section-label">How We Compare</span>
+        <table class="comparison-table">
+            <thead>
+                <tr>
+                    <th>Feature</th>
+                    <th>SquareFt AI</th>
+                    <th>AppFolio</th>
+                    <th>Buildium</th>
+                    <th>DoorLoop</th>
+                    <th>Yardi</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>AI Voice Assistant</td>
+                    <td><span class="check">✓</span> <span class="highlight">24/7</span></td>
+                    <td><span class="cross">✗</span></td>
+                    <td><span class="cross">✗</span></td>
+                    <td><span class="cross">✗</span></td>
+                    <td><span class="cross">✗</span></td>
+                </tr>
+                <tr>
+                    <td>Automated Call Handling</td>
+                    <td><span class="check">✓</span></td>
+                    <td><span class="cross">✗</span></td>
+                    <td><span class="cross">✗</span></td>
+                    <td><span class="cross">✗</span></td>
+                    <td><span class="cross">✗</span></td>
+                </tr>
+                <tr>
+                    <td>Fast Listing Creation</td>
+                    <td><span class="check">✓</span></td>
+                    <td><span class="check">✓</span></td>
+                    <td><span class="check">✓</span></td>
+                    <td><span class="check">✓</span></td>
+                    <td><span class="check">✓</span></td>
+                </tr>
+                <tr>
+                    <td>Maintenance Coordination</td>
+                    <td><span class="check">✓</span> <span class="highlight">Automated</span></td>
+                    <td>Manual</td>
+                    <td>Manual</td>
+                    <td>Manual</td>
+                    <td>Manual</td>
+                </tr>
+                <tr>
+                    <td>After-Hours Coverage</td>
+                    <td><span class="check">✓</span> <span class="highlight">Always</span></td>
+                    <td><span class="cross">✗</span></td>
+                    <td><span class="cross">✗</span></td>
+                    <td><span class="cross">✗</span></td>
+                    <td><span class="cross">✗</span></td>
+                </tr>
+                <tr>
+                    <td>Viewing Scheduling</td>
+                    <td><span class="check">✓</span> <span class="highlight">Automated</span></td>
+                    <td>Manual</td>
+                    <td>Manual</td>
+                    <td>Manual</td>
+                    <td>Manual</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="cta-section">
+        <h2>Ready to experience the future?</h2>
+        
+        <div class="cta-content">
+            <div class="cta-label">Try the Demo Line:</div>
+            <div class="phone">+1 (857) 317-8479</div>
+            
+            <div class="ask-examples">
+                <div style="font-size: 8pt; font-weight: 700; margin-bottom: 10px; opacity: 0.8; letter-spacing: 0.5px;">THINGS YOU CAN ASK:</div>
+                
+                <div class="example-item">
+                    <div class="example-tag">LEASING</div>
+                    <div class="example-text">"I'm interested in the 2-bedroom on Main St. Can I schedule a tour for Thursday?"</div>
+                </div>
+                
+                <div class="example-item">
+                    <div class="example-tag">MAINTENANCE</div>
+                    <div class="example-text">"Hi, I'm a tenant in Unit 4B and my kitchen sink is leaking everywhere. Can you help?"</div>
+                </div>
+            </div>
+            
+            <div class="divider"></div>
+            
+            <p style="margin: 8px 0; font-size: 10pt;">Visit <strong>squareft.ai</strong> to learn more and schedule a full platform demo.</p>
+            <div style="text-align: center; margin-top: 10px;">
+                <a href="https://squareft.ai" class="website-cta">Try it today →</a>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div>© 2025 SquareFt. All rights reserved.</div>
+        <div class="footer-tagline">Property management that works while you sleep.</div>
+    </footer>
+</div>
+
+</body>
+</html>
