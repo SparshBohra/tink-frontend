@@ -1,22 +1,60 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { createServerClient } from "@supabase/ssr";
 
-// SquareFt Phase 1: Simplified middleware for Supabase Auth
-// Auth protection is handled client-side by SupabaseAuthProvider
-// This middleware only handles legacy route redirects
+// SquareFt Phase 1: Middleware with Supabase SSR support
+// This ensures PKCE code verifiers are stored in cookies properly
 
-export function middleware(req: NextRequest) {
+export async function middleware(req: NextRequest) {
   const url = req.nextUrl.clone();
   
-  // Skip middleware for static assets, API routes, and Next.js internals
+  // Skip middleware for static assets and Next.js internals
   if (
     url.pathname.startsWith("/_next") || 
-    url.pathname.startsWith("/api") ||
     url.pathname.startsWith("/static") ||
     url.pathname.includes(".")  // Files with extensions (images, etc.)
   ) {
     return NextResponse.next();
   }
+
+  // Create response that we'll modify with cookie updates
+  let response = NextResponse.next({
+    request: {
+      headers: req.headers,
+    },
+  });
+
+  // Create Supabase server client to refresh session and update cookies
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return req.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          // Update request cookies
+          cookiesToSet.forEach(({ name, value }) => {
+            req.cookies.set(name, value);
+          });
+          // Create new response with updated cookies
+          response = NextResponse.next({
+            request: {
+              headers: req.headers,
+            },
+          });
+          // Set cookies on response
+          cookiesToSet.forEach(({ name, value, options }) => {
+            response.cookies.set(name, value, options);
+          });
+        },
+      },
+    }
+  );
+
+  // Refresh session - this ensures cookies stay updated
+  await supabase.auth.getUser();
 
   // Legacy routes - redirect to new dashboard or auth pages
   const legacyDashboardRoutes = [
@@ -36,11 +74,9 @@ export function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL('/dashboard/tickets', req.url));
   }
   
-  // All other routes are handled normally
-  // Auth protection for /dashboard/* is handled client-side
-  return NextResponse.next();
+  return response;
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|api).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };
