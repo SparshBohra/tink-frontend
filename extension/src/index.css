@@ -1,0 +1,117 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Extension popup dimensions */
+html, body, #root {
+  width: 420px;
+  height: 600px;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  background-color: #f8fafc;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Priority colors */
+.priority-emergency {
+  background-color: #fef2f2;
+  border-color: #fecaca;
+  color: #dc2626;
+}
+
+.priority-high {
+  background-color: #fff7ed;
+  border-color: #fed7aa;
+  color: #ea580c;
+}
+
+.priority-medium {
+  background-color: #fefce8;
+  border-color: #fef08a;
+  color: #ca8a04;
+}
+
+.priority-low {
+  background-color: #f0fdf4;
+  border-color: #bbf7d0;
+  color: #16a34a;
+}
+
+/* Status badges */
+.status-inbox, .status-triage {
+  background-color: #dbeafe;
+  color: #1d4ed8;
+}
+
+.status-open {
+  background-color: #dcfce7;
+  color: #15803d;
+}
+
+.status-in_progress {
+  background-color: #fef3c7;
+  color: #b45309;
+}
+
+.status-pending {
+  background-color: #e0e7ff;
+  color: #4338ca;
+}
+
+.status-resolved, .status-closed {
+  background-color: #f1f5f9;
+  color: #475569;
+}
+
+/* Toast animation */
+@keyframes slideIn {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOut {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+}
+
+.toast-enter {
+  animation: slideIn 0.2s ease-out;
+}
+
+.toast-exit {
+  animation: slideOut 0.2s ease-in;
+}
