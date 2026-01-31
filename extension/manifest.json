@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "SquareFt Triage",
+  "version": "1.0.0",
+  "description": "AI-powered maintenance triage for property managers. View and manage tickets while working in Yardi, AppFolio, or any PMS.",
+  "permissions": [
+    "storage",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://oubprrmcbyresbexpbuq.supabase.co/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    },
+    "default_title": "SquareFt Triage"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  }
+}

@@ -71,13 +71,20 @@ export default function AddressInput({ onSubmit, onAuthClick }: AddressInputProp
   const getAppUrl = () => {
     if (typeof window !== 'undefined') {
       const hostname = window.location.hostname;
+      const port = window.location.port ? `:${window.location.port}` : '';
+      
+      // If already on app subdomain, return current origin
+      if (hostname.startsWith('app.')) {
+        return `${window.location.protocol}//${hostname}${port}`;
+      }
+      
       if (hostname === 'localhost') {
-        return 'http://app.localhost:3000';
+        return `http://app.localhost${port || ':3000'}`;
       } else if (hostname === 'squareft.ai' || hostname.endsWith('.squareft.ai')) {
         return 'https://app.squareft.ai';
       } else {
-        // For Vercel preview deployments
-        return `${window.location.protocol}//app.${hostname}`;
+        // For Vercel preview deployments or other domains
+        return `${window.location.protocol}//app.${hostname}${port}`;
       }
     }
     // Default to production app domain during SSR to avoid localhost leakage

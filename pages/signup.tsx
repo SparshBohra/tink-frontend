@@ -1,27 +1,45 @@
 import { useEffect } from 'react';
-import { useRouter } from 'next/router';
+import Head from 'next/head';
 
-export default function Signup() {
-  const router = useRouter();
-
+// Redirect to the new auth signup page
+export default function SignupRedirect() {
   useEffect(() => {
-    // Redirect to landlord signup since managers are created by admins/landlords
-    router.replace('/landlord-signup');
-  }, [router]);
+    window.location.href = '/auth/signup';
+  }, []);
 
   return (
-    <div style={{ 
-      padding: '40px', 
-      textAlign: 'center',
-      maxWidth: '500px',
-      margin: '50px auto'
-    }}>
-      <h2>🔄 Redirecting...</h2>
-      <p>Redirecting to landlord registration...</p>
-    </div>
+    <>
+      <Head>
+        <title>Redirecting... - SquareFt</title>
+      </Head>
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: '#fafbfc'
+      }}>
+        <div style={{
+          textAlign: 'center',
+          padding: '40px'
+        }}>
+          <div style={{
+            width: 32,
+            height: 32,
+            border: '3px solid #e5e7eb',
+            borderTopColor: '#3b82f6',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite',
+            margin: '0 auto 16px'
+          }} />
+          <p style={{ color: '#64748b', fontSize: 14 }}>Redirecting to signup...</p>
+        </div>
+      </div>
+      <style jsx global>{`
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
+    </>
   );
-} 
- 
- 
- 
- 
+}

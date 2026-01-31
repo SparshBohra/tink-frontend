@@ -14,6 +14,8 @@
     "@stripe/react-connect-js": "^3.3.24",
     "@stripe/react-stripe-js": "^3.8.0",
     "@stripe/stripe-js": "^7.6.1",
+    "@supabase/auth-helpers-nextjs": "^0.15.0",
+    "@supabase/supabase-js": "^2.93.3",
     "@types/twilio": "^3.19.2",
     "autoprefixer": "^10.4.21",
     "axios": "^1.9.0",

@@ -1,15 +1,13 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+// SquareFt Phase 1: Simplified middleware for Supabase Auth
+// Auth protection is handled client-side by SupabaseAuthProvider
+// This middleware only handles legacy route redirects
+
 export function middleware(req: NextRequest) {
   const url = req.nextUrl.clone();
-  const host = req.headers.get("host") || "";
   
-  // Extract subdomain (works for both localhost and production)
-  const hostname = host.split(':')[0]; // Remove port for localhost
-  const isPortalSubdomain = hostname.startsWith('portal.');
-  const isAppSubdomain = hostname.startsWith('app.');
-
   // Skip middleware for static assets, API routes, and Next.js internals
   if (
     url.pathname.startsWith("/_next") || 
@@ -20,38 +18,26 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // Tenant Portal Subdomain (portal.localhost or portal.squareft.ai)
-  if (isPortalSubdomain) {
-    // Redirect root to tenant login
-    if (url.pathname === "/") {
-      return NextResponse.redirect(new URL("/tenant-login", req.url));
-    }
-    // Block non-tenant pages
-    if (!url.pathname.startsWith("/tenant-")) {
-      return NextResponse.redirect(new URL("/tenant-login", req.url));
-    }
-    return NextResponse.next();
-  }
+  // Legacy routes - redirect to new dashboard or auth pages
+  const legacyDashboardRoutes = [
+    '/landlord-dashboard',
+    '/manager-dashboard',
+    '/admin-dashboard',
+    '/tenant-dashboard',
+    '/properties',
+    '/tenants',
+    '/applications',
+    '/leases',
+    '/maintenance',
+  ];
 
-  // App Subdomain (app.localhost or app.squareft.ai)
-  if (isAppSubdomain) {
-    // Block tenant pages
-    if (url.pathname.startsWith("/tenant-")) {
-      return NextResponse.redirect(new URL("/login", req.url));
-    }
-    // Redirect root to login
-    if (url.pathname === "/") {
-      return NextResponse.redirect(new URL("/login", req.url));
-    }
-    return NextResponse.next();
-  }
-
-  // Root domain (localhost or squareft.ai) - Landing page only
-  // Block app and tenant pages on root domain
-  if (url.pathname.startsWith("/app") || url.pathname.startsWith("/tenant-") || url.pathname === "/login") {
-    return NextResponse.redirect(new URL("/", req.url));
+  if (legacyDashboardRoutes.some(route => url.pathname === route || url.pathname.startsWith(route + '/'))) {
+    // Redirect legacy dashboard routes to new dashboard
+    return NextResponse.redirect(new URL('/dashboard/tickets', req.url));
   }
   
+  // All other routes are handled normally
+  // Auth protection for /dashboard/* is handled client-side
   return NextResponse.next();
 }
 

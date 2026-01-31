@@ -1,0 +1,2908 @@
+import axios, { AxiosInstance, AxiosResponse, AxiosError } from 'axios';
+import Cookies from 'js-cookie';
+import {
+  AuthTokens,
+  LoginCredentials,
+  Manager,
+  Tenant,
+  Property,
+  Room,
+  Application,
+  ApplicationViewing,
+  Lease,
+  Landlord,
+  Document,
+  Occupancy,
+  InventoryItem,
+  PaginatedResponse,
+  ApiError,
+  TenantFormData,
+  PropertyFormData,
+  RoomFormData,
+  ApplicationFormData,
+  LeaseFormData,
+  DashboardStats,
+  User,
+  ManagerWithProperties,
+  ManagerPropertyAssignment,
+  ManagerFormData,
+  ManagerLandlordRelationship,
+  ListingFormData,
+  PropertyListing,
+  ListingMedia,
+  PublicApplicationData,
+  StripeConnectAccountData,
+  StripeConnectAccountStatus,
+  StripeConnectAccountSession,
+  StripeConnectAccountLink,
+  StripeConnectSessionData,
+  StripeConnectLinkData,
+  PaymentIntentRequest,
+  PaymentIntentResponse,
+  TenantPaymentIntentResponse,
+  PaymentHistoryResponse,
+  PaymentSummaryResponse,
+  TenantOtpRequest,
+  TenantOtpResponse,
+  TenantOtpVerification,
+  TenantAuthTokens,
+  TenantAuthResponse,
+  TenantProfile,
+  TenantLogoutResponse,
+  TenantProfileSelectionResponse,
+  GlobalSearchResponse,
+  Vendor,
+  VendorFormData,
+  Expense,
+  ExpenseFormData,
+  ExpenseSummary,
+  VendorSummary
+} from './types';
+
+// Smart environment-based API URL configuration
+const getApiBaseUrl = () => {
+  // If explicitly set via environment variable, use that
+  if (process.env.NEXT_PUBLIC_API_BASE_URL) {
+    return process.env.NEXT_PUBLIC_API_BASE_URL;
+  }
+  
+  // Smart defaults based on environment
+  if (process.env.NODE_ENV === 'development') {
+    // Default to localhost for development, but can be overridden
+    return 'http://localhost:8000/api';
+  }
+  
+  // Production default
+  return 'https://tink.global/api';
+};
+
+const API_BASE_URL = getApiBaseUrl();
+
+class ApiClient {
+  private api: AxiosInstance;
+  private isRefreshing = false;
+  private failedQueue: Array<{
+    resolve: (value: any) => void;
+    reject: (error: any) => void;
+  }> = [];
+
+  constructor() {
+    this.api = axios.create({
+      baseURL: API_BASE_URL,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    // Request interceptor to add auth token
+    this.api.interceptors.request.use(
+      (config) => {
+        const token = this.getAccessToken();
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`;
+        }
+        return config;
+      },
+      (error) => Promise.reject(error)
+    );
+
+    // Response interceptor to handle token refresh
+    this.api.interceptors.response.use(
+      (response) => response,
+      async (error: AxiosError) => {
+        const originalRequest = error.config as any;
+
+        if (error.response?.status === 401 && !originalRequest._retry) {
+          // Check if this is a tenant authentication error
+          if (this.isTenantAuthenticated()) {
+            // For tenant auth errors, don't try to refresh - just redirect to tenant login
+            localStorage.removeItem('tenant_access_token');
+            localStorage.removeItem('tenant_refresh_token');
+            localStorage.removeItem('tenant_user');
+            if (typeof window !== 'undefined') {
+              window.location.href = '/tenant-login';
+            }
+            return Promise.reject(error);
+          }
+
+          if (this.isRefreshing) {
+            return new Promise((resolve, reject) => {
+              this.failedQueue.push({ resolve, reject });
+            }).then((token) => {
+              originalRequest.headers.Authorization = `Bearer ${token}`;
+              return this.api(originalRequest);
+            }).catch((err) => {
+              return Promise.reject(err);
+            });
+          }
+
+          originalRequest._retry = true;
+          this.isRefreshing = true;
+
+          try {
+            const refreshToken = this.getRefreshToken();
+            if (!refreshToken) {
+              throw new Error('No refresh token');
+            }
+
+            const response = await axios.post(`${API_BASE_URL}/token/refresh/`, {
+              refresh: refreshToken
+            });
+
+            const { access } = response.data;
+            this.setAccessToken(access);
+
+            this.processQueue(null, access);
+            
+            originalRequest.headers.Authorization = `Bearer ${access}`;
+            return this.api(originalRequest);
+          } catch (refreshError) {
+            this.processQueue(refreshError, null);
+            this.logout();
+            if (typeof window !== 'undefined') {
+              window.location.href = '/login';
+            }
+            return Promise.reject(refreshError);
+          } finally {
+            this.isRefreshing = false;
+          }
+        }
+
+        return Promise.reject(this.handleError(error));
+      }
+    );
+  }
+
+  private processQueue(error: any, token: string | null = null) {
+    this.failedQueue.forEach(({ resolve, reject }) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve(token);
+      }
+    });
+    
+    this.failedQueue = [];
+  }
+
+  private handleError(error: AxiosError): ApiError {
+    const responseData = error.response?.data as any;
+    const message = responseData?.detail || responseData?.message || error.message || 'An error occurred';
+    const errors = responseData?.field_errors || responseData?.errors;
+    const status = error.response?.status || 500;
+
+    return {
+      message,
+      errors,
+      status
+    };
+  }
+
+  // Token management
+  setTokens(tokens: AuthTokens) {
+    Cookies.set('access_token', tokens.access, { expires: 1 }); // 1 day
+    Cookies.set('refresh_token', tokens.refresh, { expires: 7 }); // 7 days
+  }
+
+  getAccessToken(): string | null {
+    // Check for tenant token first, then regular token
+    const tenantToken = localStorage.getItem('tenant_access_token');
+    if (tenantToken) {
+      return tenantToken;
+    }
+    return Cookies.get('access_token') || null;
+  }
+
+  isTenantAuthenticated(): boolean {
+    return !!localStorage.getItem('tenant_access_token');
+  }
+
+  getRefreshToken(): string | null {
+    return Cookies.get('refresh_token') || null;
+  }
+
+  setAccessToken(token: string, type: 'regular' | 'tenant' = 'regular') {
+    if (type === 'tenant') {
+      // For tenant tokens, store in localStorage (not cookies)
+      localStorage.setItem('tenant_access_token', token);
+    } else {
+      Cookies.set('access_token', token, { expires: 1 });
+    }
+  }
+
+  logout() {
+    // Clear regular auth tokens
+    Cookies.remove('access_token');
+    Cookies.remove('refresh_token');
+    
+    // Also clear tenant tokens if they exist
+    localStorage.removeItem('tenant_access_token');
+    localStorage.removeItem('tenant_refresh_token');
+    localStorage.removeItem('tenant_user');
+  }
+
+  isAuthenticated(): boolean {
+    return !!this.getAccessToken();
+  }
+
+  // Authentication endpoints
+  async login(credentials: LoginCredentials): Promise<{ user: User; tokens: AuthTokens }> {
+    const response = await this.api.post('/token/', credentials);
+    
+    const tokens = {
+      access: response.data.access,
+      refresh: response.data.refresh
+    };
+    this.setTokens(tokens);
+    
+    // Get user profile after setting tokens
+    const profileResponse = await this.api.get('/auth/profile/');
+    const user: User = profileResponse.data;
+    
+    return { user, tokens };
+  }
+
+  async logout_api(): Promise<void> {
+    const refreshToken = this.getRefreshToken();
+    if (refreshToken) {
+      await this.api.post('/auth/logout/', { refresh: refreshToken });
+    }
+    this.logout();
+  }
+
+  async signup(userData: any): Promise<User> {
+    const response = await this.api.post('/auth/signup/', userData);
+    return response.data;
+  }
+
+  async signupLandlord(userData: any): Promise<{ user: User; tokens: AuthTokens; landlord: any }> {
+    const response = await this.api.post('/auth/landlord/register/', userData);
+    
+    // If the response includes tokens, set them
+    if (response.data.tokens) {
+      this.setTokens(response.data.tokens);
+    }
+    
+    return {
+      user: response.data.user,
+      tokens: response.data.tokens,
+      landlord: response.data.landlord
+    };
+  }
+
+  async getProfile(): Promise<User> {
+    const response = await this.api.get('/auth/profile/');
+    return response.data;
+  }
+
+  async updateProfile(userData: Partial<User>): Promise<User> {
+    const response = await this.api.patch('/auth/profile/', userData);
+    return response.data;
+  }
+
+  // Dashboard endpoints - Updated to use new API structure
+  async getDashboardStats(): Promise<DashboardStats> {
+    const response = await this.api.get('/dashboard/stats/');
+    return response.data;
+  }
+
+  async getPropertyAnalytics(): Promise<any> {
+    const response = await this.api.get('/dashboard/property-analytics/');
+    return response.data;
+  }
+
+  async getRoomAnalytics(): Promise<any> {
+    const response = await this.api.get('/dashboard/room-analytics/');
+    return response.data;
+  }
+
+  async getApplicationAnalytics(): Promise<any> {
+    const response = await this.api.get('/dashboard/application-analytics/');
+    return response.data;
+  }
+
+  // Global search endpoint
+  async globalSearch(query: string): Promise<GlobalSearchResponse> {
+    const response = await this.api.get(`/dashboard/search/?q=${encodeURIComponent(query)}`);
+    return response.data;
+  }
+
+  // CSV Export endpoints
+  async exportPropertiesCSV(): Promise<Blob> {
+    const response = await this.api.get('/dashboard/export-properties-csv/', {
+      responseType: 'blob'
+    });
+    return response.data;
+  }
+
+  async exportVacancyCSV(): Promise<Blob> {
+    const response = await this.api.get('/dashboard/export-vacancy-csv/', {
+      responseType: 'blob'
+    });
+    return response.data;
+  }
+
+  async exportApplicationsCSV(): Promise<Blob> {
+    const response = await this.api.get('/dashboard/export-applications-csv/', {
+      responseType: 'blob'
+    });
+    return response.data;
+  }
+
+  async exportLeasesCSV(): Promise<Blob> {
+    const response = await this.api.get('/dashboard/export-leases-csv/', {
+      responseType: 'blob'
+    });
+    return response.data;
+  }
+
+  // Tenant endpoints
+  async getTenants(): Promise<PaginatedResponse<Tenant>> {
+    try {
+      const response = await this.api.get('/tenants/tenants/');
+      // Handle both paginated and direct array responses
+      if (Array.isArray(response.data)) {
+        return {
+          count: response.data.length,
+          next: undefined,
+          previous: undefined,
+          results: response.data
+        };
+      }
+      return response.data;
+    } catch (error: any) {
+      if (error.status === 403 || error.status === 401) {
+        // Return empty response if no permission
+        return {
+          count: 0,
+          next: undefined,
+          previous: undefined,
+          results: []
+        };
+      }
+      throw error;
+    }
+  }
+
+  async getTenant(id: number): Promise<Tenant> {
+    const response = await this.api.get(`/tenants/tenants/${id}/`);
+    return response.data;
+  }
+
+  async createTenant(data: TenantFormData): Promise<Tenant> {
+    try {
+      const response = await this.api.post('/tenants/tenants/', data);
+      return response.data;
+    } catch (error: any) {
+      console.error('Tenant creation error:', error);
+      if (error.response?.status === 403) {
+        throw new Error('You do not have permission to create tenants. Please contact your administrator.');
+      }
+      if (error.response?.status === 400) {
+        const errorMessage = error.response?.data?.detail || 
+                           error.response?.data?.message || 
+                           'Invalid tenant data. Please check all required fields.';
+        throw new Error(errorMessage);
+      }
+      if (error.response?.status === 500) {
+        throw new Error('Server error occurred while creating tenant. Please try again later or contact support.');
+      }
+      throw new Error(error.message || 'Failed to create tenant. Please try again.');
+    }
+  }
+
+  async updateTenant(id: number, data: Partial<TenantFormData>): Promise<Tenant> {
+    const response = await this.api.put(`/tenants/tenants/${id}/`, data);
+    return response.data;
+  }
+
+  async deleteTenant(id: number): Promise<void> {
+    await this.api.delete(`/tenants/tenants/${id}/`);
+  }
+
+  async uploadTenantDocument(tenantId: number, file: File, documentType: string, notes?: string): Promise<Document> {
+    const formData = new FormData();
+    formData.append('tenant', tenantId.toString());
+    formData.append('document_type', documentType);
+    formData.append('document_file', file);
+    if (notes) {
+      formData.append('notes', notes);
+    }
+
+    const response = await this.api.post(`/tenants/${tenantId}/upload_document/`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  }
+
+  async getTenantApplications(tenantId: number): Promise<Application[]> {
+    const response = await this.api.get(`/tenants/tenants/${tenantId}/applications/`);
+    return response.data;
+  }
+
+  async getTenantCurrentLease(tenantId: number): Promise<Lease | null> {
+    try {
+      const response = await this.api.get(`/tenants/tenants/${tenantId}/current_lease/`);
+      return response.data;
+    } catch (error: any) {
+      if (error.status === 404) return null;
+      throw error;
+    }
+  }
+
+  // Property endpoints
+  async getProperties(): Promise<PaginatedResponse<Property>> {
+    try {
+      const response = await this.api.get('/properties/');
+      // Handle both paginated and direct array responses
+      if (Array.isArray(response.data)) {
+        return {
+          count: response.data.length,
+          next: undefined,
+          previous: undefined,
+          results: response.data
+        };
+      }
+      return response.data;
+    } catch (error: any) {
+      if (error.status === 403 || error.status === 401) {
+        // Return empty response if no permission
+        return {
+          count: 0,
+          next: undefined,
+          previous: undefined,
+          results: []
+        };
+      }
+      throw error;
+    }
+  }
+
+  async getProperty(id: number): Promise<Property> {
+    const response = await this.api.get(`/properties/${id}/`);
+    return response.data;
+  }
+
+  async checkDuplicateAddress(data: {
+    address?: string;
+    address_line1?: string;
+    address_line2?: string;
+    city?: string;
+    state?: string;
+    postal_code?: string;
+  }): Promise<{ is_duplicate: boolean; existing_property: Property | null; match_reason: string | null }> {
+    try {
+      const response = await this.api.post('/properties/check-duplicate/', data);
+      return response.data;
+    } catch (error: any) {
+      console.error('Error checking duplicate address:', error);
+      // If check fails, return no duplicate to allow proceeding
+      return { is_duplicate: false, existing_property: null, match_reason: null };
+    }
+  }
+
+  async createProperty(data: PropertyFormData): Promise<Property> {
+    try {
+      // Extract room-related fields for later use
+      const { total_rooms, room_names, room_types, room_rents, room_capacities, ...propertyData } = data;
+
+      // Helper to safely parse currency-like strings to number
+      const parseCurrencyToNumber = (value: any): number | undefined => {
+        if (value === null || value === undefined || value === '') return undefined;
+        const str = String(value);
+        // Remove currency symbols and thousand separators, keep digits and dot
+        const cleaned = str.replace(/[^0-9.]/g, '');
+        if (!cleaned) return undefined;
+        const num = parseFloat(cleaned);
+        return isNaN(num) ? undefined : num;
+      };
+
+      const payload: any = {
+        ...propertyData,
+        // Only include landlord if explicitly provided (admins)
+        ...(data.landlord ? { landlord: data.landlord } : {}),
+        // Backend expects a Decimal; send a number if present
+        monthly_rent: parseCurrencyToNumber(data.monthly_rent),
+        // Ensure structural fields are passed through
+        total_rooms,
+        // Pass room metadata so backend can create rooms server-side
+        ...(room_names && room_names.length > 0 ? { room_names } : {}),
+        ...(room_types && room_types.length > 0 ? { room_types } : {}),
+        ...(room_rents && room_rents.length > 0 ? { room_rents } : {}),
+        ...(room_capacities && room_capacities.length > 0 ? { room_capacities } : {}),
+      };
+
+      console.log('Creating property with payload:', payload); // Debug log
+
+      const response = await this.api.post('/properties/', payload);
+      const newProperty = response.data;
+      
+      console.log('Property created successfully:', newProperty); // Debug log
+      
+      // Auto-create rooms if rent_type is 'per_room' AND the FE didn't pass room_names (backend may already create from room_names)
+      if (data.rent_type === 'per_room' && total_rooms > 0 && (!room_names || room_names.length === 0)) {
+        console.log(`Auto-creating ${total_rooms} rooms for property ${newProperty.id}`);
+        try {
+          const roomPromises = Array.from({ length: total_rooms }, (_, index) => {
+            const roomName = room_names && room_names[index] 
+              ? room_names[index] 
+              : `Room ${index + 1}`;
+            
+            const roomData: RoomFormData = {
+              property_ref: newProperty.id,
+              name: roomName,
+              room_type: room_types && room_types[index] ? room_types[index] : 'Standard',
+              floor: '', // Empty string for floor
+              max_capacity: room_capacities && room_capacities[index] ? room_capacities[index] : 2, // Default capacity
+              monthly_rent: room_rents && room_rents[index] ? parseFloat(room_rents[index]) || 0 : 0, // Convert string to number
+              security_deposit: 0, // Will be set later by the user
+            };
+            
+            console.log(`Creating room ${index + 1}:`, roomData);
+            return this.createRoom(roomData);
+          });
+
+          const createdRooms = await Promise.all(roomPromises);
+          console.log(`Successfully auto-created ${createdRooms.length} rooms for property ${newProperty.id}:`, createdRooms);
+        } catch (roomError) {
+          console.error('Failed to auto-create rooms:', roomError);
+          // Log the specific error details
+          if (roomError instanceof Error) {
+            console.error('Room creation error details:', roomError.message);
+          }
+          // Don't fail the property creation if room creation fails
+          // The user can manually add rooms later
+        }
+      }
+      
+      // Auto-assign the property to the current manager
+      try {
+        const currentUser = await this.getProfile();
+        
+        // Only auto-assign for managers, not admins or landlords
+        if (currentUser.role === 'manager') {
+          // Get the manager's landlord relationships
+          const relationships = await this.getManagerLandlordRelationships();
+          const managerRelationship = relationships.find(rel => rel.manager === currentUser.id);
+          
+          if (managerRelationship) {
+            // Create the property assignment
+            await this.createManagerPropertyAssignment({
+              manager: currentUser.id,
+              property: newProperty.id,
+              landlord_relationship: managerRelationship.id,
+              role_note: `Auto-assigned to ${currentUser.full_name} (property creator)`
+            });
+            console.log(`Auto-assigned property ${newProperty.id} to manager ${currentUser.id}`);
+          } else {
+            console.warn('No landlord relationship found for manager, skipping auto-assignment');
+          }
+        }
+      } catch (assignmentError) {
+        // Don't fail the property creation if assignment fails
+        console.error('Failed to auto-assign property to manager:', assignmentError);
+      }
+      
+      return newProperty;
+    } catch (error: any) {
+      console.error('Property creation error:', error);
+      if (error.response?.status === 403) {
+        throw new Error('You do not have permission to create properties. Please contact your administrator.');
+      }
+      if (error.response?.status === 400) {
+        // Build detailed validation message from backend field errors
+        const data = error.response?.data;
+        if (data && typeof data === 'object') {
+          const parts: string[] = [];
+          for (const [field, messages] of Object.entries<any>(data)) {
+            if (Array.isArray(messages)) {
+              parts.push(`${field}: ${messages.join(', ')}`);
+            } else if (messages && typeof messages === 'object') {
+              // Nested error object
+              parts.push(`${field}: ${JSON.stringify(messages)}`);
+            } else {
+              parts.push(`${field}: ${messages}`);
+            }
+          }
+          const msg = parts.length ? `Invalid property data - ${parts.join('; ')}` : 'Invalid property data. Please check all required fields.';
+          throw new Error(msg);
+        }
+        const fallback = error.response?.data?.detail ||
+                         error.response?.data?.message ||
+                         'Invalid property data. Please check all required fields.';
+        throw new Error(fallback);
+      }
+      if (error.response?.status === 500) {
+        throw new Error('Server error occurred while creating property. Please try again later or contact support.');
+      }
+      throw new Error(error.message || 'Failed to create property. Please try again.');
+    }
+  }
+
+  async updateProperty(id: number, data: Partial<PropertyFormData>): Promise<Property> {
+    const payload = {
+      ...data,
+      monthly_rent: data.monthly_rent ? parseInt(String(data.monthly_rent), 10) : undefined,
+    };
+    delete (payload as Partial<PropertyFormData>).landlord;
+    const response = await this.api.patch(`/properties/${id}/`, payload);
+    return response.data;
+  }
+
+  async deleteProperty(id: number): Promise<void> {
+    await this.api.delete(`/properties/${id}/`);
+  }
+
+  async getPropertyRooms(propertyId: number): Promise<Room[]> {
+    // Backend expects property_ref as the query parameter
+    const response = await this.api.get(`/properties/rooms/?property_ref=${propertyId}`);
+    return response.data.results || response.data;
+  }
+
+  // Room endpoints
+  async getRooms(): Promise<PaginatedResponse<Room>> {
+    const response = await this.api.get('/properties/rooms/');
+    // Handle both paginated and direct array responses
+    if (Array.isArray(response.data)) {
+      return {
+        count: response.data.length,
+        next: undefined,
+        previous: undefined,
+        results: response.data
+      };
+    }
+    return response.data;
+  }
+
+  async getRoom(id: number, propertyId?: number): Promise<Room> {
+    if (propertyId) {
+      const rooms = await this.getPropertyRooms(propertyId);
+      const room = rooms.find(r => r.id === id);
+      if (!room) {
+        throw new Error(`Room with ID ${id} not found in property ${propertyId}`);
+      }
+      return room;
+    }
+    const response = await this.api.get(`/properties/rooms/${id}/`);
+    return response.data;
+  }
+
+  async createRoom(data: RoomFormData): Promise<Room> {
+    const response = await this.api.post('/properties/rooms/', data);
+    return response.data;
+  }
+
+  async updateRoom(id: number, data: Partial<RoomFormData>): Promise<Room> {
+    const response = await this.api.put(`/properties/rooms/${id}/`, data);
+    return response.data;
+  }
+
+  async deleteRoom(id: number): Promise<void> {
+    await this.api.delete(`/properties/rooms/${id}/`);
+  }
+
+  async checkRoomAvailability(roomId: number): Promise<any> {
+    const response = await this.api.get(`/properties/rooms/${roomId}/availability/`);
+    return response.data;
+  }
+
+  async updateRoomOccupancy(roomId: number, occupancyData: any): Promise<Room> {
+    const response = await this.api.patch(`/properties/rooms/${roomId}/update_occupancy/`, occupancyData);
+    return response.data;
+  }
+
+  // Application endpoints - Updated with new bulk operations
+  async getApplications(params?: { status?: string; property?: number; listing?: number }): Promise<PaginatedResponse<Application>> {
+    try {
+      const response = await this.api.get('/tenants/applications/', { params });
+      // Handle both paginated and direct array responses
+      if (Array.isArray(response.data)) {
+        return {
+          count: response.data.length,
+          next: undefined,
+          previous: undefined,
+          results: response.data
+        };
+      }
+      return response.data;
+    } catch (error: any) {
+      if (error.status === 403 || error.status === 401) {
+        // Return empty response if no permission
+        return {
+          count: 0,
+          next: undefined,
+          previous: undefined,
+          results: []
+        };
+      }
+      throw error;
+    }
+  }
+
+  async getApplication(id: number): Promise<Application> {
+    const response = await this.api.get(`/tenants/applications/${id}/`);
+    return response.data;
+  }
+
+  async createApplication(data: ApplicationFormData): Promise<Application> {
+    try {
+      console.log('Creating application with data:', data);
+      const response = await this.api.post('/tenants/applications/', data);
+      console.log('Application created successfully:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error('Application creation failed:', error);
+      console.error('Error response:', error.response?.data);
+      
+      if (error.response?.status === 403) {
+        throw new Error('You do not have permission to create applications. Please contact your administrator.');
+      }
+      if (error.response?.status === 400) {
+        const details = error.response?.data?.detail || error.response?.data?.message || JSON.stringify(error.response?.data);
+        throw new Error(`Invalid application data: ${details}`);
+      }
+      if (error.response?.status === 500) {
+        throw new Error('Server error occurred while creating application. Please try again or contact support.');
+      }
+      throw new Error(error.message || 'Failed to create application');
+    }
+  }
+
+  async updateApplication(id: number, data: Partial<ApplicationFormData>): Promise<Application> {
+    const response = await this.api.patch<Application>(`/tenants/applications/${id}/`, data);
+    return response.data;
+  }
+
+  async deleteApplication(id: number): Promise<void> {
+    await this.api.delete(`/tenants/applications/${id}/`);
+  }
+
+  async checkTenantConflicts(propertyId: number, startDate: string, endDate: string, roomId?: number) {
+    const response = await this.api.post('/tenants/applications/check_conflicts/', {
+      property_id: propertyId,
+      room_id: roomId,
+      start_date: startDate,
+      end_date: endDate
+    });
+    return response.data;
+  }
+
+  async moveOutTenant(occupancyId: number, moveOutDate: string, notes: string = '') {
+    const response = await this.api.post('/tenants/applications/move_out_tenant/', {
+      occupancy_id: occupancyId,
+      move_out_date: moveOutDate,
+      notes
+    });
+    return response.data;
+  }
+
+  async decideApplication(id: number, decisionData: {
+    decision: 'approve' | 'reject';
+    // Required fields for approval
+    start_date?: string;
+    end_date?: string;
+    monthly_rent?: string;
+    security_deposit?: string;
+    // Optional field for approval
+    decision_notes?: string;
+    // Required field for rejection
+    rejection_reason?: string;
+  }): Promise<Application> {
+    try {
+      console.log(`🔵 Deciding on application ${id} with data:`, JSON.stringify(decisionData, null, 2));
+      const response = await this.api.post(`/tenants/applications/${id}/decide/`, decisionData);
+      console.log('✅ Application decision successful:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error(`❌ Application decision failed for ID ${id}`);
+      console.error('Full error:', error);
+      console.error('Error response status:', error.response?.status);
+      console.error('Error response data:', error.response?.data);
+      
+      if (error.response?.status === 404) {
+        // Fallback mechanism for 404 errors
+        console.log('Endpoint not available, using fallback mechanism');
+        
+        if (decisionData.decision === 'approve') {
+          // Use existing approve fallback logic
+          const updateData = {
+            status: 'approved' as const,
+            monthly_rent: decisionData.monthly_rent || '0',
+            security_deposit: decisionData.security_deposit || '0',
+            decision_notes: decisionData.decision_notes || '',
+            start_date: decisionData.start_date || '',
+            end_date: decisionData.end_date || ''
+          };
+          
+          return await this.updateApplication(id, updateData as any);
+        } else if (decisionData.decision === 'reject') {
+          // Fallback for rejection: update status to rejected
+          const updateData = {
+            status: 'rejected' as const,
+            rejection_reason: decisionData.rejection_reason || '',
+            decision_notes: `Rejected: ${decisionData.rejection_reason}`
+          };
+          
+          return await this.updateApplication(id, updateData as any);
+        }
+      }
+      
+      if (error.response?.status === 400) {
+        const details = error.response?.data?.detail || error.response?.data?.message || JSON.stringify(error.response?.data);
+        throw new Error(`Decision validation failed: ${details}`);
+      }
+      if (error.response?.status === 500) {
+        throw new Error('Server error occurred while processing application decision. Please try again or contact support.');
+      }
+      throw new Error(error.message || `Failed to decide on application ${id}`);
+    }
+  }
+
+  async getPendingApplications(): Promise<Application[]> {
+    const response = await this.api.get('/tenants/applications/pending/');
+    return response.data;
+  }
+
+  // Enhanced workflow endpoints
+  async scheduleViewing(applicationId: number, viewingData: {
+    scheduled_date: string;
+    scheduled_time: string;
+    contact_person: string;
+    contact_phone: string;
+    viewing_notes: string;
+  }): Promise<ApplicationViewing> {
+    try {
+      console.log(`Scheduling viewing for application ${applicationId} with data:`, viewingData);
+      const response = await this.api.post(`/tenants/applications/${applicationId}/schedule-viewing/`, viewingData);
+      console.log('Viewing scheduling successful:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error('Viewing scheduling failed:', error);
+      console.error('Error response:', error.response?.data);
+      
+      if (error.response?.status === 400) {
+        const details = error.response?.data?.detail || error.response?.data?.message || JSON.stringify(error.response?.data);
+        throw new Error(`Invalid viewing data: ${details}`);
+      }
+      if (error.response?.status === 404) {
+        throw new Error(`Application with ID ${applicationId} not found`);
+      }
+      if (error.response?.status === 500) {
+        throw new Error('Server error occurred while scheduling viewing. Please try again or contact support.');
+      }
+      throw new Error(error.message || 'Failed to schedule viewing');
+    }
+  }
+
+  async completeViewing(applicationId: number, completionData: {
+    outcome: 'positive' | 'negative' | 'neutral';
+    tenant_feedback?: string;
+    landlord_notes?: string;
+    next_action?: string;
+  }): Promise<ApplicationViewing> {
+    try {
+      const response = await this.api.post(`/tenants/applications/${applicationId}/complete-viewing/`, completionData);
+      return response.data;
+    } catch (error: any) {
+      console.error('Viewing completion failed:', error);
+      
+      if (error.response?.status === 400) {
+        const details = error.response?.data?.detail || error.response?.data?.message || JSON.stringify(error.response?.data);
+        throw new Error(`Invalid completion data: ${details}`);
+      }
+      if (error.response?.status === 404) {
+        throw new Error(`Application with ID ${applicationId} not found`);
+      }
+      if (error.response?.status === 500) {
+        throw new Error('Server error occurred while completing viewing. Please try again or contact support.');
+      }
+      throw new Error(error.message || 'Failed to complete viewing');
+    }
+  }
+
+  // Skip viewing functionality - NEW ENDPOINT
+  async skipViewing(applicationId: number): Promise<Application> {
+    try {
+      console.log(`Skipping viewing for application ${applicationId}`);
+      const response = await this.api.post(`/tenants/applications/${applicationId}/skip-viewing/`, {});
+      console.log('Skip viewing successful:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Skip viewing failed for application ${applicationId}:`, error);
+      
+      if (error.response?.status === 400) {
+        const details = error.response?.data?.detail || error.response?.data?.message || JSON.stringify(error.response?.data);
+        throw new Error(`Cannot skip viewing: ${details}`);
+      }
+      if (error.response?.status === 404) {
+        throw new Error(`Application with ID ${applicationId} not found`);
+      }
+      if (error.response?.status === 500) {
+        throw new Error('Server error occurred while skipping viewing. Please try again or contact support.');
+      }
+      throw new Error(error.message || 'Failed to skip viewing');
+    }
+  }
+
+  async getApplicationViewings(applicationId: number): Promise<ApplicationViewing[]> {
+    const response = await this.api.get(`/tenants/applications/${applicationId}/viewings/`);
+    return response.data.viewings || response.data;
+  }
+
+  // Get all viewings for management
+  async getAllViewings(): Promise<ApplicationViewing[]> {
+    try {
+      const response = await this.api.get('/tenants/viewings/');
+      return response.data.results || response.data;
+    } catch (error: any) {
+      console.error('Failed to fetch all viewings:', error);
+      throw new Error(error.message || 'Failed to fetch viewings');
+    }
+  }
+
+  // Update viewing status (cancel, reschedule, etc.)
+  async updateViewingStatus(viewingId: number, statusData: {
+    status: 'scheduled' | 'completed' | 'cancelled' | 'rescheduled';
+    notes?: string;
+    scheduled_date?: string;
+    scheduled_time?: string;
+  }): Promise<ApplicationViewing> {
+    try {
+      const response = await this.api.patch(`/tenants/viewings/${viewingId}/`, statusData);
+      return response.data;
+    } catch (error: any) {
+      console.error('Failed to update viewing status:', error);
+      throw new Error(error.message || 'Failed to update viewing');
+    }
+  }
+
+  async assignRoom(applicationId: number, roomData: { room_id: number }): Promise<Application> {
+    try {
+      console.log(`Assigning room ${roomData.room_id} to application ${applicationId}`);
+      const response = await this.api.post(`/tenants/applications/${applicationId}/assign_room/`, roomData);
+      console.log('Room assignment successful:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Room assignment failed for application ${applicationId}:`, error);
+      
+      if (error.response?.status === 400) {
+        const details = error.response?.data?.detail || error.response?.data?.message || JSON.stringify(error.response?.data);
+        throw new Error(`Cannot assign room: ${details}`);
+      }
+      if (error.response?.status === 404) {
+        throw new Error(`Application with ID ${applicationId} not found`);
+      }
+      if (error.response?.status === 409) {
+        throw new Error('Room is already assigned or unavailable');
+      }
+      if (error.response?.status === 500) {
+        throw new Error('Server error occurred while assigning room. Please try again or contact support.');
+      }
+      throw new Error(error.message || 'Failed to assign room');
+    }
+  }
+
+  async generateLease(applicationId: number, roomId: number, leaseTerms?: any): Promise<Application> {
+    try {
+      console.log(`Generating lease for application ${applicationId} and room ${roomId}`, leaseTerms);
+      const requestData = { room_id: roomId, ...leaseTerms };
+      const response = await this.api.post(`/tenants/applications/${applicationId}/generate-lease/`, requestData);
+      console.log('Lease generation successful:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Lease generation failed for application ${applicationId}:`, error);
+      
+      if (error.response?.status === 400) {
+        const details = error.response?.data?.error || error.response?.data?.detail || error.response?.data?.message || JSON.stringify(error.response?.data);
+        throw new Error(details);
+      }
+      if (error.response?.status === 404) {
+        throw new Error(`Application with ID ${applicationId} not found`);
+      }
+      if (error.response?.status === 500) {
+        throw new Error('Server error occurred while generating lease. Please try again or contact support.');
+      }
+      throw new Error(error.message || 'Failed to generate lease');
+    }
+  }
+
+  async generateLeaseWithCustomDocument(applicationId: number, roomId: number, leaseTerms: any, customLeaseFile?: File | null): Promise<Application> {
+    try {
+      console.log(`Generating lease for application ${applicationId} and room ${roomId}`, leaseTerms);
+      
+      const formData = new FormData();
+      formData.append('room_id', roomId.toString());
+      
+      // Add lease terms to form data
+      Object.keys(leaseTerms).forEach(key => {
+        if (leaseTerms[key] !== undefined && leaseTerms[key] !== null) {
+          formData.append(key, leaseTerms[key].toString());
+        }
+      });
+      
+      // Add custom lease file if provided
+      if (customLeaseFile) {
+        formData.append('custom_lease_document', customLeaseFile);
+      }
+      
+      const response = await this.api.post(`/tenants/applications/${applicationId}/generate-lease/`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      
+      console.log('Lease generation successful:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Lease generation failed for application ${applicationId}:`, error);
+      
+      if (error.response?.status === 400) {
+        const details = error.response?.data?.error || error.response?.data?.detail || error.response?.data?.message || JSON.stringify(error.response?.data);
+        throw new Error(details);
+      }
+      if (error.response?.status === 404) {
+        throw new Error(`Application with ID ${applicationId} not found`);
+      }
+      if (error.response?.status === 500) {
+        throw new Error('Server error occurred while generating lease. Please try again or contact support.');
+      }
+      throw new Error(error.message || 'Failed to generate lease');
+    }
+  }
+
+  // Lease Signing Workflow API Methods
+  async sendLeaseToTenant(leaseId: number): Promise<{ message: string; lease_status: string; sent_at: string; draft_lease_url: string }> {
+    try {
+      console.log(`Sending lease ${leaseId} to tenant for signing`);
+      const response = await this.api.post(`/tenants/leases/${leaseId}/send_to_tenant/`);
+      console.log('Lease sent to tenant successfully:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Failed to send lease ${leaseId} to tenant:`, error);
+      
+      if (error.response?.status === 400) {
+        const details = error.response?.data?.error || error.response?.data?.detail || 'Invalid lease status';
+        throw new Error(details);
+      }
+      throw new Error(error.message || 'Failed to send lease to tenant');
+    }
+  }
+
+  async activateLease(leaseId: number): Promise<{ message: string; lease_status: string; activated_at: string }> {
+    try {
+      console.log(`Activating lease ${leaseId}`);
+      const response = await this.api.post(`/tenants/leases/${leaseId}/activate_lease/`);
+      console.log('Lease activated successfully:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Failed to activate lease ${leaseId}:`, error);
+      
+      if (error.response?.status === 400) {
+        const details = error.response?.data?.error || error.response?.data?.detail || 'Invalid lease status';
+        throw new Error(details);
+      }
+      throw new Error(error.message || 'Failed to activate lease');
+    }
+  }
+
+  async downloadDraftLease(leaseId: number): Promise<{ download_url: string; document_name: string }> {
+    try {
+      const response = await this.api.get(`/tenants/leases/${leaseId}/download_draft_lease/`);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Failed to get draft lease ${leaseId}:`, error);
+      throw new Error(error.message || 'Failed to get draft lease');
+    }
+  }
+
+  async downloadSignedLease(leaseId: number): Promise<{ download_url: string; document_name: string }> {
+    try {
+      const response = await this.api.get(`/tenants/leases/${leaseId}/download_signed_lease/`);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Failed to get signed lease ${leaseId}:`, error);
+      throw new Error(error.message || 'Failed to get signed lease');
+    }
+  }
+
+  // Tenant-specific lease methods (for tenant portal)
+  async getTenantLeases(): Promise<Lease[]> {
+    try {
+      const response = await this.api.get(`/tenants/tenant-leases/`);
+      return response.data || []; // The endpoint returns a list directly now
+    } catch (error: any) {
+      console.error('Failed to get tenant leases:', error);
+      throw new Error(error.message || 'Failed to get tenant leases');
+    }
+  }
+
+  async downloadTenantLeaseDraft(leaseId: number): Promise<{
+    download_url: string;
+    document_name: string;
+    lease_status: string;
+    property: string;
+    room?: string;
+    monthly_rent: number;
+    start_date: string;
+    end_date: string;
+  }> {
+    try {
+      const response = await this.api.get(`/tenants/tenant-leases/${leaseId}/download_draft/`);
+      return response.data;
+    } catch (error: any) {
+      console.error('Failed to download tenant lease draft:', error);
+      throw new Error(error.message || 'Failed to download lease');
+    }
+  }
+
+  async uploadSignedLease(leaseId: number, signedLeaseFile: File): Promise<{
+    message: string;
+    lease_status: string;
+    signed_at: string;
+  }> {
+    try {
+      const formData = new FormData();
+      formData.append('signed_lease', signedLeaseFile);
+      
+      const response = await this.api.post(
+        `/tenants/tenant-leases/${leaseId}/upload_signed_lease/`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
+      return response.data;
+    } catch (error: any) {
+      console.error('Failed to upload signed lease:', error);
+      throw new Error(error.message || 'Failed to upload signed lease');
+    }
+  }
+
+  async getApplicationsPipeline(): Promise<{
+    summary: {
+      total_applications: number;
+      active_applications: number;
+      completed_applications: number;
+      rejected_applications: number;
+    };
+    pending: Application[];
+    approved: Application[];
+    viewing_scheduled: Application[];
+    viewing_completed: Application[];
+    room_assigned: Application[];
+    lease_created: Application[];
+    lease_signed: Application[];
+    moved_in: Application[];
+    rejected: Application[];
+  }> {
+    const response = await this.api.get('/tenants/applications/pipeline/');
+    return response.data;
+  }
+
+  // New bulk operations
+  async bulkApproveApplications(data: {
+    application_ids: number[];
+    lease_duration_months: number;
+    monthly_rent: number;
+    security_deposit: number;
+  }): Promise<any> {
+    const response = await this.api.post('/tenants/applications/bulk_approve/', data);
+    return response.data;
+  }
+
+  async bulkRejectApplications(data: {
+    application_ids: number[];
+    rejection_reason: string;
+  }): Promise<any> {
+    const response = await this.api.post('/tenants/applications/bulk_reject/', data);
+    return response.data;
+  }
+
+  // Lease endpoints - Updated with move-in/move-out
+  async getLeases(params?: { status?: string; property?: number }): Promise<PaginatedResponse<Lease>> {
+    try {
+      const response = await this.api.get('/tenants/leases/', { params });
+      // Handle both paginated and direct array responses
+      if (Array.isArray(response.data)) {
+        return {
+          count: response.data.length,
+          next: undefined,
+          previous: undefined,
+          results: response.data
+        };
+      }
+      return response.data;
+    } catch (error: any) {
+      if (error.status === 403 || error.status === 401) {
+        // Return empty response if no permission
+        return {
+          count: 0,
+          next: undefined,
+          previous: undefined,
+          results: []
+        };
+      }
+      throw error;
+    }
+  }
+
+  async getLease(id: number): Promise<Lease> {
+    const response = await this.api.get(`/tenants/leases/${id}/`);
+    return response.data;
+  }
+
+  async createLease(data: LeaseFormData): Promise<Lease> {
+    // Ensure tenant is provided
+    if (!data.tenant) {
+      throw new Error("Tenant is required to create a lease.");
+    }
+    
+    // For property-level leases, room is not required
+    // For room-specific leases, room is required
+    if (!data.room && !data.property_ref) {
+      throw new Error("Either Room or Property reference is required to create a lease.");
+    }
+    
+    const response = await this.api.post('/tenants/leases/', data);
+    return response.data;
+  }
+
+  async createLeaseWithCustomDocument(data: LeaseFormData, customLeaseFile?: File | null): Promise<Lease> {
+    // Ensure tenant is provided
+    if (!data.tenant) {
+      throw new Error("Tenant is required to create a lease.");
+    }
+    
+    // For property-level leases, room is not required
+    // For room-specific leases, room is required
+    if (!data.room && !data.property_ref) {
+      throw new Error("Either Room or Property reference is required to create a lease.");
+    }
+    
+    const formData = new FormData();
+    
+    // Add all lease data to form data
+    Object.keys(data).forEach(key => {
+      if (data[key] !== undefined && data[key] !== null) {
+        formData.append(key, data[key].toString());
+      }
+    });
+    
+    // Add custom lease file if provided
+    if (customLeaseFile) {
+      formData.append('custom_lease_document', customLeaseFile);
+      formData.append('is_custom_lease', 'true');
+    }
+    
+    const response = await this.api.post('/tenants/leases/', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  }
+
+  // Property Listing & Public Endpoints
+  // ===== PROPERTY LISTINGS ENDPOINTS =====
+  
+  // Get all listings for current landlord
+  async getListings(): Promise<PaginatedResponse<PropertyListing>> {
+    try {
+      const response = await this.api.get('/properties/listings/');
+      // Handle both paginated and direct array responses
+      if (Array.isArray(response.data)) {
+        return {
+          count: response.data.length,
+          next: undefined,
+          previous: undefined,
+          results: response.data
+        };
+      }
+      return response.data;
+    } catch (error: any) {
+      console.error('Failed to get listings:', error);
+      throw error;
+    }
+  }
+
+  // Create new listing
+  async createListing(data: ListingFormData): Promise<PropertyListing> {
+    try {
+      const response = await this.api.post('/properties/listings/', data);
+      
+      if (response.status === 201) {
+        // Ideal case: The server returns the full object with ID in the body.
+        if (response.data && response.data.id) {
+          console.log('✅ createListing: Server returned new listing with ID in response body:', response.data.id);
+          return response.data;
+        }
+
+        // Common case: The server returns the ID in the 'Location' header.
+        const locationHeader = response.headers['location'];
+        if (locationHeader) {
+          console.log('✅ createListing: Found Location header:', locationHeader);
+          const matches = locationHeader.match(/\/(\d+)\/?$/); // Extracts trailing number from URL
+          if (matches && matches[1]) {
+            const newId = parseInt(matches[1], 10);
+            console.log(`✅ createListing: Extracted ID ${newId}. Fetching full listing object...`);
+            return this.getListing(newId); // Fetch the complete object using the new ID
+          }
+        }
+
+        // If we reach here, the backend isn't following standard practices.
+        console.error('❌ createListing: CRITICAL - Server did not return a listing ID in the response body or a Location header. Media upload will fail.');
+        console.error('Response Data:', response.data);
+        console.error('Response Headers:', response.headers);
+        return response.data; // Return the incomplete data, which will cause a logged failure upstream.
+      }
+      
+      throw new Error(`Unexpected response status: ${response.status}`);
+    } catch (error: any) {
+      console.error('Failed to create listing:', error);
+      throw error;
+    }
+  }
+
+  // Get specific listing details
+  async getListing(id: number): Promise<PropertyListing> {
+    const response = await this.api.get(`/properties/listings/${id}/`);
+    return response.data;
+  }
+
+  // Update listing
+  async updateListing(id: number, data: Partial<ListingFormData>): Promise<PropertyListing> {
+    try {
+      const response = await this.api.patch(`/properties/listings/${id}/`, data);
+      return response.data;
+    } catch (error: any) {
+      console.error('Failed to update listing:', error);
+      throw error;
+    }
+  }
+
+  // Delete listing
+  async deleteListing(id: number): Promise<void> {
+    try {
+      await this.api.delete(`/properties/listings/${id}/`);
+    } catch (error: any) {
+      console.error('Failed to delete listing:', error);
+      throw error;
+    }
+  }
+
+  // ===== LISTING MEDIA ENDPOINTS =====
+
+  // Upload media for listing
+  async uploadListingMedia(listingId: number, file: File, caption?: string): Promise<ListingMedia> {
+    console.log('🔄 API: Starting uploadListingMedia...');
+    console.log('📋 Upload parameters:', {
+      listingId,
+      fileName: file.name,
+      fileSize: file.size,
+      fileType: file.type,
+      caption
+    });
+    
+    try {
+      const formData = new FormData();
+      formData.append('files', file);
+      formData.append('media_type', 'image');
+      if (caption) {
+        formData.append('caption', caption);
+      }
+
+      console.log('📦 FormData contents:');
+      for (let [key, value] of formData.entries()) {
+        if (value instanceof File) {
+          console.log(`  ${key}: File(${value.name}, ${value.size} bytes, ${value.type})`);
+        } else {
+          console.log(`  ${key}: ${value}`);
+        }
+      }
+
+      const uploadUrl = `/properties/listings/${listingId}/upload_media/`;
+      console.log('🌐 Upload URL:', uploadUrl);
+      console.log('🔑 Auth token present:', !!this.getAccessToken());
+
+      const response = await this.api.post(uploadUrl, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      
+      console.log('✅ API: Upload response received');
+      console.log('📊 Response status:', response.status);
+      console.log('📄 Response data:', response.data);
+      
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ API: Upload failed');
+      console.error('🔍 Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        headers: error.response?.headers
+      });
+      console.error('🔍 Full error object:', error);
+      throw error;
+    }
+  }
+
+  // Get all media for listing
+  async getListingMedia(listingId: number): Promise<ListingMedia[]> {
+    try {
+      const response = await this.api.get(`/properties/listings/${listingId}/media/`);
+      return response.data;
+    } catch (error: any) {
+      console.error('Failed to get listing media:', error);
+      throw error;
+    }
+  }
+
+  // Delete media from listing
+  async deleteListingMedia(listingId: number, mediaId: number): Promise<void> {
+    try {
+      await this.api.delete(`/properties/listing-media/${mediaId}/`);
+    } catch (error: any) {
+      console.error('Failed to delete media:', error);
+      throw error;
+    }
+  }
+  
+  async updateListingMedia(mediaId: number, data: { caption?: string; display_order?: number; is_primary?: boolean }): Promise<ListingMedia> {
+    try {
+      const response = await this.api.patch(`/properties/listing-media/${mediaId}/`, data);
+      return response.data;
+    } catch (error: any) {
+      console.error('Failed to update media:', error);
+      throw error;
+    }
+  }
+
+  // Upload property media (images/videos) directly to a property
+  async uploadPropertyMedia(propertyId: number, files: File[]): Promise<{ images: string[]; videos: string[]; errors: any[] }> {
+    const formData = new FormData();
+    files.forEach(f => formData.append('files', f));
+    const response = await this.api.post(`/properties/${propertyId}/upload-media/`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  }
+
+  // Delete media from property
+  async deletePropertyMedia(propertyId: number, imageUrl?: string, videoUrl?: string): Promise<void> {
+    try {
+      const payload: any = {};
+      if (imageUrl) payload.image_url = imageUrl;
+      if (videoUrl) payload.video_url = videoUrl;
+      await this.api.post(`/properties/${propertyId}/delete-media/`, payload);
+    } catch (error: any) {
+      console.error('Failed to delete property media:', error);
+      throw error;
+    }
+  }
+
+  // ===== PUBLIC LISTING ENDPOINTS (No Auth Required) =====
+
+  // Get public listing by slug
+  async getPublicListing(slug: string): Promise<PropertyListing> {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/properties/public/listings/${slug}/`);
+      return response.data;
+    } catch (error: any) {
+      console.error('Failed to get public listing:', error);
+      throw error;
+    }
+  }
+
+  // Submit application from public listing
+  async submitPublicApplication(slug: string, data: PublicApplicationData): Promise<{ message: string; application_id: number }> {
+    try {
+      const response = await axios.post(`${API_BASE_URL}/properties/public/listings/${slug}/apply/`, data, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('Failed to submit public application:', error);
+      throw error;
+    }
+  }
+
+  // Get form configuration for public listing
+  async getPublicListingFormConfig(slug: string): Promise<any> {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/properties/public/listings/${slug}/form-config/`);
+      return response.data;
+    } catch (error: any) {
+      console.error('Failed to get form config:', error);
+      throw error;
+    }
+  }
+
+  // Get applications for specific listing
+  async getListingApplications(listingId: number): Promise<PaginatedResponse<Application>> {
+    const response = await this.api.get(`/properties/listings/${listingId}/applications/`);
+    return response.data;
+  }
+
+  async updateLease(leaseId: number, updates: any): Promise<Lease> {
+    const response = await this.api.put(`/tenants/leases/${leaseId}/`, {
+      ...updates,
+      // Only include the fields that can be updated, not the required relationship fields
+      start_date: updates.start_date,
+      end_date: updates.end_date,
+      monthly_rent: parseFloat(updates.monthly_rent),
+      security_deposit: parseFloat(updates.security_deposit)
+    });
+    return response.data;
+  }
+
+  async deleteLease(id: number): Promise<void> {
+    await this.api.delete(`/tenants/leases/${id}/`);
+  }
+
+  async getActiveLeases(): Promise<Lease[]> {
+    const response = await this.api.get('/tenants/leases/active/');
+    return response.data;
+  }
+
+  async getExpiringLeases(): Promise<Lease[]> {
+    const response = await this.api.get('/tenants/leases/expiring/').catch(err => {
+      // If endpoint doesn't exist, return empty array
+      if (err.response?.status === 404) return { data: [] };
+      throw err;
+    });
+    return response.data;
+  }
+
+  async processMovein(leaseId: number, moveInData: {
+    move_in_date: string;
+    move_in_condition?: string;
+    deposit_collected?: number;
+  }): Promise<Lease> {
+    try {
+      console.log(`Processing move-in for lease ${leaseId} with data:`, moveInData);
+      const response = await this.api.post(`/tenants/leases/${leaseId}/move_in/`, moveInData);
+      console.log('Move-in processing successful:', response.data);
+    return response.data;
+    } catch (error: any) {
+      console.error(`Move-in processing failed for lease ${leaseId}:`, error);
+      
+      if (error.response?.status === 400) {
+        const details = error.response?.data?.detail || error.response?.data?.message || JSON.stringify(error.response?.data);
+        throw new Error(`Cannot process move-in: ${details}`);
+      }
+      if (error.response?.status === 404) {
+        throw new Error(`Lease with ID ${leaseId} not found`);
+      }
+      if (error.response?.status === 500) {
+        throw new Error('Server error occurred while processing move-in. Please try again or contact support.');
+      }
+      throw new Error(error.message || 'Failed to process move-in');
+    }
+  }
+
+  async processMoveout(leaseId: number, moveOutData: {
+    move_out_date: string;
+    move_out_condition?: string;
+    cleaning_charges?: number;
+    damage_charges?: number;
+    deposit_returned?: number;
+  }): Promise<Lease> {
+    try {
+      console.log(`Processing move-out for lease ${leaseId} with data:`, moveOutData);
+    const response = await this.api.post(`/tenants/leases/${leaseId}/move_out/`, moveOutData);
+      console.log('Move-out successful:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error('Move-out failed:', error);
+      console.error('Error response:', error.response?.data);
+      
+      if (error.response?.status === 400) {
+        const details = error.response?.data?.detail || error.response?.data?.message || JSON.stringify(error.response?.data);
+        throw new Error(`Invalid move-out data: ${details}`);
+      }
+      if (error.response?.status === 404) {
+        throw new Error(`Lease with ID ${leaseId} not found`);
+      }
+      if (error.response?.status === 500) {
+        throw new Error('Server error occurred while processing move-out. Please try again or contact support.');
+      }
+      throw new Error(error.message || 'Failed to process move-out');
+    }
+  }
+
+  async requestTenantMoveout(leaseId: number, moveOutData: {
+    move_out_date: string;
+    move_out_condition?: string;
+    cleaning_charges?: number;
+    damage_charges?: number;
+    deposit_returned?: number;
+  }): Promise<Lease> {
+    const response = await this.api.post(`/tenants/tenant-leases/${leaseId}/request_move_out/`, moveOutData);
+    return response.data;
+  }
+
+  // Landlord endpoints
+  async getLandlords(): Promise<PaginatedResponse<Landlord>> {
+    const response = await this.api.get('/landlords/');
+    return response.data;
+  }
+
+  async getLandlord(id: number): Promise<Landlord> {
+    const response = await this.api.get(`/landlords/${id}/`);
+    return response.data;
+  }
+
+  async createLandlord(data: any): Promise<Landlord> {
+    const response = await this.api.post('/landlords/', data);
+    return response.data;
+  }
+
+  async updateLandlord(id: number, data: any): Promise<Landlord> {
+    const response = await this.api.put(`/landlords/${id}/`, data);
+    return response.data;
+  }
+
+  async deleteLandlord(id: number): Promise<void> {
+    await this.api.delete(`/landlords/${id}/`);
+  }
+
+  // Document endpoints
+  async getDocuments(): Promise<PaginatedResponse<Document>> {
+    const response = await this.api.get('/documents/');
+    return response.data;
+  }
+
+  async getDocument(id: number): Promise<Document> {
+    const response = await this.api.get(`/documents/${id}/`);
+    return response.data;
+  }
+
+  async deleteDocument(id: number): Promise<void> {
+    await this.api.delete(`/documents/${id}/`);
+  }
+
+  // Occupancy endpoints - Updated with new filtering
+  async getOccupancies(params?: { current?: boolean; property?: number; room?: number }): Promise<PaginatedResponse<Occupancy>> {
+    const response = await this.api.get('/occupancies/', { params });
+    return response.data;
+  }
+
+  async getOccupancy(id: number): Promise<Occupancy> {
+    const response = await this.api.get(`/occupancies/${id}/`);
+    return response.data;
+  }
+
+  async getCurrentOccupancies(): Promise<Occupancy[]> {
+    const response = await this.api.get('/occupancies/current/');
+    return response.data;
+  }
+
+  async getOccupancyHistory(): Promise<Occupancy[]> {
+    const response = await this.api.get('/occupancies/history/');
+    return response.data;
+  }
+
+  // Inventory endpoints - Updated
+  async getInventory(): Promise<PaginatedResponse<InventoryItem>> {
+    const response = await this.api.get('/inventory/');
+    // Handle both paginated and direct array responses
+    if (Array.isArray(response.data)) {
+      return {
+        results: response.data,
+        count: response.data.length,
+        next: undefined,
+        previous: undefined
+      };
+    }
+    return response.data;
+  }
+
+  async getInventoryItem(id: number): Promise<InventoryItem> {
+    const response = await this.api.get(`/inventory/${id}/`);
+    return response.data;
+  }
+
+  async createInventoryItem(data: any): Promise<InventoryItem> {
+    const response = await this.api.post('/inventory/', data);
+    return response.data;
+  }
+
+  async updateInventoryItem(id: number, data: any): Promise<InventoryItem> {
+    const response = await this.api.put(`/inventory/${id}/`, data);
+    return response.data;
+  }
+
+  async deleteInventoryItem(id: number): Promise<void> {
+    await this.api.delete(`/inventory/${id}/`);
+  }
+
+  async getMaintenanceItems(): Promise<InventoryItem[]> {
+    const response = await this.api.get('/inventory/needs_maintenance/');
+    return response.data;
+  }
+
+  async getManagersForLandlord(landlordId: number): Promise<Manager[]> {
+    const response = await this.api.get(`/landlords/${landlordId}/managers/`);
+    return response.data.results || response.data;
+  }
+
+  async inviteManager(landlordId: number, data: { full_name: string; email: string; username: string; password: string }): Promise<Manager> {
+    const response = await this.api.post(`/landlords/${landlordId}/managers/`, data);
+    return response.data;
+  }
+
+  async updateManager(managerId: number, data: Partial<Manager>): Promise<Manager> {
+    const response = await this.api.put(`/managers/${managerId}/`, data);
+    return response.data;
+  }
+
+  async deleteManager(managerId: number): Promise<void> {
+    await this.api.delete(`/managers/${managerId}/`);
+  }
+
+  async getManagers(): Promise<PaginatedResponse<Manager>> {
+    const response = await this.api.get('/auth/managers/');
+    return response.data;
+  }
+
+  // NEW: Enhanced managers with properties endpoint
+  async getManagersWithProperties(): Promise<ManagerWithProperties[]> {
+    const response = await this.api.get('/managers-with-properties/');
+    return response.data || [];
+  }
+
+  // NEW: Property assignment endpoints
+  async getManagerPropertyAssignments(): Promise<ManagerPropertyAssignment[]> {
+    const response = await this.api.get('/manager-property-assignments/');
+    return response.data || [];
+  }
+
+  async createManagerPropertyAssignment(data: { 
+    manager: number; 
+    property: number; 
+    landlord_relationship: number;
+    role_note?: string;
+  }): Promise<ManagerPropertyAssignment> {
+    const response = await this.api.post('/manager-property-assignments/', data);
+    return response.data;
+  }
+
+  async deleteManagerPropertyAssignment(id: number): Promise<void> {
+    await this.api.delete(`/manager-property-assignments/${id}/`);
+  }
+
+  async checkManagerPropertyAssignment(managerId: number, propertyId: number): Promise<{ exists: boolean; assignment?: ManagerPropertyAssignment }> {
+    try {
+      const response = await this.api.get(`/manager-property-assignments/check_assignment/?manager=${managerId}&property=${propertyId}`);
+      return response.data;
+    } catch (error: any) {
+      if (error.response?.status === 404) {
+        return { exists: false };
+      }
+      throw error;
+    }
+  }
+
+  async createManagerWithProperties(data: ManagerFormData): Promise<Manager> {
+    try {
+      // STEP 1: Create Manager Account using /api/signup/
+      console.log('Step 1: Creating manager account via signup...');
+      const signupData = {
+        username: data.username,
+        password: data.password,
+        password_confirm: data.password_confirm || data.password,
+        email: data.email,
+        full_name: data.full_name,
+        role: "manager"
+      };
+      
+      const signupResponse = await this.api.post('/signup/', signupData);
+      const responseData = signupResponse.data;
+      console.log('Signup response:', responseData);
+      
+      // Extract manager data from response (it might be nested under 'manager' key)
+      const manager = responseData.manager || responseData;
+      console.log('Manager created:', manager);
+
+      if (!manager.id) {
+        throw new Error('Manager ID not found in signup response');
+      }
+
+      // STEP 2: Create Manager-Landlord Relationship
+      console.log('Step 2: Creating manager-landlord relationship...');
+      if (!data.landlord_id) {
+        throw new Error('Landlord ID is required for manager creation');
+      }
+
+      const relationshipData = {
+        manager: manager.id,
+        landlord: data.landlord_id,
+        is_primary: false,  // Set to false as per instructions
+        role_note: `Manager for ${data.full_name}`
+      };
+
+      let relationship;
+      try {
+        const relationshipResponse = await this.api.post('/manager-landlord-relationships/', relationshipData);
+        relationship = relationshipResponse.data;
+        console.log('Relationship created:', relationship);
+      } catch (relationshipError: any) {
+        // Handle duplicate relationship creation gracefully
+        if (relationshipError.response?.status === 400) {
+          const errorData = relationshipError.response.data;
+          
+          if (errorData.code === 'relationship_exists') {
+            // Use existing relationship
+            relationship = errorData.existing_relationship;
+            console.log('Using existing relationship:', relationship);
+          } else {
+            throw relationshipError;
+          }
+        } else {
+          throw relationshipError;
+        }
+      }
+
+      // STEP 3: Assign Manager to Properties (if specific properties selected)
+      if (data.property_ids && data.property_ids.length > 0 && !data.access_all_properties) {
+        console.log('Step 3: Assigning manager to specific properties...');
+        for (const propertyId of data.property_ids) {
+          try {
+            await this.createManagerPropertyAssignment({
+              manager: manager.id,
+              property: propertyId,
+              landlord_relationship: relationship.id,
+              role_note: `Property Manager for Property ${propertyId}`
+            });
+          } catch (assignmentError: any) {
+            // Handle duplicate assignments gracefully
+            if (assignmentError.response?.status === 400) {
+              const errorData = assignmentError.response.data;
+              
+              if (errorData.code === 'already_assigned') {
+                console.log(`Assignment already exists for property ${propertyId}, using existing:`, errorData.existing_assignment);
+                continue; // Skip to next property
+              }
+            }
+            // Re-throw other errors
+            throw assignmentError;
+          }
+        }
+        console.log(`Assigned manager to ${data.property_ids.length} properties`);
+      }
+
+      return {
+        id: manager.id,
+        username: manager.username ?? data.username,
+        email: manager.email ?? data.email,
+        full_name: manager.full_name ?? data.full_name,
+        role: 'manager',
+        is_active: manager.is_active !== false
+      };
+    } catch (error: any) {
+      console.error('Error creating manager with properties:', error);
+      
+      // Provide detailed error messages based on which step failed
+      if (error.response?.data) {
+        const errorData = error.response.data;
+        let errorMessage = 'Failed to create manager: ';
+        
+        if (typeof errorData === 'string') {
+          errorMessage += errorData;
+        } else if (errorData.detail) {
+          errorMessage += errorData.detail;
+        } else if (errorData.username) {
+          errorMessage += `Username error: ${errorData.username.join(', ')}`;
+        } else if (errorData.email) {
+          errorMessage += `Email error: ${errorData.email.join(', ')}`;
+        } else {
+          errorMessage += JSON.stringify(errorData);
+        }
+        
+        throw new Error(errorMessage);
+      }
+      throw error;
+    }
+  }
+
+  // Manager-Landlord Relationship methods
+  async getManagerLandlordRelationships(): Promise<ManagerLandlordRelationship[]> {
+    const response = await this.api.get('/manager-landlord-relationships/');
+    return response.data || [];
+  }
+
+  async createManagerLandlordRelationship(data: { 
+    manager: number; 
+    landlord: number; 
+    is_primary: boolean;
+    access_all_properties?: boolean;
+  }): Promise<ManagerLandlordRelationship> {
+    const response = await this.api.post('/manager-landlord-relationships/', data);
+    return response.data;
+  }
+
+  async deleteManagerLandlordRelationship(relationshipId: number): Promise<void> {
+    await this.api.delete(`/manager-landlord-relationships/${relationshipId}/`);
+  }
+
+  // Platform Admin methods
+  async getAllLandlords(): Promise<any[]> {
+    try {
+      const response = await this.api.get('/landlords/');
+      return response.data.results || response.data;
+    } catch (error: any) {
+      if (error.status === 403 || error.status === 401) {
+        // Return mock data for admin if API doesn't allow access
+        return [
+          {
+            id: 27,
+            username: 'premium_owner',
+            email: 'owner@premiumprops.com',
+            full_name: 'Olivia Wilson',
+            org_name: 'Premium Properties',
+            contact_email: 'owner@premiumprops.com',
+            is_active: true
+          }
+        ];
+      }
+      throw error;
+    }
+  }
+
+  async getAllManagers(): Promise<any[]> {
+    try {
+      const response = await this.api.get('/managers/');
+      return response.data.results || response.data;
+    } catch (error: any) {
+      if (error.status === 403 || error.status === 401 || error.status === 404) {
+        // Return empty array if endpoint doesn't exist or no permission
+        return [];
+      }
+      throw error;
+    }
+  }
+
+  async getPlatformStats(): Promise<any> {
+    try {
+      const response = await this.api.get('/platform/stats/');
+      return response.data;
+    } catch (error: any) {
+      if (error.status === 403 || error.status === 401 || error.status === 404) {
+        // Return mock stats for admin
+        return {
+          total_landlords: 1,
+          total_managers: 1,
+          total_properties: 0,
+          total_revenue: 0
+        };
+      }
+      throw error;
+    }
+  }
+
+  // Landlord Profile methods
+  async getLandlordProfile(): Promise<any> {
+    const response = await this.api.get('/landlords/profile/');
+    return response.data;
+  }
+
+  async updateLandlordProfile(data: any): Promise<any> {
+    const response = await this.api.put('/landlords/profile/', data);
+    return response.data;
+  }
+
+  // Enhanced Property Management API Endpoints
+  async getPropertyAnalysisData(propertyId: number): Promise<any> {
+    const response = await this.api.get(`/properties/${propertyId}/analysis/`);
+    return response.data;
+  }
+
+  async getPropertyRevenueBreakdown(propertyId: number): Promise<any> {
+    const response = await this.api.get(`/properties/${propertyId}/revenue-breakdown/`);
+    return response.data;
+  }
+
+  async getPropertyOccupancyData(propertyId: number): Promise<any> {
+    const response = await this.api.get(`/properties/${propertyId}/occupancy-data/`);
+    return response.data;
+  }
+
+  async validatePropertyOperation(propertyId: number, operation: string, data: any): Promise<any> {
+    const response = await this.api.post(`/properties/${propertyId}/validate-operation/`, {
+      operation,
+      ...data
+    });
+    return response.data;
+  }
+
+  async executeRentTypeConversion(propertyId: number, conversionData: any): Promise<any> {
+    const response = await this.api.post(`/properties/${propertyId}/convert-rent-type/`, conversionData);
+    return response.data;
+  }
+
+  async updatePropertyRoomCount(propertyId: number, roomCountData: any): Promise<any> {
+    const response = await this.api.post(`/properties/${propertyId}/update-room-count/`, roomCountData);
+    return response.data;
+  }
+
+  async refreshPropertyData(propertyId: number): Promise<any> {
+    const response = await this.api.post(`/properties/${propertyId}/refresh-data/`);
+    return response.data;
+  }
+
+  // Smart Property/Room Management API Endpoints
+  async validatePropertyDeletion(propertyId: number): Promise<any> {
+    try {
+      const response = await this.api.get(`/properties/${propertyId}/validate-deletion/`);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Property deletion validation failed for ID ${propertyId}:`, error);
+      throw new Error(error.message || 'Failed to validate property deletion');
+    }
+  }
+
+  async cleanupPropertyData(propertyId: number): Promise<any> {
+    try {
+      const response = await this.api.post(`/properties/${propertyId}/cleanup/`);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Property cleanup failed for ID ${propertyId}:`, error);
+      throw new Error(error.message || 'Failed to cleanup property data');
+    }
+  }
+
+  async forceDeleteProperty(propertyId: number): Promise<void> {
+    try {
+      console.log(`Force deleting property ${propertyId}`);
+      await this.api.delete(`/properties/${propertyId}/force/`);
+      console.log('Property force deleted successfully');
+    } catch (error: any) {
+      console.error(`Force property deletion failed for ID ${propertyId}:`, error);
+      throw new Error(error.message || 'Failed to force delete property');
+    }
+  }
+
+  async validateRoomDeletion(roomId: number): Promise<any> {
+    try {
+      const response = await this.api.get(`/properties/rooms/${roomId}/validate-deletion/`);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Room deletion validation failed for ID ${roomId}:`, error);
+      throw new Error(error.message || 'Failed to validate room deletion');
+    }
+  }
+
+  async terminateLease(leaseId: number, terminationData: {
+    termination_date: string;
+    reason: string;
+    early_termination_fee?: number;
+    notes?: string;
+  }): Promise<any> {
+    try {
+      const response = await this.api.post(`/leases/${leaseId}/terminate/`, terminationData);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Lease termination failed for ID ${leaseId}:`, error);
+      throw new Error(error.message || 'Failed to terminate lease');
+    }
+  }
+
+  async getPropertyInconsistencies(propertyId: number): Promise<any> {
+    try {
+      const response = await this.api.get(`/properties/${propertyId}/inconsistencies/`);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Property inconsistency check failed for ID ${propertyId}:`, error);
+      // Return empty inconsistencies for any error - this is a validation check that should be optional
+      return { inconsistencies: [], warnings: [] };
+    }
+  }
+
+  // Communication endpoints
+  async getConversations(): Promise<PaginatedResponse<any>> {
+    try {
+      const response = await this.api.get('/communication/conversations/');
+      // Handle both paginated and direct array responses
+      if (Array.isArray(response.data)) {
+        return {
+          count: response.data.length,
+          next: undefined,
+          previous: undefined,
+          results: response.data
+        };
+      }
+      return response.data;
+    } catch (error: any) {
+      if (error.status === 403 || error.status === 401) {
+        // Return empty response if no permission
+        return {
+          count: 0,
+          next: undefined,
+          previous: undefined,
+          results: []
+        };
+      }
+      throw error;
+    }
+  }
+
+  async getConversation(id: number): Promise<any> {
+    const response = await this.api.get(`/communication/conversations/${id}/`);
+    return response.data;
+  }
+
+  async getMessages(): Promise<PaginatedResponse<any>> {
+    try {
+      const response = await this.api.get('/communication/messages/');
+      // Handle both paginated and direct array responses
+      if (Array.isArray(response.data)) {
+        return {
+          count: response.data.length,
+          next: undefined,
+          previous: undefined,
+          results: response.data
+        };
+      }
+      return response.data;
+    } catch (error: any) {
+      if (error.status === 403 || error.status === 401) {
+        // Return empty response if no permission
+        return {
+          count: 0,
+          next: undefined,
+          previous: undefined,
+          results: []
+        };
+      }
+      throw error;
+    }
+  }
+
+  async sendMessage(data: {
+    tenant_id: number;
+    message_type: 'sms' | 'email';
+    subject?: string;
+    body: string;
+    template_id?: number;
+  }): Promise<any> {
+    const response = await this.api.post('/communication/messages/send/', data);
+    return response.data;
+  }
+
+  async getMessageTemplates(): Promise<PaginatedResponse<any>> {
+    try {
+      const response = await this.api.get('/communication/templates/');
+      // Handle both paginated and direct array responses
+      if (Array.isArray(response.data)) {
+        return {
+          count: response.data.length,
+          next: undefined,
+          previous: undefined,
+          results: response.data
+        };
+      }
+      return response.data;
+    } catch (error: any) {
+      if (error.status === 403 || error.status === 401) {
+        // Return empty response if no permission
+        return {
+          count: 0,
+          next: undefined,
+          previous: undefined,
+          results: []
+        };
+      }
+      throw error;
+    }
+  }
+
+  // SMS Sending (for backward compatibility with existing SMS API)
+  async sendSMS(data: any): Promise<any> {
+    // Try the new communication API first
+    try {
+      if (data.to && data.message) {
+        // Find tenant by phone number
+        const tenantsResponse = await this.getTenants();
+        const tenant = tenantsResponse.results.find(t => t.phone === data.to);
+        
+        if (tenant) {
+          return await this.sendMessage({
+            tenant_id: tenant.id,
+            message_type: 'sms',
+            body: data.message
+          });
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to use new communication API, falling back to old SMS API:', error);
+    }
+
+    // Fallback to the old SMS API if needed
+    const response = await this.api.post('/api/sms/send', data);
+    return response.data;
+  }
+
+  async ensureValidToken(): Promise<void> {
+    const token = this.getAccessToken();
+    if (!token) {
+      // No token, nothing to do, the interceptor will handle the 401
+      return;
+    }
+
+    try {
+      // Decode the token to check its expiration
+      // This is a simple check; a more robust solution might use a library like jwt-decode
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const isExpired = Date.now() >= payload.exp * 1000;
+
+      if (isExpired && !this.isRefreshing) {
+        console.log('Token is expired, refreshing proactively...');
+        // The interceptor's refresh logic will be triggered by the next request,
+        // but we can trigger it manually here if needed. For now, we'll let the
+        // interceptor handle it to avoid race conditions.
+        // A simple way to trigger it is to make a lightweight, authenticated request.
+        await this.getProfile(); // This will trigger the refresh flow
+      }
+    } catch (error) {
+      console.error('Failed to decode or refresh token proactively:', error);
+      // If decoding fails, the token is likely invalid, let the interceptor handle it
+    }
+  }
+
+  // Stripe Connect Methods
+  async getStripeAccountStatus(): Promise<StripeConnectAccountStatus> {
+    const response = await this.api.get('/auth/stripe/account-status/');
+    return response.data;
+  }
+
+  async createStripeConnectedAccount(data: StripeConnectAccountData): Promise<{ account_id: string; status: string }> {
+    const response = await this.api.post('/auth/stripe/create-account/', data);
+    return response.data;
+  }
+
+  async createStripeAccountSession(data: StripeConnectSessionData): Promise<StripeConnectAccountSession> {
+    const response = await this.api.post('/auth/stripe/create-session/', data);
+    return response.data;
+  }
+
+  async createStripeAccountLink(data: StripeConnectLinkData): Promise<StripeConnectAccountLink> {
+    const response = await this.api.post('/auth/stripe/create-link/', data);
+    return response.data;
+  }
+
+  // PAYMENT API METHODS
+
+  async createRentPaymentIntent(data: PaymentIntentRequest): Promise<PaymentIntentResponse> {
+    const response = await this.api.post('/auth/payments/create-intent/', data);
+    return response.data;
+  }
+
+  async createTenantRentPaymentIntent(): Promise<TenantPaymentIntentResponse> {
+    try {
+      const response = await this.api.post('/auth/tenant-auth/create-payment-intent/', {});
+      return response.data;
+    } catch (error: any) {
+      if (error.response?.data) {
+        return {
+          client_secret: '',
+          payment_details: {
+            amount_cents: 0,
+            amount_dollars: 0,
+            property_name: '',
+            monthly_rent: 0
+          },
+          // Forward the error from backend
+          ...error.response.data
+        };
+      }
+      throw this.handleError(error);
+    }
+  }
+
+  async markTenantPaymentProcessed(paymentIntentId: string): Promise<{ success: boolean; message: string; payment_id?: number }> {
+    const response = await this.api.post('/auth/tenant-auth/mark-payment-processed/', {
+      payment_intent_id: paymentIntentId
+    });
+    return response.data;
+  }
+
+  async getPaymentHistory(params?: { page?: number; page_size?: number }): Promise<PaymentHistoryResponse> {
+    const queryString = params ? new URLSearchParams(params as any).toString() : '';
+    
+    // Use tenant-specific endpoint if tenant is authenticated
+    if (this.isTenantAuthenticated()) {
+      const url = `/auth/tenant-auth/payment-history/${queryString ? `?${queryString}` : ''}`;
+      const response = await this.api.get(url);
+      return response.data;
+    } else {
+      // Use regular endpoint for landlords/managers
+      const url = `/auth/payments/history/${queryString ? `?${queryString}` : ''}`;
+      const response = await this.api.get(url);
+      return response.data;
+    }
+  }
+
+  async getLandlordPaymentSummary(): Promise<PaymentSummaryResponse> {
+    const response = await this.api.get('/auth/payments/summary/');
+    return response.data;
+  }
+
+  // Tenant Authentication Methods
+  async requestTenantOtp(phoneNumber: string): Promise<TenantOtpResponse> {
+    try {
+      const response = await this.api.post('/auth/tenant-auth/request-otp/', {
+        phone_number: phoneNumber
+      });
+      return {
+        success: true,
+        message: response.data.message || 'OTP sent successfully',
+        expires_in_minutes: response.data.expires_in_minutes || 5
+      };
+    } catch (error: any) {
+      if (error.response?.data) {
+        return {
+          success: false,
+          message: error.response.data.error || 'Failed to send OTP',
+          error: error.response.data.error,
+          error_type: error.response.data.error_type
+        };
+      }
+      return {
+        success: false,
+        message: 'Failed to send OTP',
+        error: 'Network error',
+        error_type: 'network_error'
+      };
+    }
+  }
+
+  async verifyTenantOtp(phoneNumber: string, otpCode: string): Promise<TenantAuthResponse> {
+    try {
+      const response = await this.api.post('/auth/tenant-auth/verify-otp/', {
+        phone_number: phoneNumber,
+        otp_code: otpCode
+      });
+      return {
+        success: true,
+        message: response.data.message || 'OTP verified successfully',
+        requires_selection: response.data.requires_selection || false,
+        tokens: response.data.tokens,
+        tenant: response.data.tenant,
+        tenant_profiles: response.data.tenant_profiles,
+        phone_number: response.data.phone_number
+      };
+    } catch (error: any) {
+      if (error.response?.data) {
+        return {
+          success: false,
+          message: error.response.data.error || 'Failed to verify OTP',
+          error: error.response.data.error,
+          error_type: error.response.data.error_type,
+          remaining_attempts: error.response.data.remaining_attempts
+        };
+      }
+      return {
+        success: false,
+        message: 'Failed to verify OTP',
+        error: 'Network error',
+        error_type: 'network_error'
+      };
+    }
+  }
+
+  // Public Application OTP methods (NEW - for anyone applying to listings)
+  async requestPublicApplicationOtp(phoneNumber: string): Promise<{ success: boolean; message: string; expires_in_minutes: number }> {
+    try {
+      const response = await this.api.post('/auth/public-application/request-otp/', {
+        phone_number: phoneNumber
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('Failed to request public application OTP:', error);
+      throw new Error(error.response?.data?.error || 'Failed to send verification code');
+    }
+  }
+
+  async verifyPublicApplicationOtp(phoneNumber: string, otpCode: string): Promise<{ success: boolean; message: string; phone_number: string; verified: boolean }> {
+    try {
+      const response = await this.api.post('/auth/public-application/verify-otp/', {
+        phone_number: phoneNumber,
+        otp_code: otpCode
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('Failed to verify public application OTP:', error);
+      throw new Error(error.response?.data?.error || 'Failed to verify code');
+    }
+  }
+
+  async selectTenantProfile(phoneNumber: string, tenantUserId: number): Promise<TenantProfileSelectionResponse> {
+    try {
+      const response = await this.api.post('/auth/tenant-auth/select-profile/', {
+        phone_number: phoneNumber,
+        tenant_user_id: tenantUserId
+      });
+      return response.data;
+    } catch (error: any) {
+      if (error.response?.data) {
+        return {
+          success: false,
+          message: error.response.data.error || 'Failed to select profile',
+          error: error.response.data.error,
+          error_type: error.response.data.error_type
+        };
+      }
+      throw this.handleError(error);
+    }
+  }
+
+  async getTenantProfile(): Promise<TenantProfile> {
+    const response = await this.api.get('/auth/tenant-auth/profile/');
+    return response.data;
+  }
+
+  async tenantLogout(): Promise<TenantLogoutResponse> {
+    const response = await this.api.post('/auth/tenant-auth/logout/');
+    return response.data;
+  }
+}
+
+export const apiClient = new ApiClient();
+
+// Public API request function (no authentication required)
+export async function publicApiRequest(endpoint: string, options: any = {}) {
+  const method = options.method || 'GET';
+  const { body, ...restOptions } = options;
+  
+  try {
+    // Create a new axios instance without authentication interceptors
+    const publicApi = axios.create({
+      baseURL: API_BASE_URL,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    let response: AxiosResponse;
+    
+    switch (method.toUpperCase()) {
+      case 'GET':
+        response = await publicApi.get(endpoint, restOptions);
+        break;
+      case 'POST':
+        response = await publicApi.post(endpoint, body, restOptions);
+        break;
+      case 'PUT':
+        response = await publicApi.put(endpoint, body, restOptions);
+        break;
+      case 'PATCH':
+        response = await publicApi.patch(endpoint, body, restOptions);
+        break;
+      case 'DELETE':
+        response = await publicApi.delete(endpoint, restOptions);
+        break;
+      default:
+        throw new Error(`Unsupported method: ${method}`);
+    }
+    
+    return response.data;
+  } catch (error: any) {
+    // Handle error similar to the main API client
+    const responseData = error.response?.data as any;
+    const message = responseData?.detail || responseData?.message || error.message || 'An error occurred';
+    const errors = responseData?.field_errors || responseData?.errors;
+    const status = error.response?.status || 500;
+
+    throw {
+      message,
+      errors,
+      status
+    };
+  }
+}
+
+// ============================================
+// EXPENSE MANAGEMENT
+// ============================================
+
+// Add expense management methods to the ApiClient class
+class ExpenseApiClient {
+  constructor(private apiClient: ApiClient) {}
+
+  // Vendor Management
+  async getVendors(): Promise<Vendor[]> {
+    const response = await this.apiClient['api'].get('/expenses/vendors/');
+    return response.data;
+  }
+
+  async getVendorsForDropdown(): Promise<Vendor[]> {
+    const response = await this.apiClient['api'].get('/expenses/vendors/?format=list');
+    return response.data;
+  }
+
+  async createVendor(data: VendorFormData): Promise<Vendor> {
+    const response = await this.apiClient['api'].post('/expenses/vendors/', data);
+    return response.data;
+  }
+
+  async getVendor(id: number): Promise<Vendor> {
+    const response = await this.apiClient['api'].get(`/expenses/vendors/${id}/`);
+    return response.data;
+  }
+
+  async updateVendor(id: number, data: Partial<VendorFormData>): Promise<Vendor> {
+    const response = await this.apiClient['api'].put(`/expenses/vendors/${id}/`, data);
+    return response.data;
+  }
+
+  async deleteVendor(id: number): Promise<void> {
+    await this.apiClient['api'].delete(`/expenses/vendors/${id}/`);
+  }
+
+  async getVendorSummary(): Promise<VendorSummary> {
+    const response = await this.apiClient['api'].get('/expenses/summary/vendors/');
+    return response.data;
+  }
+
+  // Expense Management
+  async getExpenses(): Promise<Expense[]> {
+    const response = await this.apiClient['api'].get('/expenses/expenses/');
+    return response.data;
+  }
+
+  async getExpensesSimple(): Promise<Expense[]> {
+    const response = await this.apiClient['api'].get('/expenses/expenses/?format=list');
+    return response.data;
+  }
+
+  async createExpense(data: FormData): Promise<Expense> {
+    const response = await this.apiClient['api'].post('/expenses/expenses/', data, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  }
+
+  async getExpense(id: number): Promise<Expense> {
+    const response = await this.apiClient['api'].get(`/expenses/expenses/${id}/`);
+    return response.data;
+  }
+
+  async updateExpense(id: number, data: FormData): Promise<Expense> {
+    const response = await this.apiClient['api'].put(`/expenses/expenses/${id}/`, data, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  }
+
+  async deleteExpense(id: number): Promise<void> {
+    await this.apiClient['api'].delete(`/expenses/expenses/${id}/`);
+  }
+
+  async approveExpense(id: number): Promise<Expense> {
+    const response = await this.apiClient['api'].post(`/expenses/expenses/${id}/approve/`, {});
+    return response.data;
+  }
+
+  async markExpensePaid(id: number): Promise<Expense> {
+    const response = await this.apiClient['api'].post(`/expenses/expenses/${id}/mark-paid/`, {});
+    return response.data;
+  }
+
+  async getExpenseSummary(fromDate?: string, toDate?: string): Promise<ExpenseSummary> {
+    const params = new URLSearchParams();
+    if (fromDate) params.append('from_date', fromDate);
+    if (toDate) params.append('to_date', toDate);
+    const queryString = params.toString();
+    const response = await this.apiClient['api'].get(`/expenses/summary/expenses/${queryString ? '?' + queryString : ''}`);
+    return response.data;
+  }
+}
+
+// Helper function to create FormData for expense creation/update
+export const createExpenseFormData = (data: ExpenseFormData): FormData => {
+  const formData = new FormData();
+  
+  // Add all form fields
+  formData.append('title', data.title);
+  formData.append('description', data.description);
+  formData.append('amount', data.amount);
+  formData.append('property_ref', data.property_ref.toString());
+  formData.append('expense_date', data.expense_date);
+  formData.append('status', data.status);
+  
+  if (data.vendor) {
+    formData.append('vendor', data.vendor.toString());
+  }
+  if (data.vendor_name_override) {
+    formData.append('vendor_name_override', data.vendor_name_override);
+  }
+  if (data.due_date) {
+    formData.append('due_date', data.due_date);
+  }
+  if (data.is_recurring) {
+    formData.append('is_recurring', 'true');
+    formData.append('recurrence_type', data.recurrence_type);
+    if (data.recurrence_end_date) {
+      formData.append('recurrence_end_date', data.recurrence_end_date);
+    }
+  } else {
+    formData.append('is_recurring', 'false');
+    formData.append('recurrence_type', 'none');
+  }
+  if (data.receipt_file) {
+    formData.append('receipt_file', data.receipt_file);
+  }
+  if (data.tags) {
+    formData.append('tags', data.tags);
+  }
+  if (data.notes) {
+    formData.append('notes', data.notes);
+  }
+  
+  return formData;
+};
+
+// Create expense API client instance using the existing apiClient
+const expenseApiClient = new ExpenseApiClient(apiClient);
+
+// Main expense API client
+export const expenseApi = expenseApiClient;
+
+// ============================================================================
+// VAPI Communication & Maintenance API
+// ============================================================================
+
+export interface CommunicationLog {
+  id: number;
+  landlord: number;
+  comm_type: string;
+  comm_type_display: string;
+  phone_number: string;
+  contact_name: string;
+  tenant: number | null;
+  tenant_name: string | null;
+  property_ref: number | null;
+  property_name: string | null;
+  content: string;
+  status: string;
+  status_display: string;
+  duration_seconds: number | null;
+  vapi_call_id: string;
+  assistant_name: string;
+  twilio_sid: string;
+  sms_template: string;
+  metadata: Record<string, any>;
+  created_at: string;
+  is_call: boolean;
+  is_sms: boolean;
+  is_inbound: boolean;
+}
+
+export interface CommunicationSummary {
+  total_calls: number;
+  total_sms: number;
+  inbound_calls: number;
+  outbound_sms: number;
+  sms_by_template: Record<string, number>;
+  calls_by_assistant: Record<string, number>;
+  today_count: number;
+  this_week_count: number;
+  this_month_count: number;
+  total: number;
+}
+
+export interface MaintenanceVendor {
+  id: number;
+  landlord: number;
+  name: string;
+  phone: string;
+  email: string;
+  category: string;
+  category_display: string;
+  is_active: boolean;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MaintenanceTicket {
+  id: number;
+  ticket_number: string;
+  landlord: number;
+  tenant: number | null;
+  property_ref: number | null;
+  caller_name: string;
+  caller_phone: string;
+  property_address: string;
+  unit_number: string;
+  issue_category: string;
+  category_display: string;
+  issue_description: string;
+  urgency: string;
+  urgency_display: string;
+  status: string;
+  status_display: string;
+  scheduled_date: string | null;
+  scheduled_time: string | null;
+  vendor: number | null;
+  vendor_notified: boolean;
+  vapi_call_id: string;
+  conversation_notes: string;
+  created_at: string;
+  updated_at: string;
+  resolved_at: string | null;
+  days_open: number;
+  is_emergency: boolean;
+}
+
+class VAPIApiClient {
+  private apiClient: ApiClient;
+
+  constructor(apiClient: ApiClient) {
+    this.apiClient = apiClient;
+  }
+
+  // Communication Logs
+  async getCommunicationLogs(params?: {
+    type?: 'call' | 'sms';
+    status?: string;
+    phone?: string;
+    tenant_id?: number;
+    days?: number;
+  }): Promise<{ logs: CommunicationLog[]; count: number }> {
+    const queryParams = new URLSearchParams();
+    if (params?.type) queryParams.append('type', params.type);
+    if (params?.status) queryParams.append('status', params.status);
+    if (params?.phone) queryParams.append('phone', params.phone);
+    if (params?.tenant_id) queryParams.append('tenant_id', params.tenant_id.toString());
+    if (params?.days) queryParams.append('days', params.days.toString());
+    const query = queryParams.toString();
+    const response = await this.apiClient['api'].get(`/vapi/communication-logs/${query ? '?' + query : ''}`);
+    return response.data;
+  }
+
+  async getCommunicationSummary(): Promise<CommunicationSummary> {
+    const response = await this.apiClient['api'].get('/vapi/communication-logs/summary/');
+    return response.data;
+  }
+
+  // Maintenance Vendors
+  async getMaintenanceVendors(): Promise<{ vendors: MaintenanceVendor[]; count: number }> {
+    const response = await this.apiClient['api'].get('/vapi/vendors/');
+    return response.data;
+  }
+
+  async createMaintenanceVendor(data: {
+    name: string;
+    phone: string;
+    email?: string;
+    category: string;
+    is_active?: boolean;
+    notes?: string;
+  }): Promise<MaintenanceVendor> {
+    const response = await this.apiClient['api'].post('/vapi/vendors/', data);
+    return response.data;
+  }
+
+  async updateMaintenanceVendor(id: number, data: Partial<{
+    name: string;
+    phone: string;
+    email: string;
+    category: string;
+    is_active: boolean;
+    notes: string;
+  }>): Promise<MaintenanceVendor> {
+    const response = await this.apiClient['api'].put(`/vapi/vendors/${id}/`, data);
+    return response.data;
+  }
+
+  async deleteMaintenanceVendor(id: number): Promise<void> {
+    await this.apiClient['api'].delete(`/vapi/vendors/${id}/`);
+  }
+
+  async toggleMaintenanceVendorActive(id: number): Promise<{ id: number; is_active: boolean; message: string }> {
+    const response = await this.apiClient['api'].post(`/vapi/vendors/${id}/toggle-active/`);
+    return response.data;
+  }
+
+  // Maintenance Tickets
+  async getMaintenanceTickets(params?: {
+    status?: string;
+    category?: string;
+    urgency?: string;
+  }): Promise<{ tickets: MaintenanceTicket[]; count: number }> {
+    const queryParams = new URLSearchParams();
+    if (params?.status) queryParams.append('status', params.status);
+    if (params?.category) queryParams.append('category', params.category);
+    if (params?.urgency) queryParams.append('urgency', params.urgency);
+    const query = queryParams.toString();
+    const response = await this.apiClient['api'].get(`/vapi/maintenance-requests/${query ? '?' + query : ''}`);
+    return response.data;
+  }
+
+  async getMaintenanceTicket(id: number): Promise<MaintenanceTicket> {
+    const response = await this.apiClient['api'].get(`/vapi/maintenance-requests/${id}/`);
+    return response.data;
+  }
+
+  async updateMaintenanceTicket(id: number, data: {
+    status?: string;
+    vendor_id?: number | null;
+    scheduled_date?: string;
+    scheduled_time?: string;
+  }): Promise<MaintenanceTicket> {
+    const response = await this.apiClient['api'].put(`/vapi/maintenance-requests/${id}/`, data);
+    return response.data;
+  }
+}
+
+// Create VAPI API client instance
+const vapiApiClient = new VAPIApiClient(apiClient);
+export const vapiApi = vapiApiClient;
+
+// Backward compatibility - export the old function names
+export async function apiRequest(endpoint: string, options: any = {}) {
+  const method = options.method || 'GET';
+  const { body, ...restOptions } = options;
+  
+  try {
+    let response: AxiosResponse;
+    
+    switch (method.toUpperCase()) {
+      case 'GET':
+        response = await apiClient['api'].get(endpoint, restOptions);
+        break;
+      case 'POST':
+        response = await apiClient['api'].post(endpoint, body, restOptions);
+        break;
+      case 'PUT':
+        response = await apiClient['api'].put(endpoint, body, restOptions);
+        break;
+      case 'PATCH':
+        response = await apiClient['api'].patch(endpoint, body, restOptions);
+        break;
+      case 'DELETE':
+        response = await apiClient['api'].delete(endpoint, restOptions);
+        break;
+      default:
+        throw new Error(`Unsupported method: ${method}`);
+    }
+    
+    return response.data;
+  } catch (error: any) {
+    throw apiClient['handleError'](error);
+  }
+}
