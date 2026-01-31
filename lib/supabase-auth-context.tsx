@@ -3,6 +3,7 @@ import { useRouter } from 'next/router'
 import { User, Session, AuthError } from '@supabase/supabase-js'
 import { supabase } from './supabase'
 import { Profile, Organization } from './supabase-types'
+import { activityLogger } from './activity-logger'
 
 interface AuthContextType {
   user: User | null
@@ -59,6 +60,9 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
 
       if (profileData) {
         setProfile(profileData as Profile)
+
+        // Set activity logger user context
+        activityLogger.setUser(userId, profileData.organization_id)
 
         // Fetch organization if profile has one
         if (profileData.organization_id) {
@@ -228,12 +232,17 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
 
       if (data.user) {
         await fetchUserData(data.user.id)
+        // Log successful login
+        activityLogger.logLogin('password')
         // Use window.location for reliable redirect
         window.location.href = '/dashboard/tickets'
       }
     } catch (err) {
       console.error('Sign in error:', err)
-      setError(handleAuthError(err))
+      const errorMsg = handleAuthError(err)
+      setError(errorMsg)
+      // Log failed login
+      activityLogger.logLoginFailed(errorMsg)
       throw err
     } finally {
       setLoading(false)
@@ -254,6 +263,9 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
       })
 
       if (authError) throw authError
+      
+      // Log magic link sent
+      activityLogger.logMagicLinkSent(email)
     } catch (err) {
       console.error('Magic link error:', err)
       setError(handleAuthError(err))
@@ -274,6 +286,9 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
       })
 
       if (authError) throw authError
+      
+      // Log password reset requested
+      activityLogger.logPasswordResetRequested(email)
     } catch (err) {
       console.error('Password reset error:', err)
       setError(handleAuthError(err))
@@ -289,9 +304,16 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
       setLoading(true)
       setError(null)
 
+      // Log logout before clearing user context
+      await activityLogger.logLogout()
+      await activityLogger.flush()
+      
       const { error: authError } = await supabase.auth.signOut()
       if (authError) throw authError
 
+      // Clear logger user context
+      activityLogger.clearUser()
+      
       setUser(null)
       setSession(null)
       setProfile(null)

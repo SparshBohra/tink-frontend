@@ -26,6 +26,7 @@ import {
 import CategoryIcon from './CategoryIcon';
 import { updateTicketStatus, updateTicketPriority } from '../lib/ticket-service';
 import CopyButton from './CopyButton';
+import { activityLogger } from '../lib/activity-logger';
 
 interface Note {
   id: string;
@@ -83,6 +84,7 @@ export default function TicketDetailModal({
     }
     if (updating) return;
     
+    const oldStatus = ticket.status;
     setUpdating(true);
     setErrorMessage(null);
     
@@ -94,6 +96,8 @@ export default function TicketDetailModal({
       setTicket(updated);
       onUpdate(updated);
       showSuccess('Status updated');
+      // Log status change
+      activityLogger.logStatusChange(ticket.id, ticket.ticket_number, oldStatus, newStatus);
     } else {
       console.error('Status update failed:', result.error);
       showError(result.error || 'Failed to update status');
@@ -108,6 +112,7 @@ export default function TicketDetailModal({
     }
     if (updating) return;
     
+    const oldPriority = ticket.priority;
     setUpdating(true);
     setErrorMessage(null);
     
@@ -119,6 +124,8 @@ export default function TicketDetailModal({
       setTicket(updated);
       onUpdate(updated);
       showSuccess('Priority updated');
+      // Log priority change
+      activityLogger.logPriorityChange(ticket.id, ticket.ticket_number, oldPriority, newPriority);
     } else {
       console.error('Priority update failed:', result.error);
       showError(result.error || 'Failed to update priority');
@@ -155,6 +162,7 @@ export default function TicketDetailModal({
     saveNotesToStorage(updated);
     setNoteInput('');
     showSuccess('Note added');
+    activityLogger.logNoteAdd(ticket.id, ticket.ticket_number);
   };
 
   const handleDeleteNote = (noteId: string) => {
@@ -162,6 +170,7 @@ export default function TicketDetailModal({
     setNotesList(updated);
     saveNotesToStorage(updated);
     showSuccess('Note deleted');
+    activityLogger.logNoteDelete(ticket.id, ticket.ticket_number);
   };
 
   const handleStartEdit = (note: Note) => {
@@ -179,6 +188,7 @@ export default function TicketDetailModal({
     setEditingNoteId(null);
     setEditingText('');
     showSuccess('Note updated');
+    activityLogger.logNoteEdit(ticket.id, ticket.ticket_number);
   };
 
   const handleCancelEdit = () => {

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
 import { useSupabaseAuth, withSupabaseAuth } from '../../lib/supabase-auth-context'
+import { activityLogger } from '../../lib/activity-logger'
 import { 
   TicketWithRelations, 
   TicketStatus, 
@@ -75,6 +76,11 @@ function TicketsPage() {
   
   // Toast
   const [copyToast, setCopyToast] = useState<string | null>(null)
+
+  // Log page view on mount
+  useEffect(() => {
+    activityLogger.logPageView('tickets_dashboard')
+  }, [])
 
   // Load cached data
   useEffect(() => {
@@ -162,6 +168,9 @@ function TicketsPage() {
   }, [organizationId])
 
   const handleTicketClick = async (ticket: TicketWithRelations) => {
+    // Log ticket view
+    activityLogger.logTicketView(ticket.id, ticket.ticket_number)
+    
     // Fetch full ticket data with complete inbound_messages
     if (organizationId) {
       const result = await fetchTicketById(ticket.id, organizationId)
@@ -175,6 +184,7 @@ function TicketsPage() {
       setSelectedTicket(ticket)
     }
     setIsModalOpen(true)
+    activityLogger.logModalOpen('ticket_detail', { ticket_id: ticket.id, ticket_number: ticket.ticket_number })
   }
 
   const handleModalUpdate = (updatedTicket: TicketWithRelations) => {
@@ -232,13 +242,12 @@ function TicketsPage() {
 
   // Handle column sorting with proper priority ordering
   const handleSort = (field: 'created_at' | 'priority' | 'status' | 'ticket_number') => {
-    if (sort.field === field) {
-      // Toggle direction
-      setSort({ field, direction: sort.direction === 'desc' ? 'asc' : 'desc' })
-    } else {
-      // New field, default to desc (most recent/urgent first)
-      setSort({ field, direction: 'desc' })
-    }
+    const newDirection = sort.field === field 
+      ? (sort.direction === 'desc' ? 'asc' : 'desc')
+      : 'desc'
+    
+    setSort({ field, direction: newDirection })
+    activityLogger.logSortChange(field, newDirection)
   }
 
   // Handle grouping
@@ -247,10 +256,12 @@ function TicketsPage() {
       // Ungroup if clicking the same field
       setGroupBy(null)
       setCollapsedGroups(new Set())
+      activityLogger.logGroupChange(null)
     } else {
       // Group by the selected field
       setGroupBy(field)
       setCollapsedGroups(new Set()) // Reset collapsed groups when changing group field
+      activityLogger.logGroupChange(field)
     }
   }
 
@@ -258,17 +269,20 @@ function TicketsPage() {
   const toggleGroup = (groupKey: string) => {
     setCollapsedGroups(prev => {
       const newSet = new Set(prev)
-      if (newSet.has(groupKey)) {
+      const isExpanding = newSet.has(groupKey)
+      if (isExpanding) {
         newSet.delete(groupKey)
       } else {
         newSet.add(groupKey)
       }
+      activityLogger.logGroupToggle(groupKey, isExpanding)
       return newSet
     })
   }
 
   // Handle refresh - reset everything and reload
   const handleRefresh = () => {
+    activityLogger.logRefresh()
     // Reset filters
     setFilters({ status: 'all', priority: 'all' })
     // Reset sort to most recent first
@@ -332,15 +346,13 @@ function TicketsPage() {
   // Handle stat card clicks - toggle filter
   const handleStatClick = (type: 'status' | 'priority', value: string) => {
     if (type === 'status') {
-      setFilters(prev => ({
-        ...prev,
-        status: prev.status === value ? 'all' : value as TicketStatus | 'all'
-      }))
+      const newValue = filters.status === value ? 'all' : value
+      setFilters(prev => ({ ...prev, status: newValue as TicketStatus | 'all' }))
+      activityLogger.logStatusFilter(newValue)
     } else {
-      setFilters(prev => ({
-        ...prev,
-        priority: prev.priority === value ? 'all' : value as TicketPriority | 'all'
-      }))
+      const newValue = filters.priority === value ? 'all' : value
+      setFilters(prev => ({ ...prev, priority: newValue as TicketPriority | 'all' }))
+      activityLogger.logPriorityFilter(newValue)
     }
   }
 

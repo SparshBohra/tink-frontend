@@ -15,6 +15,7 @@ export default function AuthCallback() {
         // Get query params
         const urlParams = new URLSearchParams(window.location.search)
         const queryType = urlParams.get('type')
+        const code = urlParams.get('code') // PKCE flow code
         const errorParam = urlParams.get('error')
         const errorDescription = urlParams.get('error_description')
         
@@ -25,7 +26,7 @@ export default function AuthCallback() {
           return
         }
 
-        // Get the session from the URL hash (Supabase puts tokens in hash)
+        // Get the session from the URL hash (legacy flow - Supabase puts tokens in hash)
         const hashParams = new URLSearchParams(window.location.hash.substring(1))
         const accessToken = hashParams.get('access_token')
         const refreshToken = hashParams.get('refresh_token')
@@ -34,9 +35,35 @@ export default function AuthCallback() {
         // Determine the auth type (from hash or query)
         const type = hashType || queryType
         
-        console.log('Auth callback:', { type, hasAccessToken: !!accessToken, queryType, hashType })
+        console.log('Auth callback:', { type, hasCode: !!code, hasAccessToken: !!accessToken, queryType, hashType })
 
-        // If we have tokens, set the session first
+        // PKCE Flow: Exchange code for session
+        if (code) {
+          setMessage('Verifying authentication...')
+          
+          const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
+          
+          if (exchangeError) {
+            console.error('Code exchange error:', exchangeError)
+            setStatus('error')
+            setMessage(exchangeError.message || 'Failed to verify authentication')
+            return
+          }
+
+          if (data.user) {
+            await createProfileIfNeeded(data.user)
+          }
+          
+          setStatus('success')
+          setMessage('Login successful! Redirecting to dashboard...')
+          
+          setTimeout(() => {
+            window.location.href = '/dashboard/tickets'
+          }, 1000)
+          return
+        }
+
+        // Legacy Flow: If we have tokens in hash, set the session
         if (accessToken && refreshToken) {
           const { data, error: setSessionError } = await supabase.auth.setSession({
             access_token: accessToken,
@@ -116,7 +143,7 @@ export default function AuthCallback() {
           }
         }
 
-        // No tokens in URL - check for existing session
+        // No code or tokens in URL - check for existing session
         const { data: { session }, error } = await supabase.auth.getSession()
 
         if (error) {

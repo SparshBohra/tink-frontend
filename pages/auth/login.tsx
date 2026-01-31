@@ -42,6 +42,27 @@ export default function Login() {
     }
   }, [loading, isAuthenticated])
 
+  // Show loading while auth state is being checked
+  if (loading) {
+    return (
+      <div style={{ 
+        minHeight: '100vh', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <Loader2 size={32} style={{ animation: 'spin 1s linear infinite', color: '#3b82f6' }} />
+          <p style={{ color: '#64748b', marginTop: 12 }}>Loading...</p>
+        </div>
+        <style jsx global>{`
+          @keyframes spin { to { transform: rotate(360deg); } }
+        `}</style>
+      </div>
+    )
+  }
+
   const handlePasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     if (isSubmitting) return

@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, User, Building2, Lock, Check, Loader2 } from 'lucide-react';
 import { useSupabaseAuth } from '../lib/supabase-auth-context';
 import { supabase } from '../lib/supabase';
+import { activityLogger } from '../lib/activity-logger';
 
 interface SettingsModalProps {
   onClose: () => void;
@@ -11,6 +12,11 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
   const { profile, organization, user, refreshProfile } = useSupabaseAuth();
   
   const [activeTab, setActiveTab] = useState<'profile' | 'organization' | 'security'>('profile');
+
+  // Log settings open on mount
+  useEffect(() => {
+    activityLogger.logSettingsOpen();
+  }, []);
   
   // Profile form
   const [fullName, setFullName] = useState(profile?.full_name || '');
@@ -61,6 +67,7 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
       // Refresh the profile in the auth context
       await refreshProfile();
       showMessage('Profile updated successfully');
+      activityLogger.logProfileUpdate(['full_name']);
     } catch (err: any) {
       console.error('Profile update error:', err);
       showMessage(err.message || 'Failed to update profile', true);
@@ -87,6 +94,7 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
       // Refresh to get updated org data
       await refreshProfile();
       showMessage('Organization updated successfully');
+      activityLogger.logOrganizationUpdate(['name']);
     } catch (err: any) {
       console.error('Organization update error:', err);
       showMessage(err.message || 'Failed to update organization', true);
@@ -118,6 +126,7 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
       setNewPassword('');
       setConfirmPassword('');
       showMessage('Password updated successfully');
+      activityLogger.logPasswordChange();
     } catch (err: any) {
       showMessage(err.message || 'Failed to update password', true);
     } finally {
