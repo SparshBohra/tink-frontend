@@ -1,4 +1,4 @@
-import { supabase, DASHBOARD_URLS, setDashboardUrl } from './supabase'
+import { supabase, DASHBOARD_URLS } from './supabase'
 import { Profile, Organization } from '../types'
 
 export interface AuthState {
@@ -10,77 +10,13 @@ export interface AuthState {
   error: string | null
 }
 
-// Active dashboard URL (set after checking which one has auth)
+// Active dashboard URL
 let activeDashboardUrl = DASHBOARD_URLS.production
 
-// Try to get auth token from a specific URL's cookies
-const getAuthFromUrl = async (url: string): Promise<string | null> => {
-  try {
-    const cookies = await chrome.cookies.getAll({ url })
-    
-    // Look for Supabase auth cookies
-    for (const cookie of cookies) {
-      if (cookie.name.includes('auth-token') || cookie.name.includes('sb-')) {
-        if (cookie.name.endsWith('-auth-token')) {
-          try {
-            const parsed = JSON.parse(decodeURIComponent(cookie.value))
-            if (parsed.access_token) {
-              return parsed.access_token
-            }
-          } catch {
-            // Not JSON, continue
-          }
-        }
-      }
-    }
-    return null
-  } catch (err) {
-    console.error('Error reading cookies from', url, err)
-    return null
-  }
-}
-
-// Try to get auth token from either dashboard (local first, then production)
-const getAuthFromDashboardCookies = async (): Promise<{ token: string | null, url: string }> => {
-  // Try localhost first (for development)
-  const localToken = await getAuthFromUrl(DASHBOARD_URLS.local)
-  if (localToken) {
-    return { token: localToken, url: DASHBOARD_URLS.local }
-  }
-  
-  // Try production
-  const prodToken = await getAuthFromUrl(DASHBOARD_URLS.production)
-  if (prodToken) {
-    return { token: prodToken, url: DASHBOARD_URLS.production }
-  }
-  
-  return { token: null, url: DASHBOARD_URLS.production }
-}
-
-// Check if user is authenticated
+// Check if user is authenticated (uses extension's own session)
 export const checkAuth = async (): Promise<AuthState> => {
   try {
-    // First check if we already have a session
-    let { data: { session }, error: sessionError } = await supabase.auth.getSession()
-    
-    // If no session, try to get from dashboard cookies (checks both local and prod)
-    if (!session) {
-      const { token, url } = await getAuthFromDashboardCookies()
-      if (token) {
-        // Set the active dashboard URL based on where we found auth
-        activeDashboardUrl = url
-        setDashboardUrl(url)
-        
-        // Try to set the session from the token
-        const { data, error } = await supabase.auth.setSession({
-          access_token: token,
-          refresh_token: ''
-        })
-        if (!error && data.session) {
-          session = data.session
-        }
-      }
-    }
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
     
     if (sessionError) {
       console.error('Session error:', sessionError)
@@ -90,7 +26,7 @@ export const checkAuth = async (): Promise<AuthState> => {
         profile: null,
         organization: null,
         organizationId: null,
-        error: sessionError.message
+        error: null // Don't show error, just show login
       }
     }
     
@@ -151,9 +87,26 @@ export const checkAuth = async (): Promise<AuthState> => {
       profile: null,
       organization: null,
       organizationId: null,
-      error: 'Authentication check failed'
+      error: null
     }
   }
+}
+
+// Sign out from extension
+export const signOut = async (): Promise<void> => {
+  await supabase.auth.signOut()
+}
+
+// Listen for auth state changes
+export const onAuthStateChange = (callback: (isAuthenticated: boolean) => void) => {
+  return supabase.auth.onAuthStateChange((event, session) => {
+    callback(!!session)
+  })
+}
+
+// Set active dashboard URL
+export const setActiveDashboardUrl = (isLocal: boolean) => {
+  activeDashboardUrl = isLocal ? DASHBOARD_URLS.local : DASHBOARD_URLS.production
 }
 
 // Get the current active dashboard URL

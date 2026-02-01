@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { checkAuth, AuthState } from './lib/auth'
+import { checkAuth, AuthState, onAuthStateChange } from './lib/auth'
 import { TicketWithRelations } from './types'
 import Header from './components/Header'
 import Toast from './components/Toast'
@@ -27,13 +27,41 @@ function App() {
   const [toast, setToast] = useState<string | null>(null)
   
   // Check authentication on mount
-  useEffect(() => {
-    const init = async () => {
-      const state = await checkAuth()
-      setAuthState(state)
-    }
-    init()
+  const doAuthCheck = useCallback(async () => {
+    setAuthState(prev => ({ ...prev, loading: true }))
+    const state = await checkAuth()
+    setAuthState(state)
   }, [])
+  
+  useEffect(() => {
+    doAuthCheck()
+    
+    // Listen for auth state changes (logout sync)
+    const { data: { subscription } } = onAuthStateChange((isAuthenticated) => {
+      if (!isAuthenticated) {
+        // User logged out - reset state
+        setAuthState({
+          isAuthenticated: false,
+          loading: false,
+          profile: null,
+          organization: null,
+          organizationId: null,
+          error: null
+        })
+        setCurrentView('list')
+        setSelectedTicket(null)
+      }
+    })
+    
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [doAuthCheck])
+  
+  // Handle successful login
+  const handleLoginSuccess = useCallback(() => {
+    doAuthCheck()
+  }, [doAuthCheck])
   
   // Show toast message
   const showToast = useCallback((message: string) => {
@@ -67,7 +95,7 @@ function App() {
   // Handle ticket update (refresh after status/priority change)
   const handleTicketUpdate = useCallback((updatedTicket: TicketWithRelations) => {
     setSelectedTicket(updatedTicket)
-    showToast('Ticket updated')
+    showToast('Updated')
   }, [showToast])
   
   // Loading state
@@ -82,9 +110,9 @@ function App() {
     )
   }
   
-  // Not authenticated
+  // Not authenticated - show login form
   if (!authState.isAuthenticated) {
-    return <LoginView error={authState.error} />
+    return <LoginView onLoginSuccess={handleLoginSuccess} />
   }
   
   return (
