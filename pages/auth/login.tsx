@@ -24,6 +24,24 @@ export default function Login() {
     
     // Check for URL params
     const urlParams = new URLSearchParams(window.location.search)
+    
+    // Clear session if ?clear=true or ?logout=true
+    if (urlParams.get('clear') === 'true' || urlParams.get('logout') === 'true') {
+      localStorage.clear()
+      sessionStorage.clear()
+      // Clear all cookies
+      document.cookie.split(';').forEach(c => {
+        document.cookie = c.replace(/^ +/, '').replace(/=.*/, '=;expires=' + new Date().toUTCString() + ';path=/')
+      })
+      setToast({ message: 'Session cleared. Please sign in.', type: 'info' })
+      window.history.replaceState({}, '', '/auth/login')
+      // Force reload to clear any cached auth state
+      if (urlParams.get('reload') !== 'done') {
+        window.location.href = '/auth/login?reload=done'
+        return
+      }
+    }
+    
     if (urlParams.get('confirmed') === 'true') {
       setToast({ message: 'Email confirmed! You can now sign in.', type: 'success' })
       window.history.replaceState({}, '', '/auth/login')
