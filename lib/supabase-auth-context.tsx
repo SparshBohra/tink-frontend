@@ -306,47 +306,51 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
     }
   }
 
-  // Sign out
+  // Sign out - aggressive clear of all auth state
   const signOut = async () => {
     try {
       setError(null)
-      // Don't set loading=true - just sign out immediately
-
-      // Try to log logout but don't wait too long (1 second max)
+      
+      // Clear logger (don't wait)
       try {
-        const logPromise = Promise.all([
-          activityLogger.logLogout(),
-          activityLogger.flush()
-        ])
-        await Promise.race([
-          logPromise,
-          new Promise(resolve => setTimeout(resolve, 1000))
-        ])
+        activityLogger.logLogout()
+        activityLogger.clearUser()
       } catch {
-        // Ignore logging errors during signout
+        // Ignore
       }
       
-      // Clear logger user context
-      activityLogger.clearUser()
-      
-      // Clear state immediately
+      // Clear all state immediately
       setUser(null)
       setSession(null)
       setProfile(null)
       setOrganization(null)
       setLoading(false)
 
-      // Sign out from Supabase (don't wait)
-      supabase.auth.signOut().catch(console.error)
+      // Sign out from Supabase
+      try {
+        await supabase.auth.signOut({ scope: 'global' })
+      } catch {
+        // Ignore errors
+      }
 
-      // Redirect immediately
-      window.location.href = '/auth/login'
+      // Force clear all storage
+      try {
+        localStorage.clear()
+        sessionStorage.clear()
+        // Clear cookies
+        document.cookie.split(';').forEach(c => {
+          document.cookie = c.replace(/^ +/, '').replace(/=.*/, '=;expires=' + new Date().toUTCString() + ';path=/')
+        })
+      } catch {
+        // Ignore
+      }
+
+      // Redirect with clear param to ensure clean state
+      window.location.href = '/auth/login?clear=true'
     } catch (err) {
       console.error('Sign out error:', err)
-      setError(handleAuthError(err))
-      setLoading(false)
-      // Still redirect even on error
-      window.location.href = '/auth/login'
+      // Force redirect anyway
+      window.location.href = '/auth/login?clear=true'
     }
   }
 

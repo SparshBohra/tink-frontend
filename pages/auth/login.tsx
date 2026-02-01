@@ -27,14 +27,25 @@ export default function Login() {
     
     // Clear session if ?clear=true or ?logout=true
     if (urlParams.get('clear') === 'true' || urlParams.get('logout') === 'true') {
+      // Clear all storage
       localStorage.clear()
       sessionStorage.clear()
+      
       // Clear all cookies
       document.cookie.split(';').forEach(c => {
         document.cookie = c.replace(/^ +/, '').replace(/=.*/, '=;expires=' + new Date().toUTCString() + ';path=/')
       })
+      
+      // Clear IndexedDB (Supabase may use this)
+      try {
+        indexedDB.deleteDatabase('supabase-auth-token')
+      } catch (e) {
+        console.log('IndexedDB clear failed:', e)
+      }
+      
       setToast({ message: 'Session cleared. Please sign in.', type: 'info' })
       window.history.replaceState({}, '', '/auth/login')
+      
       // Force reload to clear any cached auth state
       if (urlParams.get('reload') !== 'done') {
         window.location.href = '/auth/login?reload=done'
