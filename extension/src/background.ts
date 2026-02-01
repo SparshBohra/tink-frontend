@@ -1,5 +1,5 @@
 // SquareFt Extension - Background Service Worker
-// Updates badge count with number of triage tickets
+// Opens side panel and updates badge count
 
 import { createClient } from '@supabase/supabase-js'
 
@@ -11,6 +11,13 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     persistSession: true,
     autoRefreshToken: true,
   },
+})
+
+// Open side panel when extension icon is clicked
+chrome.action.onClicked.addListener((tab) => {
+  if (tab.id) {
+    chrome.sidePanel.open({ tabId: tab.id })
+  }
 })
 
 // Update badge with triage ticket count
@@ -73,10 +80,7 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   }
 })
 
-// Update badge when extension is clicked
-chrome.action.onClicked.addListener(() => {
-  updateBadge()
-})
+// Note: onClicked is already handled above to open side panel
 
 // Listen for messages from popup to trigger badge update
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {

@@ -7,15 +7,19 @@
     "storage",
     "cookies",
     "activeTab",
-    "alarms"
+    "alarms",
+    "sidePanel"
   ],
   "host_permissions": [
     "https://squareft.ai/*",
+    "https://app.squareft.ai/*",
     "https://*.supabase.co/*",
     "http://localhost:3000/*"
   ],
+  "side_panel": {
+    "default_path": "popup.html"
+  },
   "action": {
-    "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",
