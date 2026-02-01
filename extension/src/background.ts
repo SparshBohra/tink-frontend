@@ -82,11 +82,38 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 
 // Note: onClicked is already handled above to open side panel
 
-// Listen for messages from popup to trigger badge update
+// Listen for messages from popup and content scripts
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === 'UPDATE_BADGE') {
     updateBadge().then(() => sendResponse({ success: true }))
-    return true // Keep channel open for async response
+    return true
+  }
+  
+  // Sync auth from dashboard content script
+  if (message.type === 'SYNC_AUTH') {
+    const { token, refreshToken } = message
+    if (token) {
+      supabase.auth.setSession({
+        access_token: token,
+        refresh_token: refreshToken || ''
+      }).then(() => {
+        console.log('Auth synced from dashboard')
+        updateBadge()
+        sendResponse({ success: true })
+      }).catch((err) => {
+        console.error('Auth sync failed:', err)
+        sendResponse({ success: false })
+      })
+      return true
+    }
+  }
+  
+  // Auth cleared on dashboard
+  if (message.type === 'AUTH_CLEARED') {
+    supabase.auth.signOut().then(() => {
+      console.log('Auth cleared - synced from dashboard')
+      chrome.action.setBadgeText({ text: '' })
+    })
   }
 })
 

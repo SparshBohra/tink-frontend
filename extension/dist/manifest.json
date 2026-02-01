@@ -34,5 +34,16 @@
   "background": {
     "service_worker": "background.js",
     "type": "module"
-  }
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://squareft.ai/*",
+        "https://app.squareft.ai/*",
+        "http://localhost:3000/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
 }
