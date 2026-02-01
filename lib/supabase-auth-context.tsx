@@ -86,12 +86,19 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
     }
   }
 
-  // Initialize auth state
+  // Initialize auth state with timeout
   useEffect(() => {
     const initAuth = async () => {
       try {
-        // Get current session
-        const { data: { session: currentSession } } = await supabase.auth.getSession()
+        // Add timeout to prevent infinite loading
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Auth timeout')), 10000)
+        )
+        
+        const sessionPromise = supabase.auth.getSession()
+        
+        const result = await Promise.race([sessionPromise, timeoutPromise]) as any
+        const currentSession = result?.data?.session
         
         if (currentSession) {
           setSession(currentSession)
@@ -100,6 +107,7 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
         }
       } catch (err) {
         console.error('Error initializing auth:', err)
+        // On timeout or error, just show login - don't stay stuck
       } finally {
         setLoading(false)
       }
@@ -301,31 +309,44 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
   // Sign out
   const signOut = async () => {
     try {
-      setLoading(true)
       setError(null)
+      // Don't set loading=true - just sign out immediately
 
-      // Log logout before clearing user context
-      await activityLogger.logLogout()
-      await activityLogger.flush()
+      // Try to log logout but don't wait too long (1 second max)
+      try {
+        const logPromise = Promise.all([
+          activityLogger.logLogout(),
+          activityLogger.flush()
+        ])
+        await Promise.race([
+          logPromise,
+          new Promise(resolve => setTimeout(resolve, 1000))
+        ])
+      } catch {
+        // Ignore logging errors during signout
+      }
       
-      const { error: authError } = await supabase.auth.signOut()
-      if (authError) throw authError
-
       // Clear logger user context
       activityLogger.clearUser()
       
+      // Clear state immediately
       setUser(null)
       setSession(null)
       setProfile(null)
       setOrganization(null)
+      setLoading(false)
 
-      // Use window.location for reliable redirect
+      // Sign out from Supabase (don't wait)
+      supabase.auth.signOut().catch(console.error)
+
+      // Redirect immediately
       window.location.href = '/auth/login'
     } catch (err) {
       console.error('Sign out error:', err)
       setError(handleAuthError(err))
-    } finally {
       setLoading(false)
+      // Still redirect even on error
+      window.location.href = '/auth/login'
     }
   }
 
