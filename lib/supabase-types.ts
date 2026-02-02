@@ -34,6 +34,21 @@ export interface Database {
         Insert: Omit<InboundMessage, 'id' | 'processed_at'>
         Update: Partial<Omit<InboundMessage, 'id'>>
       }
+      org_contacts: {
+        Row: OrgContact
+        Insert: Omit<OrgContact, 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Omit<OrgContact, 'id' | 'created_at'>>
+      }
+      inbound_queue: {
+        Row: InboundQueue
+        Insert: Omit<InboundQueue, 'id' | 'created_at'>
+        Update: Partial<Omit<InboundQueue, 'id' | 'created_at'>>
+      }
+      webhook_events: {
+        Row: WebhookEvent
+        Insert: Omit<WebhookEvent, 'id' | 'created_at'>
+        Update: Partial<Omit<WebhookEvent, 'id' | 'created_at'>>
+      }
     }
   }
 }
@@ -43,6 +58,7 @@ export interface Organization {
   id: string
   name: string
   slug: string | null
+  inbound_settings: Record<string, unknown> | null // Additional inbound processing settings
   created_at: string
 }
 
@@ -52,6 +68,9 @@ export interface Profile {
   organization_id: string | null
   full_name: string | null
   email: string | null
+  phone: string | null // Phone number for OTP verification
+  phone_verified: boolean // Whether phone has been verified
+  phone_verified_at: string | null // When phone was verified
   role: 'pm' | 'admin'
   created_at: string
 }
@@ -144,6 +163,77 @@ export interface TicketWithRelations extends Ticket {
 
 // Inbound Message Source Type
 export type MessageSource = 'email' | 'sms'
+
+// Contact Type
+export type ContactType = 'phone' | 'email'
+
+// Processing Status Type
+export type ProcessingStatus = 
+  | 'pending' 
+  | 'processing' 
+  | 'processed' 
+  | 'failed' 
+  | 'manual_review' 
+  | 'duplicate' 
+  | 'spam'
+
+// Webhook Source Type
+export type WebhookSource = 'sendgrid' | 'twilio' | 'other'
+
+// Webhook Status Type
+export type WebhookStatus = 'received' | 'processed' | 'failed' | 'ignored'
+
+// OrgContact - Verified contact methods for organizations
+export interface OrgContact {
+  id: string
+  organization_id: string
+  contact_type: ContactType
+  contact_value: string // Phone number or email address
+  label: string | null // User-friendly label like "Main Office"
+  is_verified: boolean
+  verification_code: string | null
+  verified_at: string | null
+  created_by: string | null // Profile ID of creator
+  created_at: string
+  updated_at: string
+}
+
+// InboundQueue - Queue for processing inbound messages
+export interface InboundQueue {
+  id: string
+  source_type: MessageSource
+  source_contact: string | null // Who sent it
+  destination: string | null // What they sent to
+  raw_subject: string | null
+  raw_body: string
+  raw_headers: Record<string, unknown> | null
+  processing_status: ProcessingStatus
+  retry_count: number
+  max_retries: number
+  organization_id: string | null
+  ticket_id: string | null
+  error_message: string | null
+  parsed_data: Record<string, unknown> | null // Gemini parsing results
+  created_at: string
+  processed_at: string | null
+  next_retry_at: string | null
+}
+
+// WebhookEvent - Log of webhook calls
+export interface WebhookEvent {
+  id: string
+  source: WebhookSource
+  event_type: string | null
+  payload: Record<string, unknown>
+  headers: Record<string, unknown> | null
+  signature_valid: boolean | null
+  status: WebhookStatus
+  processing_time_ms: number | null
+  error: string | null
+  inbound_queue_id: string | null
+  created_at: string
+  processed_at: string | null
+}
 
 // Inbound Message - Original email/SMS that created the ticket
 export interface InboundMessage {

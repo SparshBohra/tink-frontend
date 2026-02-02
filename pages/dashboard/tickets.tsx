@@ -154,6 +154,10 @@ function TicketsPage() {
           [newTicket.status]: prev[newTicket.status as keyof typeof prev] + 1,
           ...(newTicket.priority === 'emergency' ? { emergency: prev.emergency + 1 } : {})
         }))
+        
+        // Show toast notification for new ticket
+        setCopyToast(`New ${newTicket.priority} ticket: ${newTicket.title || 'Untitled'}`)
+        setTimeout(() => setCopyToast(null), 4000)
       },
       (updatedTicket) => {
         setTickets(prev => {
