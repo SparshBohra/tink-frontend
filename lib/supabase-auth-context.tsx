@@ -296,44 +296,48 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
           console.log('Created organization:', orgId)
         }
         
-        // Step 2: Create org_contacts if we have an org
-        if (orgId) {
-          const contactsToCreate = [
-            {
-              organization_id: orgId,
-              contact_type: 'email',
-              contact_value: email.toLowerCase(),
-              label: `${fullName} - Email`,
-              is_verified: false,
-              created_by: authData.user.id
-            }
-          ]
-          
-          if (phone) {
-            contactsToCreate.push({
-              organization_id: orgId,
-              contact_type: 'phone',
-              contact_value: phone,
-              label: `${fullName} - Phone`,
-              is_verified: false,
-              created_by: authData.user.id
-            })
+      // Step 2: Create org_contacts if we have an org
+      if (orgId) {
+        // ... (existing contact creation logic) ...
+        const contactsToCreate = [
+          {
+            organization_id: orgId,
+            contact_type: 'email',
+            contact_value: email.toLowerCase(),
+            label: `${fullName} - Email`,
+            is_verified: false,
+            created_by: authData.user.id
           }
-          
-          console.log('Creating org contacts:', contactsToCreate.length)
-          const { error: contactsError } = await supabase
-            .from('org_contacts')
-            .insert(contactsToCreate)
-          
-          if (contactsError) {
-            console.error('Error creating org contacts:', contactsError)
-          } else {
-            console.log('Org contacts created successfully')
-          }
+        ]
+        
+        if (phone) {
+          contactsToCreate.push({
+            organization_id: orgId,
+            contact_type: 'phone',
+            contact_value: phone,
+            label: `${fullName} - Phone`,
+            is_verified: false,
+            created_by: authData.user.id
+          })
+        }
+        
+        console.log('Creating org contacts:', JSON.stringify(contactsToCreate, null, 2))
+        const { error: contactsError, data: contactsData } = await supabase
+          .from('org_contacts')
+          .insert(contactsToCreate)
+          .select()
+        
+        if (contactsError) {
+          console.error('CRITICAL: Error creating org contacts:', contactsError)
+          // Don't return here, try to create profile anyway
+        } else {
+          console.log('Org contacts created successfully:', contactsData)
         }
       }
 
-      // Step 3: Check if profile already exists (could be created by Supabase trigger)
+      // Step 3: Check if profile already exists...
+      // ... (rest of function) ...
+
       const { data: profileExists } = await supabase
         .from('profiles')
         .select('id, full_name, organization_id')
@@ -521,47 +525,13 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
   const signOut = async () => {
     try {
       setError(null)
-      
-      // Clear logger (don't wait)
-      try {
-        activityLogger.logLogout()
-        activityLogger.clearUser()
-      } catch {
-        // Ignore
-      }
-      
-      // Clear all state immediately
-      setUser(null)
-      setSession(null)
-      setProfile(null)
-      setOrganization(null)
-      setLoading(false)
+      setLoading(true)
 
-      // Sign out from Supabase
-      try {
-        await supabase.auth.signOut({ scope: 'global' })
-      } catch {
-        // Ignore errors
-      }
-
-      // Force clear all storage
-      try {
-        localStorage.clear()
-        sessionStorage.clear()
-        // Clear cookies
-        document.cookie.split(';').forEach(c => {
-          document.cookie = c.replace(/^ +/, '').replace(/=.*/, '=;expires=' + new Date().toUTCString() + ';path=/')
-        })
-      } catch {
-        // Ignore
-      }
-
-      // Redirect with clear param to ensure clean state
-      window.location.href = '/auth/login?clear=true'
+      // Use the dedicated logout route for a clean exit
+      window.location.href = '/auth/logout'
     } catch (err) {
       console.error('Sign out error:', err)
-      // Force redirect anyway
-      window.location.href = '/auth/login?clear=true'
+      window.location.href = '/auth/logout'
     }
   }
 
