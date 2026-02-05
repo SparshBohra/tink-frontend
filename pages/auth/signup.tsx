@@ -46,20 +46,15 @@ export default function Signup() {
       return
     }
 
-    try {
-      setIsSubmitting(true)
-      const result = await signUp(email, password, fullName, orgName || undefined)
-      
-      // Check if email confirmation is required
-      if (result?.requiresConfirmation) {
-        setConfirmationSent(true)
-        setConfirmationEmail(email)
-      }
-    } catch (err) {
-      // Error handled in context
-    } finally {
-      setIsSubmitting(false)
+    setIsSubmitting(true)
+    const result = await signUp(email, password, fullName, orgName || undefined)
+    
+    // Check if email confirmation is required
+    if (result?.requiresConfirmation) {
+      setConfirmationSent(true)
+      setConfirmationEmail(email)
     }
+    setIsSubmitting(false)
   }
 
   if (isAuthenticated) {

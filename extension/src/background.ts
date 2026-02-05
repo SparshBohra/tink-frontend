@@ -90,30 +90,32 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
   
   // Sync auth from dashboard content script
-  if (message.type === 'SYNC_AUTH') {
-    const { token, refreshToken } = message
-    if (token) {
+  if (message.type === 'SYNC_AUTH_FROM_DASHBOARD') {
+    const { accessToken, refreshToken } = message
+    if (accessToken && refreshToken) {
       supabase.auth.setSession({
-        access_token: token,
-        refresh_token: refreshToken || ''
+        access_token: accessToken,
+        refresh_token: refreshToken
       }).then(() => {
         console.log('Auth synced from dashboard')
         updateBadge()
         sendResponse({ success: true })
       }).catch((err) => {
-        console.error('Auth sync failed:', err)
+        console.error('Failed to sync auth:', err)
         sendResponse({ success: false })
       })
       return true
     }
   }
   
-  // Auth cleared on dashboard
-  if (message.type === 'AUTH_CLEARED') {
+  // Dashboard logout - clear extension session too
+  if (message.type === 'DASHBOARD_LOGOUT') {
+    console.log('Dashboard logout detected - clearing extension session')
     supabase.auth.signOut().then(() => {
-      console.log('Auth cleared - synced from dashboard')
       chrome.action.setBadgeText({ text: '' })
+      sendResponse({ success: true })
     })
+    return true
   }
 })
 

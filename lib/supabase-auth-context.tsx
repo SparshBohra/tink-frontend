@@ -90,6 +90,21 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     const initAuth = async () => {
       try {
+        // Check if we're on a logout/clear page - if so, don't restore session
+        if (typeof window !== 'undefined') {
+          const urlParams = new URLSearchParams(window.location.search)
+          const isLogoutRequest = urlParams.get('clear') === 'true' || 
+                                   urlParams.get('logout') === 'true' ||
+                                   urlParams.get('reload') === 'done'
+          
+          if (isLogoutRequest && window.location.pathname.includes('/auth/login')) {
+            // On logout page with clear params - don't try to restore session
+            console.log('Logout request detected, skipping session restore')
+            setLoading(false)
+            return
+          }
+        }
+        
         // Add timeout to prevent infinite loading
         const timeoutPromise = new Promise((_, reject) => 
           setTimeout(() => reject(new Error('Auth timeout')), 10000)
@@ -153,6 +168,19 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
       setLoading(true)
       setError(null)
 
+      // First, check if a profile with this email already exists
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('id, email')
+        .eq('email', email.toLowerCase())
+        .maybeSingle()
+      
+      if (existingProfile) {
+        setError('An account with this email already exists. Please sign in instead.')
+        setLoading(false)
+        return null
+      }
+
       // Create auth user with email redirect to login page
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
@@ -169,9 +197,39 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
       if (authError) throw authError
       if (!authData.user) throw new Error('User creation failed')
 
+      // Check if user already exists
+      // Supabase returns user with empty identities for existing confirmed users
+      // For existing unconfirmed users, it returns the existing user without creating a new one
+      const isExistingUser = authData.user.identities && authData.user.identities.length === 0
+      
+      if (isExistingUser) {
+        // User already exists and is confirmed
+        setError('An account with this email already exists. Please sign in instead, or use "Forgot password" to reset your password.')
+        setLoading(false)
+        return null
+      }
+
       // Check if email confirmation is required
       // If session is null, email confirmation is pending
       if (!authData.session) {
+        // This is a new signup or existing unconfirmed user
+        // Try to resend confirmation email
+        try {
+          const { error: resendError } = await supabase.auth.resend({
+            type: 'signup',
+            email: email,
+            options: {
+              emailRedirectTo: `${window.location.origin}/auth/callback?type=signup`
+            }
+          })
+          
+          if (resendError) {
+            console.log('Resend error (might be rate limited):', resendError.message)
+          }
+        } catch (e) {
+          console.log('Resend failed:', e)
+        }
+        
         // Don't redirect - let the signup page show the confirmation message
         // Profile will be created after email confirmation
         return { requiresConfirmation: true, email }
@@ -219,7 +277,7 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
     } catch (err) {
       console.error('Sign up error:', err)
       setError(handleAuthError(err))
-      throw err
+      return null
     } finally {
       setLoading(false)
     }
@@ -236,7 +294,13 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
         password
       })
 
-      if (authError) throw authError
+      if (authError) {
+        const errorMsg = handleAuthError(authError)
+        setError(errorMsg)
+        activityLogger.logLoginFailed(errorMsg)
+        setLoading(false)
+        return // Don't throw - let UI handle the error state
+      }
 
       if (data.user) {
         await fetchUserData(data.user.id)
@@ -249,9 +313,8 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
       console.error('Sign in error:', err)
       const errorMsg = handleAuthError(err)
       setError(errorMsg)
-      // Log failed login
       activityLogger.logLoginFailed(errorMsg)
-      throw err
+      // Don't throw - let UI handle the error state
     } finally {
       setLoading(false)
     }
@@ -270,16 +333,21 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
         }
       })
 
-      if (authError) throw authError
+      if (authError) {
+        setError(handleAuthError(authError))
+        setLoading(false)
+        return false
+      }
       
       // Log magic link sent
       activityLogger.logMagicLinkSent(email)
+      setLoading(false)
+      return true
     } catch (err) {
       console.error('Magic link error:', err)
       setError(handleAuthError(err))
-      throw err
-    } finally {
       setLoading(false)
+      return false
     }
   }
 
@@ -293,16 +361,21 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
         redirectTo: `${window.location.origin}/auth/callback?type=recovery`
       })
 
-      if (authError) throw authError
+      if (authError) {
+        setError(handleAuthError(authError))
+        setLoading(false)
+        return false
+      }
       
       // Log password reset requested
       activityLogger.logPasswordResetRequested(email)
+      setLoading(false)
+      return true
     } catch (err) {
       console.error('Password reset error:', err)
       setError(handleAuthError(err))
-      throw err
-    } finally {
       setLoading(false)
+      return false
     }
   }
 

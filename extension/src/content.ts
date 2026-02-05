@@ -1,49 +1,60 @@
-// Content script - runs on squareft.ai and localhost to sync auth with extension
+// Content script - runs on squareft.ai and localhost
+// Syncs authentication state between dashboard and extension
 
-// Check for Supabase auth in localStorage and send to extension
-function checkAndSyncAuth() {
+const SUPABASE_PROJECT_REF = 'oubprrmcbyresbexpbuq'
+const AUTH_STORAGE_KEY = `sb-${SUPABASE_PROJECT_REF}-auth-token`
+
+// Check for auth in localStorage and sync to extension
+function syncAuthToExtension() {
   try {
-    // Look for Supabase auth token in localStorage
-    const keys = Object.keys(localStorage)
-    for (const key of keys) {
-      if (key.includes('supabase') && key.includes('auth')) {
-        const value = localStorage.getItem(key)
-        if (value) {
-          try {
-            const parsed = JSON.parse(value)
-            if (parsed.access_token) {
-              // Send to extension background
-              chrome.runtime.sendMessage({
-                type: 'SYNC_AUTH',
-                token: parsed.access_token,
-                refreshToken: parsed.refresh_token,
-                expiresAt: parsed.expires_at
-              })
-              return
-            }
-          } catch {
-            // Not JSON
-          }
-        }
+    const authData = localStorage.getItem(AUTH_STORAGE_KEY)
+    
+    if (authData) {
+      const parsed = JSON.parse(authData)
+      // Supabase stores session as { access_token, refresh_token, ... }
+      if (parsed?.access_token && parsed?.refresh_token) {
+        chrome.runtime.sendMessage({
+          type: 'SYNC_AUTH_FROM_DASHBOARD',
+          accessToken: parsed.access_token,
+          refreshToken: parsed.refresh_token,
+          expiresAt: parsed.expires_at
+        }).catch(() => {
+          // Extension might not be installed
+        })
       }
     }
-    
-    // No auth found - tell extension user is logged out
-    chrome.runtime.sendMessage({ type: 'AUTH_CLEARED' })
   } catch (err) {
-    console.error('Auth sync error:', err)
+    // Ignore errors
+  }
+}
+
+// Check for logout
+function checkForLogout() {
+  try {
+    if (window.location.search.includes('clear=true') || 
+        window.location.search.includes('logout=true')) {
+      chrome.runtime.sendMessage({ type: 'DASHBOARD_LOGOUT' }).catch(() => {})
+    }
+  } catch (err) {
+    // Ignore
   }
 }
 
 // Run on page load
-checkAndSyncAuth()
+syncAuthToExtension()
+checkForLogout()
 
-// Also listen for storage changes (login/logout)
+// Listen for storage changes (login/logout on dashboard)
 window.addEventListener('storage', (e) => {
-  if (e.key?.includes('supabase') && e.key?.includes('auth')) {
-    checkAndSyncAuth()
+  if (e.key === AUTH_STORAGE_KEY) {
+    if (e.newValue) {
+      syncAuthToExtension()
+    } else {
+      // Token removed - user logged out
+      chrome.runtime.sendMessage({ type: 'DASHBOARD_LOGOUT' }).catch(() => {})
+    }
   }
 })
 
-// Check periodically (in case of auth refresh)
-setInterval(checkAndSyncAuth, 30000)
+// Also sync after a short delay (in case of async login)
+setTimeout(syncAuthToExtension, 1000)

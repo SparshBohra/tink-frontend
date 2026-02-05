@@ -16,6 +16,7 @@ export default function AuthCallback() {
         const urlParams = new URLSearchParams(window.location.search)
         const queryType = urlParams.get('type')
         const code = urlParams.get('code') // PKCE flow code
+        const tokenHash = urlParams.get('token_hash') // Email confirmation token
         const errorParam = urlParams.get('error')
         const errorDescription = urlParams.get('error_description')
         
@@ -35,18 +36,21 @@ export default function AuthCallback() {
         // Determine the auth type (from hash or query)
         const type = hashType || queryType
         
-        console.log('Auth callback:', { type, hasCode: !!code, hasAccessToken: !!accessToken, queryType, hashType })
+        console.log('Auth callback:', { type, hasCode: !!code, hasTokenHash: !!tokenHash, hasAccessToken: !!accessToken })
 
-        // PKCE Flow: Exchange code for session
-        if (code) {
-          setMessage('Verifying authentication...')
+        // Email confirmation with token_hash (doesn't need PKCE verifier)
+        if (tokenHash && type) {
+          setMessage('Verifying email...')
           
-          const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
+          const { data, error: verifyError } = await supabase.auth.verifyOtp({
+            token_hash: tokenHash,
+            type: type as any // signup, recovery, email_change, etc.
+          })
           
-          if (exchangeError) {
-            console.error('Code exchange error:', exchangeError)
+          if (verifyError) {
+            console.error('Token verification error:', verifyError)
             setStatus('error')
-            setMessage(exchangeError.message || 'Failed to verify authentication')
+            setMessage(verifyError.message || 'Failed to verify email')
             return
           }
 
@@ -54,13 +58,110 @@ export default function AuthCallback() {
             await createProfileIfNeeded(data.user)
           }
           
-          setStatus('success')
-          setMessage('Login successful! Redirecting to dashboard...')
+          // For signup confirmation, redirect to login
+          if (type === 'signup' || type === 'email') {
+            setStatus('success')
+            setMessage('Email confirmed! Redirecting to login...')
+            await supabase.auth.signOut()
+            setTimeout(() => {
+              window.location.href = '/auth/login?confirmed=true'
+            }, 1500)
+            return
+          }
           
+          // For other types, go to dashboard
+          setStatus('success')
+          setMessage('Verified! Redirecting...')
           setTimeout(() => {
             window.location.href = '/dashboard/tickets'
           }, 1000)
           return
+        }
+
+        // PKCE Flow: Exchange code for session
+        if (code) {
+          setMessage('Verifying authentication...')
+          
+          try {
+            const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
+            
+            if (exchangeError) {
+              // If PKCE verifier not found, handle based on the auth type
+              if (exchangeError.message.includes('PKCE') || exchangeError.message.includes('code verifier')) {
+                console.log('PKCE verifier not found - handling based on type:', type)
+                
+                if (type === 'recovery') {
+                  // Password reset - can't proceed without session
+                  setStatus('error')
+                  setMessage('Reset link expired. Please request a new password reset.')
+                  return
+                }
+                
+                if (type === 'magiclink') {
+                  // Magic link - can't proceed without session
+                  setStatus('error')
+                  setMessage('Magic link expired. Please request a new one.')
+                  return
+                }
+                
+                // For signup/email confirmation, redirect to login
+                setStatus('success')
+                setMessage('Email verified! Please sign in.')
+                setTimeout(() => {
+                  window.location.href = '/auth/login?confirmed=true'
+                }, 1500)
+                return
+              }
+              
+              console.error('Code exchange error:', exchangeError)
+              setStatus('error')
+              setMessage(exchangeError.message || 'Failed to verify authentication')
+              return
+            }
+
+            if (data.user) {
+              await createProfileIfNeeded(data.user)
+            }
+            
+            // Handle based on type
+            if (type === 'recovery') {
+              setStatus('success')
+              setMessage('Verified! Redirecting to reset password...')
+              setTimeout(() => {
+                window.location.href = '/auth/reset-password'
+              }, 1000)
+              return
+            }
+            
+            if (type === 'signup') {
+              setStatus('success')
+              setMessage('Email confirmed! Redirecting to login...')
+              await supabase.auth.signOut()
+              setTimeout(() => {
+                window.location.href = '/auth/login?confirmed=true'
+              }, 1500)
+              return
+            }
+            
+            setStatus('success')
+            setMessage('Login successful! Redirecting to dashboard...')
+            
+            setTimeout(() => {
+              window.location.href = '/dashboard/tickets'
+            }, 1000)
+            return
+          } catch (err: any) {
+            // Fallback for PKCE errors
+            if (err?.message?.includes('PKCE') || err?.message?.includes('code verifier')) {
+              setStatus('success')
+              setMessage('Email verified! Please sign in.')
+              setTimeout(() => {
+                window.location.href = '/auth/login?confirmed=true'
+              }, 1500)
+              return
+            }
+            throw err
+          }
         }
 
         // Legacy Flow: If we have tokens in hash, set the session

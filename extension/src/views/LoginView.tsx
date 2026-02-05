@@ -1,7 +1,8 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { LogIn, Mail, Lock, Loader2, ExternalLink } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { openDashboard } from '../lib/auth'
+import { syncSessionToDashboard, restoreSessionFromDashboard } from '../lib/auth-sync'
 
 interface LoginViewProps {
   onLoginSuccess: () => void
@@ -11,7 +12,26 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const [checkingDashboard, setCheckingDashboard] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Try to restore session from dashboard on mount
+  useEffect(() => {
+    const checkDashboardSession = async () => {
+      try {
+        const restored = await restoreSessionFromDashboard()
+        if (restored) {
+          onLoginSuccess()
+          return
+        }
+      } catch (err) {
+        console.log('No dashboard session to restore')
+      }
+      setCheckingDashboard(false)
+    }
+    
+    checkDashboardSession()
+  }, [onLoginSuccess])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -35,6 +55,17 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
       }
 
       if (data.session) {
+        // Sync session to dashboard so user doesn't need to login again there
+        try {
+          await syncSessionToDashboard({
+            accessToken: data.session.access_token,
+            refreshToken: data.session.refresh_token,
+            expiresAt: data.session.expires_at || (Date.now() / 1000 + 3600)
+          })
+        } catch (syncErr) {
+          console.log('Failed to sync to dashboard:', syncErr)
+        }
+        
         onLoginSuccess()
       }
     } catch (err) {
@@ -42,6 +73,16 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
     } finally {
       setLoading(false)
     }
+  }
+
+  // Show loading while checking dashboard session
+  if (checkingDashboard) {
+    return (
+      <div className="flex flex-col h-full bg-slate-50 items-center justify-center">
+        <Loader2 size={24} className="animate-spin text-blue-600 mb-2" />
+        <p className="text-sm text-slate-500">Checking login status...</p>
+      </div>
+    )
   }
 
   return (

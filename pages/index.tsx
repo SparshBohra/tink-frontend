@@ -7,14 +7,20 @@ export default function Home() {
   const [isRedirecting, setIsRedirecting] = useState(false);
 
   useEffect(() => {
-    // Check for auth code in URL (Supabase PKCE flow)
+    // Check for auth params in URL (Supabase PKCE flow or email confirmation)
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get('code');
+    const tokenHash = urlParams.get('token_hash');
+    const type = urlParams.get('type');
     
-    if (code) {
-      // Redirect to auth callback with the code
+    if (code || tokenHash) {
+      // Redirect to auth callback with all relevant params
       setIsRedirecting(true);
-      window.location.href = `/auth/callback?code=${code}`;
+      const params = new URLSearchParams();
+      if (code) params.set('code', code);
+      if (tokenHash) params.set('token_hash', tokenHash);
+      if (type) params.set('type', type);
+      window.location.href = `/auth/callback?${params.toString()}`;
     }
   }, []);
 

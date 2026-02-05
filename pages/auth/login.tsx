@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
@@ -18,38 +18,46 @@ export default function Login() {
   const [showEmailNotConfirmed, setShowEmailNotConfirmed] = useState(false)
   const [showForgotPassword, setShowForgotPassword] = useState(false)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null)
+  const [forceShowForm, setForceShowForm] = useState(false)
+  const clearedRef = useRef(false)
 
   useEffect(() => {
     clearError()
     
     // Check for URL params
     const urlParams = new URLSearchParams(window.location.search)
+    const isClearRequest = urlParams.get('clear') === 'true' || urlParams.get('logout') === 'true'
+    const isReloadDone = urlParams.get('reload') === 'done'
     
-    // Clear session if ?clear=true or ?logout=true
-    if (urlParams.get('clear') === 'true' || urlParams.get('logout') === 'true') {
-      // Clear all storage
-      localStorage.clear()
-      sessionStorage.clear()
+    // If this is a clear/logout request or we just reloaded after clear
+    if (isClearRequest || isReloadDone) {
+      // Force show the form immediately - don't wait for auth context
+      setForceShowForm(true)
       
-      // Clear all cookies
-      document.cookie.split(';').forEach(c => {
-        document.cookie = c.replace(/^ +/, '').replace(/=.*/, '=;expires=' + new Date().toUTCString() + ';path=/')
-      })
-      
-      // Clear IndexedDB (Supabase may use this)
-      try {
-        indexedDB.deleteDatabase('supabase-auth-token')
-      } catch (e) {
-        console.log('IndexedDB clear failed:', e)
-      }
-      
-      setToast({ message: 'Session cleared. Please sign in.', type: 'info' })
-      window.history.replaceState({}, '', '/auth/login')
-      
-      // Force reload to clear any cached auth state
-      if (urlParams.get('reload') !== 'done') {
-        window.location.href = '/auth/login?reload=done'
-        return
+      // Only clear storage once (not on the reload=done request)
+      if (isClearRequest && !clearedRef.current) {
+        clearedRef.current = true
+        
+        // Clear all storage synchronously
+        try {
+          localStorage.clear()
+          sessionStorage.clear()
+          
+          // Clear all cookies
+          document.cookie.split(';').forEach(c => {
+            document.cookie = c.replace(/^ +/, '').replace(/=.*/, '=;expires=' + new Date().toUTCString() + ';path=/')
+          })
+          
+          // Clear IndexedDB
+          indexedDB.deleteDatabase('supabase-auth-token')
+        } catch (e) {
+          console.log('Storage clear error:', e)
+        }
+        
+        setToast({ message: 'Signed out successfully.', type: 'info' })
+        
+        // Update URL without reload if possible
+        window.history.replaceState({}, '', '/auth/login?reload=done')
       }
     }
     
@@ -64,15 +72,25 @@ export default function Login() {
   }, [])
 
   useEffect(() => {
-    if (!loading && isAuthenticated) {
-      // Use window.location.replace for immediate redirect
-      // This replaces the current history entry so back button works correctly
+    // Only redirect to dashboard if:
+    // 1. Not loading
+    // 2. Is authenticated
+    // 3. NOT a force show form situation (logout/clear)
+    if (!loading && isAuthenticated && !forceShowForm) {
       window.location.replace('/dashboard/tickets')
     }
-  }, [loading, isAuthenticated])
+  }, [loading, isAuthenticated, forceShowForm])
+
+  // Watch for email not confirmed errors
+  useEffect(() => {
+    if (error?.toLowerCase().includes('email not confirmed')) {
+      setShowEmailNotConfirmed(true)
+    }
+  }, [error])
 
   // Show loading while auth state is being checked
-  if (loading) {
+  // BUT skip loading screen if forceShowForm is true (user is logging out)
+  if (loading && !forceShowForm) {
     return (
       <div style={{ 
         minHeight: '100vh', 
@@ -97,52 +115,38 @@ export default function Login() {
     if (isSubmitting) return
 
     setShowEmailNotConfirmed(false)
-    
-    try {
-      setIsSubmitting(true)
-      await signIn(email, password)
-    } catch (err: any) {
-      // Check for email not confirmed error
-      if (err?.message?.toLowerCase().includes('email not confirmed')) {
-        setShowEmailNotConfirmed(true)
-      }
-    } finally {
-      setIsSubmitting(false)
-    }
+    setIsSubmitting(true)
+    await signIn(email, password)
+    setIsSubmitting(false)
   }
 
   const handleMagicLink = async (e: React.FormEvent) => {
     e.preventDefault()
     if (isSubmitting || !email) return
 
-    try {
-      setIsSubmitting(true)
-      await signInWithMagicLink(email)
+    setIsSubmitting(true)
+    const success = await signInWithMagicLink(email)
+    if (success) {
       setMagicLinkSent(true)
-    } catch (err) {
-      // Error handled in context
-    } finally {
-      setIsSubmitting(false)
     }
+    setIsSubmitting(false)
   }
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault()
     if (isSubmitting || !email) return
 
-    try {
-      setIsSubmitting(true)
-      await resetPassword(email)
+    setIsSubmitting(true)
+    const success = await resetPassword(email)
+    if (success) {
       setResetLinkSent(true)
       setShowForgotPassword(false)
-    } catch (err) {
-      // Error handled in context
-    } finally {
-      setIsSubmitting(false)
     }
+    setIsSubmitting(false)
   }
 
-  if (isAuthenticated) {
+  // Only show "Welcome back" redirect screen if authenticated AND not forcing form display
+  if (isAuthenticated && !forceShowForm) {
     return (
       <>
         <Head>
