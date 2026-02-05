@@ -92,9 +92,29 @@ export const checkAuth = async (): Promise<AuthState> => {
   }
 }
 
-// Sign out from extension
+// Sign out from extension only
 export const signOut = async (): Promise<void> => {
   await supabase.auth.signOut()
+}
+
+// Sign out from extension AND clear dashboard session
+export const signOutAndClearDashboard = async (): Promise<void> => {
+  try {
+    // Sign out from extension's Supabase
+    await supabase.auth.signOut()
+    
+    // Clear dashboard cookies
+    const { clearDashboardSession } = await import('./auth-sync')
+    await clearDashboardSession()
+    
+    // Open dashboard logout page to ensure it's fully cleared
+    // This will trigger the dashboard's logout flow
+    chrome.tabs.create({ url: `${activeDashboardUrl}/auth/login?logout=true` })
+  } catch (err) {
+    console.error('Error during sign out:', err)
+    // Still try to open logout page
+    chrome.tabs.create({ url: `${activeDashboardUrl}/auth/login?logout=true` })
+  }
 }
 
 // Listen for auth state changes

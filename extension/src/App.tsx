@@ -98,6 +98,20 @@ function App() {
     showToast('Updated')
   }, [showToast])
   
+  // Handle logout from header
+  const handleLogout = useCallback(() => {
+    setAuthState({
+      isAuthenticated: false,
+      loading: false,
+      profile: null,
+      organization: null,
+      organizationId: null,
+      error: null
+    })
+    setCurrentView('list')
+    setSelectedTicket(null)
+  }, [])
+  
   // Loading state
   if (authState.loading) {
     return (
@@ -124,6 +138,7 @@ function App() {
         showBackButton={currentView === 'detail'}
         onBack={handleBack}
         ticketNumber={selectedTicket?.ticket_number}
+        onLogout={handleLogout}
       />
       
       <main className="flex-1 overflow-hidden">

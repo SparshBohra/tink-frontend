@@ -134,6 +134,25 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
         console.log('Auth state changed:', event)
+        
+        // Check if we're on a logout page - don't restore session
+        if (typeof window !== 'undefined') {
+          const urlParams = new URLSearchParams(window.location.search)
+          const isLogoutRequest = urlParams.get('clear') === 'true' || 
+                                   urlParams.get('logout') === 'true' ||
+                                   urlParams.get('reload') === 'done'
+          
+          if (isLogoutRequest && window.location.pathname.includes('/auth/login')) {
+            console.log('On logout page - ignoring auth state change')
+            setSession(null)
+            setUser(null)
+            setProfile(null)
+            setOrganization(null)
+            setLoading(false)
+            return
+          }
+        }
+        
         setSession(newSession)
         setUser(newSession?.user ?? null)
 

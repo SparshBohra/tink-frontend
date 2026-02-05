@@ -1,6 +1,6 @@
-import React from 'react'
-import { Settings, ExternalLink, ArrowLeft, Calendar, List } from 'lucide-react'
-import { openDashboard, openDashboardSettings } from '../lib/auth'
+import React, { useState, useRef, useEffect } from 'react'
+import { Settings, ExternalLink, ArrowLeft, Calendar, List, LogOut, ChevronDown } from 'lucide-react'
+import { openDashboard, signOutAndClearDashboard } from '../lib/auth'
 import { Organization } from '../types'
 
 interface HeaderProps {
@@ -10,6 +10,7 @@ interface HeaderProps {
   showBackButton?: boolean
   onBack?: () => void
   ticketNumber?: number
+  onLogout?: () => void
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -17,8 +18,34 @@ const Header: React.FC<HeaderProps> = ({
   onTabChange,
   showBackButton,
   onBack,
-  ticketNumber
+  ticketNumber,
+  onLogout
 }) => {
+  const [showMenu, setShowMenu] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+  
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowMenu(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+  
+  const handleLogout = async () => {
+    setShowMenu(false)
+    await signOutAndClearDashboard()
+    onLogout?.()
+  }
+  
+  const handleOpenDashboard = () => {
+    setShowMenu(false)
+    openDashboard()
+  }
+  
   return (
     <header className="bg-white border-b border-slate-200 flex-shrink-0">
       {/* Top bar */}
@@ -46,21 +73,36 @@ const Header: React.FC<HeaderProps> = ({
           </span>
         )}
         
-        <div className="flex items-center gap-2">
+        {/* Settings Menu */}
+        <div className="relative" ref={menuRef}>
           <button
-            onClick={openDashboardSettings}
-            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-            title="Settings (opens dashboard)"
+            onClick={() => setShowMenu(!showMenu)}
+            className="flex items-center gap-1 p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+            title="Menu"
           >
             <Settings size={18} />
+            <ChevronDown size={14} />
           </button>
-          <button
-            onClick={openDashboard}
-            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-            title="Open Dashboard"
-          >
-            <ExternalLink size={18} />
-          </button>
+          
+          {showMenu && (
+            <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-50">
+              <button
+                onClick={handleOpenDashboard}
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+              >
+                <ExternalLink size={16} className="text-slate-400" />
+                Open Dashboard
+              </button>
+              <div className="border-t border-slate-100 my-1" />
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+              >
+                <LogOut size={16} />
+                Sign Out
+              </button>
+            </div>
+          )}
         </div>
       </div>
       
