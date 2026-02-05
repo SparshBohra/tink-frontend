@@ -334,21 +334,21 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
       }
 
       // Step 3: Check if profile already exists (could be created by Supabase trigger)
-      const { data: existingProfile } = await supabase
+      const { data: profileExists } = await supabase
         .from('profiles')
         .select('id, full_name, organization_id')
         .eq('id', authData.user.id)
         .single()
 
-      if (existingProfile) {
-        console.log('Profile already exists, updating it:', existingProfile)
+      if (profileExists) {
+        console.log('Profile already exists, updating it:', profileExists)
         // Update existing profile with the correct data
         const { error: updateError } = await supabase
           .from('profiles')
           .update({
             email: email,
             full_name: fullName,
-            organization_id: orgId || existingProfile.organization_id,
+            organization_id: orgId || profileExists.organization_id,
             phone: phone || null,
             role: 'pm'
           })
