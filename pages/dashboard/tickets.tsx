@@ -53,7 +53,15 @@ const PRIORITY_ORDER: Record<TicketPriority, number> = {
 }
 
 function TicketsPage() {
-  const { organizationId, profile } = useSupabaseAuth()
+  const { organizationId, profile, refreshProfile, user } = useSupabaseAuth()
+  
+  // Refresh profile if it appears incomplete (e.g., full_name is 'User' or missing)
+  useEffect(() => {
+    if (user && profile && (!profile.full_name || profile.full_name === 'User')) {
+      console.log('Profile appears incomplete, refreshing...', profile)
+      refreshProfile()
+    }
+  }, [user, profile, refreshProfile])
   
   // Tab State
   const [activeTab, setActiveTab] = useState<'tickets' | 'calendar'>('tickets')

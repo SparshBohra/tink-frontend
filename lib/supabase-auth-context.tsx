@@ -256,10 +256,18 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
       }
 
       // If we get here, email confirmation is disabled - create profile immediately
+      console.log('=== Creating profile immediately (no email confirmation) ===')
+      console.log('User ID:', authData.user.id)
+      console.log('Full Name:', fullName)
+      console.log('Org Name:', orgName)
+      console.log('Phone:', phone)
+      
       let orgId: string | null = null
       
+      // Step 1: Create organization if provided
       if (orgName) {
         const slug = orgName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+        console.log('Creating organization with slug:', slug)
         
         const { data: orgData, error: orgError } = await supabase
           .from('organizations')
@@ -272,10 +280,24 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
 
         if (orgError) {
           console.error('Error creating organization:', orgError)
+          // Try to check if org with this slug exists and use it
+          const { data: existingOrg } = await supabase
+            .from('organizations')
+            .select('id')
+            .eq('slug', slug)
+            .single()
+          
+          if (existingOrg) {
+            console.log('Using existing organization:', existingOrg.id)
+            orgId = existingOrg.id
+          }
         } else {
           orgId = orgData.id
-          
-          // Create org_contacts entries for email and phone
+          console.log('Created organization:', orgId)
+        }
+        
+        // Step 2: Create org_contacts if we have an org
+        if (orgId) {
           const contactsToCreate = [
             {
               organization_id: orgId,
@@ -298,29 +320,92 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
             })
           }
           
+          console.log('Creating org contacts:', contactsToCreate.length)
           const { error: contactsError } = await supabase
             .from('org_contacts')
             .insert(contactsToCreate)
           
           if (contactsError) {
             console.error('Error creating org contacts:', contactsError)
+          } else {
+            console.log('Org contacts created successfully')
           }
         }
       }
 
-      const { error: profileError } = await supabase
+      // Step 3: Check if profile already exists (could be created by Supabase trigger)
+      const { data: existingProfile } = await supabase
         .from('profiles')
-        .insert({
-          id: authData.user.id,
-          email: email,
-          full_name: fullName,
-          organization_id: orgId,
-          phone: phone || null,
-          role: 'pm'
-        })
+        .select('id, full_name, organization_id')
+        .eq('id', authData.user.id)
+        .single()
 
-      if (profileError) {
-        console.error('Error creating profile:', profileError)
+      if (existingProfile) {
+        console.log('Profile already exists, updating it:', existingProfile)
+        // Update existing profile with the correct data
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({
+            email: email,
+            full_name: fullName,
+            organization_id: orgId || existingProfile.organization_id,
+            phone: phone || null,
+            role: 'pm'
+          })
+          .eq('id', authData.user.id)
+        
+        if (updateError) {
+          console.error('Error updating existing profile:', updateError)
+        } else {
+          console.log('Profile updated successfully')
+        }
+      } else {
+        // Create new profile
+        console.log('Creating new profile')
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: authData.user.id,
+            email: email,
+            full_name: fullName,
+            organization_id: orgId,
+            phone: phone || null,
+            role: 'pm'
+          })
+
+        if (profileError) {
+          console.error('Error creating profile:', profileError)
+        } else {
+          console.log('Profile created successfully')
+        }
+      }
+
+      // Step 4: Verify the profile was created correctly
+      const { data: verifyProfile, error: verifyError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', authData.user.id)
+        .single()
+      
+      console.log('Profile verification:', verifyProfile, verifyError)
+
+      // Step 5: Update local state before redirect
+      if (verifyProfile) {
+        setProfile(verifyProfile as any)
+        setUser(authData.user)
+        setSession(authData.session)
+        
+        if (verifyProfile.organization_id) {
+          const { data: orgData } = await supabase
+            .from('organizations')
+            .select('*')
+            .eq('id', verifyProfile.organization_id)
+            .single()
+          
+          if (orgData) {
+            setOrganization(orgData as any)
+          }
+        }
       }
 
       // Use window.location for reliable redirect
