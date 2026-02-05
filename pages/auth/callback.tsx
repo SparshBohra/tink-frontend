@@ -286,9 +286,11 @@ export default function AuthCallback() {
         const metadata = user.user_metadata || user.raw_user_meta_data || {}
         const fullName = metadata.full_name || metadata.fullName || user.email?.split('@')[0] || 'User'
         const orgName = metadata.org_name || metadata.orgName || ''
+        const phone = metadata.phone || ''
         
         console.log('Extracted fullName:', fullName)
         console.log('Extracted orgName:', orgName)
+        console.log('Extracted phone:', phone)
         
         // Check if profile exists
         const { data: existingProfile } = await supabase
@@ -320,9 +322,47 @@ export default function AuthCallback() {
             if (!orgError && orgData) {
               console.log('Created organization for existing profile:', orgData.id)
               updates.organization_id = orgData.id
+              
+              // Create org_contacts entries
+              const contactsToCreate: any[] = [
+                {
+                  organization_id: orgData.id,
+                  contact_type: 'email',
+                  contact_value: user.email.toLowerCase(),
+                  label: `${fullName} - Email`,
+                  is_verified: false,
+                  created_by: user.id
+                }
+              ]
+              
+              if (phone) {
+                contactsToCreate.push({
+                  organization_id: orgData.id,
+                  contact_type: 'phone',
+                  contact_value: phone,
+                  label: `${fullName} - Phone`,
+                  is_verified: false,
+                  created_by: user.id
+                })
+              }
+              
+              const { error: contactsError } = await supabase
+                .from('org_contacts')
+                .insert(contactsToCreate)
+              
+              if (contactsError) {
+                console.error('Error creating org contacts:', contactsError)
+              } else {
+                console.log('Created org contacts successfully')
+              }
             } else if (orgError) {
               console.error('Error creating org for existing profile:', orgError)
             }
+          }
+          
+          // Update phone in profile if provided and not already set
+          if (phone) {
+            updates.phone = phone
           }
           
           // Apply updates if any
@@ -358,6 +398,39 @@ export default function AuthCallback() {
             console.error('Error creating org:', orgError)
           } else {
             orgId = orgData?.id || null
+            
+            // Create org_contacts entries for email and phone
+            const contactsToCreate: any[] = [
+              {
+                organization_id: orgId,
+                contact_type: 'email',
+                contact_value: user.email.toLowerCase(),
+                label: `${fullName} - Email`,
+                is_verified: false,
+                created_by: user.id
+              }
+            ]
+            
+            if (phone) {
+              contactsToCreate.push({
+                organization_id: orgId,
+                contact_type: 'phone',
+                contact_value: phone,
+                label: `${fullName} - Phone`,
+                is_verified: false,
+                created_by: user.id
+              })
+            }
+            
+            const { error: contactsError } = await supabase
+              .from('org_contacts')
+              .insert(contactsToCreate)
+            
+            if (contactsError) {
+              console.error('Error creating org contacts:', contactsError)
+            } else {
+              console.log('Created org contacts for new profile')
+            }
           }
         }
 
@@ -369,6 +442,7 @@ export default function AuthCallback() {
             email: user.email,
             full_name: fullName,
             organization_id: orgId,
+            phone: phone || null,
             role: 'pm'
           })
         

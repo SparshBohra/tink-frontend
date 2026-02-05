@@ -3,7 +3,7 @@ import Head from 'next/head'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { useSupabaseAuth } from '../../lib/supabase-auth-context'
-import { Mail, Lock, User, Building2, Loader2, CheckCircle } from 'lucide-react'
+import { Mail, Lock, User, Building2, Loader2, CheckCircle, Phone } from 'lucide-react'
 
 export default function Signup() {
   const router = useRouter()
@@ -13,6 +13,7 @@ export default function Signup() {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [fullName, setFullName] = useState('')
+  const [phone, setPhone] = useState('')
   const [orgName, setOrgName] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [validationError, setValidationError] = useState<string | null>(null)
@@ -46,8 +47,17 @@ export default function Signup() {
       return
     }
 
+    // Format phone number (remove non-digits, ensure starts with +1 for US)
+    let formattedPhone = phone.replace(/\D/g, '')
+    if (formattedPhone && !formattedPhone.startsWith('1') && formattedPhone.length === 10) {
+      formattedPhone = '1' + formattedPhone
+    }
+    if (formattedPhone && !formattedPhone.startsWith('+')) {
+      formattedPhone = '+' + formattedPhone
+    }
+
     setIsSubmitting(true)
-    const result = await signUp(email, password, fullName, orgName || undefined)
+    const result = await signUp(email, password, fullName, orgName || undefined, formattedPhone || undefined)
     
     // Check if email confirmation is required
     if (result?.requiresConfirmation) {
@@ -296,6 +306,22 @@ export default function Signup() {
                   disabled={isSubmitting}
                 />
               </div>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="phone">Phone Number</label>
+              <div className="input-wrapper">
+                <Phone size={18} className="input-icon" />
+                <input
+                  id="phone"
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="+1 (555) 123-4567"
+                  disabled={isSubmitting}
+                />
+              </div>
+              <span className="form-hint">Used to receive forwarded SMS maintenance requests</span>
             </div>
 
             <div className="form-group">

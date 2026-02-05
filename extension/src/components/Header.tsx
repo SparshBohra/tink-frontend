@@ -65,7 +65,7 @@ const Header: React.FC<HeaderProps> = ({
         ) : (
           <div className="flex items-center gap-2.5">
             <img 
-              src="/icons/icon48.png" 
+              src="icons/icon48.png" 
               alt="SquareFt" 
               className="w-7 h-7"
             />

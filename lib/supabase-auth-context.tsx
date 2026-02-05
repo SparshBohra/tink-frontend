@@ -182,7 +182,7 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
   }
 
   // Sign up with email/password
-  const signUp = async (email: string, password: string, fullName: string, orgName?: string) => {
+  const signUp = async (email: string, password: string, fullName: string, orgName?: string, phone?: string) => {
     try {
       setLoading(true)
       setError(null)
@@ -207,7 +207,8 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
         options: {
           data: {
             full_name: fullName,
-            org_name: orgName // Store for profile creation after confirmation
+            org_name: orgName, // Store for profile creation after confirmation
+            phone: phone // Store phone for org_contacts creation
           },
           emailRedirectTo: `${window.location.origin}/auth/callback?type=signup`
         }
@@ -273,6 +274,37 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
           console.error('Error creating organization:', orgError)
         } else {
           orgId = orgData.id
+          
+          // Create org_contacts entries for email and phone
+          const contactsToCreate = [
+            {
+              organization_id: orgId,
+              contact_type: 'email',
+              contact_value: email.toLowerCase(),
+              label: `${fullName} - Email`,
+              is_verified: false,
+              created_by: authData.user.id
+            }
+          ]
+          
+          if (phone) {
+            contactsToCreate.push({
+              organization_id: orgId,
+              contact_type: 'phone',
+              contact_value: phone,
+              label: `${fullName} - Phone`,
+              is_verified: false,
+              created_by: authData.user.id
+            })
+          }
+          
+          const { error: contactsError } = await supabase
+            .from('org_contacts')
+            .insert(contactsToCreate)
+          
+          if (contactsError) {
+            console.error('Error creating org contacts:', contactsError)
+          }
         }
       }
 
@@ -283,6 +315,7 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
           email: email,
           full_name: fullName,
           organization_id: orgId,
+          phone: phone || null,
           role: 'pm'
         })
 
