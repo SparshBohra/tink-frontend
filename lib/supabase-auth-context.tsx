@@ -42,7 +42,6 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
   const [organization, setOrganization] = useState<Organization | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [isLoggingOut, setIsLoggingOut] = useState(false)
   const router = useRouter()
 
   // Fetch user profile and organization with timeout
@@ -89,69 +88,28 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
     }
   }
 
-  // Initialize auth state with timeout
+  // Initialize auth state - SIMPLE version
   useEffect(() => {
     const initAuth = async () => {
       try {
-        // Check if we're on a logout/clear page - if so, don't restore session
-        if (typeof window !== 'undefined') {
-          const urlParams = new URLSearchParams(window.location.search)
-          const isLogoutFlag = localStorage.getItem('squareft_logging_out') === 'true'
-          const isLogoutRequest = urlParams.get('clear') === 'true' || 
-                                   urlParams.get('logout') === 'true' ||
-                                   urlParams.get('reload') === 'done' ||
-                                   window.location.pathname.includes('/auth/logout') ||
-                                   isLogoutFlag
-          
-          if (isLogoutRequest) {
-            // On logout page with clear params - don't try to restore session
-            console.log('Logout request detected, skipping session restore')
-            setIsLoggingOut(true)
-            setLoading(false)
-            return
-          }
-          
-          // Clear any stale logout flag if we're on login page (fresh start)
-          if (window.location.pathname === '/auth/login' && !urlParams.get('clear') && !urlParams.get('logout')) {
-            localStorage.removeItem('squareft_logging_out')
-          }
-        }
-        
-        // For auth pages, skip the session check to show form immediately
-        const isAuthPage = window.location.pathname.startsWith('/auth/')
-        if (isAuthPage) {
-          // Just check if session exists, don't fetch user data
-          const { data: { session: currentSession } } = await supabase.auth.getSession()
-          if (currentSession) {
-            setSession(currentSession)
-            setUser(currentSession.user)
-            // On auth pages with session, redirect to dashboard
-            if (window.location.pathname === '/auth/login') {
-              window.location.href = '/dashboard/tickets'
-              return
-            }
-          }
+        // Skip if on logout page
+        if (window.location.pathname.includes('/auth/logout')) {
           setLoading(false)
           return
         }
         
-        // For dashboard/other pages, fetch session and user data
+        // Get session
         const { data: { session: currentSession } } = await supabase.auth.getSession()
         
         if (currentSession) {
           setSession(currentSession)
           setUser(currentSession.user)
           
-          // Fetch user data with timeout - don't block forever
-          const fetchPromise = fetchUserData(currentSession.user.id)
-          const timeoutPromise = new Promise<void>(resolve => setTimeout(resolve, 3000))
-          
-          // Wait for fetch OR timeout, whichever comes first
-          await Promise.race([fetchPromise, timeoutPromise])
+          // Fetch user data (don't await - let it load in background)
+          fetchUserData(currentSession.user.id)
         }
       } catch (err) {
         console.error('Error initializing auth:', err)
-        // On error, just show login - don't stay stuck
       } finally {
         setLoading(false)
       }
@@ -159,49 +117,16 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
 
     initAuth()
 
-    // Listen for auth changes
+    // Listen for auth changes - SIMPLE version
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
-        console.log('Auth state changed:', event, 'isLoggingOut:', isLoggingOut)
+        console.log('Auth state changed:', event)
         
-        // Check if we're on a logout page or actively logging out - don't restore session
-        if (typeof window !== 'undefined') {
-          const urlParams = new URLSearchParams(window.location.search)
-          const isLogoutFlag = localStorage.getItem('squareft_logging_out') === 'true'
-          const isLogoutRequest = urlParams.get('clear') === 'true' || 
-                                   urlParams.get('logout') === 'true' ||
-                                   urlParams.get('reload') === 'done' ||
-                                   window.location.pathname.includes('/auth/logout') ||
-                                   isLogoutFlag
-          
-          if (isLogoutRequest || isLoggingOut) {
-            console.log('Logout in progress - ignoring auth state change:', event)
-            setSession(null)
-            setUser(null)
-            setProfile(null)
-            setOrganization(null)
-            setLoading(false)
-            return
-          }
-        }
-        
-        // Handle SIGNED_OUT event - redirect to login
         if (event === 'SIGNED_OUT') {
           setSession(null)
           setUser(null)
           setProfile(null)
           setOrganization(null)
-          setLoading(false)
-          // Redirect to login if not already there
-          if (!window.location.pathname.includes('/auth/')) {
-            window.location.href = '/auth/login'
-          }
-          return
-        }
-        
-        // Only process SIGNED_IN if not logging out
-        if (event === 'SIGNED_IN' && isLoggingOut) {
-          console.log('Ignoring SIGNED_IN during logout')
           return
         }
         
@@ -209,66 +134,29 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
         setUser(newSession?.user ?? null)
 
         if (newSession?.user) {
-          // For auth pages, don't block on user data
-          const isAuthPage = window.location.pathname.startsWith('/auth/')
-          if (isAuthPage) {
-            setLoading(false)
-          } else {
-            // For dashboard, wait for user data
-            await fetchUserData(newSession.user.id)
-            setLoading(false)
-          }
+          fetchUserData(newSession.user.id)
         } else {
           setProfile(null)
           setOrganization(null)
-          setLoading(false)
         }
       }
     )
     
-    // Listen for cross-tab logout via storage events
+    // Listen for storage changes (for extension sync)
     const handleStorageChange = (e: StorageEvent) => {
-      // Supabase stores auth in localStorage with key pattern sb-*-auth-token
       if (e.key?.includes('auth-token') && e.newValue === null) {
-        console.log('Cross-tab logout detected via storage')
+        // Token removed - logged out (possibly from extension)
         setSession(null)
         setUser(null)
         setProfile(null)
         setOrganization(null)
-        // Redirect to login
-        if (!window.location.pathname.includes('/auth/')) {
-          window.location.href = '/auth/login'
-        }
       }
     }
-    
     window.addEventListener('storage', handleStorageChange)
-    
-    // Listen for cross-tab logout via BroadcastChannel (more reliable)
-    let bc: BroadcastChannel | null = null
-    try {
-      bc = new BroadcastChannel('squareft_auth')
-      bc.onmessage = (event) => {
-        if (event.data?.type === 'LOGOUT') {
-          console.log('Cross-tab logout detected via BroadcastChannel')
-          setSession(null)
-          setUser(null)
-          setProfile(null)
-          setOrganization(null)
-          // Redirect to login
-          if (!window.location.pathname.includes('/auth/')) {
-            window.location.href = '/auth/login'
-          }
-        }
-      }
-    } catch (e) {
-      console.log('BroadcastChannel not supported')
-    }
 
     return () => {
       subscription.unsubscribe()
       window.removeEventListener('storage', handleStorageChange)
-      if (bc) bc.close()
     }
   }, [])
 
@@ -482,18 +370,15 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
   // Sign out - aggressive clear of all auth state
   const signOut = async () => {
     try {
-      setError(null)
-      setLoading(true)
-      setIsLoggingOut(true)
-      
-      // Set a localStorage flag to persist across page loads
-      localStorage.setItem('squareft_logging_out', 'true')
-
-      // Use the dedicated logout route for a clean exit
-      window.location.href = '/auth/logout'
+      await supabase.auth.signOut()
+      setSession(null)
+      setUser(null)
+      setProfile(null)
+      setOrganization(null)
+      window.location.href = '/auth/login'
     } catch (err) {
       console.error('Sign out error:', err)
-      window.location.href = '/auth/logout'
+      window.location.href = '/auth/login'
     }
   }
 
