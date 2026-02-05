@@ -4,6 +4,21 @@
 const SUPABASE_PROJECT_REF = 'oubprrmcbyresbexpbuq'
 const AUTH_STORAGE_KEY = `sb-${SUPABASE_PROJECT_REF}-auth-token`
 
+// Safe message sender - handles cases where extension context is invalidated
+function safeSendMessage(message: any) {
+  try {
+    // Check if chrome.runtime is available and connected
+    if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.id) {
+      return
+    }
+    chrome.runtime.sendMessage(message).catch(() => {
+      // Extension might not be installed or context invalidated
+    })
+  } catch {
+    // Silently ignore - extension context might be invalidated
+  }
+}
+
 // Check for auth in localStorage and sync to extension
 function syncAuthToExtension() {
   try {
@@ -13,17 +28,15 @@ function syncAuthToExtension() {
       const parsed = JSON.parse(authData)
       // Supabase stores session as { access_token, refresh_token, ... }
       if (parsed?.access_token && parsed?.refresh_token) {
-        chrome.runtime.sendMessage({
+        safeSendMessage({
           type: 'SYNC_AUTH_FROM_DASHBOARD',
           accessToken: parsed.access_token,
           refreshToken: parsed.refresh_token,
           expiresAt: parsed.expires_at
-        }).catch(() => {
-          // Extension might not be installed
         })
       }
     }
-  } catch (err) {
+  } catch {
     // Ignore errors
   }
 }
@@ -33,9 +46,9 @@ function checkForLogout() {
   try {
     if (window.location.search.includes('clear=true') || 
         window.location.search.includes('logout=true')) {
-      chrome.runtime.sendMessage({ type: 'DASHBOARD_LOGOUT' }).catch(() => {})
+      safeSendMessage({ type: 'DASHBOARD_LOGOUT' })
     }
-  } catch (err) {
+  } catch {
     // Ignore
   }
 }
@@ -51,7 +64,7 @@ window.addEventListener('storage', (e) => {
       syncAuthToExtension()
     } else {
       // Token removed - user logged out
-      chrome.runtime.sendMessage({ type: 'DASHBOARD_LOGOUT' }).catch(() => {})
+      safeSendMessage({ type: 'DASHBOARD_LOGOUT' })
     }
   }
 })
