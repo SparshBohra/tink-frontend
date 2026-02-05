@@ -46,7 +46,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
 
   const handleSidebarMouseLeave = () => {
     if (isCollapsed) {
-      setIsHoverExpanded(false);
+            setIsHoverExpanded(false);
     }
   };
 
@@ -82,27 +82,27 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         <div className="sidebar-header">
           <div className="logo-container">
             <img src="/logo1.png" alt="SquareFt" className="logo-img" />
-            {shouldShowExpanded && (
+                {shouldShowExpanded && (
               <span className="logo-text">SquareFt</span>
             )}
-          </div>
+                        </div>
           <button className="collapse-btn" onClick={onToggle}>
             {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
-          </button>
+                      </button>
         </div>
 
         {/* Organization Badge */}
         {shouldShowExpanded && organization && (
           <div className="org-badge">
             <span className="org-name">{organization.name}</span>
-          </div>
-        )}
+                </div>
+              )}
 
         {/* Main Navigation */}
         <nav className="sidebar-nav">
           {navigationItems.map((item) => (
             <Link
-              key={item.path}
+                    key={item.path}
               href={item.path}
               className={`nav-item ${isActive(item.path) ? 'active' : ''}`}
               title={isCollapsed ? item.label : undefined}
@@ -138,7 +138,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
               <div className="user-details">
                 <div className="user-name">{profile?.full_name || 'User'}</div>
                 <div className="user-role">Property Manager</div>
-              </div>
+                </div>
               <button onClick={handleLogout} className="logout-btn" title="Sign out">
                 <LogOut size={18} />
               </button>
@@ -402,4 +402,4 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
       `}</style>
     </>
   );
-}
+} 

@@ -45,42 +45,35 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const router = useRouter()
 
-  // Fetch user profile and organization
+  // Fetch user profile and organization - optimized with single query
   const fetchUserData = async (userId: string) => {
     try {
-      // Fetch profile
+      // Fetch profile with organization in a single query using join
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('*')
+        .select(`
+          *,
+          organization:organizations(*)
+        `)
         .eq('id', userId)
         .single()
 
       if (profileError && profileError.code !== 'PGRST116') {
         console.error('Error fetching profile:', profileError)
+        return
       }
 
       if (profileData) {
-        setProfile(profileData as Profile)
+        // Extract organization from nested result
+        const { organization, ...profile } = profileData
+        setProfile(profile as Profile)
+        
+        if (organization) {
+          setOrganization(organization as Organization)
+        }
 
         // Set activity logger user context
-        activityLogger.setUser(userId, profileData.organization_id)
-
-        // Fetch organization if profile has one
-        if (profileData.organization_id) {
-          const { data: orgData, error: orgError } = await supabase
-            .from('organizations')
-            .select('*')
-            .eq('id', profileData.organization_id)
-            .single()
-
-          if (orgError && orgError.code !== 'PGRST116') {
-            console.error('Error fetching organization:', orgError)
-          }
-
-          if (orgData) {
-            setOrganization(orgData as Organization)
-          }
-        }
+        activityLogger.setUser(userId, profile.organization_id)
       }
     } catch (err) {
       console.error('Error fetching user data:', err)
@@ -445,7 +438,10 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
       // Log any errors that occurred
       if (errors.length > 0) {
         console.error('SIGNUP ERRORS:', errors)
-        // Don't block signup, but log for debugging
+        // Show errors to user for debugging
+        if (typeof window !== 'undefined') {
+          console.warn('SIGNUP ERRORS (visible):', errors.join(', '))
+        }
       }
 
       // Step 4: Verify the profile was created correctly
