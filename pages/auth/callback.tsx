@@ -276,11 +276,19 @@ export default function AuthCallback() {
     // Helper to create or update profile
     const createProfileIfNeeded = async (user: any) => {
       try {
-        console.log('Creating/updating profile for user:', user.id)
-        console.log('User metadata:', user.user_metadata)
+        console.log('=== Profile Creation Debug ===')
+        console.log('User ID:', user.id)
+        console.log('User email:', user.email)
+        console.log('User metadata:', JSON.stringify(user.user_metadata, null, 2))
+        console.log('Raw user object:', JSON.stringify(user, null, 2))
         
-        const fullName = user.user_metadata?.full_name || user.email?.split('@')[0] || 'User'
-        const orgName = user.user_metadata?.org_name || ''
+        // Get metadata - could be in user_metadata or raw_user_meta_data depending on Supabase version
+        const metadata = user.user_metadata || user.raw_user_meta_data || {}
+        const fullName = metadata.full_name || metadata.fullName || user.email?.split('@')[0] || 'User'
+        const orgName = metadata.org_name || metadata.orgName || ''
+        
+        console.log('Extracted fullName:', fullName)
+        console.log('Extracted orgName:', orgName)
         
         // Check if profile exists
         const { data: existingProfile } = await supabase
@@ -290,12 +298,48 @@ export default function AuthCallback() {
           .single()
 
         if (existingProfile) {
-          // Profile exists - update if name is missing
+          console.log('Existing profile found:', existingProfile)
+          
+          // Prepare updates for missing fields
+          const updates: Record<string, any> = {}
+          
+          // Update name if missing or default
           if (!existingProfile.full_name || existingProfile.full_name === 'User') {
-            await supabase
+            updates.full_name = fullName
+          }
+          
+          // Create organization and update profile if org is missing
+          if (!existingProfile.organization_id && orgName) {
+            const slug = orgName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+            const { data: orgData, error: orgError } = await supabase
+              .from('organizations')
+              .insert({ name: orgName, slug })
+              .select()
+              .single()
+            
+            if (!orgError && orgData) {
+              console.log('Created organization for existing profile:', orgData.id)
+              updates.organization_id = orgData.id
+            } else if (orgError) {
+              console.error('Error creating org for existing profile:', orgError)
+            }
+          }
+          
+          // Apply updates if any
+          if (Object.keys(updates).length > 0) {
+            console.log('Updating existing profile with:', updates)
+            const { error: updateError } = await supabase
               .from('profiles')
-              .update({ full_name: fullName })
+              .update(updates)
               .eq('id', user.id)
+            
+            if (updateError) {
+              console.error('Error updating profile:', updateError)
+            } else {
+              console.log('Profile updated successfully')
+            }
+          } else {
+            console.log('Profile already complete, no updates needed')
           }
           return
         }
