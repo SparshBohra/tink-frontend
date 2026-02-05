@@ -201,7 +201,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ organizationId }) => {
               <button
                 key={i}
                 onClick={() => handleDayClick(day)}
-                className={`aspect-square flex flex-col items-center justify-center text-sm rounded-lg relative transition-all hover:bg-slate-50 ${
+                className={`aspect-square flex items-center justify-center text-sm rounded-lg relative transition-all hover:bg-slate-50 ${
                   isToday 
                     ? 'bg-blue-600 text-white font-semibold hover:bg-blue-700' 
                     : 'text-slate-700'
@@ -210,12 +210,10 @@ const CalendarView: React.FC<CalendarViewProps> = ({ organizationId }) => {
                 <span>{day}</span>
                 {ticketCount > 0 && (
                   <span 
-                    className={`absolute bottom-1 text-[10px] font-bold px-1 rounded ${
-                      isToday 
-                        ? 'text-white/80' 
-                        : hasEmergency 
-                          ? 'text-red-600' 
-                          : 'text-blue-600'
+                    className={`absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center text-[10px] font-bold rounded-full ${
+                      hasEmergency 
+                        ? 'bg-red-500 text-white' 
+                        : 'bg-blue-500 text-white'
                     }`}
                   >
                     {ticketCount}
