@@ -34,10 +34,8 @@ export default function Login() {
       // Force show the form immediately - don't wait for auth context
       setForceShowForm(true)
       
-      // Only clear storage once (not on the reload=done request)
-      if (isClearRequest && !clearedRef.current) {
-        clearedRef.current = true
-        
+      // Clear storage on every clear request (not just once)
+      if (isClearRequest) {
         // Clear all storage synchronously
         try {
           localStorage.clear()
@@ -49,15 +47,23 @@ export default function Login() {
           })
           
           // Clear IndexedDB
-          indexedDB.deleteDatabase('supabase-auth-token')
+          try {
+            indexedDB.deleteDatabase('supabase-auth-token')
+          } catch (e) {
+            // Ignore
+          }
         } catch (e) {
           console.log('Storage clear error:', e)
         }
         
-        setToast({ message: 'Signed out successfully.', type: 'info' })
-        
-        // Update URL without reload if possible
-        window.history.replaceState({}, '', '/auth/login?reload=done')
+        // Force reload to completely reset React state
+        if (!clearedRef.current) {
+          clearedRef.current = true
+          setToast({ message: 'Signed out successfully.', type: 'info' })
+          // Force a full page reload to clear all React state
+          window.location.replace('/auth/login?reload=done')
+          return
+        }
       }
     }
     

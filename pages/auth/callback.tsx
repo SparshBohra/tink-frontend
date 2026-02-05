@@ -273,44 +273,68 @@ export default function AuthCallback() {
       }
     }
 
-    // Helper to create profile if it doesn't exist
+    // Helper to create or update profile
     const createProfileIfNeeded = async (user: any) => {
       try {
+        console.log('Creating/updating profile for user:', user.id)
+        console.log('User metadata:', user.user_metadata)
+        
+        const fullName = user.user_metadata?.full_name || user.email?.split('@')[0] || 'User'
+        const orgName = user.user_metadata?.org_name || ''
+        
+        // Check if profile exists
         const { data: existingProfile } = await supabase
           .from('profiles')
-          .select('id')
+          .select('id, full_name, organization_id')
           .eq('id', user.id)
           .single()
 
-        if (!existingProfile) {
-          const fullName = user.user_metadata?.full_name || user.email?.split('@')[0] || ''
-          const orgName = user.user_metadata?.org_name || ''
+        if (existingProfile) {
+          // Profile exists - update if name is missing
+          if (!existingProfile.full_name || existingProfile.full_name === 'User') {
+            await supabase
+              .from('profiles')
+              .update({ full_name: fullName })
+              .eq('id', user.id)
+          }
+          return
+        }
+
+        // Create organization if provided
+        let orgId: string | null = null
+        if (orgName) {
+          const slug = orgName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+          const { data: orgData, error: orgError } = await supabase
+            .from('organizations')
+            .insert({ name: orgName, slug })
+            .select()
+            .single()
           
-          // Create organization if provided
-          let orgId: string | null = null
-          if (orgName) {
-            const slug = orgName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
-            const { data: orgData } = await supabase
-              .from('organizations')
-              .insert({ name: orgName, slug })
-              .select()
-              .single()
+          if (orgError) {
+            console.error('Error creating org:', orgError)
+          } else {
             orgId = orgData?.id || null
           }
+        }
 
-          // Create profile
-          await supabase
-            .from('profiles')
-            .insert({
-              id: user.id,
-              email: user.email,
-              full_name: fullName,
-              organization_id: orgId,
-              role: 'pm'
-            })
+        // Create profile
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: user.id,
+            email: user.email,
+            full_name: fullName,
+            organization_id: orgId,
+            role: 'pm'
+          })
+        
+        if (profileError) {
+          console.error('Error creating profile:', profileError)
+        } else {
+          console.log('Profile created successfully')
         }
       } catch (err) {
-        console.error('Error creating profile:', err)
+        console.error('Error in createProfileIfNeeded:', err)
       }
     }
 
