@@ -314,192 +314,40 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
         return null
       }
 
-      // EMAIL CONFIRMATION IS DISABLED IN SUPABASE
-      // Proceed directly to create all data regardless of session state
-      console.log('=== SIGNUP: Creating user data ===')
+      // DATABASE TRIGGER handles org, profile, and contacts creation
+      // We just need to wait briefly for it to complete, then redirect
+      console.log('=== SIGNUP SUCCESS ===')
       console.log('User ID:', authData.user.id)
-      console.log('Full Name:', fullName)
-      console.log('Org Name:', orgName)
-      console.log('Phone:', phone)
-      console.log('Session present:', !!authData.session)
+      console.log('Trigger will create: profile, organization, org_contacts')
       
-      // Small delay to ensure auth is fully established
-      await new Promise(resolve => setTimeout(resolve, 500))
+      // Brief delay to let the database trigger complete
+      await new Promise(resolve => setTimeout(resolve, 300))
       
-      let orgId: string | null = null
-      const errors: string[] = []
-      
-      // STEP 1: Create organization if provided
-      if (orgName) {
-        const slug = orgName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
-        console.log('SIGNUP Step 1: Creating organization with slug:', slug)
-        
-        const { data: orgData, error: orgError } = await supabase
-          .from('organizations')
-          .insert({
-            name: orgName,
-            slug: slug
-          })
-          .select()
-          .single()
-
-        if (orgError) {
-          console.error('SIGNUP ERROR: Failed to create organization:', orgError)
-          errors.push(`Org creation failed: ${orgError.message}`)
-          
-          // Try to check if org with this slug exists and use it
-          const { data: existingOrg } = await supabase
-            .from('organizations')
-            .select('id')
-            .eq('slug', slug)
-            .single()
-          
-          if (existingOrg) {
-            console.log('SIGNUP: Using existing organization:', existingOrg.id)
-            orgId = existingOrg.id
-          }
-        } else if (orgData) {
-          orgId = orgData.id
-          console.log('SIGNUP SUCCESS: Created organization:', orgId)
-        }
-      }
-
-      // STEP 2: Create or update profile FIRST (before org_contacts due to FK constraint)
-      console.log('SIGNUP Step 2: Creating/updating profile...')
-      const { data: existingProfileCheck, error: checkError } = await supabase
+      // Fetch the profile created by the trigger
+      const { data: profileData } = await supabase
         .from('profiles')
-        .select('id, full_name, organization_id')
-        .eq('id', authData.user.id)
-        .maybeSingle()
-
-      if (checkError) {
-        console.log('SIGNUP: Profile check error (may be normal):', checkError)
-      }
-
-      if (existingProfileCheck) {
-        console.log('SIGNUP: Profile already exists, updating it:', existingProfileCheck)
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({
-            email: email,
-            full_name: fullName,
-            organization_id: orgId || existingProfileCheck.organization_id,
-            phone: phone || null,
-            role: 'pm'
-          })
-          .eq('id', authData.user.id)
-        
-        if (updateError) {
-          console.error('SIGNUP ERROR: Failed to update profile:', updateError)
-          errors.push(`Profile update failed: ${updateError.message}`)
-        } else {
-          console.log('SIGNUP SUCCESS: Profile updated')
-        }
-      } else {
-        // Create new profile
-        console.log('SIGNUP: Creating new profile with id:', authData.user.id)
-        const { error: profileError, data: newProfile } = await supabase
-          .from('profiles')
-          .insert({
-            id: authData.user.id,
-            email: email,
-            full_name: fullName,
-            organization_id: orgId,
-            phone: phone || null,
-            role: 'pm'
-          })
-          .select()
-          .single()
-
-        if (profileError) {
-          console.error('SIGNUP ERROR: Failed to create profile:', profileError)
-          errors.push(`Profile creation failed: ${profileError.message}`)
-        } else {
-          console.log('SIGNUP SUCCESS: Profile created:', newProfile)
-        }
-      }
-
-      // STEP 3: Create org_contacts AFTER profile exists (due to FK on created_by)
-      if (orgId) {
-        console.log('SIGNUP Step 3: Creating org_contacts...')
-        const contactsToCreate: any[] = [
-          {
-            organization_id: orgId,
-            contact_type: 'email',
-            contact_value: email.toLowerCase(),
-            label: `${fullName} - Email`,
-            is_verified: false,
-            created_by: authData.user.id
-          }
-        ]
-        
-        if (phone) {
-          contactsToCreate.push({
-            organization_id: orgId,
-            contact_type: 'phone',
-            contact_value: phone,
-            label: `${fullName} - Phone`,
-            is_verified: false,
-            created_by: authData.user.id
-          })
-        }
-        
-        console.log('SIGNUP: Org contacts to create:', contactsToCreate.length)
-        const { error: contactsError, data: contactsData } = await supabase
-          .from('org_contacts')
-          .insert(contactsToCreate)
-          .select()
-        
-        if (contactsError) {
-          console.error('SIGNUP ERROR: Failed to create org contacts:', contactsError)
-          errors.push(`Org contacts failed: ${contactsError.message}`)
-        } else {
-          console.log('SIGNUP SUCCESS: Org contacts created:', contactsData?.length)
-        }
-      } else {
-        console.log('SIGNUP: Skipping org_contacts (no orgId)')
-      }
-      
-      // Log any errors that occurred
-      if (errors.length > 0) {
-        console.error('SIGNUP ERRORS:', errors)
-        // Show errors to user for debugging
-        if (typeof window !== 'undefined') {
-          console.warn('SIGNUP ERRORS (visible):', errors.join(', '))
-        }
-      }
-
-      // Step 4: Verify the profile was created correctly
-      const { data: verifyProfile, error: verifyError } = await supabase
-        .from('profiles')
-        .select('*')
+        .select(`
+          *,
+          organization:organizations(*)
+        `)
         .eq('id', authData.user.id)
         .single()
       
-      console.log('Profile verification:', verifyProfile, verifyError)
-
-      // Step 5: Update local state before redirect
-      if (verifyProfile) {
-        setProfile(verifyProfile as any)
+      if (profileData) {
+        const { organization, ...profile } = profileData
+        setProfile(profile as any)
         setUser(authData.user)
         setSession(authData.session)
-        
-        if (verifyProfile.organization_id) {
-          const { data: orgData } = await supabase
-            .from('organizations')
-            .select('*')
-            .eq('id', verifyProfile.organization_id)
-            .single()
-          
-          if (orgData) {
-            setOrganization(orgData as any)
-          }
+        if (organization) {
+          setOrganization(organization as any)
         }
       }
+      
+      // Log successful signup
+      activityLogger.logSignup()
 
-      // Use window.location for reliable redirect
-      // Add a timestamp to force reload if needed
-      window.location.href = '/dashboard/tickets?signup=success&t=' + Date.now()
+      // Redirect to dashboard
+      window.location.href = '/dashboard/tickets'
       return { requiresConfirmation: false }
     } catch (err) {
       console.error('Sign up error:', err)
