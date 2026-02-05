@@ -53,15 +53,26 @@ const PRIORITY_ORDER: Record<TicketPriority, number> = {
 }
 
 function TicketsPage() {
-  const { organizationId, profile, refreshProfile, user } = useSupabaseAuth()
+  const { organizationId, profile, refreshProfile, user, loading } = useSupabaseAuth()
   
-  // Refresh profile if it appears incomplete (e.g., full_name is 'User' or missing)
+  // Refresh profile if:
+  // 1. User is logged in (user exists)
+  // 2. Not currently loading initial auth
+  // 3. Profile is missing OR profile name is incomplete/default
   useEffect(() => {
-    if (user && profile && (!profile.full_name || profile.full_name === 'User')) {
-      console.log('Profile appears incomplete, refreshing...', profile)
-      refreshProfile()
+    if (!loading && user) {
+      const isProfileMissing = !profile
+      const isProfileIncomplete = profile && (!profile.full_name || profile.full_name === 'User')
+      
+      if (isProfileMissing || isProfileIncomplete) {
+        console.log('Profile missing or incomplete, forcing refresh...', { isProfileMissing, isProfileIncomplete })
+        const timer = setTimeout(() => {
+          refreshProfile()
+        }, 1000) // Small delay to allow DB propagation if this is fresh signup
+        return () => clearTimeout(timer)
+      }
     }
-  }, [user, profile, refreshProfile])
+  }, [user, profile, loading, refreshProfile])
   
   // Tab State
   const [activeTab, setActiveTab] = useState<'tickets' | 'calendar'>('tickets')

@@ -409,7 +409,8 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
       }
 
       // Use window.location for reliable redirect
-      window.location.href = '/dashboard/tickets'
+      // Add a timestamp to force reload if needed
+      window.location.href = '/dashboard/tickets?signup=success&t=' + Date.now()
       return { requiresConfirmation: false }
     } catch (err) {
       console.error('Sign up error:', err)
