@@ -108,7 +108,25 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
           }
         }
         
-        // Simple session check without aggressive timeout
+        // For auth pages, skip the session check to show form immediately
+        const isAuthPage = window.location.pathname.startsWith('/auth/')
+        if (isAuthPage) {
+          // Just check if session exists, don't fetch user data
+          const { data: { session: currentSession } } = await supabase.auth.getSession()
+          if (currentSession) {
+            setSession(currentSession)
+            setUser(currentSession.user)
+            // On auth pages with session, redirect to dashboard
+            if (window.location.pathname === '/auth/login') {
+              window.location.href = '/dashboard/tickets'
+              return
+            }
+          }
+          setLoading(false)
+          return
+        }
+        
+        // For dashboard/other pages, fetch full user data
         const { data: { session: currentSession } } = await supabase.auth.getSession()
         
         if (currentSession) {
@@ -176,13 +194,20 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
         setUser(newSession?.user ?? null)
 
         if (newSession?.user) {
-          await fetchUserData(newSession.user.id)
+          // For auth pages, don't block on user data
+          const isAuthPage = window.location.pathname.startsWith('/auth/')
+          if (isAuthPage) {
+            setLoading(false)
+          } else {
+            // For dashboard, wait for user data
+            await fetchUserData(newSession.user.id)
+            setLoading(false)
+          }
         } else {
           setProfile(null)
           setOrganization(null)
+          setLoading(false)
         }
-
-        setLoading(false)
       }
     )
     
@@ -504,18 +529,28 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
         return // Don't throw - let UI handle the error state
       }
 
-      if (data.user) {
-        await fetchUserData(data.user.id)
+      if (data.user && data.session) {
+        // Set session and user
+        setSession(data.session)
+        setUser(data.user)
+        
         // Log successful login
         activityLogger.logLogin('password')
-        // Use window.location for reliable redirect
+        
+        // Fetch user data before redirect so dashboard has it
+        await fetchUserData(data.user.id)
+        
+        // Redirect to dashboard
         window.location.href = '/dashboard/tickets'
+      } else {
+        setLoading(false)
       }
     } catch (err) {
       console.error('Sign in error:', err)
       const errorMsg = handleAuthError(err)
       setError(errorMsg)
       activityLogger.logLoginFailed(errorMsg)
+      setLoading(false)
       // Don't throw - let UI handle the error state
     } finally {
       setLoading(false)
