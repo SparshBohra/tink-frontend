@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { Settings, ExternalLink, ArrowLeft, Calendar, List, LogOut, ChevronDown } from 'lucide-react'
 import { openDashboard, signOutAndClearDashboard } from '../lib/auth'
-import { Organization } from '../types'
+import { Organization, Profile } from '../types'
 
 interface HeaderProps {
   organization: Organization | null
+  profile: Profile | null
   activeTab: 'tickets' | 'calendar'
   onTabChange: (tab: 'tickets' | 'calendar') => void
   showBackButton?: boolean
@@ -14,6 +15,7 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({
+  profile,
   activeTab,
   onTabChange,
   showBackButton,
@@ -21,6 +23,8 @@ const Header: React.FC<HeaderProps> = ({
   ticketNumber,
   onLogout
 }) => {
+  // Get first name from profile
+  const firstName = profile?.full_name?.split(' ')[0] || 'there'
   const [showMenu, setShowMenu] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   
@@ -59,11 +63,15 @@ const Header: React.FC<HeaderProps> = ({
             <span className="text-sm font-medium">Back</span>
           </button>
         ) : (
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-blue-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">S</span>
-            </div>
-            <span className="font-semibold text-slate-800">SquareFt</span>
+          <div className="flex items-center gap-2.5">
+            <img 
+              src="/icons/icon48.png" 
+              alt="SquareFt" 
+              className="w-7 h-7"
+            />
+            <span className="font-medium text-slate-700">
+              Welcome, <span className="font-semibold text-slate-800">{firstName}</span>
+            </span>
           </div>
         )}
         

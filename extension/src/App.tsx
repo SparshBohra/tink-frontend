@@ -133,6 +133,7 @@ function App() {
     <div className="flex flex-col h-full bg-slate-50">
       <Header 
         organization={authState.organization}
+        profile={authState.profile}
         activeTab={activeTab}
         onTabChange={handleTabChange}
         showBackButton={currentView === 'detail'}
