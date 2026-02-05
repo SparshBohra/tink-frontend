@@ -53,14 +53,14 @@ const PRIORITY_ORDER: Record<TicketPriority, number> = {
 }
 
 function TicketsPage() {
-  const { organizationId, profile, refreshProfile, user, loading } = useSupabaseAuth()
+  const { organizationId, profile, refreshProfile, user, loading: authLoading } = useSupabaseAuth()
   
   // Refresh profile if:
   // 1. User is logged in (user exists)
   // 2. Not currently loading initial auth
   // 3. Profile is missing OR profile name is incomplete/default
   useEffect(() => {
-    if (!loading && user) {
+    if (!authLoading && user) {
       const isProfileMissing = !profile
       const isProfileIncomplete = profile && (!profile.full_name || profile.full_name === 'User')
       
@@ -72,7 +72,7 @@ function TicketsPage() {
         return () => clearTimeout(timer)
       }
     }
-  }, [user, profile, loading, refreshProfile])
+  }, [user, profile, authLoading, refreshProfile])
   
   // Tab State
   const [activeTab, setActiveTab] = useState<'tickets' | 'calendar'>('tickets')

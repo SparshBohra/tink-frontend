@@ -229,45 +229,21 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
         return null
       }
 
-      // Check if email confirmation is required
-      // If session is null, email confirmation is pending
-      if (!authData.session) {
-        // This is a new signup or existing unconfirmed user
-        // Try to resend confirmation email
-        try {
-          const { error: resendError } = await supabase.auth.resend({
-            type: 'signup',
-            email: email,
-            options: {
-              emailRedirectTo: `${window.location.origin}/auth/callback?type=signup`
-            }
-          })
-          
-          if (resendError) {
-            console.log('Resend error (might be rate limited):', resendError.message)
-          }
-        } catch (e) {
-          console.log('Resend failed:', e)
-        }
-        
-        // Don't redirect - let the signup page show the confirmation message
-        // Profile will be created after email confirmation
-        return { requiresConfirmation: true, email }
-      }
-
-      // If we get here, email confirmation is disabled - create profile immediately
-      console.log('=== Creating profile immediately (no email confirmation) ===')
+      // EMAIL CONFIRMATION IS DISABLED IN SUPABASE
+      // Proceed directly to create all data regardless of session state
+      console.log('=== Creating user data (email confirmation disabled) ===')
       console.log('User ID:', authData.user.id)
       console.log('Full Name:', fullName)
       console.log('Org Name:', orgName)
       console.log('Phone:', phone)
+      console.log('Session present:', !!authData.session)
       
       let orgId: string | null = null
       
-      // Step 1: Create organization if provided
+      // STEP 1: Create organization if provided
       if (orgName) {
         const slug = orgName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
-        console.log('Creating organization with slug:', slug)
+        console.log('Step 1: Creating organization with slug:', slug)
         
         const { data: orgData, error: orgError } = await supabase
           .from('organizations')
@@ -295,64 +271,24 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
           orgId = orgData.id
           console.log('Created organization:', orgId)
         }
-        
-      // Step 2: Create org_contacts if we have an org
-      if (orgId) {
-        // ... (existing contact creation logic) ...
-        const contactsToCreate = [
-          {
-            organization_id: orgId,
-            contact_type: 'email',
-            contact_value: email.toLowerCase(),
-            label: `${fullName} - Email`,
-            is_verified: false,
-            created_by: authData.user.id
-          }
-        ]
-        
-        if (phone) {
-          contactsToCreate.push({
-            organization_id: orgId,
-            contact_type: 'phone',
-            contact_value: phone,
-            label: `${fullName} - Phone`,
-            is_verified: false,
-            created_by: authData.user.id
-          })
-        }
-        
-        console.log('Creating org contacts:', JSON.stringify(contactsToCreate, null, 2))
-        const { error: contactsError, data: contactsData } = await supabase
-          .from('org_contacts')
-          .insert(contactsToCreate)
-          .select()
-        
-        if (contactsError) {
-          console.error('CRITICAL: Error creating org contacts:', contactsError)
-          // Don't return here, try to create profile anyway
-        } else {
-          console.log('Org contacts created successfully:', contactsData)
-        }
       }
 
-      // Step 3: Check if profile already exists...
-      // ... (rest of function) ...
-
-      const { data: profileExists } = await supabase
+      // STEP 2: Create or update profile FIRST (before org_contacts due to FK constraint)
+      console.log('Step 2: Creating/updating profile...')
+      const { data: existingProfileCheck } = await supabase
         .from('profiles')
         .select('id, full_name, organization_id')
         .eq('id', authData.user.id)
         .single()
 
-      if (profileExists) {
-        console.log('Profile already exists, updating it:', profileExists)
-        // Update existing profile with the correct data
+      if (existingProfileCheck) {
+        console.log('Profile already exists, updating it:', existingProfileCheck)
         const { error: updateError } = await supabase
           .from('profiles')
           .update({
             email: email,
             full_name: fullName,
-            organization_id: orgId || profileExists.organization_id,
+            organization_id: orgId || existingProfileCheck.organization_id,
             phone: phone || null,
             role: 'pm'
           })
@@ -381,6 +317,44 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
           console.error('Error creating profile:', profileError)
         } else {
           console.log('Profile created successfully')
+        }
+      }
+
+      // STEP 3: Create org_contacts AFTER profile exists (due to FK on created_by)
+      if (orgId) {
+        console.log('Step 3: Creating org_contacts...')
+        const contactsToCreate: any[] = [
+          {
+            organization_id: orgId,
+            contact_type: 'email',
+            contact_value: email.toLowerCase(),
+            label: `${fullName} - Email`,
+            is_verified: false,
+            created_by: authData.user.id
+          }
+        ]
+        
+        if (phone) {
+          contactsToCreate.push({
+            organization_id: orgId,
+            contact_type: 'phone',
+            contact_value: phone,
+            label: `${fullName} - Phone`,
+            is_verified: false,
+            created_by: authData.user.id
+          })
+        }
+        
+        console.log('Org contacts to create:', JSON.stringify(contactsToCreate, null, 2))
+        const { error: contactsError, data: contactsData } = await supabase
+          .from('org_contacts')
+          .insert(contactsToCreate)
+          .select()
+        
+        if (contactsError) {
+          console.error('Error creating org contacts:', contactsError)
+        } else {
+          console.log('Org contacts created successfully:', contactsData)
         }
       }
 
