@@ -44,14 +44,11 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
 
-  // Fetch user profile and organization - create if missing
+  // Fetch user profile and organization
   const fetchUserData = async (userId: string) => {
     try {
-      // Get current user for metadata
-      const { data: { user: currentUser } } = await supabase.auth.getUser()
-      
       // Fetch profile
-      let { data: profileData, error: profileError } = await supabase
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
@@ -59,70 +56,6 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
 
       if (profileError && profileError.code !== 'PGRST116') {
         console.error('Error fetching profile:', profileError)
-      }
-
-      // If no profile exists, create one
-      if (!profileData && currentUser) {
-        console.log('No profile found, creating one...')
-        const metadata = currentUser.user_metadata || {}
-        const fullName = metadata.full_name || metadata.fullName || currentUser.email?.split('@')[0] || 'User'
-        const orgName = metadata.org_name || metadata.orgName || ''
-        
-        // Create organization if name provided
-        let orgId: string | null = null
-        if (orgName) {
-          const slug = orgName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
-          const { data: orgData } = await supabase
-            .from('organizations')
-            .insert({ name: orgName, slug })
-            .select()
-            .single()
-          orgId = orgData?.id || null
-        }
-        
-        // Create profile
-        const { data: newProfile, error: createError } = await supabase
-          .from('profiles')
-          .insert({
-            id: userId,
-            email: currentUser.email,
-            full_name: fullName,
-            organization_id: orgId,
-            role: 'pm'
-          })
-          .select()
-          .single()
-        
-        if (createError) {
-          console.error('Error creating profile:', createError)
-        } else {
-          profileData = newProfile
-          console.log('Profile created:', profileData)
-        }
-      }
-      
-      // If profile exists but has missing data, try to update it
-      if (profileData && currentUser) {
-        const needsUpdate = !profileData.full_name || profileData.full_name === 'User'
-        
-        if (needsUpdate) {
-          const metadata = currentUser.user_metadata || {}
-          const fullName = metadata.full_name || metadata.fullName || currentUser.email?.split('@')[0] || 'User'
-          
-          if (fullName && fullName !== 'User' && fullName !== profileData.full_name) {
-            const { data: updatedProfile } = await supabase
-              .from('profiles')
-              .update({ full_name: fullName })
-              .eq('id', userId)
-              .select()
-              .single()
-            
-            if (updatedProfile) {
-              profileData = updatedProfile
-              console.log('Profile updated with name:', fullName)
-            }
-          }
-        }
       }
 
       if (profileData) {

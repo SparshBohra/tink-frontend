@@ -89,11 +89,9 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
     <div className="flex flex-col h-full bg-slate-50">
       {/* Header */}
       <div className="flex items-center justify-center py-6 border-b border-slate-200 bg-white">
-        <img 
-          src="/icons/icon48.png" 
-          alt="SquareFt" 
-          className="w-10 h-10 mr-2"
-        />
+        <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center mr-2">
+          <span className="text-white font-bold text-lg">S</span>
+        </div>
         <span className="font-semibold text-xl text-slate-800">SquareFt</span>
       </div>
 

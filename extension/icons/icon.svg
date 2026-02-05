@@ -2,10 +2,21 @@
   <!-- Background rounded square -->
   <rect x="8" y="8" width="112" height="112" rx="24" ry="24" fill="#2563eb"/>
   
-  <!-- Simple bold house shape - filled -->
-  <!-- Roof triangle -->
-  <polygon points="64,28 100,58 28,58" fill="white"/>
+  <!-- House - clean minimal style -->
+  <!-- Roof -->
+  <path d="M64 30 L98 56 L94 56 L94 96 L34 96 L34 56 L30 56 Z" 
+        fill="none" 
+        stroke="white" 
+        stroke-width="6" 
+        stroke-linecap="round" 
+        stroke-linejoin="round"/>
   
-  <!-- House body -->
-  <rect x="34" y="54" width="60" height="44" fill="white"/>
+  <!-- Door frame - just an outline, not filled -->
+  <rect x="52" y="66" width="16" height="30" rx="2" 
+        fill="none" 
+        stroke="white" 
+        stroke-width="4"/>
+  
+  <!-- Door handle - small circle -->
+  <circle cx="63" cy="82" r="2" fill="white"/>
 </svg>

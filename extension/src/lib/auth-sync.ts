@@ -16,39 +16,36 @@ interface SessionTokens {
 
 // Set auth cookies on dashboard domain after extension login
 export async function syncSessionToDashboard(session: SessionTokens): Promise<void> {
-  // Create the cookie value - @supabase/ssr uses plain JSON (URL encoded)
-  const authData = {
-    access_token: session.accessToken,
-    refresh_token: session.refreshToken,
-    expires_at: Math.floor(session.expiresAt),
-    expires_in: 3600,
-    token_type: 'bearer'
-  }
-  
-  // The cookie value needs to be URL-safe
-  const cookieValue = encodeURIComponent(JSON.stringify(authData))
-  
-  // Production domains
-  const productionUrls = [
-    'https://app.squareft.ai',
-    'https://squareft.ai'
+  const domains = [
+    'squareft.ai',
+    'app.squareft.ai', 
+    '.squareft.ai'
   ]
   
-  // Set cookie on production domains
-  for (const url of productionUrls) {
+  // Create the cookie value (Supabase stores as base64 JSON array)
+  const cookieValue = btoa(JSON.stringify([
+    session.accessToken,
+    session.refreshToken,
+    null,
+    null,
+    null
+  ]))
+  
+  // Set cookie on each domain
+  for (const domain of domains) {
     try {
       await chrome.cookies.set({
-        url,
+        url: `https://${domain.replace(/^\./, '')}`,
         name: ACCESS_TOKEN_COOKIE,
         value: cookieValue,
         path: '/',
         secure: true,
         sameSite: 'lax',
-        expirationDate: Math.floor(session.expiresAt)
+        expirationDate: session.expiresAt
       })
-      console.log(`Auth cookie set for ${url}`)
+      console.log(`Auth cookie set for ${domain}`)
     } catch (err) {
-      console.log(`Failed to set cookie for ${url}:`, err)
+      console.log(`Failed to set cookie for ${domain}:`, err)
     }
   }
   
@@ -61,7 +58,7 @@ export async function syncSessionToDashboard(session: SessionTokens): Promise<vo
       path: '/',
       secure: false,
       sameSite: 'lax',
-      expirationDate: Math.floor(session.expiresAt)
+      expirationDate: session.expiresAt
     })
     console.log('Auth cookie set for localhost')
   } catch (err) {
@@ -105,42 +102,13 @@ export async function getSessionFromDashboard(): Promise<SessionTokens | null> {
       })
       
       if (cookie?.value) {
-        let decoded: any = null
-        
-        // Try URL-decoded JSON first (our format)
-        try {
-          decoded = JSON.parse(decodeURIComponent(cookie.value))
-        } catch {
-          // Try plain JSON
-          try {
-            decoded = JSON.parse(cookie.value)
-          } catch {
-            // Try base64 decoded JSON
-            try {
-              decoded = JSON.parse(atob(cookie.value))
-            } catch {
-              // Not a valid format
-            }
-          }
-        }
-        
-        if (decoded) {
-          // Handle object format
-          if (decoded.access_token && decoded.refresh_token) {
-            return {
-              accessToken: decoded.access_token,
-              refreshToken: decoded.refresh_token,
-              expiresAt: decoded.expires_at || cookie.expirationDate || (Date.now() / 1000 + 3600)
-            }
-          }
-          
-          // Handle array format (legacy)
-          if (Array.isArray(decoded) && decoded[0] && decoded[1]) {
-            return {
-              accessToken: decoded[0],
-              refreshToken: decoded[1],
-              expiresAt: cookie.expirationDate || (Date.now() / 1000 + 3600)
-            }
+        // Decode the cookie value
+        const decoded = JSON.parse(atob(cookie.value))
+        if (Array.isArray(decoded) && decoded[0] && decoded[1]) {
+          return {
+            accessToken: decoded[0],
+            refreshToken: decoded[1],
+            expiresAt: cookie.expirationDate || (Date.now() / 1000 + 3600)
           }
         }
       }
