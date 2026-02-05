@@ -2,13 +2,14 @@
   <!-- Background rounded square -->
   <rect x="8" y="8" width="112" height="112" rx="24" ry="24" fill="#2563eb"/>
   
-  <!-- House icon - roof -->
-  <path d="M64 28 L100 58 L100 100 L28 100 L28 58 Z" fill="none" stroke="white" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- House - clean outline only -->
+  <!-- Roof -->
+  <path d="M64 30 L98 56" fill="none" stroke="white" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M64 30 L30 56" fill="none" stroke="white" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
   
-  <!-- Roof peak -->
-  <path d="M64 28 L100 58" fill="none" stroke="white" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M64 28 L28 58" fill="none" stroke="white" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Walls -->
+  <path d="M36 52 L36 94 L92 94 L92 52" fill="none" stroke="white" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
   
-  <!-- Door -->
-  <rect x="48" y="68" width="24" height="32" rx="2" fill="white" opacity="0.9"/>
+  <!-- Square window -->
+  <rect x="52" y="62" width="24" height="20" rx="3" fill="none" stroke="white" stroke-width="5"/>
 </svg>
