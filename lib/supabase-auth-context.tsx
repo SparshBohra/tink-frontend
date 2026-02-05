@@ -15,7 +15,7 @@ interface AuthContextType {
   error: string | null
   
   // Auth methods
-  signUp: (email: string, password: string, fullName: string, orgName?: string) => Promise<void>
+  signUp: (email: string, password: string, fullName: string, orgName?: string, phone?: string) => Promise<{ requiresConfirmation?: boolean; email?: string } | null>
   signIn: (email: string, password: string) => Promise<void>
   signInWithMagicLink: (email: string) => Promise<void>
   resetPassword: (email: string) => Promise<void>
@@ -42,6 +42,7 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
   const [organization, setOrganization] = useState<Organization | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
   const router = useRouter()
 
   // Fetch user profile and organization
@@ -93,27 +94,29 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
         // Check if we're on a logout/clear page - if so, don't restore session
         if (typeof window !== 'undefined') {
           const urlParams = new URLSearchParams(window.location.search)
+          const isLogoutFlag = localStorage.getItem('squareft_logging_out') === 'true'
           const isLogoutRequest = urlParams.get('clear') === 'true' || 
                                    urlParams.get('logout') === 'true' ||
-                                   urlParams.get('reload') === 'done'
+                                   urlParams.get('reload') === 'done' ||
+                                   window.location.pathname.includes('/auth/logout') ||
+                                   isLogoutFlag
           
-          if (isLogoutRequest && window.location.pathname.includes('/auth/login')) {
+          if (isLogoutRequest) {
             // On logout page with clear params - don't try to restore session
             console.log('Logout request detected, skipping session restore')
+            setIsLoggingOut(true)
             setLoading(false)
             return
           }
+          
+          // Clear any stale logout flag if we're on login page (fresh start)
+          if (window.location.pathname === '/auth/login' && !urlParams.get('clear') && !urlParams.get('logout')) {
+            localStorage.removeItem('squareft_logging_out')
+          }
         }
         
-        // Add timeout to prevent infinite loading
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Auth timeout')), 10000)
-        )
-        
-        const sessionPromise = supabase.auth.getSession()
-        
-        const result = await Promise.race([sessionPromise, timeoutPromise]) as any
-        const currentSession = result?.data?.session
+        // Simple session check without aggressive timeout
+        const { data: { session: currentSession } } = await supabase.auth.getSession()
         
         if (currentSession) {
           setSession(currentSession)
@@ -122,7 +125,7 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
         }
       } catch (err) {
         console.error('Error initializing auth:', err)
-        // On timeout or error, just show login - don't stay stuck
+        // On error, just show login - don't stay stuck
       } finally {
         setLoading(false)
       }
@@ -133,17 +136,20 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
-        console.log('Auth state changed:', event)
+        console.log('Auth state changed:', event, 'isLoggingOut:', isLoggingOut)
         
-        // Check if we're on a logout page - don't restore session
+        // Check if we're on a logout page or actively logging out - don't restore session
         if (typeof window !== 'undefined') {
           const urlParams = new URLSearchParams(window.location.search)
+          const isLogoutFlag = localStorage.getItem('squareft_logging_out') === 'true'
           const isLogoutRequest = urlParams.get('clear') === 'true' || 
                                    urlParams.get('logout') === 'true' ||
-                                   urlParams.get('reload') === 'done'
+                                   urlParams.get('reload') === 'done' ||
+                                   window.location.pathname.includes('/auth/logout') ||
+                                   isLogoutFlag
           
-          if (isLogoutRequest && window.location.pathname.includes('/auth/login')) {
-            console.log('On logout page - ignoring auth state change')
+          if (isLogoutRequest || isLoggingOut) {
+            console.log('Logout in progress - ignoring auth state change:', event)
             setSession(null)
             setUser(null)
             setProfile(null)
@@ -151,6 +157,26 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
             setLoading(false)
             return
           }
+        }
+        
+        // Handle SIGNED_OUT event - redirect to login
+        if (event === 'SIGNED_OUT') {
+          setSession(null)
+          setUser(null)
+          setProfile(null)
+          setOrganization(null)
+          setLoading(false)
+          // Redirect to login if not already there
+          if (!window.location.pathname.includes('/auth/')) {
+            window.location.href = '/auth/login'
+          }
+          return
+        }
+        
+        // Only process SIGNED_IN if not logging out
+        if (event === 'SIGNED_IN' && isLoggingOut) {
+          console.log('Ignoring SIGNED_IN during logout')
+          return
         }
         
         setSession(newSession)
@@ -166,9 +192,50 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
         setLoading(false)
       }
     )
+    
+    // Listen for cross-tab logout via storage events
+    const handleStorageChange = (e: StorageEvent) => {
+      // Supabase stores auth in localStorage with key pattern sb-*-auth-token
+      if (e.key?.includes('auth-token') && e.newValue === null) {
+        console.log('Cross-tab logout detected via storage')
+        setSession(null)
+        setUser(null)
+        setProfile(null)
+        setOrganization(null)
+        // Redirect to login
+        if (!window.location.pathname.includes('/auth/')) {
+          window.location.href = '/auth/login'
+        }
+      }
+    }
+    
+    window.addEventListener('storage', handleStorageChange)
+    
+    // Listen for cross-tab logout via BroadcastChannel (more reliable)
+    let bc: BroadcastChannel | null = null
+    try {
+      bc = new BroadcastChannel('squareft_auth')
+      bc.onmessage = (event) => {
+        if (event.data?.type === 'LOGOUT') {
+          console.log('Cross-tab logout detected via BroadcastChannel')
+          setSession(null)
+          setUser(null)
+          setProfile(null)
+          setOrganization(null)
+          // Redirect to login
+          if (!window.location.pathname.includes('/auth/')) {
+            window.location.href = '/auth/login'
+          }
+        }
+      }
+    } catch (e) {
+      console.log('BroadcastChannel not supported')
+    }
 
     return () => {
       subscription.unsubscribe()
+      window.removeEventListener('storage', handleStorageChange)
+      if (bc) bc.close()
     }
   }, [])
 
@@ -231,19 +298,23 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
 
       // EMAIL CONFIRMATION IS DISABLED IN SUPABASE
       // Proceed directly to create all data regardless of session state
-      console.log('=== Creating user data (email confirmation disabled) ===')
+      console.log('=== SIGNUP: Creating user data ===')
       console.log('User ID:', authData.user.id)
       console.log('Full Name:', fullName)
       console.log('Org Name:', orgName)
       console.log('Phone:', phone)
       console.log('Session present:', !!authData.session)
       
+      // Small delay to ensure auth is fully established
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
       let orgId: string | null = null
+      const errors: string[] = []
       
       // STEP 1: Create organization if provided
       if (orgName) {
         const slug = orgName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
-        console.log('Step 1: Creating organization with slug:', slug)
+        console.log('SIGNUP Step 1: Creating organization with slug:', slug)
         
         const { data: orgData, error: orgError } = await supabase
           .from('organizations')
@@ -255,7 +326,9 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
           .single()
 
         if (orgError) {
-          console.error('Error creating organization:', orgError)
+          console.error('SIGNUP ERROR: Failed to create organization:', orgError)
+          errors.push(`Org creation failed: ${orgError.message}`)
+          
           // Try to check if org with this slug exists and use it
           const { data: existingOrg } = await supabase
             .from('organizations')
@@ -264,25 +337,29 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
             .single()
           
           if (existingOrg) {
-            console.log('Using existing organization:', existingOrg.id)
+            console.log('SIGNUP: Using existing organization:', existingOrg.id)
             orgId = existingOrg.id
           }
-        } else {
+        } else if (orgData) {
           orgId = orgData.id
-          console.log('Created organization:', orgId)
+          console.log('SIGNUP SUCCESS: Created organization:', orgId)
         }
       }
 
       // STEP 2: Create or update profile FIRST (before org_contacts due to FK constraint)
-      console.log('Step 2: Creating/updating profile...')
-      const { data: existingProfileCheck } = await supabase
+      console.log('SIGNUP Step 2: Creating/updating profile...')
+      const { data: existingProfileCheck, error: checkError } = await supabase
         .from('profiles')
         .select('id, full_name, organization_id')
         .eq('id', authData.user.id)
-        .single()
+        .maybeSingle()
+
+      if (checkError) {
+        console.log('SIGNUP: Profile check error (may be normal):', checkError)
+      }
 
       if (existingProfileCheck) {
-        console.log('Profile already exists, updating it:', existingProfileCheck)
+        console.log('SIGNUP: Profile already exists, updating it:', existingProfileCheck)
         const { error: updateError } = await supabase
           .from('profiles')
           .update({
@@ -295,14 +372,15 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
           .eq('id', authData.user.id)
         
         if (updateError) {
-          console.error('Error updating existing profile:', updateError)
+          console.error('SIGNUP ERROR: Failed to update profile:', updateError)
+          errors.push(`Profile update failed: ${updateError.message}`)
         } else {
-          console.log('Profile updated successfully')
+          console.log('SIGNUP SUCCESS: Profile updated')
         }
       } else {
         // Create new profile
-        console.log('Creating new profile')
-        const { error: profileError } = await supabase
+        console.log('SIGNUP: Creating new profile with id:', authData.user.id)
+        const { error: profileError, data: newProfile } = await supabase
           .from('profiles')
           .insert({
             id: authData.user.id,
@@ -312,17 +390,20 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
             phone: phone || null,
             role: 'pm'
           })
+          .select()
+          .single()
 
         if (profileError) {
-          console.error('Error creating profile:', profileError)
+          console.error('SIGNUP ERROR: Failed to create profile:', profileError)
+          errors.push(`Profile creation failed: ${profileError.message}`)
         } else {
-          console.log('Profile created successfully')
+          console.log('SIGNUP SUCCESS: Profile created:', newProfile)
         }
       }
 
       // STEP 3: Create org_contacts AFTER profile exists (due to FK on created_by)
       if (orgId) {
-        console.log('Step 3: Creating org_contacts...')
+        console.log('SIGNUP Step 3: Creating org_contacts...')
         const contactsToCreate: any[] = [
           {
             organization_id: orgId,
@@ -345,17 +426,26 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
           })
         }
         
-        console.log('Org contacts to create:', JSON.stringify(contactsToCreate, null, 2))
+        console.log('SIGNUP: Org contacts to create:', contactsToCreate.length)
         const { error: contactsError, data: contactsData } = await supabase
           .from('org_contacts')
           .insert(contactsToCreate)
           .select()
         
         if (contactsError) {
-          console.error('Error creating org contacts:', contactsError)
+          console.error('SIGNUP ERROR: Failed to create org contacts:', contactsError)
+          errors.push(`Org contacts failed: ${contactsError.message}`)
         } else {
-          console.log('Org contacts created successfully:', contactsData)
+          console.log('SIGNUP SUCCESS: Org contacts created:', contactsData?.length)
         }
+      } else {
+        console.log('SIGNUP: Skipping org_contacts (no orgId)')
+      }
+      
+      // Log any errors that occurred
+      if (errors.length > 0) {
+        console.error('SIGNUP ERRORS:', errors)
+        // Don't block signup, but log for debugging
       }
 
       // Step 4: Verify the profile was created correctly
@@ -500,6 +590,10 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
     try {
       setError(null)
       setLoading(true)
+      setIsLoggingOut(true)
+      
+      // Set a localStorage flag to persist across page loads
+      localStorage.setItem('squareft_logging_out', 'true')
 
       // Use the dedicated logout route for a clean exit
       window.location.href = '/auth/logout'

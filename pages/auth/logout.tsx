@@ -1,32 +1,40 @@
 import { useEffect } from 'react'
-import { useRouter } from 'next/router'
 import { supabase } from '../../lib/supabase'
 
 export default function Logout() {
-  const router = useRouter()
-
   useEffect(() => {
     const performLogout = async () => {
       try {
         console.log('Performing aggressive logout...')
         
-        // 1. Clear Supabase auth
-        await supabase.auth.signOut()
+        // 1. Broadcast logout to other tabs FIRST (before clearing storage)
+        try {
+          const bc = new BroadcastChannel('squareft_auth')
+          bc.postMessage({ type: 'LOGOUT' })
+          bc.close()
+        } catch (e) {
+          console.log('BroadcastChannel not supported')
+        }
+        
+        // 2. Clear Supabase auth with global scope (logs out all tabs)
+        await supabase.auth.signOut({ scope: 'global' })
 
-        // 2. Clear Local Storage
+        // 3. Clear the logout flag first, then clear all localStorage
+        // (clearing localStorage triggers storage events in other tabs)
+        window.localStorage.removeItem('squareft_logging_out')
         window.localStorage.clear()
         
-        // 3. Clear Session Storage
+        // 4. Clear Session Storage
         window.sessionStorage.clear()
 
-        // 4. Clear Cookies
+        // 5. Clear Cookies
         document.cookie.split(';').forEach((c) => {
           document.cookie = c
             .replace(/^ +/, '')
             .replace(/=.*/, '=;expires=' + new Date().toUTCString() + ';path=/')
         })
 
-        // 5. Clear IndexedDB (used by Supabase sometimes)
+        // 6. Clear IndexedDB (used by Supabase sometimes)
         if (window.indexedDB) {
           try {
             const dbs = await window.indexedDB.databases()
@@ -42,7 +50,7 @@ export default function Logout() {
       } catch (error) {
         console.error('Logout error:', error)
       } finally {
-        // 6. Hard redirect to login page to clear any React state
+        // 7. Hard redirect to login page to clear any React state
         window.location.href = '/auth/login'
       }
     }
