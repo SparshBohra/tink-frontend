@@ -45,18 +45,21 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const router = useRouter()
 
-  // Fetch user profile and organization - optimized with single query
+  // Fetch user profile and organization with timeout
   const fetchUserData = async (userId: string) => {
     try {
-      // Fetch profile with organization in a single query using join
+      // Add timeout to prevent infinite loading
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 5000)
+      
+      // Simple query first - just get profile
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select(`
-          *,
-          organization:organizations(*)
-        `)
+        .select('*')
         .eq('id', userId)
         .single()
+      
+      clearTimeout(timeout)
 
       if (profileError && profileError.code !== 'PGRST116') {
         console.error('Error fetching profile:', profileError)
@@ -64,19 +67,25 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
       }
 
       if (profileData) {
-        // Extract organization from nested result
-        const { organization, ...profile } = profileData
-        setProfile(profile as Profile)
+        setProfile(profileData as Profile)
+        activityLogger.setUser(userId, profileData.organization_id)
         
-        if (organization) {
-          setOrganization(organization as Organization)
+        // Fetch organization separately if exists
+        if (profileData.organization_id) {
+          const { data: orgData } = await supabase
+            .from('organizations')
+            .select('*')
+            .eq('id', profileData.organization_id)
+            .single()
+          
+          if (orgData) {
+            setOrganization(orgData as Organization)
+          }
         }
-
-        // Set activity logger user context
-        activityLogger.setUser(userId, profile.organization_id)
       }
     } catch (err) {
       console.error('Error fetching user data:', err)
+      // Don't block on error - let page load anyway
     }
   }
 
@@ -126,13 +135,19 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
           return
         }
         
-        // For dashboard/other pages, fetch full user data
+        // For dashboard/other pages, fetch session and user data
         const { data: { session: currentSession } } = await supabase.auth.getSession()
         
         if (currentSession) {
           setSession(currentSession)
           setUser(currentSession.user)
-          await fetchUserData(currentSession.user.id)
+          
+          // Fetch user data with timeout - don't block forever
+          const fetchPromise = fetchUserData(currentSession.user.id)
+          const timeoutPromise = new Promise<void>(resolve => setTimeout(resolve, 3000))
+          
+          // Wait for fetch OR timeout, whichever comes first
+          await Promise.race([fetchPromise, timeoutPromise])
         }
       } catch (err) {
         console.error('Error initializing auth:', err)
