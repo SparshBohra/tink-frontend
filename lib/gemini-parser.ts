@@ -164,74 +164,229 @@ ${rawMessage}
 
 // Parse Gemini's response and handle edge cases
 function parseGeminiResponse(rawResponse: string): ParsedTicketData | null {
+  // Clean up the response first
+  let cleanedResponse = rawResponse.trim()
+  
   try {
     // Try direct JSON parse first
-    const parsed = JSON.parse(rawResponse)
-    
-    // Validate required fields
-    if (parsed.is_maintenance_related === undefined || 
-        !parsed.message_type ||
-        !parsed.title || 
-        !parsed.description) {
-      throw new Error('Missing required fields in Gemini response')
-    }
-    
-    // If not maintenance related, confidence should be lower and we don't care about priority/category accuracy
-    if (!parsed.is_maintenance_related) {
-      console.log(`Non-maintenance message detected: ${parsed.message_type}`)
-    }
-    
-    // Validate priority (only important if maintenance-related)
-    const validPriorities: TicketPriority[] = ['low', 'medium', 'high', 'emergency']
-    if (!validPriorities.includes(parsed.priority)) {
-      console.warn(`Invalid priority: ${parsed.priority}, defaulting to medium`)
-      parsed.priority = 'medium'
-    }
-    
-    // Validate category (only important if maintenance-related)
-    const validCategories: TicketCategory[] = [
-      'hvac', 'heating', 'cooling', 'plumbing', 'electrical', 
-      'appliance', 'access_control', 'pest', 'general'
-    ]
-    if (!validCategories.includes(parsed.category)) {
-      console.warn(`Invalid category: ${parsed.category}, defaulting to general`)
-      parsed.category = 'general'
-    }
-    
-    // Validate message_type
-    const validTypes = ['maintenance', 'spam', 'personal', 'marketing', 'automated', 'unclear']
-    if (!validTypes.includes(parsed.message_type)) {
-      console.warn(`Invalid message_type: ${parsed.message_type}, defaulting to unclear`)
-      parsed.message_type = 'unclear'
-    }
-    
-    // Ensure confidence is between 0 and 1
-    if (typeof parsed.confidence !== 'number' || parsed.confidence < 0 || parsed.confidence > 1) {
-      parsed.confidence = 0.5 // Default to moderate confidence
-    }
-    
-    // Ensure extracted_data exists
-    if (!parsed.extracted_data) {
-      parsed.extracted_data = {}
-    }
-    
-    return parsed as ParsedTicketData
+    const parsed = JSON.parse(cleanedResponse)
+    return validateAndNormalizeData(parsed)
   } catch (error) {
-    console.error('Failed to parse Gemini response:', error)
-    console.error('Raw response:', rawResponse)
+    console.error('Failed to parse Gemini response directly:', error)
+    console.error('Raw response length:', rawResponse.length)
+    console.error('First 200 chars:', rawResponse.substring(0, 200))
     
-    // Try to extract JSON from markdown code block (sometimes Gemini wraps it)
-    const jsonMatch = rawResponse.match(/```json\s*([\s\S]*?)\s*```/)
-    if (jsonMatch) {
+    // Strategy 1: Try to extract JSON from markdown code block
+    const jsonMatch1 = cleanedResponse.match(/```json\s*([\s\S]*?)\s*```/)
+    if (jsonMatch1) {
       try {
-        return parseGeminiResponse(jsonMatch[1])
+        console.log('Found JSON in markdown code block, attempting parse...')
+        const parsed = JSON.parse(jsonMatch1[1].trim())
+        return validateAndNormalizeData(parsed)
       } catch (e) {
         console.error('Failed to parse JSON from markdown block')
       }
     }
     
+    // Strategy 2: Try to extract JSON from generic code block
+    const jsonMatch2 = cleanedResponse.match(/```\s*([\s\S]*?)\s*```/)
+    if (jsonMatch2) {
+      try {
+        console.log('Found content in generic code block, attempting parse...')
+        const parsed = JSON.parse(jsonMatch2[1].trim())
+        return validateAndNormalizeData(parsed)
+      } catch (e) {
+        console.error('Failed to parse JSON from generic code block')
+      }
+    }
+    
+    // Strategy 3: Look for JSON object anywhere in the response
+    const jsonMatch3 = cleanedResponse.match(/\{[\s\S]*\}/)
+    if (jsonMatch3) {
+      try {
+        console.log('Found JSON-like content, attempting parse...')
+        const parsed = JSON.parse(jsonMatch3[0])
+        return validateAndNormalizeData(parsed)
+      } catch (e) {
+        console.error('Failed to parse extracted JSON-like content')
+      }
+    }
+    
+    // Strategy 4: Try to remove any leading/trailing text before/after JSON
+    try {
+      const firstBrace = cleanedResponse.indexOf('{')
+      const lastBrace = cleanedResponse.lastIndexOf('}')
+      if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+        const jsonContent = cleanedResponse.substring(firstBrace, lastBrace + 1)
+        console.log('Extracted JSON by brace positions, attempting parse...')
+        const parsed = JSON.parse(jsonContent)
+        return validateAndNormalizeData(parsed)
+      }
+    } catch (e) {
+      console.error('Failed to parse JSON by brace extraction')
+    }
+    
+    console.error('All parsing strategies failed')
     return null
   }
+}
+
+// Helper function to validate and normalize parsed data
+function validateAndNormalizeData(parsed: any): ParsedTicketData {
+  // Validate required fields
+  if (parsed.is_maintenance_related === undefined || 
+      !parsed.message_type ||
+      !parsed.title || 
+      !parsed.description) {
+    throw new Error('Missing required fields in Gemini response')
+  }
+  
+  // If not maintenance related, confidence should be lower and we don't care about priority/category accuracy
+  if (!parsed.is_maintenance_related) {
+    console.log(`Non-maintenance message detected: ${parsed.message_type}`)
+  }
+  
+  // Validate priority (only important if maintenance-related)
+  const validPriorities: TicketPriority[] = ['low', 'medium', 'high', 'emergency']
+  if (!validPriorities.includes(parsed.priority)) {
+    console.warn(`Invalid priority: ${parsed.priority}, defaulting to medium`)
+    parsed.priority = 'medium'
+  }
+  
+  // Validate category (only important if maintenance-related)
+  const validCategories: TicketCategory[] = [
+    'hvac', 'heating', 'cooling', 'plumbing', 'electrical', 
+    'appliance', 'access_control', 'pest', 'general'
+  ]
+  if (!validCategories.includes(parsed.category)) {
+    console.warn(`Invalid category: ${parsed.category}, defaulting to general`)
+    parsed.category = 'general'
+  }
+  
+  // Validate message_type
+  const validTypes = ['maintenance', 'spam', 'personal', 'marketing', 'automated', 'unclear']
+  if (!validTypes.includes(parsed.message_type)) {
+    console.warn(`Invalid message_type: ${parsed.message_type}, defaulting to unclear`)
+    parsed.message_type = 'unclear'
+  }
+  
+  // Ensure confidence is between 0 and 1
+  if (typeof parsed.confidence !== 'number' || parsed.confidence < 0 || parsed.confidence > 1) {
+    parsed.confidence = 0.5 // Default to moderate confidence
+  }
+  
+  // Ensure extracted_data exists
+  if (!parsed.extracted_data) {
+    parsed.extracted_data = {}
+  }
+  
+  return parsed as ParsedTicketData
+}
+
+// Helper function to call Gemini API with retry logic
+async function callGeminiWithRetry(
+  prompt: string,
+  maxRetries: number = 2
+): Promise<{ success: boolean; generatedText?: string; error?: string; rawResult?: any }> {
+  let lastError: string = ''
+  
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    if (attempt > 0) {
+      const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000) // Exponential backoff: 1s, 2s, 4s (max 5s)
+      console.log(`Retrying Gemini API call (attempt ${attempt + 1}/${maxRetries + 1}) after ${delay}ms...`)
+      await new Promise(resolve => setTimeout(resolve, delay))
+    }
+    
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [
+                  {
+                    text: prompt
+                  }
+                ]
+              }
+            ],
+            generationConfig: {
+              temperature: 0.1, // Low temperature for consistent, structured output
+              topK: 1,
+              topP: 0.95,
+              maxOutputTokens: 2048,
+            },
+            safetySettings: [
+              {
+                category: "HARM_CATEGORY_HARASSMENT",
+                threshold: "BLOCK_NONE"
+              },
+              {
+                category: "HARM_CATEGORY_HATE_SPEECH",
+                threshold: "BLOCK_NONE"
+              },
+              {
+                category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                threshold: "BLOCK_NONE"
+              },
+              {
+                category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+                threshold: "BLOCK_NONE"
+              }
+            ]
+          })
+        }
+      )
+      
+      if (!response.ok) {
+        const errorText = await response.text()
+        lastError = `Gemini API error: ${response.status} - ${errorText}`
+        
+        // Retry on 5xx errors or rate limits
+        if (response.status >= 500 || response.status === 429) {
+          console.warn(`Retryable error: ${lastError}`)
+          continue
+        }
+        
+        // Don't retry on 4xx errors (except 429)
+        return { success: false, error: lastError }
+      }
+      
+      const result = await response.json()
+      
+      // Extract text from Gemini response
+      const generatedText = result.candidates?.[0]?.content?.parts?.[0]?.text
+      
+      if (!generatedText) {
+        lastError = 'No text generated by Gemini'
+        return { 
+          success: false, 
+          error: lastError,
+          rawResult: result
+        }
+      }
+      
+      // Success!
+      return { success: true, generatedText }
+      
+    } catch (error: any) {
+      lastError = error.message || 'Unknown error calling Gemini API'
+      console.error(`Gemini API call failed (attempt ${attempt + 1}):`, lastError)
+      
+      // Continue to retry on network errors
+      if (attempt < maxRetries) {
+        continue
+      }
+    }
+  }
+  
+  // All retries exhausted
+  return { success: false, error: `Failed after ${maxRetries + 1} attempts: ${lastError}` }
 }
 
 // Main parsing function
@@ -260,81 +415,25 @@ export async function parseMaintenanceRequest(
   try {
     const prompt = buildPrompt(truncatedMessage)
     
-    // Call Gemini API
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                {
-                  text: prompt
-                }
-              ]
-            }
-          ],
-          generationConfig: {
-            temperature: 0.1, // Low temperature for consistent, structured output
-            topK: 1,
-            topP: 0.95,
-            maxOutputTokens: 2048,
-          },
-          safetySettings: [
-            {
-              category: "HARM_CATEGORY_HARASSMENT",
-              threshold: "BLOCK_NONE"
-            },
-            {
-              category: "HARM_CATEGORY_HATE_SPEECH",
-              threshold: "BLOCK_NONE"
-            },
-            {
-              category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-              threshold: "BLOCK_NONE"
-            },
-            {
-              category: "HARM_CATEGORY_DANGEROUS_CONTENT",
-              threshold: "BLOCK_NONE"
-            }
-          ]
-        })
-      }
-    )
+    // Call Gemini API with retry logic
+    const apiResult = await callGeminiWithRetry(prompt, 2)
     
-    if (!response.ok) {
-      const errorText = await response.text()
+    if (!apiResult.success || !apiResult.generatedText) {
       return {
         success: false,
-        error: `Gemini API error: ${response.status} - ${errorText}`
-      }
-    }
-    
-    const result = await response.json()
-    
-    // Extract text from Gemini response
-    const generatedText = result.candidates?.[0]?.content?.parts?.[0]?.text
-    
-    if (!generatedText) {
-      return {
-        success: false,
-        error: 'No text generated by Gemini',
-        raw_response: JSON.stringify(result)
+        error: apiResult.error || 'Failed to get response from Gemini',
+        raw_response: apiResult.rawResult ? JSON.stringify(apiResult.rawResult) : undefined
       }
     }
     
     // Parse the structured data
-    const parsedData = parseGeminiResponse(generatedText)
+    const parsedData = parseGeminiResponse(apiResult.generatedText)
     
     if (!parsedData) {
       return {
         success: false,
         error: 'Failed to parse Gemini response as valid JSON',
-        raw_response: generatedText
+        raw_response: apiResult.generatedText
       }
     }
     
@@ -343,14 +442,14 @@ export async function parseMaintenanceRequest(
       success: true,
       data: parsedData,
       confidence: parsedData.confidence,
-      raw_response: generatedText
+      raw_response: apiResult.generatedText
     }
     
   } catch (error: any) {
-    console.error('Error calling Gemini API:', error)
+    console.error('Error in parseMaintenanceRequest:', error)
     return {
       success: false,
-      error: error.message || 'Unknown error calling Gemini API'
+      error: error.message || 'Unknown error in parsing flow'
     }
   }
 }

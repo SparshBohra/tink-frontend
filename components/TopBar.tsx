@@ -2,29 +2,186 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { useSupabaseAuth } from '../lib/supabase-auth-context';
+import { supabase } from '../lib/supabase';
 import { Bell, Settings, LogOut, ChevronDown, User, Building2, Lock, X, Check } from 'lucide-react';
 import SettingsModal from './SettingsModal';
 
-// Mock notifications for demo
-const mockNotifications = [
-  { id: 1, title: 'New emergency ticket', message: 'Active Water Leak in Unit 402', time: '5m ago', read: false },
-  { id: 2, title: 'Ticket assigned', message: 'HVAC issue assigned to maintenance', time: '1h ago', read: false },
-  { id: 3, title: 'Ticket completed', message: 'Plumbing repair marked as done', time: '3h ago', read: true },
-  { id: 4, title: 'New message', message: 'Tenant responded to ticket #12', time: '1d ago', read: true },
-];
+interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  time: string;
+  read: boolean;
+  ticketId?: string;
+  ticketNumber?: number;
+}
 
 export default function TopBar() {
   const router = useRouter();
-  const { profile, organization, signOut } = useSupabaseAuth();
+  const { profile, organization, organizationId, signOut } = useSupabaseAuth();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [notifications, setNotifications] = useState(mockNotifications);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [readNotifications, setReadNotifications] = useState<Set<string>>(new Set());
   
   const userMenuRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const unreadCount = notifications.filter(n => !readNotifications.has(n.id)).length;
+
+  // Fetch real notifications from tickets
+  useEffect(() => {
+    if (!organizationId) return;
+
+    const fetchNotifications = async () => {
+      try {
+        // Get recent tickets from user's organization (last 24 hours)
+        const oneDayAgo = new Date();
+        oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+
+        const { data: tickets, error } = await supabase
+          .from('tickets')
+          .select('id, ticket_number, title, priority, status, created_at, updated_at')
+          .eq('organization_id', organizationId)
+          .gte('created_at', oneDayAgo.toISOString())
+          .order('created_at', { ascending: false })
+          .limit(10);
+
+        if (error) {
+          console.error('Error fetching notifications:', error);
+          return;
+        }
+
+        if (!tickets || tickets.length === 0) {
+          setNotifications([]);
+          return;
+        }
+
+        // Convert tickets to notifications
+        const notifs: Notification[] = tickets.map((ticket: any) => {
+          const createdAt = new Date(ticket.created_at);
+          const now = new Date();
+          const diffMs = now.getTime() - createdAt.getTime();
+          const diffMins = Math.floor(diffMs / 60000);
+          const diffHours = Math.floor(diffMs / 3600000);
+          const diffDays = Math.floor(diffMs / 86400000);
+
+          let timeAgo = '';
+          if (diffMins < 1) {
+            timeAgo = 'Just now';
+          } else if (diffMins < 60) {
+            timeAgo = `${diffMins}m ago`;
+          } else if (diffHours < 24) {
+            timeAgo = `${diffHours}h ago`;
+          } else {
+            timeAgo = `${diffDays}d ago`;
+          }
+
+          let title = '';
+          let message = ticket.title;
+
+          if (ticket.priority === 'emergency') {
+            title = '🚨 Emergency ticket';
+          } else if (ticket.status === 'completed') {
+            title = '✅ Ticket completed';
+          } else if (ticket.status === 'in_progress') {
+            title = '🔧 Ticket in progress';
+          } else {
+            title = '🎫 New ticket';
+          }
+
+          return {
+            id: ticket.id,
+            title,
+            message,
+            time: timeAgo,
+            read: false,
+            ticketId: ticket.id,
+            ticketNumber: ticket.ticket_number
+          };
+        });
+
+        setNotifications(notifs);
+      } catch (error) {
+        console.error('Error in fetchNotifications:', error);
+      }
+    };
+
+    fetchNotifications();
+
+    // Subscribe to real-time ticket changes
+    const channel = supabase
+      .channel('ticket-notifications')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'tickets',
+          filter: `organization_id=eq.${organizationId}`
+        },
+        (payload) => {
+          const newTicket = payload.new as any;
+          const newNotif: Notification = {
+            id: newTicket.id,
+            title: newTicket.priority === 'emergency' ? '🚨 Emergency ticket' : '🎫 New ticket',
+            message: newTicket.title,
+            time: 'Just now',
+            read: false,
+            ticketId: newTicket.id,
+            ticketNumber: newTicket.ticket_number
+          };
+          setNotifications(prev => [newNotif, ...prev].slice(0, 10));
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'tickets',
+          filter: `organization_id=eq.${organizationId}`
+        },
+        (payload) => {
+          const updatedTicket = payload.new as any;
+          // Update existing notification or add new one for status changes
+          setNotifications(prev => {
+            const existing = prev.find(n => n.ticketId === updatedTicket.id);
+            if (existing) {
+              return prev.map(n => 
+                n.ticketId === updatedTicket.id
+                  ? {
+                      ...n,
+                      title: updatedTicket.status === 'completed' ? '✅ Ticket completed' : 
+                             updatedTicket.status === 'in_progress' ? '🔧 Ticket in progress' : n.title,
+                      message: updatedTicket.title,
+                      time: 'Just now'
+                    }
+                  : n
+              );
+            } else {
+              // Add as new notification if status changed
+              const newNotif: Notification = {
+                id: `${updatedTicket.id}-update`,
+                title: updatedTicket.status === 'completed' ? '✅ Ticket completed' : '🔧 Ticket updated',
+                message: updatedTicket.title,
+                time: 'Just now',
+                read: false,
+                ticketId: updatedTicket.id,
+                ticketNumber: updatedTicket.ticket_number
+              };
+              return [newNotif, ...prev].slice(0, 10);
+            }
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [organizationId, supabase]);
 
   // Handle outside clicks
   useEffect(() => {
@@ -49,12 +206,12 @@ export default function TopBar() {
     }
   };
 
-  const markAsRead = (id: number) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+  const markAsRead = (id: string) => {
+    setReadNotifications(prev => new Set(prev).add(id));
   };
 
   const markAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    setReadNotifications(new Set(notifications.map(n => n.id)));
   };
 
   return (
@@ -90,22 +247,30 @@ export default function TopBar() {
                   </div>
                   <div className="notif-list">
                     {notifications.length === 0 ? (
-                      <div className="notif-empty">No notifications</div>
+                      <div className="notif-empty">No recent activity</div>
                     ) : (
-                      notifications.map(notif => (
-                        <div 
-                          key={notif.id} 
-                          className={`notif-item ${notif.read ? 'read' : 'unread'}`}
-                          onClick={() => markAsRead(notif.id)}
-                        >
-                          <div className="notif-indicator" />
-                          <div className="notif-content">
-                            <div className="notif-title">{notif.title}</div>
-                            <div className="notif-message">{notif.message}</div>
-                            <div className="notif-time">{notif.time}</div>
+                      notifications.map(notif => {
+                        const isRead = readNotifications.has(notif.id);
+                        return (
+                          <div 
+                            key={notif.id} 
+                            className={`notif-item ${isRead ? 'read' : 'unread'}`}
+                            onClick={() => {
+                              markAsRead(notif.id);
+                              if (notif.ticketId) {
+                                router.push('/dashboard/tickets');
+                              }
+                            }}
+                          >
+                            <div className="notif-indicator" />
+                            <div className="notif-content">
+                              <div className="notif-title">{notif.title}</div>
+                              <div className="notif-message">{notif.message}</div>
+                              <div className="notif-time">{notif.time}</div>
+                            </div>
                           </div>
-                        </div>
-                      ))
+                        );
+                      })
                     )}
                   </div>
                 </div>
