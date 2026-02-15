@@ -285,8 +285,8 @@ export async function getTicketStats(
  */
 export function subscribeToTickets(
   organizationId: string,
-  onInsert: (ticket: Ticket) => void,
-  onUpdate: (ticket: Ticket) => void
+  onInsert: (ticket: TicketWithRelations) => void,
+  onUpdate: (ticket: TicketWithRelations) => void
 ) {
   const channel = supabase
     .channel(`tickets-${organizationId}`)
@@ -298,8 +298,15 @@ export function subscribeToTickets(
         table: 'tickets',
         filter: `organization_id=eq.${organizationId}`
       },
-      (payload) => {
-        onInsert(payload.new as Ticket)
+      async (payload) => {
+        // Fetch full ticket with inbound_messages for correct source display
+        const { data: fullTicket } = await supabase
+          .from('tickets')
+          .select('*, inbound_messages(id, source, sender_name, sender_email, sender_phone, raw_body, raw_subject, received_at, processed_at, forwarder_email, forwarder_name, original_from, original_from_name)')
+          .eq('id', (payload.new as Ticket).id)
+          .single()
+        
+        onInsert((fullTicket || payload.new) as TicketWithRelations)
       }
     )
     .on(
@@ -310,8 +317,15 @@ export function subscribeToTickets(
         table: 'tickets',
         filter: `organization_id=eq.${organizationId}`
       },
-      (payload) => {
-        onUpdate(payload.new as Ticket)
+      async (payload) => {
+        // Fetch full ticket with inbound_messages
+        const { data: fullTicket } = await supabase
+          .from('tickets')
+          .select('*, inbound_messages(id, source, sender_name, sender_email, sender_phone, raw_body, raw_subject, received_at, processed_at, forwarder_email, forwarder_name, original_from, original_from_name)')
+          .eq('id', (payload.new as Ticket).id)
+          .single()
+        
+        onUpdate((fullTicket || payload.new) as TicketWithRelations)
       }
     )
     .subscribe()

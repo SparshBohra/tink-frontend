@@ -672,7 +672,14 @@ function TicketsPage() {
           </div>
         ) : (
           <div className="dashboard-content fade-in h-full">
-            <FullCalendar />
+            <FullCalendar 
+              tickets={tickets} 
+              onTicketClick={(ticket) => {
+                setSelectedTicket(ticket)
+                setIsModalOpen(true)
+                activityLogger.logTicketView(ticket.id, ticket.ticket_number || 0)
+              }}
+            />
           </div>
         )}
       </div>

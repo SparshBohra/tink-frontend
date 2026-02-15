@@ -1,23 +1,20 @@
 import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight, Clock } from 'lucide-react';
+import { TicketWithRelations, getPriorityColor } from '../lib/supabase-types';
 
-export default function FullCalendar() {
+interface FullCalendarProps {
+  tickets: TicketWithRelations[];
+  onTicketClick?: (ticket: TicketWithRelations) => void;
+}
+
+export default function FullCalendar({ tickets, onTicketClick }: FullCalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<'month' | 'week' | 'day'>('month');
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   
   const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const monthNames = ["January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December"
-  ];
-
-  // Mock events
-  const events = [
-    { date: new Date(2026, 0, 2), title: 'HVAC Maintenance', type: 'maintenance', time: '10:00 AM' },
-    { date: new Date(2026, 0, 5), title: 'Unit 402 Inspection', type: 'inspection', time: '2:00 PM' },
-    { date: new Date(2026, 0, 12), title: 'Lease Renewal', type: 'admin', time: 'All Day' },
-    { date: new Date(2026, 0, 15), title: 'Plumbing Repair', type: 'emergency', time: '9:30 AM' },
-    { date: new Date(2026, 0, 24), title: 'Fire Alarm Test', type: 'maintenance', time: '11:00 AM' },
-    { date: new Date(2026, 0, 31), title: 'Monthly Review', type: 'admin', time: '3:00 PM' },
   ];
 
   const getDaysInMonth = (date: Date) => {
@@ -58,12 +55,13 @@ export default function FullCalendar() {
     return weekDays;
   };
 
-  const getEventsForDate = (date: Date) => {
-    return events.filter(e => 
-      e.date.getFullYear() === date.getFullYear() &&
-      e.date.getMonth() === date.getMonth() &&
-      e.date.getDate() === date.getDate()
-    );
+  const getEventsForDate = (date: Date): TicketWithRelations[] => {
+    return tickets.filter(t => {
+      const ticketDate = new Date(t.created_at);
+      return ticketDate.getFullYear() === date.getFullYear() &&
+        ticketDate.getMonth() === date.getMonth() &&
+        ticketDate.getDate() === date.getDate();
+    });
   };
 
   const changeDate = (offset: number) => {
@@ -101,6 +99,14 @@ export default function FullCalendar() {
   const calendarDays = getDaysInMonth(currentDate);
   const weekDays = getWeekDays(currentDate);
   const hours = Array.from({ length: 12 }, (_, i) => i + 8); // 8 AM to 7 PM
+  
+  const today = new Date();
+  const isCurrentMonth = today.getMonth() === currentDate.getMonth() && 
+                         today.getFullYear() === currentDate.getFullYear();
+  const todayDate = today.getDate();
+  
+  // Get today's tickets for the summary
+  const todayTickets = isCurrentMonth ? getEventsForDate(new Date(today.getFullYear(), today.getMonth(), todayDate)) : [];
 
   return (
     <div className="full-calendar">
@@ -129,16 +135,42 @@ export default function FullCalendar() {
             {calendarDays.map((item, index) => {
               const dayEvents = getEventsForDate(item.date);
               const isToday = new Date().toDateString() === item.date.toDateString();
+              const ticketCount = dayEvents.length;
+              const hasEmergency = dayEvents.some(t => t.priority === 'emergency');
               
               return (
                 <div key={index} className={`day-cell ${item.type} ${isToday ? 'today' : ''}`}>
                   <div className="day-number">{item.date.getDate()}</div>
+                  {ticketCount > 0 && (
+                    <div className="ticket-badge-wrapper">
+                      <span className={`ticket-badge ${hasEmergency ? 'emergency' : ''}`}>
+                        {ticketCount}
+                      </span>
+                    </div>
+                  )}
                   <div className="events-list">
-                    {dayEvents.map((event, idx) => (
-                      <div key={idx} className={`event-chip ${event.type}`}>
-                        <span className="event-title">{event.title}</span>
+                    {dayEvents.slice(0, 3).map((ticket) => {
+                      const priorityColor = getPriorityColor(ticket.priority);
+                      return (
+                        <div 
+                          key={ticket.id} 
+                          className="event-chip"
+                          style={{ 
+                            background: priorityColor.bg, 
+                            borderColor: priorityColor.text,
+                            color: priorityColor.text
+                          }}
+                          onClick={() => onTicketClick?.(ticket)}
+                        >
+                          <span className="event-title">#{ticket.ticket_number} {ticket.title || 'Request'}</span>
+                        </div>
+                      );
+                    })}
+                    {dayEvents.length > 3 && (
+                      <div className="event-chip more">
+                        +{dayEvents.length - 3} more
                       </div>
-                    ))}
+                    )}
                   </div>
                 </div>
               );
@@ -153,10 +185,14 @@ export default function FullCalendar() {
             <div className="time-gutter"></div>
             {weekDays.map((day, i) => {
               const isToday = new Date().toDateString() === day.toDateString();
+              const dayTickets = getEventsForDate(day);
               return (
                 <div key={i} className={`week-day-header ${isToday ? 'today' : ''}`}>
                   <span className="day-name">{days[day.getDay()].slice(0, 3)}</span>
                   <span className={`day-num ${isToday ? 'today' : ''}`}>{day.getDate()}</span>
+                  {dayTickets.length > 0 && (
+                    <span className="ticket-count">{dayTickets.length}</span>
+                  )}
                 </div>
               );
             })}
@@ -170,18 +206,34 @@ export default function FullCalendar() {
               ))}
             </div>
             {weekDays.map((day, i) => {
-              const dayEvents = getEventsForDate(day);
+              const dayTickets = getEventsForDate(day);
               return (
                 <div key={i} className="day-column">
                   {hours.map(h => (
                     <div key={h} className="hour-cell"></div>
                   ))}
-                  {dayEvents.map((event, idx) => (
-                    <div key={idx} className={`week-event ${event.type}`} style={{ top: `${(parseInt(event.time) - 8) * 60 + 10}px` }}>
-                      <span className="event-time">{event.time}</span>
-                      <span className="event-title">{event.title}</span>
-                    </div>
-                  ))}
+                  {dayTickets.map((ticket, idx) => {
+                    const priorityColor = getPriorityColor(ticket.priority);
+                    const ticketDate = new Date(ticket.created_at);
+                    const topPos = (ticketDate.getHours() - 8) * 60 + 10;
+                    
+                    return (
+                      <div 
+                        key={ticket.id} 
+                        className="week-event" 
+                        style={{ 
+                          top: `${topPos >= 0 ? topPos : 10}px`,
+                          background: priorityColor.bg,
+                          borderColor: priorityColor.text,
+                          color: priorityColor.text
+                        }}
+                        onClick={() => onTicketClick?.(ticket)}
+                      >
+                        <span className="event-time">{ticketDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span>
+                        <span className="event-title">#{ticket.ticket_number} {ticket.title || 'Request'}</span>
+                      </div>
+                    );
+                  })}
                 </div>
               );
             })}
@@ -193,26 +245,83 @@ export default function FullCalendar() {
         <div className="day-view">
           <div className="day-schedule">
             {hours.map(h => {
-              const hourEvents = events.filter(e => 
-                e.date.toDateString() === currentDate.toDateString() && 
-                parseInt(e.time) === h
-              );
+              const hourTickets = tickets.filter(t => {
+                const ticketDate = new Date(t.created_at);
+                return ticketDate.toDateString() === currentDate.toDateString() && 
+                  ticketDate.getHours() === h;
+              });
               return (
                 <div key={h} className="hour-row">
                   <div className="hour-label">{h > 12 ? h - 12 : h}:00 {h >= 12 ? 'PM' : 'AM'}</div>
                   <div className="hour-content">
-                    {hourEvents.map((event, idx) => (
-                      <div key={idx} className={`day-event ${event.type}`}>
-                        <Clock size={14} />
-                        <span className="event-time">{event.time}</span>
-                        <span className="event-title">{event.title}</span>
-                      </div>
-                    ))}
+                    {hourTickets.map((ticket) => {
+                      const priorityColor = getPriorityColor(ticket.priority);
+                      const ticketDate = new Date(ticket.created_at);
+                      return (
+                        <div 
+                          key={ticket.id} 
+                          className="day-event"
+                          style={{
+                            background: priorityColor.bg,
+                            borderColor: priorityColor.text,
+                            color: priorityColor.text
+                          }}
+                          onClick={() => onTicketClick?.(ticket)}
+                        >
+                          <Clock size={14} />
+                          <span className="event-time">{ticketDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span>
+                          <span className="event-title">#{ticket.ticket_number} {ticket.title || 'Request'}</span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               );
             })}
           </div>
+        </div>
+      )}
+
+      {/* Today's Summary - only show in month view */}
+      {view === 'month' && isCurrentMonth && (
+        <div className="today-summary">
+          <h3 className="summary-title">
+            Today ({todayTickets.length} ticket{todayTickets.length !== 1 ? 's' : ''})
+          </h3>
+          
+          {todayTickets.length === 0 ? (
+            <p className="no-tickets">No tickets today</p>
+          ) : (
+            <div className="tickets-list">
+              {todayTickets.slice(0, 5).map(ticket => {
+                const priorityColor = getPriorityColor(ticket.priority);
+                return (
+                  <div
+                    key={ticket.id}
+                    className="ticket-summary-card"
+                    onClick={() => onTicketClick?.(ticket)}
+                  >
+                    <span className="ticket-number">#{ticket.ticket_number}</span>
+                    <span className="ticket-title">{ticket.title || 'Maintenance Request'}</span>
+                    <span
+                      className="ticket-priority"
+                      style={{
+                        backgroundColor: priorityColor.bg,
+                        color: priorityColor.text
+                      }}
+                    >
+                      {ticket.priority.toUpperCase()}
+                    </span>
+                  </div>
+                );
+              })}
+              {todayTickets.length > 5 && (
+                <p className="more-tickets">
+                  +{todayTickets.length - 5} more
+                </p>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -390,13 +499,41 @@ export default function FullCalendar() {
           border-left: 3px solid;
           cursor: pointer;
           transition: transform 0.1s;
+          font-weight: 600;
         }
 
         .event-chip:hover { transform: translateX(2px); }
-        .event-chip.maintenance { background: #eff6ff; border-color: #3b82f6; color: #1e40af; }
-        .event-chip.inspection { background: #f0fdf4; border-color: #22c55e; color: #15803d; }
-        .event-chip.emergency { background: #fef2f2; border-color: #ef4444; color: #b91c1c; }
-        .event-chip.admin { background: #f8fafc; border-color: #64748b; color: #334155; }
+        
+        .event-chip.more {
+          background: #f1f5f9;
+          border-color: #94a3b8;
+          color: #64748b;
+          text-align: center;
+        }
+        
+        .ticket-badge-wrapper {
+          position: absolute;
+          top: 8px;
+          right: 8px;
+        }
+        
+        .ticket-badge {
+          min-width: 20px;
+          height: 20px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: #3b82f6;
+          color: white;
+          font-size: 11px;
+          font-weight: 700;
+          border-radius: 10px;
+          padding: 0 6px;
+        }
+        
+        .ticket-badge.emergency {
+          background: #ef4444;
+        }
 
         .event-title {
           font-weight: 600;
@@ -503,12 +640,14 @@ export default function FullCalendar() {
           border-radius: 6px;
           font-size: 11px;
           border-left: 3px solid;
+          cursor: pointer;
+          transition: all 0.2s;
         }
 
-        .week-event.maintenance { background: #eff6ff; border-color: #3b82f6; }
-        .week-event.inspection { background: #f0fdf4; border-color: #22c55e; }
-        .week-event.emergency { background: #fef2f2; border-color: #ef4444; }
-        .week-event.admin { background: #f8fafc; border-color: #64748b; }
+        .week-event:hover {
+          transform: translateX(2px);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
 
         .week-event .event-time {
           font-size: 10px;
@@ -566,12 +705,14 @@ export default function FullCalendar() {
           padding: 12px 16px;
           border-radius: 10px;
           border-left: 4px solid;
+          cursor: pointer;
+          transition: all 0.2s;
         }
 
-        .day-event.maintenance { background: #eff6ff; border-color: #3b82f6; color: #1e40af; }
-        .day-event.inspection { background: #f0fdf4; border-color: #22c55e; color: #15803d; }
-        .day-event.emergency { background: #fef2f2; border-color: #ef4444; color: #b91c1c; }
-        .day-event.admin { background: #f8fafc; border-color: #64748b; color: #334155; }
+        .day-event:hover {
+          transform: translateX(4px);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
 
         .day-event .event-time {
           font-size: 13px;
@@ -581,6 +722,97 @@ export default function FullCalendar() {
         .day-event .event-title {
           font-size: 14px;
           font-weight: 600;
+        }
+        
+        /* Today's Summary */
+        .today-summary {
+          margin-top: 24px;
+          background: white;
+          border-radius: 16px;
+          border: 1px solid #e2e8f0;
+          padding: 20px;
+        }
+        
+        .summary-title {
+          font-size: 12px;
+          font-weight: 700;
+          color: #64748b;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          margin: 0 0 16px 0;
+        }
+        
+        .no-tickets {
+          text-align: center;
+          color: #94a3b8;
+          font-size: 14px;
+          padding: 20px 0;
+        }
+        
+        .tickets-list {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+        
+        .ticket-summary-card {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 12px 16px;
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 10px;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        
+        .ticket-summary-card:hover {
+          background: #f1f5f9;
+          border-color: #cbd5e1;
+          transform: translateX(2px);
+        }
+        
+        .ticket-number {
+          font-size: 12px;
+          color: #94a3b8;
+          font-weight: 600;
+          flex-shrink: 0;
+        }
+        
+        .ticket-title {
+          flex: 1;
+          font-size: 14px;
+          color: #0f172a;
+          font-weight: 500;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        
+        .ticket-priority {
+          font-size: 11px;
+          font-weight: 700;
+          padding: 4px 8px;
+          border-radius: 6px;
+          flex-shrink: 0;
+        }
+        
+        .more-tickets {
+          text-align: center;
+          font-size: 12px;
+          color: #94a3b8;
+          padding: 8px 0;
+          margin: 0;
+        }
+        
+        .ticket-count {
+          font-size: 10px;
+          background: #3b82f6;
+          color: white;
+          padding: 2px 6px;
+          border-radius: 8px;
+          font-weight: 700;
         }
       `}</style>
     </div>

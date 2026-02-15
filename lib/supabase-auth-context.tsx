@@ -217,34 +217,66 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
         return null
       }
 
-      // DATABASE TRIGGER handles org, profile, and contacts creation
-      // We just need to wait briefly for it to complete, then redirect
+      // ALWAYS CREATE NEW ORGANIZATION FOR EACH SIGNUP
+      // No org matching - each user gets their own organization
       console.log('=== SIGNUP SUCCESS ===')
       console.log('User ID:', authData.user.id)
-      console.log('Trigger will create: profile, organization, org_contacts')
+      console.log('Creating: new organization, profile, org_contacts')
       
-      // Brief delay to let the database trigger complete
-      await new Promise(resolve => setTimeout(resolve, 300))
-      
-      // Fetch the profile created by the trigger
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select(`
-          *,
-          organization:organizations(*)
-        `)
-        .eq('id', authData.user.id)
+      // Create new organization
+      const { data: newOrg, error: orgError } = await supabase
+        .from('organizations')
+        .insert({
+          name: orgName || `${fullName}'s Organization`,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select()
         .single()
       
-      if (profileData) {
-        const { organization, ...profile } = profileData
-        setProfile(profile as any)
-        setUser(authData.user)
-        setSession(authData.session)
-        if (organization) {
-          setOrganization(organization as any)
-        }
+      if (orgError) {
+        console.error('Error creating organization:', orgError)
+        throw new Error('Failed to create organization')
       }
+      
+      // Create profile with the new organization
+      const { data: newProfile, error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          id: authData.user.id,
+          email: email.toLowerCase(),
+          full_name: fullName,
+          organization_id: newOrg.id,
+          role: 'admin',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select()
+        .single()
+      
+      if (profileError) {
+        console.error('Error creating profile:', profileError)
+        throw new Error('Failed to create profile')
+      }
+      
+      // Create org_contacts entry if phone provided
+      if (phone) {
+        await supabase
+          .from('org_contacts')
+          .insert({
+            organization_id: newOrg.id,
+            contact_type: 'phone',
+            contact_value: phone,
+            owner_name: fullName,
+            created_at: new Date().toISOString()
+          })
+      }
+      
+      // Set state
+      setProfile(newProfile as any)
+      setUser(authData.user)
+      setSession(authData.session)
+      setOrganization(newOrg as any)
       
       // Log successful signup
       activityLogger.logSignup()
