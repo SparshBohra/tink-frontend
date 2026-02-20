@@ -13,6 +13,13 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   },
 })
 
+// Storage keys
+const STORAGE_KEYS = {
+  LAST_BADGE_UPDATE: 'lastBadgeUpdate',
+  USER_PREFERENCES: 'userPreferences',
+  CACHED_ORGANIZATION_ID: 'cachedOrganizationId'
+}
+
 // Open side panel when extension icon is clicked
 chrome.action.onClicked.addListener((tab) => {
   if (tab.id) {
@@ -30,23 +37,41 @@ async function updateBadge(): Promise<void> {
       return
     }
     
-    // Get user's organization
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('organization_id')
-      .eq('id', session.user.id)
-      .single()
+    // Try to get cached organization_id from chrome.storage for faster updates
+    let organizationId: string | null = null
+    try {
+      const cached = await chrome.storage.local.get([STORAGE_KEYS.CACHED_ORGANIZATION_ID])
+      organizationId = cached[STORAGE_KEYS.CACHED_ORGANIZATION_ID] || null
+    } catch (e) {
+      console.log('No cached organization ID')
+    }
     
-    if (!profile?.organization_id) {
-      chrome.action.setBadgeText({ text: '' })
-      return
+    // If not cached, fetch from database
+    if (!organizationId) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('organization_id')
+        .eq('id', session.user.id)
+        .single()
+      
+      if (!profile?.organization_id) {
+        chrome.action.setBadgeText({ text: '' })
+        return
+      }
+      
+      organizationId = profile.organization_id
+      
+      // Cache the organization_id in chrome.storage for next time
+      await chrome.storage.local.set({ 
+        [STORAGE_KEYS.CACHED_ORGANIZATION_ID]: organizationId 
+      })
     }
     
     // Count triage tickets
     const { count, error } = await supabase
       .from('tickets')
       .select('*', { count: 'exact', head: true })
-      .eq('organization_id', profile.organization_id)
+      .eq('organization_id', organizationId)
       .eq('status', 'triage')
     
     if (error) {
@@ -61,6 +86,11 @@ async function updateBadge(): Promise<void> {
     } else {
       chrome.action.setBadgeText({ text: '' })
     }
+    
+    // Store last update timestamp in chrome.storage
+    await chrome.storage.local.set({ 
+      [STORAGE_KEYS.LAST_BADGE_UPDATE]: Date.now() 
+    })
   } catch (err) {
     console.error('Badge update error:', err)
   }
@@ -111,9 +141,38 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   // Dashboard logout - clear extension session too
   if (message.type === 'DASHBOARD_LOGOUT') {
     console.log('Dashboard logout detected - clearing extension session')
-    supabase.auth.signOut().then(() => {
+    supabase.auth.signOut().then(async () => {
       chrome.action.setBadgeText({ text: '' })
+      // Clear cached data from chrome.storage
+      await chrome.storage.local.clear()
       sendResponse({ success: true })
+    })
+    return true
+  }
+  
+  // Save user preferences to chrome.storage
+  if (message.type === 'SAVE_PREFERENCES') {
+    chrome.storage.local.set({
+      [STORAGE_KEYS.USER_PREFERENCES]: message.preferences
+    }).then(() => {
+      sendResponse({ success: true })
+    }).catch((err) => {
+      console.error('Failed to save preferences:', err)
+      sendResponse({ success: false })
+    })
+    return true
+  }
+  
+  // Get user preferences from chrome.storage
+  if (message.type === 'GET_PREFERENCES') {
+    chrome.storage.local.get([STORAGE_KEYS.USER_PREFERENCES]).then((result) => {
+      sendResponse({ 
+        success: true, 
+        preferences: result[STORAGE_KEYS.USER_PREFERENCES] || {} 
+      })
+    }).catch((err) => {
+      console.error('Failed to get preferences:', err)
+      sendResponse({ success: false })
     })
     return true
   }
