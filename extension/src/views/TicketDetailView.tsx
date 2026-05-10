@@ -126,7 +126,27 @@ const TicketDetailView: React.FC<TicketDetailViewProps> = ({
 
   const priorityColor = getPriorityColor(ticket.priority)
   const statusColor = getStatusColor(ticket.status)
-  
+
+  const fillPreview = buildYardiAutofillPayloadV1(ticket)
+  const meta = ticket.ai_metadata || {}
+  const yf = meta.yardi_fields
+
+  const briefDisplay =
+    (typeof meta.brief_description === 'string' && meta.brief_description.trim()) ||
+    (typeof yf?.brief_description === 'string' && yf.brief_description.trim()) ||
+    (ticket.title || '').trim() ||
+    ''
+
+  const problemDisplay =
+    (typeof meta.problem_description === 'string' && meta.problem_description.trim()) ||
+    (typeof yf?.problem_description === 'string' && yf.problem_description.trim()) ||
+    (ticket.description || '').trim() ||
+    ''
+
+  const yfProblemOnly = (typeof yf?.problem_description === 'string' && yf.problem_description.trim()) || ''
+  const showLegacyYardiProblem =
+    !!yfProblemOnly && yfProblemOnly !== problemDisplay.trim()
+
   // Get unit info
   const unitInfo = ticket.unit?.unit_number 
     ? `Unit ${ticket.unit.unit_number}`
@@ -210,19 +230,38 @@ const TicketDetailView: React.FC<TicketDetailViewProps> = ({
         
         {/* Divider */}
         <hr className="border-slate-200" />
-        
-        {/* Copyable Fields */}
-        <CopyableField 
-          label="Category" 
+
+        {/* Match main app: brief + problem + category; autofill uses same payload as below */}
+        {briefDisplay ? (
+          <CopyableField label="Brief description" value={briefDisplay} showToast={showToast} />
+        ) : (
+          <p className="text-xs text-slate-500 mb-1">
+            No brief on file — autofill will use the ticket title (trimmed to 35 chars) if available.
+          </p>
+        )}
+
+        {problemDisplay ? (
+          <CopyableField label="Description" value={problemDisplay} showToast={showToast} />
+        ) : null}
+
+        <CopyableField
+          label="Category"
           value={getCategoryDisplayName(ticket.category)}
           showToast={showToast}
         />
-        
-        <CopyableField 
-          label="Description" 
-          value={ticket.description}
-          showToast={showToast}
-        />
+
+        <div className="rounded-lg border border-slate-100 bg-slate-50/80 p-3 space-y-1">
+          <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-2">
+            Work order form (autofill)
+          </p>
+          <CopyableField label="Work order priority" value={fillPreview.priority} showToast={showToast} />
+          <CopyableField label="Work order category" value={fillPreview.category || '—'} showToast={showToast} />
+          {fillPreview.subcategory ? (
+            <CopyableField label="Work order subcategory" value={fillPreview.subcategory} showToast={showToast} />
+          ) : (
+            <p className="text-xs text-slate-500 py-1">Subcategory — not set (optional)</p>
+          )}
+        </div>
         
         {ticket.location_raw && (
           <CopyableField 
@@ -274,14 +313,13 @@ const TicketDetailView: React.FC<TicketDetailViewProps> = ({
           </>
         )}
         
-        {/* AI Metadata extras */}
-        {ticket.ai_metadata?.yardi_fields?.problem_description && (
-          <CopyableField 
-            label="Yardi Problem Description" 
-            value={ticket.ai_metadata.yardi_fields.problem_description}
+        {showLegacyYardiProblem ? (
+          <CopyableField
+            label="Yardi problem description (legacy)"
+            value={yfProblemOnly}
             showToast={showToast}
           />
-        )}
+        ) : null}
         
         {/* Received time */}
         {message?.received_at && (
@@ -305,7 +343,7 @@ const TicketDetailView: React.FC<TicketDetailViewProps> = ({
           <p className="text-sm font-semibold text-slate-800">Autofill work order</p>
           <p className="text-xs text-slate-500 mt-1 mb-3 leading-snug">
             {targetTabReady
-              ? 'A work-order form tab is open. Send this ticket into that form.'
+              ? 'A work-order form tab is open. Fills brief, full description, priority, category, and subcategory from the values above.'
               : 'Open your work-order form in another tab in this browser, then return here.'}
           </p>
           <button
