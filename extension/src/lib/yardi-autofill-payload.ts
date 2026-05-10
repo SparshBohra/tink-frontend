@@ -1,7 +1,6 @@
-import type { TicketPriority, TicketWithRelations } from './supabase-types'
-import { getCategoryDisplayName } from './supabase-types'
+import type { TicketPriority, TicketWithRelations } from '../types'
+import { getCategoryDisplayName } from '../types'
 
-/** Payload sent from dashboard → extension → Yardi / mock tab (versioned for forward compatibility). */
 export interface YardiAutofillPayloadV1 {
   version: 1
   briefDescription: string
@@ -57,19 +56,38 @@ export function buildYardiAutofillPayloadV1(ticket: TicketWithRelations): YardiA
     getCategoryDisplayName(ticket.category) ||
     ''
 
-  const problemDescription =
-    ticket.description ||
+  const briefFromMeta =
+    (typeof meta.brief_description === 'string' && meta.brief_description) ||
+    (typeof yf?.brief_description === 'string' && yf.brief_description) ||
+    ''
+
+  const problemFromMeta =
+    (typeof meta.problem_description === 'string' && meta.problem_description) ||
     (typeof yf?.problem_description === 'string' && yf.problem_description) ||
+    ''
+
+  const briefDescription = (briefFromMeta || ticket.title || '').slice(0, 35)
+  const problemDescription =
+    problemFromMeta ||
+    ticket.description ||
     ticket.title ||
+    ''
+
+  const priority =
+    (typeof yf?.priority === 'string' && yf.priority) || mapPriority(ticket.priority)
+
+  const subcategory =
+    (typeof yf?.subcategory === 'string' && yf.subcategory) ||
+    (typeof meta.subcategory === 'string' && meta.subcategory) ||
     ''
 
   return {
     version: 1,
-    briefDescription: (ticket.title || '').slice(0, 35),
+    briefDescription,
     problemDescription,
     category,
-    priority: mapPriority(ticket.priority),
-    subcategory: (typeof yf?.subcategory === 'string' && yf.subcategory) || (typeof meta.subcategory === 'string' && meta.subcategory) || '',
+    priority,
+    subcategory,
     callerName,
     callerPhone,
     callerEmail,
@@ -85,6 +103,9 @@ export function buildYardiAutofillPayloadV1(ticket: TicketWithRelations): YardiA
       ticket.property?.name ||
       (typeof meta.property_name === 'string' && meta.property_name) ||
       '',
-    unitLabel: ticket.unit?.unit_number || (typeof meta.unit_number === 'string' && meta.unit_number) || '',
+    unitLabel:
+      ticket.unit?.unit_number ||
+      (typeof meta.unit_number === 'string' && meta.unit_number) ||
+      '',
   }
 }

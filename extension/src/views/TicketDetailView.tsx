@@ -1,19 +1,17 @@
-import React, { useState } from 'react'
-import { ExternalLink, ChevronDown } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { ExternalLink, ChevronDown, Sparkles } from 'lucide-react'
 import { 
   TicketWithRelations, 
   TicketStatus, 
   TicketPriority,
-  getPriorityDisplayName,
   getPriorityColor,
-  getStatusDisplayName,
   getStatusColor,
   getCategoryDisplayName
 } from '../types'
 import { updateTicketStatus, updateTicketPriority, fetchTicketById } from '../lib/api'
 import { openTicketInDashboard } from '../lib/auth'
+import { buildYardiAutofillPayloadV1 } from '../lib/yardi-autofill-payload'
 import CopyableField from '../components/CopyableField'
-import CategoryIcon from '../components/CategoryIcon'
 
 interface TicketDetailViewProps {
   ticket: TicketWithRelations
@@ -28,8 +26,36 @@ const TicketDetailView: React.FC<TicketDetailViewProps> = ({
   showToast
 }) => {
   const [updating, setUpdating] = useState(false)
-  
-  // Get first inbound message for source info
+  const [targetTabReady, setTargetTabReady] = useState(false)
+  const [autofillRunning, setAutofillRunning] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    const refreshTarget = () => {
+      try {
+        if (typeof chrome === 'undefined' || !chrome.runtime?.id) {
+          if (!cancelled) setTargetTabReady(false)
+          return
+        }
+        chrome.runtime.sendMessage({ type: 'SQFT_YARDI_STATUS_QUERY' }, (response) => {
+          if (cancelled) return
+          if (chrome.runtime.lastError) {
+            setTargetTabReady(false)
+            return
+          }
+          setTargetTabReady(!!response?.yardiReady)
+        })
+      } catch {
+        if (!cancelled) setTargetTabReady(false)
+      }
+    }
+    refreshTarget()
+    const interval = setInterval(refreshTarget, 2500)
+    return () => {
+      cancelled = true
+      clearInterval(interval)
+    }
+  }, [])
   const message = ticket.inbound_messages?.[0]
   
   // Handle status change
@@ -67,7 +93,37 @@ const TicketDetailView: React.FC<TicketDetailViewProps> = ({
     }
     setUpdating(false)
   }
-  
+
+  const autofillTooltip = targetTabReady
+    ? 'Fill the open work-order tab with this ticket'
+    : 'Open a work-order form tab (same browser) to enable autofill'
+
+  const handleAutofillExternal = () => {
+    if (!targetTabReady || autofillRunning) return
+    setAutofillRunning(true)
+    const payload = buildYardiAutofillPayloadV1(ticket)
+    try {
+      chrome.runtime.sendMessage(
+        { type: 'SQFT_EXECUTE_YARDI_AUTOFILL', payload },
+        (response) => {
+          setAutofillRunning(false)
+          if (chrome.runtime.lastError) {
+            showToast(chrome.runtime.lastError.message || 'Autofill failed')
+            return
+          }
+          if (response?.ok) {
+            showToast('Autofill applied')
+          } else {
+            showToast((response?.error as string) || 'Autofill failed')
+          }
+        }
+      )
+    } catch (e) {
+      setAutofillRunning(false)
+      showToast(String(e))
+    }
+  }
+
   const priorityColor = getPriorityColor(ticket.priority)
   const statusColor = getStatusColor(ticket.status)
   
@@ -244,6 +300,26 @@ const TicketDetailView: React.FC<TicketDetailViewProps> = ({
           />
         )}
         
+        {/* Work-order autofill — matches dashboard slate / primary button patterns */}
+        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <p className="text-sm font-semibold text-slate-800">Autofill work order</p>
+          <p className="text-xs text-slate-500 mt-1 mb-3 leading-snug">
+            {targetTabReady
+              ? 'A work-order form tab is open. Send this ticket into that form.'
+              : 'Open your work-order form in another tab in this browser, then return here.'}
+          </p>
+          <button
+            type="button"
+            disabled={!targetTabReady || autofillRunning}
+            title={autofillTooltip}
+            onClick={handleAutofillExternal}
+            className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-white bg-blue-600 rounded-lg border border-blue-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700 transition-colors"
+          >
+            <Sparkles size={18} className="shrink-0" />
+            {autofillRunning ? 'Applying…' : 'Autofill open tab'}
+          </button>
+        </div>
+
         {/* Open in Dashboard button */}
         <button
           onClick={() => openTicketInDashboard(ticket.id)}

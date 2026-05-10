@@ -202,7 +202,7 @@ export default async function handler(
     }
     
     console.log('✅ Gemini parsed:', {
-      title: parseResult.data.title,
+      brief: parseResult.data.brief_description,
       priority: parseResult.data.priority,
       category: parseResult.data.category,
       confidence: parseResult.data.confidence,
@@ -263,8 +263,8 @@ export default async function handler(
         status: 'triage',
         priority: parseResult.data.priority,
         category: parseResult.data.category,
-        title: parseResult.data.title,
-        description: parseResult.data.description,
+        title: parseResult.data.brief_description,
+        description: parseResult.data.problem_description,
         ai_metadata: aiMetadata as any
       } as any)
       .select()

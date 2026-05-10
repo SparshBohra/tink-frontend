@@ -18,6 +18,57 @@ export interface GeminiParseResult {
   confidence?: number
 }
 
+// Work-order form labels (match internal mock / common PM dropdowns)
+export const WORK_ORDER_PRIORITY_LABELS = ['Urgent - ASAP', 'Same Day', 'Non-Urgent'] as const
+export type WorkOrderPriorityLabel = (typeof WORK_ORDER_PRIORITY_LABELS)[number]
+
+export const WORK_ORDER_CATEGORY_LABELS = [
+  'Access Card',
+  'Administrative',
+  'Building',
+  'Capital Work',
+  'Electrical',
+  'HVAC',
+  'Plumbing',
+  'General',
+] as const
+
+function workOrderPriorityToInternal(label: string): TicketPriority {
+  const s = label.trim()
+  if (s === 'Urgent - ASAP') return 'emergency'
+  if (s === 'Same Day') return 'high'
+  return 'medium'
+}
+
+function normalizeWorkOrderPriorityLabel(raw: string | undefined, fallbackInternal: TicketPriority): WorkOrderPriorityLabel {
+  const s = (raw || '').trim()
+  if (WORK_ORDER_PRIORITY_LABELS.includes(s as WorkOrderPriorityLabel)) return s as WorkOrderPriorityLabel
+  return internalPriorityToWorkOrderLabel(fallbackInternal)
+}
+
+function normalizeWorkOrderCategoryLabel(raw: string | undefined): string {
+  const s = (raw || '').trim()
+  const found = WORK_ORDER_CATEGORY_LABELS.find((x) => x.toLowerCase() === s.toLowerCase())
+  if (found) return found
+  return 'General'
+}
+
+function workOrderCategoryToInternal(label: string): TicketCategory {
+  const x = label.trim().toLowerCase()
+  if (x === 'plumbing') return 'plumbing'
+  if (x === 'hvac') return 'hvac'
+  if (x === 'electrical') return 'electrical'
+  if (x === 'access card') return 'access_control'
+  if (x === 'administrative' || x === 'building' || x === 'capital work') return 'general'
+  return 'general'
+}
+
+function internalPriorityToWorkOrderLabel(p: TicketPriority): WorkOrderPriorityLabel {
+  if (p === 'emergency') return 'Urgent - ASAP'
+  if (p === 'high') return 'Same Day'
+  return 'Non-Urgent'
+}
+
 // Structured ticket data from Gemini
 export interface ParsedTicketData {
   title: string
@@ -28,6 +79,15 @@ export interface ParsedTicketData {
   reasoning: string // Why Gemini chose this priority/category
   is_maintenance_related: boolean // NEW: Is this actually a maintenance request?
   message_type: 'maintenance' | 'spam' | 'personal' | 'marketing' | 'automated' | 'unclear' // NEW: Type of message
+  /** ≤35 chars, headline for work-order "Brief Description" — only facts from the message */
+  brief_description: string
+  /** ≤4000 chars, work-order "Description" / problem detail — only facts from the message, no inventions */
+  problem_description: string
+  /** Dropdown label for external work-order systems */
+  work_order_priority: WorkOrderPriorityLabel
+  work_order_category: string
+  /** Short issue label (e.g. Leak, No heat) or null if not clear from the message */
+  work_order_subcategory: string | null
   extracted_data: {
     tenant_name?: string | null
     tenant_phone?: string | null
@@ -41,118 +101,61 @@ export interface ParsedTicketData {
 
 // Build the Gemini prompt
 function buildPrompt(rawMessage: string): string {
-  return `You are a maintenance ticket parser for property management. Your job is to determine if a message is a legitimate maintenance request and extract structured data.
+  const catList = WORK_ORDER_CATEGORY_LABELS.join(' | ')
+  const priList = WORK_ORDER_PRIORITY_LABELS.join(' | ')
 
-**CRITICAL**: Return ONLY valid JSON. No markdown formatting, no code blocks, no explanations outside the JSON.
+  return `You are a maintenance ticket parser for property management. Classify the message and extract ONLY what is supported by the text. Never invent symptoms, locations, unit numbers, or tenant details.
+
+**CRITICAL**: Return ONLY valid JSON. No markdown, no code blocks, no text outside JSON.
 
 **Required JSON Structure:**
 {
-  "is_maintenance_related": boolean (true if this is a legitimate maintenance/repair request),
+  "is_maintenance_related": boolean,
   "message_type": "maintenance|spam|personal|marketing|automated|unclear",
-  "title": "string (max 100 chars, brief summary)",
-  "description": "string (full problem description)",
+  "brief_description": "string, maximum 35 characters — one short headline for a work-order 'Brief Description' field (e.g. 'Kitchen sink leak', 'No heat unit 4B'). Use only facts stated or clearly implied in the message.",
+  "problem_description": "string, maximum 4000 characters — full 'Description' / problem narrative for the maintenance team. Paraphrase and organize ONLY information present in the message (who, what, where in the message, urgency as stated). If something is unknown, omit it — do NOT guess or fabricate.",
+  "work_order_priority": "${priList}",
+  "work_order_category": "string — MUST be exactly one of: ${catList}",
+  "work_order_subcategory": "string or null — short specific issue ONLY if clear from the message (e.g. 'Leak', 'No heat', 'Clogged drain'); otherwise null",
+  "title": "string (max 100 chars, legacy list title — may match brief_description or slightly longer)",
+  "description": "string (legacy full text — should match problem_description unless you need a tiny bridge for non-maintenance)",
   "priority": "emergency|high|medium|low",
   "category": "hvac|heating|cooling|plumbing|electrical|appliance|access_control|pest|general",
-  "confidence": number (0.0-1.0, how confident you are in the categorization),
-  "reasoning": "string (1-2 sentences explaining your classification)",
+  "confidence": number (0.0-1.0),
+  "reasoning": "string (1-2 sentences)",
   "extracted_data": {
     "tenant_name": "string or null",
-    "tenant_phone": "string or null (format: +1234567890 if found)",
+    "tenant_phone": "string or null",
     "tenant_email": "string or null",
-    "unit_number": "string or null (e.g., 'Unit 5', 'Apt 302', '2B')",
-    "property_name": "string or null",
-    "access_notes": "string or null (any instructions about accessing the unit)",
-    "subcategory": "string or null (specific issue like 'no heat', 'clogged drain')"
+    "unit_number": "string or null — only if explicitly in the message",
+    "property_name": "string or null — only if explicitly in the message",
+    "access_notes": "string or null",
+    "subcategory": "string or null — may mirror work_order_subcategory"
   }
 }
 
-**Message Type Classification:**
-- **maintenance**: Legitimate maintenance, repair, or issue request
-- **spam**: Advertisements, scams, phishing, mass marketing
-- **personal**: Personal conversations, non-business messages, social chatter
-- **marketing**: Business promotions, newsletters, vendor outreach
-- **automated**: System notifications, auto-replies, out-of-office messages
-- **unclear**: Cannot determine (very short messages, cryptic content)
+**Anti-hallucination (mandatory):**
+- Do not add equipment, rooms, or failures that are not in the message.
+- Do not invent property names, building names, or unit numbers.
+- If the message is vague ("something is broken"), brief_description and problem_description should stay vague — do not fill in a fake cause.
+- work_order_category: pick the closest label from the allowed list; use "General" if none fits.
+- work_order_priority: use "${priList}" semantics — urgent life/safety or severe active damage → "Urgent - ASAP"; serious but not immediate → "Same Day"; routine or minor → "Non-Urgent".
 
-**SPAM Indicators:**
-- Marketing language ("Buy now", "Limited offer", "Click here")
-- Cryptocurrency, get-rich-quick schemes
-- Suspicious links or requests for personal info
-- Mass email templates
-- Unrelated to property management
+**Align priority field with work_order_priority:**
+- "Urgent - ASAP" ↔ priority "emergency"
+- "Same Day" ↔ priority "high"
+- "Non-Urgent" ↔ priority "medium" or "low" (use "low" only for clearly cosmetic/routine items)
 
-**NON-MAINTENANCE Indicators:**
-- Social conversations ("How are you?", "Thanks!", "See you later")
-- Vendor quotes/invoices (unless reporting an issue)
-- General questions about rent, lease, amenities
-- Meeting requests, scheduling
-- Auto-replies and system notifications
+**Align category with work_order_category** (examples):
+- Plumbing issues → plumbing + work_order_category "Plumbing"
+- HVAC / AC / heat (not electrical-only) → hvac/heating/cooling + "HVAC"
+- Lights, breakers, outlets → electrical + "Electrical"
+- Keys, fobs, badges → access_control + "Access Card"
 
-**MAINTENANCE Indicators:**
-- Reports of broken items, issues, problems
-- Requests for repairs or fixes
-- Safety concerns
-- Urgent situations (leaks, no heat, etc.)
-- References to appliances, systems, building issues
+**Message types:** (same as before)
+- maintenance | spam | personal | marketing | automated | unclear
 
-**Priority Classification Rules** (only if is_maintenance_related = true):
-- **emergency**: Life/safety issues or total system failures
-  * No heat in winter (below 50°F outside)
-  * No AC in extreme heat (above 90°F)
-  * Flooding, water gushing, sewage backup
-  * Gas leak, fire hazard, carbon monoxide
-  * Total power outage
-  * Locked out with no entry method
-  * Broken/unsafe stairs, collapsed ceiling
-  
-- **high**: Major inconvenience but not life-threatening
-  * No hot water (heat works)
-  * AC broken in summer (not extreme heat)
-  * Refrigerator/freezer broken (food spoilage)
-  * Major leak (not flooding but significant)
-  * Broken locks, security concerns
-  * Partial power outage (some circuits work)
-  * Heating/AC partially working but inadequate
-  
-- **medium**: Moderate issues affecting quality of life
-  * Appliance malfunctions (dishwasher, stove, microwave)
-  * Minor leaks (dripping faucet, slow drain)
-  * Pest sightings (roaches, mice, bedbugs)
-  * HVAC making noise but still working
-  * Broken windows (not security issue)
-  * Light fixtures out
-  
-- **low**: Cosmetic or non-urgent issues
-  * Paint/drywall damage
-  * Cabinet/door adjustments
-  * Routine maintenance requests
-  * Aesthetic improvements
-  * Minor cosmetic repairs
-
-**Category Guidelines** (only if is_maintenance_related = true):
-- **hvac**: General heating/cooling issues, thermostats, vents
-- **heating**: Specifically no heat or furnace problems
-- **cooling**: Specifically no AC or cooling problems  
-- **plumbing**: Water leaks, drains, toilets, sinks, pipes
-- **electrical**: Power, outlets, lights, breakers
-- **appliance**: Refrigerator, stove, dishwasher, washer/dryer
-- **access_control**: Locks, keys, gates, garage doors
-- **pest**: Bugs, rodents, pest control issues
-- **general**: Everything else or unclear category
-
-**Important Rules:**
-- If is_maintenance_related = false, still provide title/description but priority/category are less important
-- Be conservative - if unsure if it's maintenance, mark as unclear or personal
-- Short messages like "Thanks" or "OK" are personal, not maintenance
-- Vendor emails offering services are marketing, not maintenance
-- Only mark as maintenance if they're reporting an actual problem/issue
-
-**Extraction Tips:**
-- Unit numbers: Look for "Apt", "Unit", "Suite", numbers with letters like "2B"
-- Names: Usually at start/end of message or in signature
-- Phone/email: Standard formats
-- Access: Key location, gate codes, entry instructions
-- Be conservative with confidence - if unsure, lower the score
+**If is_maintenance_related is false:** still output brief_description and problem_description summarizing the message honestly; set work_order_priority to "Non-Urgent", work_order_category to "General", work_order_subcategory to null.
 
 ---
 **MESSAGE TO PARSE:**
@@ -233,53 +236,109 @@ function parseGeminiResponse(rawResponse: string): ParsedTicketData | null {
 
 // Helper function to validate and normalize parsed data
 function validateAndNormalizeData(parsed: any): ParsedTicketData {
-  // Validate required fields
-  if (parsed.is_maintenance_related === undefined || 
-      !parsed.message_type ||
-      !parsed.title || 
-      !parsed.description) {
+  if (parsed.is_maintenance_related === undefined || !parsed.message_type) {
     throw new Error('Missing required fields in Gemini response')
   }
-  
-  // If not maintenance related, confidence should be lower and we don't care about priority/category accuracy
-  if (!parsed.is_maintenance_related) {
-    console.log(`Non-maintenance message detected: ${parsed.message_type}`)
-  }
-  
-  // Validate priority (only important if maintenance-related)
-  const validPriorities: TicketPriority[] = ['low', 'medium', 'high', 'emergency']
-  if (!validPriorities.includes(parsed.priority)) {
-    console.warn(`Invalid priority: ${parsed.priority}, defaulting to medium`)
-    parsed.priority = 'medium'
-  }
-  
-  // Validate category (only important if maintenance-related)
-  const validCategories: TicketCategory[] = [
-    'hvac', 'heating', 'cooling', 'plumbing', 'electrical', 
-    'appliance', 'access_control', 'pest', 'general'
-  ]
-  if (!validCategories.includes(parsed.category)) {
-    console.warn(`Invalid category: ${parsed.category}, defaulting to general`)
-    parsed.category = 'general'
-  }
-  
-  // Validate message_type
-  const validTypes = ['maintenance', 'spam', 'personal', 'marketing', 'automated', 'unclear']
-  if (!validTypes.includes(parsed.message_type)) {
-    console.warn(`Invalid message_type: ${parsed.message_type}, defaulting to unclear`)
-    parsed.message_type = 'unclear'
-  }
-  
-  // Ensure confidence is between 0 and 1
-  if (typeof parsed.confidence !== 'number' || parsed.confidence < 0 || parsed.confidence > 1) {
-    parsed.confidence = 0.5 // Default to moderate confidence
-  }
-  
-  // Ensure extracted_data exists
+
   if (!parsed.extracted_data) {
     parsed.extracted_data = {}
   }
-  
+
+  // New fields with legacy backfill
+  let brief =
+    typeof parsed.brief_description === 'string'
+      ? parsed.brief_description.trim().slice(0, 35)
+      : ''
+  let problem =
+    typeof parsed.problem_description === 'string'
+      ? parsed.problem_description.trim().slice(0, 4000)
+      : ''
+
+  if (!brief && typeof parsed.title === 'string') {
+    brief = parsed.title.trim().slice(0, 35)
+  }
+  if (!problem && typeof parsed.description === 'string') {
+    problem = parsed.description.trim().slice(0, 4000)
+  }
+  if (!brief) {
+    brief = (problem || 'Maintenance').trim().slice(0, 35) || 'Maintenance'
+  }
+  if (!problem) {
+    problem = brief
+  }
+
+  parsed.brief_description = brief
+  parsed.problem_description = problem
+  parsed.title = (typeof parsed.title === 'string' && parsed.title.trim())
+    ? parsed.title.trim().slice(0, 100)
+    : brief
+  parsed.description = (typeof parsed.description === 'string' && parsed.description.trim())
+    ? parsed.description.trim().slice(0, 8000)
+    : problem
+
+  const validPriorities: TicketPriority[] = ['low', 'medium', 'high', 'emergency']
+  if (!validPriorities.includes(parsed.priority)) {
+    parsed.priority = 'medium'
+  }
+  const validCategories: TicketCategory[] = [
+    'hvac',
+    'heating',
+    'cooling',
+    'plumbing',
+    'electrical',
+    'appliance',
+    'access_control',
+    'pest',
+    'general',
+  ]
+  if (!validCategories.includes(parsed.category)) {
+    parsed.category = 'general'
+  }
+
+  const workPri = normalizeWorkOrderPriorityLabel(
+    typeof parsed.work_order_priority === 'string' ? parsed.work_order_priority : undefined,
+    parsed.priority as TicketPriority
+  )
+  const workCat = normalizeWorkOrderCategoryLabel(
+    typeof parsed.work_order_category === 'string' ? parsed.work_order_category : undefined
+  )
+  parsed.work_order_priority = workPri
+  parsed.work_order_category = workCat
+
+  if (parsed.is_maintenance_related) {
+    parsed.priority = workOrderPriorityToInternal(workPri)
+    parsed.category = workOrderCategoryToInternal(workCat)
+  }
+
+  const sub =
+    parsed.work_order_subcategory !== undefined && parsed.work_order_subcategory !== null
+      ? String(parsed.work_order_subcategory).trim() || null
+      : null
+  parsed.work_order_subcategory = sub && sub.length > 120 ? sub.slice(0, 120) : sub
+  if (parsed.work_order_subcategory && !parsed.extracted_data.subcategory) {
+    parsed.extracted_data.subcategory = parsed.work_order_subcategory
+  }
+
+  const validTypes = ['maintenance', 'spam', 'personal', 'marketing', 'automated', 'unclear']
+  if (!validTypes.includes(parsed.message_type)) {
+    parsed.message_type = 'unclear'
+  }
+
+  if (!parsed.is_maintenance_related) {
+    console.log(`Non-maintenance message detected: ${parsed.message_type}`)
+    parsed.work_order_priority = 'Non-Urgent'
+    parsed.work_order_category = 'General'
+    parsed.work_order_subcategory = null
+  }
+
+  if (typeof parsed.confidence !== 'number' || parsed.confidence < 0 || parsed.confidence > 1) {
+    parsed.confidence = 0.5
+  }
+
+  if (!parsed.reasoning || typeof parsed.reasoning !== 'string') {
+    parsed.reasoning = ''
+  }
+
   return parsed as ParsedTicketData
 }
 
@@ -456,8 +515,15 @@ export async function parseMaintenanceRequest(
 
 // Convert ParsedTicketData to AIMetadata format for database
 export function toAIMetadata(parsed: ParsedTicketData): AIMetadata {
+  const sub =
+    parsed.work_order_subcategory ||
+    parsed.extracted_data.subcategory ||
+    undefined
+
   return {
-    subcategory: parsed.extracted_data.subcategory || undefined,
+    brief_description: parsed.brief_description,
+    problem_description: parsed.problem_description,
+    subcategory: typeof sub === 'string' ? sub : undefined,
     access_notes: parsed.extracted_data.access_notes || undefined,
     tenant_name: parsed.extracted_data.tenant_name || undefined,
     tenant_phone: parsed.extracted_data.tenant_phone || undefined,
@@ -466,6 +532,13 @@ export function toAIMetadata(parsed: ParsedTicketData): AIMetadata {
     property_name: parsed.extracted_data.property_name || undefined,
     confidence_score: parsed.confidence,
     parsed_at: new Date().toISOString(),
-    gemini_reasoning: parsed.reasoning
+    gemini_reasoning: parsed.reasoning,
+    yardi_fields: {
+      brief_description: parsed.brief_description,
+      problem_description: parsed.problem_description,
+      priority: parsed.work_order_priority,
+      category: parsed.work_order_category,
+      subcategory: typeof sub === 'string' ? sub : undefined,
+    },
   }
 }

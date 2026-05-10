@@ -1,6 +1,6 @@
 /**
  * Yardi Facility Manager + SquareFt mock page: detect fill targets and apply payload.
- * Kept in sync with `lib/yardi-autofill-payload.ts` (dashboard).
+ * Kept in sync with `extension/src/lib/yardi-autofill-payload.ts`.
  */
 export interface YardiAutofillPayloadV1 {
   version: 1

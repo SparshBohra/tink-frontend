@@ -58,6 +58,8 @@ export type TicketCategory =
 
 // AI Metadata - Parsed data from LLM
 export interface AIMetadata {
+  brief_description?: string
+  problem_description?: string
   subcategory?: string
   access_notes?: string
   tenant_name?: string
@@ -66,6 +68,7 @@ export interface AIMetadata {
   unit_number?: string
   property_name?: string
   yardi_fields?: {
+    brief_description?: string
     problem_description?: string
     priority?: string
     category?: string
@@ -76,6 +79,7 @@ export interface AIMetadata {
   }
   confidence_score?: number
   parsed_at?: string
+  gemini_reasoning?: string
   [key: string]: unknown
 }
 
