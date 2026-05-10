@@ -2,6 +2,7 @@
 // Opens side panel and updates badge count
 
 import { createClient } from '@supabase/supabase-js'
+import { findYardiFillTargetTabId } from './lib/yardi-target-url'
 
 const SUPABASE_URL = 'https://oubprrmcbyresbexpbuq.supabase.co'
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91YnBycm1jYnlyZXNiZXhwYnVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk2NDQ2OTUsImV4cCI6MjA4NTIyMDY5NX0.fNPd81uplwNJsISZZpyk_od1HukPEAQkOUJvNZ0gRoU'
@@ -174,6 +175,38 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       console.error('Failed to get preferences:', err)
       sendResponse({ success: false })
     })
+    return true
+  }
+
+  if (message.type === 'SQFT_YARDI_STATUS_QUERY') {
+    void findYardiFillTargetTabId()
+      .then((tabId) => {
+        sendResponse({ yardiReady: tabId != null, tabId })
+      })
+      .catch(() => {
+        sendResponse({ yardiReady: false })
+      })
+    return true
+  }
+
+  if (message.type === 'SQFT_EXECUTE_YARDI_AUTOFILL') {
+    const payload = message.payload
+    void (async () => {
+      const tabId = await findYardiFillTargetTabId()
+      if (tabId == null) {
+        sendResponse({ ok: false, error: 'no_target_tab' })
+        return
+      }
+      try {
+        const r = await chrome.tabs.sendMessage(tabId, {
+          type: 'SQFT_APPLY_AUTOFILL_IN_TAB',
+          payload,
+        })
+        sendResponse(r ?? { ok: false, error: 'empty_response' })
+      } catch (e) {
+        sendResponse({ ok: false, error: String(e) })
+      }
+    })()
     return true
   }
 })

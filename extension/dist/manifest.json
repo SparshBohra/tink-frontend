@@ -1,20 +1,24 @@
 {
   "manifest_version": 3,
   "name": "SquareFt",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Quick access to your maintenance tickets with click-to-copy fields",
   "permissions": [
     "storage",
     "cookies",
     "activeTab",
     "alarms",
-    "sidePanel"
+    "sidePanel",
+    "tabs"
   ],
   "host_permissions": [
     "https://squareft.ai/*",
     "https://app.squareft.ai/*",
+    "https://www.squareft.ai/*",
     "https://*.supabase.co/*",
-    "http://localhost:3000/*"
+    "https://*.elevate.cafe/*",
+    "http://localhost/*",
+    "http://127.0.0.1/*"
   ],
   "side_panel": {
     "default_path": "popup.html"
@@ -40,7 +44,10 @@
       "matches": [
         "https://squareft.ai/*",
         "https://app.squareft.ai/*",
-        "http://localhost:3000/*"
+        "https://www.squareft.ai/*",
+        "http://localhost/*",
+        "http://127.0.0.1/*",
+        "https://*.elevate.cafe/*"
       ],
       "js": ["content.js"],
       "run_at": "document_idle"

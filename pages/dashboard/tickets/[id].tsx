@@ -19,6 +19,7 @@ import {
   updateTicketStatus,
   updateTicketPriority
 } from '../../../lib/ticket-service'
+import { buildYardiAutofillPayloadV1 } from '../../../lib/yardi-autofill-payload'
 import DashboardLayout from '../../../components/DashboardLayout'
 import CopyButton from '../../../components/CopyButton'
 import { 
@@ -32,7 +33,8 @@ import {
   CheckCircle,
   AlertTriangle,
   Building2,
-  Hash
+  Hash,
+  Sparkles
 } from 'lucide-react'
 
 function TicketDetailPage() {
@@ -45,6 +47,10 @@ function TicketDetailPage() {
   const [error, setError] = useState<string | null>(null)
   const [updating, setUpdating] = useState(false)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  /** Extension bridge: Simplify-style enable only when a fillable Yardi/mock tab exists */
+  const [yardiBridge, setYardiBridge] = useState<'unknown' | 'ok' | 'no-extension'>('unknown')
+  const [yardiTargetReady, setYardiTargetReady] = useState(false)
+  const [autofillNotice, setAutofillNotice] = useState<string | null>(null)
 
   useEffect(() => {
     if (!id || !organizationId) return
@@ -66,6 +72,46 @@ function TicketDetailPage() {
     
     loadTicket()
   }, [id, organizationId])
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+
+    const onStatus = (e: Event) => {
+      const ce = e as CustomEvent<{ extension?: boolean; yardiReady?: boolean }>
+      if (ce.detail?.extension) {
+        setYardiBridge('ok')
+        setYardiTargetReady(!!ce.detail.yardiReady)
+      } else {
+        setYardiBridge('no-extension')
+        setYardiTargetReady(false)
+      }
+    }
+
+    document.addEventListener('sqft:yardi-status', onStatus)
+
+    const poll = () => {
+      document.dispatchEvent(
+        new CustomEvent('sqft:yardi-status-request', { bubbles: true })
+      )
+    }
+    poll()
+    const interval = setInterval(poll, 2500)
+    const onVis = () => {
+      if (document.visibilityState === 'visible') poll()
+    }
+    document.addEventListener('visibilitychange', onVis)
+
+    const timeout = window.setTimeout(() => {
+      setYardiBridge((b) => (b === 'unknown' ? 'no-extension' : b))
+    }, 5000)
+
+    return () => {
+      document.removeEventListener('sqft:yardi-status', onStatus)
+      document.removeEventListener('visibilitychange', onVis)
+      clearInterval(interval)
+      window.clearTimeout(timeout)
+    }
+  }, [])
 
   const handleStatusChange = async (newStatus: TicketStatus) => {
     if (!ticket || !organizationId || updating) return
@@ -95,6 +141,47 @@ function TicketDetailPage() {
     }
     
     setUpdating(false)
+  }
+
+  const yardiAutofillTitle =
+    yardiBridge === 'unknown'
+      ? 'Checking SquareFt extension…'
+      : yardiBridge === 'no-extension'
+        ? 'Install the SquareFt Chrome extension to use autofill'
+        : !yardiTargetReady
+          ? 'Open a Facility Manager work order tab or /dev/yardi-work-order-mock in another tab'
+          : 'Send this ticket to the Yardi or mock work order tab'
+
+  const handleYardiAutofill = () => {
+    if (!ticket || yardiBridge !== 'ok' || !yardiTargetReady) return
+    setAutofillNotice(null)
+    const payload = buildYardiAutofillPayloadV1(ticket)
+
+    const onResult = (e: Event) => {
+      window.clearTimeout(failTimer)
+      document.removeEventListener('sqft:yardi-autofill-result', onResult as EventListener)
+      const ce = e as CustomEvent<{ ok?: boolean; error?: string }>
+      if (ce.detail?.ok) {
+        setSuccessMessage('Autofill applied in the Yardi / mock tab')
+        setTimeout(() => setSuccessMessage(null), 4000)
+      } else {
+        const msg = ce.detail?.error || 'Could not autofill'
+        setAutofillNotice(msg)
+      }
+    }
+
+    const failTimer = window.setTimeout(() => {
+      document.removeEventListener('sqft:yardi-autofill-result', onResult as EventListener)
+      setAutofillNotice('No response from extension. Reload this page and try again.')
+    }, 12000)
+
+    document.addEventListener('sqft:yardi-autofill-result', onResult as EventListener)
+    document.dispatchEvent(
+      new CustomEvent('sqft:yardi-autofill-request', {
+        bubbles: true,
+        detail: { payload },
+      })
+    )
   }
 
   const formatDate = (dateString: string): string => {
@@ -414,6 +501,19 @@ function TicketDetailPage() {
             <div className="sidebar-card">
               <h3>Quick Actions</h3>
               <div className="actions">
+                <button
+                  type="button"
+                  className="action-btn yardi"
+                  disabled={yardiBridge !== 'ok' || !yardiTargetReady}
+                  title={yardiAutofillTitle}
+                  onClick={handleYardiAutofill}
+                >
+                  <Sparkles size={18} />
+                  Autofill Yardi
+                </button>
+                {autofillNotice && (
+                  <p className="autofill-notice">{autofillNotice}</p>
+                )}
                 <button 
                   className="action-btn primary"
                   onClick={() => handleStatusChange('open')}
@@ -784,6 +884,10 @@ function TicketDetailPage() {
         }
 
         .action-btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
           padding: 10px 16px;
           border: none;
           border-radius: 8px;
@@ -793,7 +897,32 @@ function TicketDetailPage() {
           transition: all 0.2s;
         }
 
-        .action-btn:disabled {
+        .autofill-notice {
+          margin: 0;
+          font-size: 12px;
+          color: #b45309;
+          line-height: 1.4;
+        }
+
+        .action-btn.yardi {
+          background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%);
+          color: white;
+          width: 100%;
+        }
+
+        .action-btn.yardi:hover:not(:disabled) {
+          filter: brightness(1.05);
+        }
+
+        .action-btn.yardi:disabled {
+          background: #e2e8f0;
+          color: #94a3b8;
+          cursor: not-allowed;
+          filter: none;
+        }
+
+        .action-btn.primary:disabled,
+        .action-btn.success:disabled {
           opacity: 0.5;
           cursor: not-allowed;
         }
