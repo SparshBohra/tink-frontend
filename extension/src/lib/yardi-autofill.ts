@@ -82,6 +82,29 @@ function pickSelectOptionByLabel(select: HTMLSelectElement, wanted: string): boo
   return false
 }
 
+/**
+ * Vendor subcategory lists rarely match free-form AI labels (e.g. "Overflowing sink" vs "Leak").
+ * Map common phrases to option labels present on the select.
+ */
+function pickSubcategoryOption(select: HTMLSelectElement, wanted: string): boolean {
+  if (pickSelectOptionByLabel(select, wanted)) return true
+  const w = norm(wanted)
+  if (!w) return false
+
+  const tryLabel = (label: string) => pickSelectOptionByLabel(select, label)
+
+  if (/no heat|without heat|heat not working|furnace|boiler|cold air|thermostat/.test(w)) {
+    if (tryLabel('no heat')) return true
+  }
+  if (
+    /leak|leaking|overflow|overflowing|drip|dripping|flood|flooding|clog|clogged|drain|backing up|standing water/.test(w)
+  ) {
+    if (tryLabel('leak')) return true
+  }
+  if (tryLabel('general')) return true
+  return false
+}
+
 function queryInput(
   doc: Document,
   selectors: string[]
@@ -135,7 +158,7 @@ export function applyYardiAutofillToDocument(doc: Document, payload: YardiAutofi
 
   const sub = doc.querySelector('#ddSubcategory, select[name="subcategory"]')
   if (sub instanceof HTMLSelectElement && payload.subcategory) {
-    pickSelectOptionByLabel(sub, payload.subcategory)
+    pickSubcategoryOption(sub, payload.subcategory)
   }
 
   const unit = queryInput(doc, ['#acUnit', 'input[name="unit"]'])
