@@ -69,21 +69,31 @@ if (!isLogoutPage()) {
   setTimeout(syncAuthToExtension, 1000)
 }
 
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (message.type === 'SQFT_APPLY_AUTOFILL_IN_TAB') {
-    ;(async () => {
-      try {
-        if (!isYardiFillTargetPage(location.href, document)) {
-          sendResponse({ ok: false, error: 'not_fill_target' })
-          return
-        }
-        applyYardiAutofillToDocument(document, message.payload)
-        sendResponse({ ok: true })
-      } catch (e) {
-        sendResponse({ ok: false, error: String(e) })
-      }
-    })()
-    return true
+declare global {
+  interface Window {
+    __SQFT_YARDI_MESSAGE_LISTENER__?: boolean
   }
-  return false
-})
+}
+
+/** Programmatic inject can run this file twice; avoid duplicate listeners / double fill. */
+if (!window.__SQFT_YARDI_MESSAGE_LISTENER__) {
+  window.__SQFT_YARDI_MESSAGE_LISTENER__ = true
+  chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+    if (message.type === 'SQFT_APPLY_AUTOFILL_IN_TAB') {
+      ;(async () => {
+        try {
+          if (!isYardiFillTargetPage(location.href, document)) {
+            sendResponse({ ok: false, error: 'not_fill_target' })
+            return
+          }
+          applyYardiAutofillToDocument(document, message.payload)
+          sendResponse({ ok: true })
+        } catch (e) {
+          sendResponse({ ok: false, error: String(e) })
+        }
+      })()
+      return true
+    }
+    return false
+  })
+}

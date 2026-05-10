@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "SquareFt",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Quick access to your maintenance tickets with click-to-copy fields",
   "permissions": [
     "storage",
@@ -9,7 +9,8 @@
     "activeTab",
     "alarms",
     "sidePanel",
-    "tabs"
+    "tabs",
+    "scripting"
   ],
   "host_permissions": [
     "https://squareft.ai/*",

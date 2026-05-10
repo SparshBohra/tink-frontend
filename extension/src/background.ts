@@ -197,14 +197,44 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         sendResponse({ ok: false, error: 'no_target_tab' })
         return
       }
+      const msg = { type: 'SQFT_APPLY_AUTOFILL_IN_TAB' as const, payload }
+      const noReceiver = (err: unknown) => {
+        const s = String(err)
+        return (
+          s.includes('Receiving end does not exist') ||
+          s.includes('Could not establish connection')
+        )
+      }
       try {
-        const r = await chrome.tabs.sendMessage(tabId, {
-          type: 'SQFT_APPLY_AUTOFILL_IN_TAB',
-          payload,
-        })
+        const r = await chrome.tabs.sendMessage(tabId, msg)
         sendResponse(r ?? { ok: false, error: 'empty_response' })
+        return
       } catch (e) {
-        sendResponse({ ok: false, error: String(e) })
+        if (!noReceiver(e)) {
+          sendResponse({ ok: false, error: String(e) })
+          return
+        }
+      }
+      try {
+        await chrome.scripting.executeScript({
+          target: { tabId },
+          files: ['content.js'],
+        })
+      } catch (injectErr) {
+        sendResponse({
+          ok: false,
+          error: `Could not inject helper into the work-order tab. Try refreshing that tab, then autofill again. (${String(injectErr)})`,
+        })
+        return
+      }
+      try {
+        const r = await chrome.tabs.sendMessage(tabId, msg)
+        sendResponse(r ?? { ok: false, error: 'empty_response' })
+      } catch (e2) {
+        sendResponse({
+          ok: false,
+          error: `After inject: ${String(e2)}. Refresh the work-order page and try again.`,
+        })
       }
     })()
     return true
