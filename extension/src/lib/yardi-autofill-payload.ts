@@ -1,5 +1,6 @@
 import type { TicketPriority, TicketWithRelations } from '../types'
 import { getCategoryDisplayName } from '../types'
+import { clampBriefDescription } from '../../../lib/brief-clamp'
 
 export interface YardiAutofillPayloadV1 {
   version: 1
@@ -66,7 +67,7 @@ export function buildYardiAutofillPayloadV1(ticket: TicketWithRelations): YardiA
     (typeof yf?.problem_description === 'string' && yf.problem_description) ||
     ''
 
-  const briefDescription = (briefFromMeta || ticket.title || '').slice(0, 35)
+  const briefDescription = clampBriefDescription(briefFromMeta || ticket.title || '', 35)
   const problemDescription =
     problemFromMeta ||
     ticket.description ||

@@ -317,7 +317,7 @@ export default async function handler(
         status: 'triage',
         priority: parseResult.data.priority,
         category: parseResult.data.category,
-        title: parseResult.data.brief_description,
+        title: parseResult.data.title || parseResult.data.brief_description,
         description: parseResult.data.problem_description,
         ai_metadata: aiMetadata as any
       } as any)

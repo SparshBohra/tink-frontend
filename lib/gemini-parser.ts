@@ -4,6 +4,7 @@
 // ===================================================================
 
 import { TicketPriority, TicketCategory, AIMetadata } from './supabase-types'
+import { clampBriefDescription } from './brief-clamp'
 
 /**
  * Email/SMS from phones and macOS often use curly apostrophes (U+2019) instead of ASCII (').
@@ -259,10 +260,10 @@ function validateAndNormalizeData(parsed: any): ParsedTicketData {
     parsed.extracted_data = {}
   }
 
-  // New fields with legacy backfill
+  // New fields with legacy backfill (brief: 35 chars max for Yardi — break on word boundary)
   let brief =
     typeof parsed.brief_description === 'string'
-      ? parsed.brief_description.trim().slice(0, 35)
+      ? clampBriefDescription(parsed.brief_description.trim(), 35)
       : ''
   let problem =
     typeof parsed.problem_description === 'string'
@@ -270,13 +271,13 @@ function validateAndNormalizeData(parsed: any): ParsedTicketData {
       : ''
 
   if (!brief && typeof parsed.title === 'string') {
-    brief = parsed.title.trim().slice(0, 35)
+    brief = clampBriefDescription(parsed.title.trim(), 35)
   }
   if (!problem && typeof parsed.description === 'string') {
     problem = parsed.description.trim().slice(0, 4000)
   }
   if (!brief) {
-    brief = (problem || 'Maintenance').trim().slice(0, 35) || 'Maintenance'
+    brief = clampBriefDescription((problem || 'Maintenance').trim(), 35) || 'Maintenance'
   }
   if (!problem) {
     problem = brief
@@ -284,9 +285,10 @@ function validateAndNormalizeData(parsed: any): ParsedTicketData {
 
   parsed.brief_description = brief
   parsed.problem_description = problem
-  parsed.title = (typeof parsed.title === 'string' && parsed.title.trim())
-    ? parsed.title.trim().slice(0, 100)
-    : brief
+  const titleFromModel = typeof parsed.title === 'string' && parsed.title.trim() ? parsed.title.trim() : ''
+  parsed.title = titleFromModel
+    ? clampBriefDescription(titleFromModel, 100)
+    : clampBriefDescription(problem, 100)
   parsed.description = (typeof parsed.description === 'string' && parsed.description.trim())
     ? parsed.description.trim().slice(0, 8000)
     : problem
