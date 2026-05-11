@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import {
   looksLikeDefiniteMaintenanceText,
+  normalizeInboundMessageText,
   parseGeminiResponse,
   toAIMetadata,
   type ParsedTicketData,
@@ -72,11 +73,24 @@ function minimalModelJson(overrides: Partial<ParsedTicketData> & Record<string, 
   return JSON.stringify({ ...base, ...overrides })
 }
 
+describe('normalizeInboundMessageText', () => {
+  it('maps curly apostrophes to ASCII so keyword patterns match', () => {
+    const curly = 'the door isn\u2019t latching and it\u2019s dark'
+    expect(normalizeInboundMessageText(curly)).toBe("the door isn't latching and it's dark")
+  })
+})
+
 describe('looksLikeDefiniteMaintenanceText', () => {
   it('matches common tenant maintenance phrasing', () => {
     for (const text of KEYWORD_SAFETY_NET_SHOULD_MATCH) {
       expect(looksLikeDefiniteMaintenanceText(text), text.slice(0, 80)).toBe(true)
     }
+  })
+
+  it('matches Naman message when iOS sends curly apostrophes', () => {
+    const msg =
+      'Hi team, Naman in Unit 25. Just wanted to report that the lightbulb in the 2nd-floor hallway is out, and it\u2019s pretty dark by the stairs. Also, the front heavy door isn\u2019t latching shut properly. Thanks!'
+    expect(looksLikeDefiniteMaintenanceText(msg)).toBe(true)
   })
 
   it('does not match everyday non-maintenance messages', () => {
@@ -115,7 +129,7 @@ describe('parseGeminiResponse', () => {
     expect(parsed!.priority).toBe('high')
   })
 
-  it('clears work-order fields when not maintenance', () => {
+  it('non-maintenance keeps model work_order labels (for review + coercion)', () => {
     const raw = minimalModelJson({
       is_maintenance_related: false,
       message_type: 'personal',
@@ -128,9 +142,9 @@ describe('parseGeminiResponse', () => {
       const parsed = parseGeminiResponse(raw)
       expect(parsed).not.toBeNull()
       expect(parsed!.is_maintenance_related).toBe(false)
-      expect(parsed!.work_order_priority).toBe('Non-Urgent')
-      expect(parsed!.work_order_category).toBe('General')
-      expect(parsed!.work_order_subcategory).toBeNull()
+      expect(parsed!.work_order_priority).toBe('Urgent - ASAP')
+      expect(parsed!.work_order_category).toBe('Plumbing')
+      expect(parsed!.work_order_subcategory).toBe('Leak')
     } finally {
       logSpy.mockRestore()
     }

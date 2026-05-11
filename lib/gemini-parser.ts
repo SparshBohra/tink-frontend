@@ -5,6 +5,16 @@
 
 import { TicketPriority, TicketCategory, AIMetadata } from './supabase-types'
 
+/**
+ * Email/SMS from phones and macOS often use curly apostrophes (U+2019) instead of ASCII (').
+ * Our keyword safety net and regex expect ASCII; Gemini also parses more reliably after normalize.
+ */
+export function normalizeInboundMessageText(raw: string): string {
+  return raw
+    .replace(/[\u2018\u2019\u201A\u2032]/g, "'")
+    .replace(/[\u201C\u201D]/g, '"')
+}
+
 // Environment variables
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY!
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash'
@@ -165,7 +175,7 @@ function buildPrompt(rawMessage: string): string {
 
 ---
 **MESSAGE TO PARSE:**
-${rawMessage}
+${normalizeInboundMessageText(rawMessage)}
 ---
 
 **JSON OUTPUT:**`
@@ -332,9 +342,8 @@ function validateAndNormalizeData(parsed: any): ParsedTicketData {
 
   if (!parsed.is_maintenance_related) {
     console.log(`Non-maintenance message detected: ${parsed.message_type}`)
-    parsed.work_order_priority = 'Non-Urgent'
-    parsed.work_order_category = 'General'
-    parsed.work_order_subcategory = null
+    // Do not overwrite work_order_* here: the model may still output useful labels for queue review,
+    // and coercing is_maintenance_related=true later needs those fields if the model was only wrong on the boolean.
   }
 
   if (typeof parsed.confidence !== 'number' || parsed.confidence < 0 || parsed.confidence > 1) {
@@ -353,7 +362,7 @@ function validateAndNormalizeData(parsed: any): ParsedTicketData {
  * Only upgrades when multiple facility/issue cues appear — not a single vague word.
  */
 export function looksLikeDefiniteMaintenanceText(rawMessage: string): boolean {
-  const t = rawMessage.toLowerCase()
+  const t = normalizeInboundMessageText(rawMessage).toLowerCase()
   if (t.length < 15) return false
 
   const issueVerbs =
@@ -498,8 +507,8 @@ export async function parseMaintenanceRequest(
     }
   }
   
-  // Limit message length (Gemini has token limits)
-  const truncatedMessage = rawMessage.slice(0, 10000)
+  // Limit message length (Gemini has token limits); normalize smart punctuation first
+  const truncatedMessage = normalizeInboundMessageText(rawMessage).trim().slice(0, 10000)
   
   try {
     const prompt = buildPrompt(truncatedMessage)
