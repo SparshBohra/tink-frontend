@@ -245,12 +245,23 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
         }
         setSession(si.session)
         setUser(si.user)
-        const { error: provErr } = await provisionProfileForUser(si.user, {
-          fullName,
-          orgName: orgName || undefined,
-          phone: phone || undefined,
-        })
-        if (provErr) console.error('provision after existing-auth signup:', provErr)
+        const { error: provErr } = await provisionProfileForUser(
+          si.user,
+          {
+            fullName,
+            orgName: orgName || undefined,
+            phone: phone || undefined,
+          },
+          si.session?.access_token
+        )
+        if (provErr) {
+          setError(
+            provErr === 'server_misconfigured'
+              ? 'New accounts cannot be completed yet: add SUPABASE_SERVICE_ROLE_KEY to this site’s environment (Vercel → Settings → Environment Variables), then redeploy.'
+              : `Could not finish account setup: ${provErr}`
+          )
+          return false
+        }
         await fetchUserData(si.user)
         activityLogger.logSignup(email)
         window.location.href = '/dashboard/tickets'
@@ -279,14 +290,26 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
         return ok ? { requiresConfirmation: false } : null
       }
 
-      const { error: provErr } = await provisionProfileForUser(authData.user, {
-        fullName,
-        orgName: orgName || undefined,
-        phone: phone || undefined,
-      })
+      if (!authData.session?.access_token) {
+        return { requiresConfirmation: true, email }
+      }
+
+      const { error: provErr } = await provisionProfileForUser(
+        authData.user,
+        {
+          fullName,
+          orgName: orgName || undefined,
+          phone: phone || undefined,
+        },
+        authData.session.access_token
+      )
       if (provErr) {
+        const msg =
+          provErr === 'server_misconfigured'
+            ? 'New accounts cannot be completed yet: add SUPABASE_SERVICE_ROLE_KEY to this site’s environment (Vercel), then redeploy.'
+            : provErr
         console.error('provisionProfileForUser:', provErr)
-        throw new Error(provErr)
+        throw new Error(msg)
       }
 
       setUser(authData.user)
