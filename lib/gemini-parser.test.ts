@@ -4,6 +4,7 @@ import {
   normalizeInboundMessageText,
   parseGeminiResponse,
   toAIMetadata,
+  toAIMetadataForIssue,
   type ParsedTicketData,
 } from './gemini-parser'
 
@@ -122,6 +123,7 @@ describe('parseGeminiResponse', () => {
     })
     const parsed = parseGeminiResponse(raw)
     expect(parsed).not.toBeNull()
+    expect(parsed!.issues.length).toBe(1)
     expect(parsed!.is_maintenance_related).toBe(true)
     expect(parsed!.brief_description.length).toBeLessThanOrEqual(35)
     expect(parsed!.work_order_category).toBe('Electrical')
@@ -148,6 +150,61 @@ describe('parseGeminiResponse', () => {
     } finally {
       logSpy.mockRestore()
     }
+  })
+
+  it('splits multi-issue maintenance JSON into one entry per distinct problem', () => {
+    const raw = JSON.stringify({
+      is_maintenance_related: true,
+      message_type: 'maintenance',
+      reasoning: 'Two separate repairs mentioned.',
+      extracted_data: {
+        tenant_name: 'Naman',
+        unit_number: '25',
+        tenant_phone: null,
+        tenant_email: null,
+        property_name: null,
+        access_notes: null,
+        subcategory: null,
+      },
+      issues: [
+        {
+          brief_description: '2nd floor hallway light out',
+          problem_description:
+            'Naman Unit 25 reports the 2nd-floor hallway lightbulb is out; area by stairs is dark.',
+          work_order_priority: 'Non-Urgent',
+          work_order_category: 'Electrical',
+          work_order_subcategory: null,
+          title: 'Hallway light out floor 2',
+          description:
+            'Naman Unit 25 reports the 2nd-floor hallway lightbulb is out; area by stairs is dark.',
+          priority: 'medium',
+          category: 'electrical',
+          confidence: 0.92,
+          reasoning: 'Lighting.',
+        },
+        {
+          brief_description: 'Front door not latching',
+          problem_description: 'Front heavy door is not latching shut properly.',
+          work_order_priority: 'Non-Urgent',
+          work_order_category: 'Building',
+          work_order_subcategory: 'Door latch',
+          title: 'Front door latch',
+          description: 'Front heavy door is not latching shut properly.',
+          priority: 'medium',
+          category: 'general',
+          confidence: 0.9,
+          reasoning: 'Door / entry.',
+        },
+      ],
+    })
+    const parsed = parseGeminiResponse(raw)
+    expect(parsed).not.toBeNull()
+    expect(parsed!.issues.length).toBe(2)
+    expect(parsed!.issues[0].work_order_category).toBe('Electrical')
+    expect(parsed!.issues[0].category).toBe('electrical')
+    expect(parsed!.issues[1].work_order_category).toBe('Building')
+    expect(parsed!.issues[1].category).toBe('general')
+    expect(parsed!.brief_description).toBe(parsed!.issues[0].brief_description)
   })
 
   it('parses JSON when ```json opening fence has no closing fence (Gemini 2.x)', () => {
@@ -201,5 +258,51 @@ describe('toAIMetadata', () => {
     expect(meta.brief_description).toBe('No hot water')
     expect(meta.yardi_fields?.subcategory).toBe('No hot water')
     expect(meta.yardi_fields?.category).toBe('General')
+    expect(meta.inbound_split).toBeUndefined()
+  })
+
+  it('sets inbound_split per issue when message produced multiple tickets', () => {
+    const parsed = parseGeminiResponse(
+      JSON.stringify({
+        is_maintenance_related: true,
+        message_type: 'maintenance',
+        reasoning: 'Two issues.',
+        extracted_data: {},
+        issues: [
+          {
+            brief_description: 'Hall light out',
+            problem_description: 'Bulb out in hall.',
+            work_order_priority: 'Non-Urgent',
+            work_order_category: 'Electrical',
+            work_order_subcategory: null,
+            title: 'Hall light',
+            description: 'Bulb out in hall.',
+            priority: 'medium',
+            category: 'electrical',
+            confidence: 0.9,
+            reasoning: 'Electrical.',
+          },
+          {
+            brief_description: 'Door wont latch',
+            problem_description: 'Front door latch failed.',
+            work_order_priority: 'Non-Urgent',
+            work_order_category: 'Building',
+            work_order_subcategory: null,
+            title: 'Door latch',
+            description: 'Front door latch failed.',
+            priority: 'medium',
+            category: 'general',
+            confidence: 0.85,
+            reasoning: 'Building.',
+          },
+        ],
+      })
+    )!
+    const m0 = toAIMetadataForIssue(parsed, parsed.issues[0], 0, 2)
+    const m1 = toAIMetadataForIssue(parsed, parsed.issues[1], 1, 2)
+    expect(m0.inbound_split).toEqual({ issue_index: 1, issue_total: 2 })
+    expect(m1.inbound_split).toEqual({ issue_index: 2, issue_total: 2 })
+    expect(m0.yardi_fields?.category).toBe('Electrical')
+    expect(m1.yardi_fields?.category).toBe('Building')
   })
 })

@@ -5,7 +5,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '@supabase/supabase-js'
-import { parseMaintenanceRequest, toAIMetadata } from '../../../lib/gemini-parser'
+import { parseMaintenanceRequest, toAIMetadataForIssue } from '../../../lib/gemini-parser'
 import type { Database } from '../../../lib/supabase-types'
 
 // Supabase admin client (has full access, bypasses RLS)
@@ -203,6 +203,7 @@ export default async function handler(
     
     console.log('✅ Gemini parsed:', {
       brief: parseResult.data.brief_description,
+      issue_count: parseResult.data.issues?.length ?? 0,
       priority: parseResult.data.priority,
       category: parseResult.data.category,
       confidence: parseResult.data.confidence,
@@ -253,66 +254,76 @@ export default async function handler(
       })
     }
     
-    // Step 5: Create ticket (only for maintenance requests)
-    const aiMetadata = toAIMetadata(parseResult.data)
-    
-    const { data: ticket, error: ticketError } = await supabaseAdmin
-      .from('tickets')
-      .insert({
-        organization_id: orgContact.organization_id,
-        status: 'triage',
-        priority: parseResult.data.priority,
-        category: parseResult.data.category,
-        title: parseResult.data.title || parseResult.data.brief_description,
-        description: parseResult.data.problem_description,
-        ai_metadata: aiMetadata as any
-      } as any)
-      .select()
-      .single()
-    
-    if (ticketError || !ticket) {
-      console.error('❌ Failed to create ticket:', ticketError)
-      
-      await supabaseAdmin
-        .from('inbound_queue')
-        .update({
-          processing_status: 'failed',
-          error_message: `Failed to create ticket: ${ticketError?.message}`,
-          parsed_data: parseResult.data as any
+    const issues = parseResult.data.issues
+    const createdTickets: { id: string; ticket_number: number; priority: string; category: string | null }[] = []
+
+    for (let i = 0; i < issues.length; i++) {
+      const issue = issues[i]
+      const aiMetadata = toAIMetadataForIssue(parseResult.data, issue, i, issues.length)
+
+      const { data: ticket, error: ticketError } = await supabaseAdmin
+        .from('tickets')
+        .insert({
+          organization_id: orgContact.organization_id,
+          status: 'triage',
+          priority: issue.priority,
+          category: issue.category,
+          title: issue.title || issue.brief_description,
+          description: issue.problem_description,
+          ai_metadata: aiMetadata as any
         } as any)
-        .eq('id', queueEntry.id)
-      
-      return res.status(500).json({ error: 'Failed to create ticket' })
+        .select()
+        .single()
+
+      if (ticketError || !ticket) {
+        console.error('❌ Failed to create ticket:', ticketError)
+
+        await supabaseAdmin
+          .from('inbound_queue')
+          .update({
+            processing_status: 'failed',
+            error_message: `Failed to create ticket: ${ticketError?.message}`,
+            parsed_data: { ...parseResult.data, ticket_ids: createdTickets.map((t) => t.id) } as any
+          } as any)
+          .eq('id', queueEntry.id)
+
+        return res.status(500).json({ error: 'Failed to create ticket' })
+      }
+
+      createdTickets.push(ticket)
+      console.log('🎫 Ticket created:', ticket.id, `#${ticket.ticket_number}`, `(issue ${i + 1}/${issues.length})`)
+
+      const { error: messageError } = await supabaseAdmin
+        .from('inbound_messages')
+        .insert({
+          organization_id: orgContact.organization_id,
+          ticket_id: ticket.id,
+          source: 'sms',
+          sender_phone: twilioData.From,
+          sender_name: parseResult.data.extracted_data.tenant_name || null,
+          raw_subject: null,
+          raw_body: twilioData.Body,
+          raw_headers: twilioData as any,
+          received_at: new Date().toISOString()
+        } as any)
+
+      if (messageError) {
+        console.error('⚠️ Failed to create message record:', messageError)
+      }
     }
-    
-    console.log('🎫 Ticket created:', ticket.id, `#${ticket.ticket_number}`)
-    
-    // Step 6: Create inbound message record
-    const { error: messageError } = await supabaseAdmin
-      .from('inbound_messages')
-      .insert({
-        organization_id: orgContact.organization_id,
-        ticket_id: ticket.id,
-        source: 'sms',
-        sender_phone: twilioData.From,
-        sender_name: parseResult.data.extracted_data.tenant_name || null,
-        raw_subject: null,
-        raw_body: twilioData.Body,
-        raw_headers: twilioData as any,
-        received_at: new Date().toISOString()
-      } as any)
-    
-    if (messageError) {
-      console.error('⚠️ Failed to create message record:', messageError)
+
+    const primaryTicket = createdTickets[0]
+    const parsedWithTickets = {
+      ...parseResult.data,
+      ticket_ids: createdTickets.map((t) => t.id)
     }
-    
-    // Step 7: Update queue as processed
+
     await supabaseAdmin
       .from('inbound_queue')
       .update({
         processing_status: 'processed',
-        ticket_id: ticket.id,
-        parsed_data: parseResult.data as any,
+        ticket_id: primaryTicket.id,
+        parsed_data: parsedWithTickets as any,
         processed_at: new Date().toISOString()
       } as any)
       .eq('id', queueEntry.id)
@@ -334,10 +345,12 @@ export default async function handler(
     // Return success to Twilio
     res.status(200).json({
       success: true,
-      ticket_id: ticket.id,
-      ticket_number: ticket.ticket_number,
-      priority: ticket.priority,
-      category: ticket.category,
+      ticket_id: primaryTicket.id,
+      ticket_ids: createdTickets.map((t) => t.id),
+      ticket_number: primaryTicket.ticket_number,
+      ticket_count: createdTickets.length,
+      priority: primaryTicket.priority,
+      category: primaryTicket.category,
       is_maintenance: true,
       message_type: 'maintenance',
       processing_time_ms: Date.now() - startTime

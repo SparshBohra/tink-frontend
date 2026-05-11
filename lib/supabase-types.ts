@@ -139,6 +139,11 @@ export interface AIMetadata {
   confidence_score?: number
   parsed_at?: string
   gemini_reasoning?: string
+  /** Present when one SMS/email produced multiple tickets from distinct issues in the same message */
+  inbound_split?: {
+    issue_index: number
+    issue_total: number
+  }
   [key: string]: unknown
 }
 

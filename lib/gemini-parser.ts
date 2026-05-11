@@ -80,13 +80,30 @@ function internalPriorityToWorkOrderLabel(p: TicketPriority): WorkOrderPriorityL
   return 'Non-Urgent'
 }
 
+const MAX_INBOUND_ISSUES = 5
+
+/** One distinct maintenance item — may share tenant/unit context via parent ParsedTicketData.extracted_data */
+export interface ParsedMaintenanceIssue {
+  title: string
+  description: string
+  priority: TicketPriority
+  category: TicketCategory
+  confidence: number
+  reasoning: string
+  brief_description: string
+  problem_description: string
+  work_order_priority: WorkOrderPriorityLabel
+  work_order_category: string
+  work_order_subcategory: string | null
+}
+
 // Structured ticket data from Gemini
 export interface ParsedTicketData {
   title: string
   description: string
   priority: TicketPriority
   category: TicketCategory
-  confidence: number // 0-1 score
+  confidence: number // 0-1 score (mean across issues when split)
   reasoning: string // Why Gemini chose this priority/category
   is_maintenance_related: boolean // NEW: Is this actually a maintenance request?
   message_type: 'maintenance' | 'spam' | 'personal' | 'marketing' | 'automated' | 'unclear' // NEW: Type of message
@@ -99,6 +116,8 @@ export interface ParsedTicketData {
   work_order_category: string
   /** Short issue label (e.g. Leak, No heat) or null if not clear from the message */
   work_order_subcategory: string | null
+  /** Normalized maintenance items (always length ≥ 1 after parse). Use for multi-ticket creation. */
+  issues: ParsedMaintenanceIssue[]
   extracted_data: {
     tenant_name?: string | null
     tenant_phone?: string | null
@@ -107,6 +126,113 @@ export interface ParsedTicketData {
     property_name?: string | null
     access_notes?: string | null
     subcategory?: string | null
+  }
+}
+
+function syncRootFromIssues(parsed: ParsedTicketData, issues: ParsedMaintenanceIssue[]) {
+  const head = issues[0]
+  parsed.brief_description = head.brief_description
+  parsed.problem_description = head.problem_description
+  parsed.title = head.title
+  parsed.description = head.description
+  parsed.priority = head.priority
+  parsed.category = head.category
+  parsed.work_order_priority = head.work_order_priority
+  parsed.work_order_category = head.work_order_category
+  parsed.work_order_subcategory = head.work_order_subcategory
+  parsed.confidence =
+    issues.reduce((a, i) => a + i.confidence, 0) / Math.max(issues.length, 1)
+}
+
+function normalizeSingleIssue(iss: any, isMaintenance: boolean): ParsedMaintenanceIssue {
+  let brief =
+    typeof iss.brief_description === 'string'
+      ? clampBriefDescription(iss.brief_description.trim(), 35)
+      : ''
+  let problem =
+    typeof iss.problem_description === 'string' ? iss.problem_description.trim().slice(0, 4000) : ''
+
+  if (!brief && typeof iss.title === 'string') {
+    brief = clampBriefDescription(iss.title.trim(), 35)
+  }
+  if (!problem && typeof iss.description === 'string') {
+    problem = iss.description.trim().slice(0, 4000)
+  }
+  if (!brief) {
+    brief = clampBriefDescription((problem || 'Maintenance').trim(), 35) || 'Maintenance'
+  }
+  if (!problem) {
+    problem = brief
+  }
+
+  const titleFromModel = typeof iss.title === 'string' && iss.title.trim() ? iss.title.trim() : ''
+  const title = titleFromModel
+    ? clampBriefDescription(titleFromModel, 100)
+    : clampBriefDescription(problem, 100)
+  const description =
+    typeof iss.description === 'string' && iss.description.trim()
+      ? iss.description.trim().slice(0, 8000)
+      : problem
+
+  const validPriorities: TicketPriority[] = ['low', 'medium', 'high', 'emergency']
+  let priority: TicketPriority = validPriorities.includes(iss.priority) ? iss.priority : 'medium'
+
+  const validCategories: TicketCategory[] = [
+    'hvac',
+    'heating',
+    'cooling',
+    'plumbing',
+    'electrical',
+    'appliance',
+    'access_control',
+    'pest',
+    'general',
+  ]
+  let category: TicketCategory = validCategories.includes(iss.category) ? iss.category : 'general'
+
+  const workPri = normalizeWorkOrderPriorityLabel(
+    typeof iss.work_order_priority === 'string' ? iss.work_order_priority : undefined,
+    priority
+  )
+  const workCat = normalizeWorkOrderCategoryLabel(
+    typeof iss.work_order_category === 'string' ? iss.work_order_category : undefined
+  )
+  let woPri = workPri
+  let woCat = workCat
+
+  const sub =
+    iss.work_order_subcategory !== undefined && iss.work_order_subcategory !== null
+      ? String(iss.work_order_subcategory).trim() || null
+      : null
+  const woSub = sub && sub.length > 120 ? sub.slice(0, 120) : sub
+
+  if (isMaintenance) {
+    priority = workOrderPriorityToInternal(woPri)
+    category = workOrderCategoryToInternal(woCat)
+  } else {
+    if (!validPriorities.includes(priority)) priority = 'medium'
+    if (!validCategories.includes(category)) category = 'general'
+  }
+
+  if (typeof iss.confidence !== 'number' || iss.confidence < 0 || iss.confidence > 1) {
+    iss.confidence = 0.5
+  }
+  const confidence = iss.confidence as number
+
+  const reasoning = typeof iss.reasoning === 'string' ? iss.reasoning : ''
+
+  return {
+    brief_description: brief,
+    problem_description: problem,
+    title,
+    description,
+    priority,
+    category,
+    work_order_priority: woPri,
+    work_order_category: woCat,
+    work_order_subcategory: woSub,
+    confidence,
+    reasoning,
   }
 }
 
@@ -129,17 +255,7 @@ function buildPrompt(rawMessage: string): string {
 {
   "is_maintenance_related": boolean,
   "message_type": "maintenance|spam|personal|marketing|automated|unclear",
-  "brief_description": "string — max 35 chars, MUST be ≤35, complete words only, see rules above",
-  "problem_description": "string, maximum 4000 characters — full 'Description' / problem narrative for the maintenance team. Paraphrase and organize ONLY information present in the message (who, what, where in the message, urgency as stated). If something is unknown, omit it — do NOT guess or fabricate.",
-  "work_order_priority": "${priList}",
-  "work_order_category": "string — MUST be exactly one of: ${catList}",
-  "work_order_subcategory": "string or null — short specific issue ONLY if clear from the message (e.g. 'Leak', 'No heat', 'Clogged drain'); otherwise null",
-  "title": "string — max 100 chars, readable list title, complete words only, see rules above",
-  "description": "string (legacy full text — should match problem_description unless you need a tiny bridge for non-maintenance)",
-  "priority": "emergency|high|medium|low",
-  "category": "hvac|heating|cooling|plumbing|electrical|appliance|access_control|pest|general",
-  "confidence": number (0.0-1.0),
-  "reasoning": "string (1-2 sentences)",
+  "reasoning": "string — 1-2 sentences for the whole message (not per-issue)",
   "extracted_data": {
     "tenant_name": "string or null",
     "tenant_phone": "string or null",
@@ -147,9 +263,31 @@ function buildPrompt(rawMessage: string): string {
     "unit_number": "string or null — only if explicitly in the message",
     "property_name": "string or null — only if explicitly in the message",
     "access_notes": "string or null",
-    "subcategory": "string or null — may mirror work_order_subcategory"
-  }
+    "subcategory": "string or null — optional; usually mirror the first issue's work_order_subcategory if relevant"
+  },
+  "issues": [
+    {
+      "brief_description": "string — max 35 chars for THIS issue only, same word-boundary rules as above",
+      "problem_description": "string, max 4000 — narrative for THIS issue only (you may repeat tenant name/unit from the message for clarity)",
+      "work_order_priority": "${priList}",
+      "work_order_category": "string — MUST be exactly one of: ${catList}",
+      "work_order_subcategory": "string or null — short specific issue ONLY if clear for this item (e.g. 'Bulb out', 'Door latch'); otherwise null",
+      "title": "string — max 100 chars for this issue",
+      "description": "string — should match this issue's problem_description",
+      "priority": "emergency|high|medium|low",
+      "category": "hvac|heating|cooling|plumbing|electrical|appliance|access_control|pest|general",
+      "confidence": number (0.0-1.0),
+      "reasoning": "string — one short sentence for this issue's category/priority choice"
+    }
+  ]
 }
+
+**\`issues\` array (required):**
+- Always include **at least one** object. Use **one object per distinct maintenance problem** (different place, system, or repair need).
+- Example: **2nd-floor hallway light out** → one issue with work_order_category **Electrical** and category **electrical**; **front door not latching** → a **second** issue with work_order_category **Building** (or **General** only if Building is a poor fit) — **do not** blend unrelated problems into a single issue or force one shared "General" category when two different trades apply.
+- Cap at **5** issues; if the tenant lists more, group the least urgent or omit with an honest note only in the last issue's text (still no fabrication).
+- **Single problem** → exactly **one** entry in \`issues\`.
+- **Legacy:** You may also include root-level \`brief_description\`, \`problem_description\`, etc. (omit \`issues\`) and the parser will treat that as one issue — **prefer the \`issues\` array** for all new output.
 
 **Anti-hallucination (mandatory):**
 - Do not add equipment, rooms, or failures that are not in the message.
@@ -175,10 +313,10 @@ function buildPrompt(rawMessage: string): string {
 - Set **true** if the message describes **any** physical issue with the property or building needing facilities attention — whether in a **unit or a common area** (hallway, stairs, lobby, entrance, garage, exterior door, shared lighting, etc.).
 - Examples that MUST be maintenance: lights or bulbs out; doors, locks, or latches not working; leaks; no water; HVAC problems; pests; damage; appliances not working; trip hazards; anything asking for **repair, fix, or someone to look at** a building/system problem.
 - **Polite or casual wording** ("Hi team", "just wanted to report", "thanks") does **not** make it non-maintenance. **message_type** can still be \`maintenance\`.
-- **Multiple issues in one message** (e.g. hallway light out AND front door not latching) — set **is_maintenance_related: true**, \`message_type: "maintenance"\`, put **both** issues in \`problem_description\`, and compose \`brief_description\` per the **brief_description rules** (≤35 chars, complete words, shorten smartly if needed).
+- **Multiple issues in one message** (e.g. hallway light out AND front door not latching) — set **is_maintenance_related: true**, \`message_type: "maintenance"\`, and output **separate objects in \`issues\`** — each with its **own** \`brief_description\`, \`problem_description\`, \`category\`, and \`work_order_category\` (do not merge into one combined issue).
 - Set **false** only when there is **no** facility/maintenance problem: spam, pure marketing, unrelated personal chat with no building issue, automated newsletters, or messages with zero actionable property concern.
 
-**If is_maintenance_related is false:** still output brief_description and problem_description summarizing the message honestly; set work_order_priority to "Non-Urgent", work_order_category to "General", work_order_subcategory to null.
+**If is_maintenance_related is false:** still output \`issues\` with one (or more) entries summarizing the message honestly; for each issue set work_order_priority to "Non-Urgent", work_order_category to "General", work_order_subcategory to null.
 
 ---
 **MESSAGE TO PARSE:**
@@ -266,80 +404,28 @@ function validateAndNormalizeData(parsed: any): ParsedTicketData {
     parsed.extracted_data = {}
   }
 
-  // brief/title: model should respect limits + whole words (prompt); clamp only catches overflow
-  let brief =
-    typeof parsed.brief_description === 'string'
-      ? clampBriefDescription(parsed.brief_description.trim(), 35)
-      : ''
-  let problem =
-    typeof parsed.problem_description === 'string'
-      ? parsed.problem_description.trim().slice(0, 4000)
-      : ''
+  const isMaint = !!parsed.is_maintenance_related
 
-  if (!brief && typeof parsed.title === 'string') {
-    brief = clampBriefDescription(parsed.title.trim(), 35)
-  }
-  if (!problem && typeof parsed.description === 'string') {
-    problem = parsed.description.trim().slice(0, 4000)
-  }
-  if (!brief) {
-    brief = clampBriefDescription((problem || 'Maintenance').trim(), 35) || 'Maintenance'
-  }
-  if (!problem) {
-    problem = brief
+  let rawIssues: any[] = []
+  if (Array.isArray(parsed.issues) && parsed.issues.length > 0) {
+    rawIssues = parsed.issues.slice(0, MAX_INBOUND_ISSUES)
   }
 
-  parsed.brief_description = brief
-  parsed.problem_description = problem
-  const titleFromModel = typeof parsed.title === 'string' && parsed.title.trim() ? parsed.title.trim() : ''
-  parsed.title = titleFromModel
-    ? clampBriefDescription(titleFromModel, 100)
-    : clampBriefDescription(problem, 100)
-  parsed.description = (typeof parsed.description === 'string' && parsed.description.trim())
-    ? parsed.description.trim().slice(0, 8000)
-    : problem
+  const issues: ParsedMaintenanceIssue[] =
+    rawIssues.length > 0
+      ? rawIssues.map((iss) => normalizeSingleIssue(iss, isMaint))
+      : [normalizeSingleIssue(parsed, isMaint)]
 
-  const validPriorities: TicketPriority[] = ['low', 'medium', 'high', 'emergency']
-  if (!validPriorities.includes(parsed.priority)) {
-    parsed.priority = 'medium'
-  }
-  const validCategories: TicketCategory[] = [
-    'hvac',
-    'heating',
-    'cooling',
-    'plumbing',
-    'electrical',
-    'appliance',
-    'access_control',
-    'pest',
-    'general',
-  ]
-  if (!validCategories.includes(parsed.category)) {
-    parsed.category = 'general'
+  if (!issues.length) {
+    throw new Error('No issues in Gemini response')
   }
 
-  const workPri = normalizeWorkOrderPriorityLabel(
-    typeof parsed.work_order_priority === 'string' ? parsed.work_order_priority : undefined,
-    parsed.priority as TicketPriority
-  )
-  const workCat = normalizeWorkOrderCategoryLabel(
-    typeof parsed.work_order_category === 'string' ? parsed.work_order_category : undefined
-  )
-  parsed.work_order_priority = workPri
-  parsed.work_order_category = workCat
+  const out = parsed as ParsedTicketData
+  out.issues = issues
+  syncRootFromIssues(out, issues)
 
-  if (parsed.is_maintenance_related) {
-    parsed.priority = workOrderPriorityToInternal(workPri)
-    parsed.category = workOrderCategoryToInternal(workCat)
-  }
-
-  const sub =
-    parsed.work_order_subcategory !== undefined && parsed.work_order_subcategory !== null
-      ? String(parsed.work_order_subcategory).trim() || null
-      : null
-  parsed.work_order_subcategory = sub && sub.length > 120 ? sub.slice(0, 120) : sub
-  if (parsed.work_order_subcategory && !parsed.extracted_data.subcategory) {
-    parsed.extracted_data.subcategory = parsed.work_order_subcategory
+  if (issues[0].work_order_subcategory && !parsed.extracted_data.subcategory) {
+    parsed.extracted_data.subcategory = issues[0].work_order_subcategory
   }
 
   const validTypes = ['maintenance', 'spam', 'personal', 'marketing', 'automated', 'unclear']
@@ -347,21 +433,15 @@ function validateAndNormalizeData(parsed: any): ParsedTicketData {
     parsed.message_type = 'unclear'
   }
 
-  if (!parsed.is_maintenance_related) {
+  if (!isMaint) {
     console.log(`Non-maintenance message detected: ${parsed.message_type}`)
-    // Do not overwrite work_order_* here: the model may still output useful labels for queue review,
-    // and coercing is_maintenance_related=true later needs those fields if the model was only wrong on the boolean.
-  }
-
-  if (typeof parsed.confidence !== 'number' || parsed.confidence < 0 || parsed.confidence > 1) {
-    parsed.confidence = 0.5
   }
 
   if (!parsed.reasoning || typeof parsed.reasoning !== 'string') {
     parsed.reasoning = ''
   }
 
-  return parsed as ParsedTicketData
+  return out
 }
 
 /**
@@ -550,12 +630,15 @@ export async function parseMaintenanceRequest(
       )
       parsedData.is_maintenance_related = true
       parsedData.message_type = 'maintenance'
-      const workPri = normalizeWorkOrderPriorityLabel(parsedData.work_order_priority, parsedData.priority)
-      const workCat = normalizeWorkOrderCategoryLabel(parsedData.work_order_category)
-      parsedData.work_order_priority = workPri
-      parsedData.work_order_category = workCat
-      parsedData.priority = workOrderPriorityToInternal(workPri)
-      parsedData.category = workOrderCategoryToInternal(workCat)
+      for (const issue of parsedData.issues) {
+        const workPri = normalizeWorkOrderPriorityLabel(issue.work_order_priority, issue.priority)
+        const workCat = normalizeWorkOrderCategoryLabel(issue.work_order_category)
+        issue.work_order_priority = workPri
+        issue.work_order_category = workCat
+        issue.priority = workOrderPriorityToInternal(workPri)
+        issue.category = workOrderCategoryToInternal(workCat)
+      }
+      syncRootFromIssues(parsedData, parsedData.issues)
     }
 
     // Success!
@@ -575,16 +658,26 @@ export async function parseMaintenanceRequest(
   }
 }
 
-// Convert ParsedTicketData to AIMetadata format for database
-export function toAIMetadata(parsed: ParsedTicketData): AIMetadata {
+/** One ticket's AI metadata when the inbound message was split into multiple issues */
+export function toAIMetadataForIssue(
+  parsed: ParsedTicketData,
+  issue: ParsedMaintenanceIssue,
+  issueIndex: number,
+  issueTotal: number
+): AIMetadata {
   const sub =
-    parsed.work_order_subcategory ||
+    issue.work_order_subcategory ||
     parsed.extracted_data.subcategory ||
     undefined
 
-  return {
-    brief_description: parsed.brief_description,
-    problem_description: parsed.problem_description,
+  const reasoningParts = [parsed.reasoning?.trim(), issue.reasoning?.trim()].filter(Boolean)
+  const combined = reasoningParts.join(' · ')
+  const gemini_reasoning =
+    issueTotal > 1 ? `[Issue ${issueIndex + 1}/${issueTotal}] ${combined}`.trim() : combined
+
+  const meta: AIMetadata = {
+    brief_description: issue.brief_description,
+    problem_description: issue.problem_description,
     subcategory: typeof sub === 'string' ? sub : undefined,
     access_notes: parsed.extracted_data.access_notes || undefined,
     tenant_name: parsed.extracted_data.tenant_name || undefined,
@@ -592,15 +685,30 @@ export function toAIMetadata(parsed: ParsedTicketData): AIMetadata {
     tenant_email: parsed.extracted_data.tenant_email || undefined,
     unit_number: parsed.extracted_data.unit_number || undefined,
     property_name: parsed.extracted_data.property_name || undefined,
-    confidence_score: parsed.confidence,
+    confidence_score: issue.confidence,
     parsed_at: new Date().toISOString(),
-    gemini_reasoning: parsed.reasoning,
+    gemini_reasoning,
     yardi_fields: {
-      brief_description: parsed.brief_description,
-      problem_description: parsed.problem_description,
-      priority: parsed.work_order_priority,
-      category: parsed.work_order_category,
+      brief_description: issue.brief_description,
+      problem_description: issue.problem_description,
+      priority: issue.work_order_priority,
+      category: issue.work_order_category,
       subcategory: typeof sub === 'string' ? sub : undefined,
     },
   }
+
+  if (issueTotal > 1) {
+    meta.inbound_split = { issue_index: issueIndex + 1, issue_total: issueTotal }
+  }
+
+  return meta
+}
+
+// Convert ParsedTicketData to AIMetadata format for database (first issue; use toAIMetadataForIssue when saving split tickets)
+export function toAIMetadata(parsed: ParsedTicketData): AIMetadata {
+  const first = parsed.issues?.[0]
+  if (!first) {
+    return toAIMetadataForIssue(parsed, normalizeSingleIssue(parsed, !!parsed.is_maintenance_related), 0, 1)
+  }
+  return toAIMetadataForIssue(parsed, first, 0, parsed.issues.length)
 }
