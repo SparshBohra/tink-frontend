@@ -7,6 +7,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '@supabase/supabase-js'
 import { parseMaintenanceRequest, toAIMetadata } from '../../../lib/gemini-parser'
 import type { Database } from '../../../lib/supabase-types'
+import { phoneLookupVariants } from '../../../lib/phone-lookup'
 
 // Supabase admin client (has full access, bypasses RLS)
 const supabaseAdmin = createClient<Database>(
@@ -112,15 +113,29 @@ export default async function handler(
     
     console.log('✅ Queue entry created:', queueEntry.id)
     
-    // Step 3: Identify organization by phone number
-    const { data: orgContact } = await supabaseAdmin
-      .from('org_contacts')
-      .select('organization_id, label')
-      .eq('contact_type', 'phone')
-      .eq('contact_value', twilioData.From)
-      .eq('is_verified', true)
-      .single()
-    
+    // Step 3: Identify organization by phone number (Twilio E.164 vs stored formats; verified preferred)
+    const phoneVariants = phoneLookupVariants(twilioData.From)
+    let orgContact: { organization_id: string; label: string | null } | null = null
+
+    if (phoneVariants.length > 0) {
+      const baseQuery = () =>
+        supabaseAdmin
+          .from('org_contacts')
+          .select('organization_id, label')
+          .eq('contact_type', 'phone')
+          .in('contact_value', phoneVariants)
+
+      const { data: verifiedMatch } = await baseQuery().eq('is_verified', true).limit(1).maybeSingle()
+      if (verifiedMatch) {
+        orgContact = verifiedMatch
+      } else {
+        const { data: anyMatch } = await baseQuery().limit(1).maybeSingle()
+        orgContact = anyMatch ?? null
+        if (anyMatch) {
+          console.log('📞 Matched phone on org_contacts (unverified); consider marking contact verified')
+        }
+      }
+    }
     if (!orgContact) {
       console.warn('⚠️ No organization found for phone:', twilioData.From)
       
