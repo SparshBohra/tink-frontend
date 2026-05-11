@@ -173,8 +173,8 @@ export default async function handler(
       .select('organization_id, label, organizations(id, name)')
       .eq('contact_type', 'email')
       .eq('contact_value', emailData.from)
-      .eq('is_verified', true)
-      .single()
+      .limit(1)
+      .maybeSingle()
     
     if (!orgContact) {
       console.warn('⚠️ No organization found for email:', emailData.from)

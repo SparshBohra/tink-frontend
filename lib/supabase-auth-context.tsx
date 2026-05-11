@@ -268,6 +268,7 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
             contact_type: 'phone',
             contact_value: phone,
             owner_name: fullName,
+            is_verified: true,
             created_at: new Date().toISOString()
           })
       }
