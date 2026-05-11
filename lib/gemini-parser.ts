@@ -183,71 +183,70 @@ ${normalizeInboundMessageText(rawMessage)}
 
 // Parse Gemini's response and handle edge cases (exported for unit tests)
 export function parseGeminiResponse(rawResponse: string): ParsedTicketData | null {
-  // Clean up the response first
-  let cleanedResponse = rawResponse.trim()
-  
-  try {
-    // Try direct JSON parse first
-    const parsed = JSON.parse(cleanedResponse)
-    return validateAndNormalizeData(parsed)
-  } catch (error) {
-    console.error('Failed to parse Gemini response directly:', error)
-    console.error('Raw response length:', rawResponse.length)
-    console.error('First 200 chars:', rawResponse.substring(0, 200))
-    
-    // Strategy 1: Try to extract JSON from markdown code block
-    const jsonMatch1 = cleanedResponse.match(/```json\s*([\s\S]*?)\s*```/)
-    if (jsonMatch1) {
-      try {
-        console.log('Found JSON in markdown code block, attempting parse...')
-        const parsed = JSON.parse(jsonMatch1[1].trim())
-        return validateAndNormalizeData(parsed)
-      } catch (e) {
-        console.error('Failed to parse JSON from markdown block')
-      }
-    }
-    
-    // Strategy 2: Try to extract JSON from generic code block
-    const jsonMatch2 = cleanedResponse.match(/```\s*([\s\S]*?)\s*```/)
-    if (jsonMatch2) {
-      try {
-        console.log('Found content in generic code block, attempting parse...')
-        const parsed = JSON.parse(jsonMatch2[1].trim())
-        return validateAndNormalizeData(parsed)
-      } catch (e) {
-        console.error('Failed to parse JSON from generic code block')
-      }
-    }
-    
-    // Strategy 3: Look for JSON object anywhere in the response
-    const jsonMatch3 = cleanedResponse.match(/\{[\s\S]*\}/)
-    if (jsonMatch3) {
-      try {
-        console.log('Found JSON-like content, attempting parse...')
-        const parsed = JSON.parse(jsonMatch3[0])
-        return validateAndNormalizeData(parsed)
-      } catch (e) {
-        console.error('Failed to parse extracted JSON-like content')
-      }
-    }
-    
-    // Strategy 4: Try to remove any leading/trailing text before/after JSON
-    try {
-      const firstBrace = cleanedResponse.indexOf('{')
-      const lastBrace = cleanedResponse.lastIndexOf('}')
-      if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-        const jsonContent = cleanedResponse.substring(firstBrace, lastBrace + 1)
-        console.log('Extracted JSON by brace positions, attempting parse...')
-        const parsed = JSON.parse(jsonContent)
-        return validateAndNormalizeData(parsed)
-      }
-    } catch (e) {
-      console.error('Failed to parse JSON by brace extraction')
-    }
-    
-    console.error('All parsing strategies failed')
-    return null
+  const cleanedResponse = rawResponse.trim()
+
+  /** Gemini often wraps JSON in ```json ... ``` but may omit the closing fence or use ```JSON. */
+  function extractFencedOrRaw(s: string): string {
+    const t = s.trim()
+    const openMatch = /```(?:json)?\s*/i.exec(t)
+    if (!openMatch || openMatch.index === undefined) return t
+    let body = t.slice(openMatch.index + openMatch[0].length)
+    const close = body.indexOf('```')
+    if (close !== -1) body = body.slice(0, close)
+    return body.trim()
   }
+
+  function tryParseJsonObject(jsonStr: string): ParsedTicketData | null {
+    try {
+      return validateAndNormalizeData(JSON.parse(jsonStr))
+    } catch {
+      return null
+    }
+  }
+
+  const unfenced = extractFencedOrRaw(cleanedResponse)
+  const fromFence = tryParseJsonObject(unfenced)
+  if (fromFence) return fromFence
+
+  const direct = tryParseJsonObject(cleanedResponse)
+  if (direct) return direct
+
+  try {
+    const firstBrace = cleanedResponse.indexOf('{')
+    const lastBrace = cleanedResponse.lastIndexOf('}')
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+      const sliced = cleanedResponse.substring(firstBrace, lastBrace + 1)
+      const fromBraces = tryParseJsonObject(sliced)
+      if (fromBraces) return fromBraces
+    }
+  } catch {
+    // fall through
+  }
+
+  console.error('Failed to parse Gemini response as structured JSON')
+  console.error('Raw response length:', rawResponse.length)
+  console.error('First 200 chars:', rawResponse.substring(0, 200))
+
+  const jsonMatch1 = cleanedResponse.match(/```json\s*([\s\S]*?)\s*```/)
+  if (jsonMatch1) {
+    const parsed = tryParseJsonObject(jsonMatch1[1].trim())
+    if (parsed) return parsed
+  }
+
+  const jsonMatch2 = cleanedResponse.match(/```\s*([\s\S]*?)\s*```/)
+  if (jsonMatch2) {
+    const parsed = tryParseJsonObject(jsonMatch2[1].trim())
+    if (parsed) return parsed
+  }
+
+  const jsonMatch3 = cleanedResponse.match(/\{[\s\S]*\}/)
+  if (jsonMatch3) {
+    const parsed = tryParseJsonObject(jsonMatch3[0])
+    if (parsed) return parsed
+  }
+
+  console.error('All parsing strategies failed')
+  return null
 }
 
 // Helper function to validate and normalize parsed data
@@ -417,7 +416,7 @@ async function callGeminiWithRetry(
               temperature: 0.1, // Low temperature for consistent, structured output
               topK: 1,
               topP: 0.95,
-              maxOutputTokens: 2048,
+              maxOutputTokens: 8192,
             },
             safetySettings: [
               {

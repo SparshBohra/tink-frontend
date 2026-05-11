@@ -150,6 +150,22 @@ describe('parseGeminiResponse', () => {
     }
   })
 
+  it('parses JSON when ```json opening fence has no closing fence (Gemini 2.x)', () => {
+    const inner = minimalModelJson({
+      brief_description: 'Hallway light and door',
+      problem_description: 'Light out and door not latching.',
+    })
+    const raw = '```json\n' + inner
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      const parsed = parseGeminiResponse(raw)
+      expect(parsed).not.toBeNull()
+      expect(parsed!.is_maintenance_related).toBe(true)
+    } finally {
+      errSpy.mockRestore()
+    }
+  })
+
   it('parses JSON wrapped in markdown fence', () => {
     const inner = minimalModelJson({
       brief_description: 'Leak under kitchen sink',
