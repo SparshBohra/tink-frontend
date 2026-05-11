@@ -152,8 +152,14 @@ function buildPrompt(rawMessage: string): string {
 - Lights, breakers, outlets → electrical + "Electrical"
 - Keys, fobs, badges → access_control + "Access Card"
 
-**Message types:** (same as before)
-- maintenance | spam | personal | marketing | automated | unclear
+**Message types:** maintenance | spam | personal | marketing | automated | unclear
+
+**is_maintenance_related — critical rules (reduce false negatives):**
+- Set **true** if the message describes **any** physical issue with the property or building needing facilities attention — whether in a **unit or a common area** (hallway, stairs, lobby, entrance, garage, exterior door, shared lighting, etc.).
+- Examples that MUST be maintenance: lights or bulbs out; doors, locks, or latches not working; leaks; no water; HVAC problems; pests; damage; appliances not working; trip hazards; anything asking for **repair, fix, or someone to look at** a building/system problem.
+- **Polite or casual wording** ("Hi team", "just wanted to report", "thanks") does **not** make it non-maintenance. **message_type** can still be \`maintenance\`.
+- **Multiple issues in one message** (e.g. hallway light out AND front door not latching) — set **is_maintenance_related: true**, \`message_type: "maintenance"\`, and include **both** problems in problem_description (and a brief_description that summarizes the combined request within 35 chars if needed, e.g. "Hallway light and front door").
+- Set **false** only when there is **no** facility/maintenance problem: spam, pure marketing, unrelated personal chat with no building issue, automated newsletters, or messages with zero actionable property concern.
 
 **If is_maintenance_related is false:** still output brief_description and problem_description summarizing the message honestly; set work_order_priority to "Non-Urgent", work_order_category to "General", work_order_subcategory to null.
 
@@ -165,8 +171,8 @@ ${rawMessage}
 **JSON OUTPUT:**`
 }
 
-// Parse Gemini's response and handle edge cases
-function parseGeminiResponse(rawResponse: string): ParsedTicketData | null {
+// Parse Gemini's response and handle edge cases (exported for unit tests)
+export function parseGeminiResponse(rawResponse: string): ParsedTicketData | null {
   // Clean up the response first
   let cleanedResponse = rawResponse.trim()
   
@@ -342,6 +348,30 @@ function validateAndNormalizeData(parsed: any): ParsedTicketData {
   return parsed as ParsedTicketData
 }
 
+/**
+ * Narrow override when the model false-negates obvious maintenance (common-area + multi-issue + polite tone).
+ * Only upgrades when multiple facility/issue cues appear — not a single vague word.
+ */
+export function looksLikeDefiniteMaintenanceText(rawMessage: string): boolean {
+  const t = rawMessage.toLowerCase()
+  if (t.length < 15) return false
+
+  const issueVerbs =
+    /\b(broken|leak|leaking|drip|dripping|flood|clog|out\b|not working|not cooling|not heating|doesn'?t work|won'?t|not latching|isn'?t latching|latching|no water|repair|fix(ed)?|inspect|beep|beeping|chirp|chirping|noise|noisy|grinding|stuck)\b/.test(
+      t
+    )
+  const facilityNouns =
+    /\b(light|bulb|lightbulb|light bulb|door|lock|latch|tap|faucet|sink|toilet|heat|furnace|ac\b|hvac|pipe|window|ceiling|hallway|stairs|elevator|garage|lobby|entrance|smoke detector|smoke alarm)\b/.test(
+      t
+    )
+  const requestCue =
+    /\b(report|request|can (someone|you)|please (send|fix|have)|need(s)?\s+(a |this |it )?fix|maintenance)\b/.test(t)
+
+  if (issueVerbs && facilityNouns) return true
+  if (facilityNouns && requestCue && /\b(unit|apt|apartment|\#\d+)\b/.test(t)) return true
+  return false
+}
+
 // Helper function to call Gemini API with retry logic
 async function callGeminiWithRetry(
   prompt: string,
@@ -495,7 +525,23 @@ export async function parseMaintenanceRequest(
         raw_response: apiResult.generatedText
       }
     }
-    
+
+    if (!parsedData.is_maintenance_related && looksLikeDefiniteMaintenanceText(truncatedMessage)) {
+      console.warn(
+        '[gemini-parser] Coercing is_maintenance_related=true (keyword safety net). Model had:',
+        parsedData.message_type,
+        parsedData.reasoning?.slice(0, 120)
+      )
+      parsedData.is_maintenance_related = true
+      parsedData.message_type = 'maintenance'
+      const workPri = normalizeWorkOrderPriorityLabel(parsedData.work_order_priority, parsedData.priority)
+      const workCat = normalizeWorkOrderCategoryLabel(parsedData.work_order_category)
+      parsedData.work_order_priority = workPri
+      parsedData.work_order_category = workCat
+      parsedData.priority = workOrderPriorityToInternal(workPri)
+      parsedData.category = workOrderCategoryToInternal(workCat)
+    }
+
     // Success!
     return {
       success: true,
