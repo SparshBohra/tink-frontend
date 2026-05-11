@@ -119,16 +119,22 @@ function buildPrompt(rawMessage: string): string {
 
 **CRITICAL**: Return ONLY valid JSON. No markdown, no code blocks, no text outside JSON.
 
+**brief_description (work-order "Brief Description", hard max 35 characters) & title (list headline, hard max 100 characters):**
+- **Count characters carefully** (including spaces and punctuation). \`brief_description\` MUST be **35 characters or fewer**; \`title\` MUST be **100 or fewer**.
+- **Never end mid-word.** The last visible character must be a **complete word** or allowed punctuation (e.g. period). Bad: "...door not latch" / "...not latchi" / "light &" — Good: "...door latch", "Hall light + door", "Hallway light and door".
+- **If several issues** (e.g. hallway light + door) do not both fit in 35 chars: shorten with **natural abbreviations** or **"+" / "and"** between short nouns, or **drop the less critical** issue in the brief only (keep **both** in \`problem_description\`). Example: "Hall light + door latch" / "2nd fl hall light, door".
+- **title** should be a clear list headline (can be slightly longer than \`brief_description\`); same rules — **no truncated words**, stay ≤100 chars. Put full detail in \`problem_description\`, not in \`title\`.
+
 **Required JSON Structure:**
 {
   "is_maintenance_related": boolean,
   "message_type": "maintenance|spam|personal|marketing|automated|unclear",
-  "brief_description": "string, maximum 35 characters — one short headline for a work-order 'Brief Description' field (e.g. 'Kitchen sink leak', 'No heat unit 4B'). Use only facts stated or clearly implied in the message.",
+  "brief_description": "string — max 35 chars, MUST be ≤35, complete words only, see rules above",
   "problem_description": "string, maximum 4000 characters — full 'Description' / problem narrative for the maintenance team. Paraphrase and organize ONLY information present in the message (who, what, where in the message, urgency as stated). If something is unknown, omit it — do NOT guess or fabricate.",
   "work_order_priority": "${priList}",
   "work_order_category": "string — MUST be exactly one of: ${catList}",
   "work_order_subcategory": "string or null — short specific issue ONLY if clear from the message (e.g. 'Leak', 'No heat', 'Clogged drain'); otherwise null",
-  "title": "string (max 100 chars, legacy list title — may match brief_description or slightly longer)",
+  "title": "string — max 100 chars, readable list title, complete words only, see rules above",
   "description": "string (legacy full text — should match problem_description unless you need a tiny bridge for non-maintenance)",
   "priority": "emergency|high|medium|low",
   "category": "hvac|heating|cooling|plumbing|electrical|appliance|access_control|pest|general",
@@ -169,7 +175,7 @@ function buildPrompt(rawMessage: string): string {
 - Set **true** if the message describes **any** physical issue with the property or building needing facilities attention — whether in a **unit or a common area** (hallway, stairs, lobby, entrance, garage, exterior door, shared lighting, etc.).
 - Examples that MUST be maintenance: lights or bulbs out; doors, locks, or latches not working; leaks; no water; HVAC problems; pests; damage; appliances not working; trip hazards; anything asking for **repair, fix, or someone to look at** a building/system problem.
 - **Polite or casual wording** ("Hi team", "just wanted to report", "thanks") does **not** make it non-maintenance. **message_type** can still be \`maintenance\`.
-- **Multiple issues in one message** (e.g. hallway light out AND front door not latching) — set **is_maintenance_related: true**, \`message_type: "maintenance"\`, and include **both** problems in problem_description (and a brief_description that summarizes the combined request within 35 chars if needed, e.g. "Hallway light and front door").
+- **Multiple issues in one message** (e.g. hallway light out AND front door not latching) — set **is_maintenance_related: true**, \`message_type: "maintenance"\`, put **both** issues in \`problem_description\`, and compose \`brief_description\` per the **brief_description rules** (≤35 chars, complete words, shorten smartly if needed).
 - Set **false** only when there is **no** facility/maintenance problem: spam, pure marketing, unrelated personal chat with no building issue, automated newsletters, or messages with zero actionable property concern.
 
 **If is_maintenance_related is false:** still output brief_description and problem_description summarizing the message honestly; set work_order_priority to "Non-Urgent", work_order_category to "General", work_order_subcategory to null.
@@ -260,7 +266,7 @@ function validateAndNormalizeData(parsed: any): ParsedTicketData {
     parsed.extracted_data = {}
   }
 
-  // New fields with legacy backfill (brief: 35 chars max for Yardi — break on word boundary)
+  // brief/title: model should respect limits + whole words (prompt); clamp only catches overflow
   let brief =
     typeof parsed.brief_description === 'string'
       ? clampBriefDescription(parsed.brief_description.trim(), 35)
