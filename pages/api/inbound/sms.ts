@@ -7,7 +7,6 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '@supabase/supabase-js'
 import { parseMaintenanceRequest, toAIMetadata } from '../../../lib/gemini-parser'
 import type { Database } from '../../../lib/supabase-types'
-import { phoneLookupVariants } from '../../../lib/phone-lookup'
 
 // Supabase admin client (has full access, bypasses RLS)
 const supabaseAdmin = createClient<Database>(
@@ -113,20 +112,15 @@ export default async function handler(
     
     console.log('✅ Queue entry created:', queueEntry.id)
     
-    // Step 3: Identify organization by phone (any org_contacts phone row; no OTP / verification gate)
-    const phoneVariants = phoneLookupVariants(twilioData.From)
-    let orgContact: { organization_id: string; label: string | null } | null = null
-
-    if (phoneVariants.length > 0) {
-      const { data: match } = await supabaseAdmin
-        .from('org_contacts')
-        .select('organization_id, label')
-        .eq('contact_type', 'phone')
-        .in('contact_value', phoneVariants)
-        .limit(1)
-        .maybeSingle()
-      orgContact = match ?? null
-    }
+    // Step 3: Identify organization by phone number
+    const { data: orgContact } = await supabaseAdmin
+      .from('org_contacts')
+      .select('organization_id, label')
+      .eq('contact_type', 'phone')
+      .eq('contact_value', twilioData.From)
+      .eq('is_verified', true)
+      .single()
+    
     if (!orgContact) {
       console.warn('⚠️ No organization found for phone:', twilioData.From)
       

@@ -330,7 +330,7 @@ export default function AuthCallback() {
                   contact_type: 'email',
                   contact_value: user.email.toLowerCase(),
                   label: `${fullName} - Email`,
-                  is_verified: true,
+                  is_verified: false,
                   created_by: user.id
                 }
               ]
@@ -341,7 +341,7 @@ export default function AuthCallback() {
                   contact_type: 'phone',
                   contact_value: phone,
                   label: `${fullName} - Phone`,
-                  is_verified: true,
+                  is_verified: false,
                   created_by: user.id
                 })
               }
@@ -406,7 +406,7 @@ export default function AuthCallback() {
                 contact_type: 'email',
                 contact_value: user.email.toLowerCase(),
                 label: `${fullName} - Email`,
-                is_verified: true,
+                is_verified: false,
                 created_by: user.id
               }
             ]
@@ -417,7 +417,7 @@ export default function AuthCallback() {
                 contact_type: 'phone',
                 contact_value: phone,
                 label: `${fullName} - Phone`,
-                is_verified: true,
+                is_verified: false,
                 created_by: user.id
               })
             }

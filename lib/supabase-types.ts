@@ -68,9 +68,9 @@ export interface Profile {
   organization_id: string | null
   full_name: string | null
   email: string | null
-  phone: string | null
-  phone_verified: boolean
-  phone_verified_at: string | null
+  phone: string | null // Phone number for OTP verification
+  phone_verified: boolean // Whether phone has been verified
+  phone_verified_at: string | null // When phone was verified
   role: 'pm' | 'admin'
   created_at: string
 }
@@ -189,7 +189,7 @@ export type WebhookSource = 'sendgrid' | 'twilio' | 'other'
 // Webhook Status Type
 export type WebhookStatus = 'received' | 'processed' | 'failed' | 'ignored'
 
-// OrgContact - Routed inbound channels (email/SMS) for organizations
+// OrgContact - Verified contact methods for organizations
 export interface OrgContact {
   id: string
   organization_id: string

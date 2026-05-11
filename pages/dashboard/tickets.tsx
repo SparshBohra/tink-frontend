@@ -74,19 +74,6 @@ function TicketsPage() {
     }
   }, [user, profile, authLoading, refreshProfile])
   
-  useEffect(() => {
-    if (authLoading) return
-    if (!user) return
-    if (organizationId) return
-    const t = window.setTimeout(() => {
-      setLoading(false)
-      setError(
-        'No workspace linked to this account yet. Try refreshing. If it keeps happening, sign out and sign in again, or contact support.'
-      )
-    }, 6000)
-    return () => clearTimeout(t)
-  }, [authLoading, user, organizationId])
-
   // Tab State
   const [activeTab, setActiveTab] = useState<'tickets' | 'calendar'>('tickets')
 

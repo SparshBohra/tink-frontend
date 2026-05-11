@@ -4,7 +4,6 @@ import { User, Session, AuthError } from '@supabase/supabase-js'
 import { supabase } from './supabase'
 import { Profile, Organization } from './supabase-types'
 import { activityLogger } from './activity-logger'
-import { provisionProfileForUser } from './auth-provision'
 
 interface AuthContextType {
   user: User | null
@@ -45,19 +44,20 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
 
-  // Fetch profile + org; if auth user exists but profile was deleted, recreate from user_metadata
-  const fetchUserData = async (authUser: User, isRetry = false) => {
+  // Fetch user profile and organization with timeout
+  const fetchUserData = async (userId: string) => {
     try {
-      const userId = authUser.id
+      // Add timeout to prevent infinite loading
       const controller = new AbortController()
       const timeout = setTimeout(() => controller.abort(), 5000)
-
+      
+      // Simple query first - just get profile
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .maybeSingle()
-
+        .single()
+      
       clearTimeout(timeout)
 
       if (profileError && profileError.code !== 'PGRST116') {
@@ -65,55 +65,26 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
         return
       }
 
-      if (!profileData) {
-        if (isRetry) {
-          console.warn('No profile row after provisioning attempt')
-          return
+      if (profileData) {
+        setProfile(profileData as Profile)
+        activityLogger.setUser(userId, profileData.organization_id)
+        
+        // Fetch organization separately if exists
+        if (profileData.organization_id) {
+          const { data: orgData } = await supabase
+            .from('organizations')
+            .select('*')
+            .eq('id', profileData.organization_id)
+            .single()
+          
+          if (orgData) {
+            setOrganization(orgData as Organization)
+          }
         }
-        const meta = authUser.user_metadata || {}
-        const fullName =
-          (typeof meta.full_name === 'string' && meta.full_name) ||
-          (typeof meta.fullName === 'string' && meta.fullName) ||
-          authUser.email?.split('@')[0] ||
-          'User'
-        const orgName =
-          (typeof meta.org_name === 'string' && meta.org_name) ||
-          (typeof meta.orgName === 'string' && meta.orgName) ||
-          undefined
-        const phone =
-          (typeof meta.phone === 'string' && meta.phone) || undefined
-        const { error: provErr } = await provisionProfileForUser(authUser, {
-          fullName,
-          orgName,
-          phone,
-        })
-        if (provErr) {
-          console.error('provisionProfileForUser (login/init):', provErr)
-          return
-        }
-        await fetchUserData(authUser, true)
-        return
-      }
-
-      const p = profileData as Profile
-      setProfile(p)
-      activityLogger.setUser(userId, p.organization_id)
-
-      if (p.organization_id) {
-        const { data: orgData } = await supabase
-          .from('organizations')
-          .select('*')
-          .eq('id', p.organization_id)
-          .single()
-
-        if (orgData) {
-          setOrganization(orgData as Organization)
-        }
-      } else {
-        setOrganization(null)
       }
     } catch (err) {
       console.error('Error fetching user data:', err)
+      // Don't block on error - let page load anyway
     }
   }
 
@@ -133,7 +104,9 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
         if (currentSession) {
           setSession(currentSession)
           setUser(currentSession.user)
-          fetchUserData(currentSession.user)
+          
+          // Fetch user data (don't await - let it load in background)
+          fetchUserData(currentSession.user.id)
         }
       } catch (err) {
         console.error('Error initializing auth:', err)
@@ -161,7 +134,7 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
         setUser(newSession?.user ?? null)
 
         if (newSession?.user) {
-          fetchUserData(newSession.user)
+          fetchUserData(newSession.user.id)
         } else {
           setProfile(null)
           setOrganization(null)
@@ -190,9 +163,6 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
   const clearError = () => setError(null)
 
   const handleAuthError = (err: AuthError | Error | unknown): string => {
-    if (err && typeof err === 'object' && 'message' in err && typeof (err as AuthError).message === 'string') {
-      return (err as AuthError).message
-    }
     if (err instanceof Error) {
       return err.message
     }
@@ -225,97 +195,93 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
         options: {
           data: {
             full_name: fullName,
-            org_name: orgName,
-            phone: phone,
+            org_name: orgName, // Store for profile creation after confirmation
+            phone: phone // Store phone for org_contacts creation
           },
-          emailRedirectTo: `${window.location.origin}/auth/callback?type=signup`,
-        },
+          emailRedirectTo: `${window.location.origin}/auth/callback?type=signup`
+        }
       })
 
-      const recoverExistingAuthUser = async (): Promise<boolean> => {
-        const { data: si, error: siErr } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        })
-        if (siErr || !si?.user) {
-          setError(
-            'This email is already registered for sign-in. Use Sign in or Forgot password. If you deleted app data but want a fresh account, remove this user in Supabase Dashboard → Authentication → Users, then sign up again.'
-          )
-          return false
-        }
-        setSession(si.session)
-        setUser(si.user)
-        const { error: provErr } = await provisionProfileForUser(
-          si.user,
-          {
-            fullName,
-            orgName: orgName || undefined,
-            phone: phone || undefined,
-          },
-          si.session?.access_token
-        )
-        if (provErr) {
-          setError(
-            provErr === 'server_misconfigured'
-              ? 'New accounts cannot be completed yet: add SUPABASE_SERVICE_ROLE_KEY to this site’s environment (Vercel → Settings → Environment Variables), then redeploy.'
-              : `Could not finish account setup: ${provErr}`
-          )
-          return false
-        }
-        await fetchUserData(si.user)
-        activityLogger.logSignup(email)
-        window.location.href = '/dashboard/tickets'
-        return true
-      }
-
-      if (authError) {
-        const em = authError.message.toLowerCase()
-        if (
-          em.includes('already registered') ||
-          em.includes('already been registered') ||
-          (em.includes('user') && em.includes('already'))
-        ) {
-          const ok = await recoverExistingAuthUser()
-          return ok ? { requiresConfirmation: false } : null
-        }
-        throw authError
-      }
-
+      if (authError) throw authError
       if (!authData.user) throw new Error('User creation failed')
 
-      const isExistingAuthOnly =
-        Array.isArray(authData.user.identities) && authData.user.identities.length === 0
-      if (isExistingAuthOnly) {
-        const ok = await recoverExistingAuthUser()
-        return ok ? { requiresConfirmation: false } : null
+      // Check if user already exists
+      // Supabase returns user with empty identities for existing confirmed users
+      // For existing unconfirmed users, it returns the existing user without creating a new one
+      const isExistingUser = authData.user.identities && authData.user.identities.length === 0
+      
+      if (isExistingUser) {
+        // User already exists and is confirmed
+        setError('An account with this email already exists. Please sign in instead, or use "Forgot password" to reset your password.')
+        setLoading(false)
+        return null
       }
 
-      if (!authData.session?.access_token) {
-        return { requiresConfirmation: true, email }
+      // ALWAYS CREATE NEW ORGANIZATION FOR EACH SIGNUP
+      // No org matching - each user gets their own organization
+      console.log('=== SIGNUP SUCCESS ===')
+      console.log('User ID:', authData.user.id)
+      console.log('Creating: new organization, profile, org_contacts')
+      
+      // Create new organization
+      const { data: newOrg, error: orgError } = await supabase
+        .from('organizations')
+        .insert({
+          name: orgName || `${fullName}'s Organization`,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select()
+        .single()
+      
+      if (orgError) {
+        console.error('Error creating organization:', orgError)
+        throw new Error('Failed to create organization')
       }
-
-      const { error: provErr } = await provisionProfileForUser(
-        authData.user,
-        {
-          fullName,
-          orgName: orgName || undefined,
-          phone: phone || undefined,
-        },
-        authData.session.access_token
-      )
-      if (provErr) {
-        const msg =
-          provErr === 'server_misconfigured'
-            ? 'New accounts cannot be completed yet: add SUPABASE_SERVICE_ROLE_KEY to this site’s environment (Vercel), then redeploy.'
-            : provErr
-        console.error('provisionProfileForUser:', provErr)
-        throw new Error(msg)
+      
+      // Create profile with the new organization
+      const { data: newProfile, error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          id: authData.user.id,
+          email: email.toLowerCase(),
+          full_name: fullName,
+          organization_id: newOrg.id,
+          role: 'admin',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select()
+        .single()
+      
+      if (profileError) {
+        console.error('Error creating profile:', profileError)
+        throw new Error('Failed to create profile')
       }
-
+      
+      // Create org_contacts entry if phone provided
+      if (phone) {
+        await supabase
+          .from('org_contacts')
+          .insert({
+            organization_id: newOrg.id,
+            contact_type: 'phone',
+            contact_value: phone,
+            owner_name: fullName,
+            created_at: new Date().toISOString()
+          })
+      }
+      
+      // Set state
+      setProfile(newProfile as any)
       setUser(authData.user)
       setSession(authData.session)
-      await fetchUserData(authData.user)
-      activityLogger.logSignup(email)
+      setOrganization(newOrg as any)
+      
+      // Log successful signup
+      activityLogger.logSignup()
+
+      // Redirect to dashboard
       window.location.href = '/dashboard/tickets'
       return { requiresConfirmation: false }
     } catch (err) {
@@ -355,7 +321,7 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
         activityLogger.logLogin('password')
         
         // Fetch user data before redirect so dashboard has it
-        await fetchUserData(data.user)
+        await fetchUserData(data.user.id)
         
         // Redirect to dashboard
         window.location.href = '/dashboard/tickets'
@@ -450,8 +416,8 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
 
   // Refresh profile data
   const refreshProfile = async () => {
-    if (user) {
-      await fetchUserData(user)
+    if (user?.id) {
+      await fetchUserData(user.id)
     }
   }
 
