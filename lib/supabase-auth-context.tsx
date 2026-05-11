@@ -31,6 +31,21 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+/** Supabase returns identities: [] when the email already exists in auth.users (signup no-op). */
+function isDuplicateAuthSignupUser(user: User): boolean {
+  return Array.isArray(user.identities) && user.identities.length === 0
+}
+
+function authErrorIndicatesUserExists(err: AuthError): boolean {
+  const msg = (err.message || '').toLowerCase()
+  return (
+    msg.includes('already registered') ||
+    msg.includes('already exists') ||
+    msg.includes('user already') ||
+    (err as { code?: string }).code === 'user_already_exists'
+  )
+}
+
 interface AuthProviderProps {
   children: ReactNode
 }
@@ -171,59 +186,11 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
 
   // Sign up with email/password
   const signUp = async (email: string, password: string, fullName: string, orgName?: string, phone?: string) => {
-    try {
-      setLoading(true)
-      setError(null)
+    const emailLower = email.toLowerCase().trim()
 
-      // First, check if a profile with this email already exists
-      const { data: existingProfile } = await supabase
-        .from('profiles')
-        .select('id, email')
-        .eq('email', email.toLowerCase())
-        .maybeSingle()
-      
-      if (existingProfile) {
-        setError('An account with this email already exists. Please sign in instead.')
-        setLoading(false)
-        return null
-      }
+    const provisionNewOrgAndProfile = async (user: User, session: Session | null) => {
+      console.log('=== SIGNUP: creating organization, profile, org_contacts ===', user.id)
 
-      // Create auth user with email redirect to login page
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: fullName,
-            org_name: orgName, // Store for profile creation after confirmation
-            phone: phone // Store phone for org_contacts creation
-          },
-          emailRedirectTo: `${window.location.origin}/auth/callback?type=signup`
-        }
-      })
-
-      if (authError) throw authError
-      if (!authData.user) throw new Error('User creation failed')
-
-      // Check if user already exists
-      // Supabase returns user with empty identities for existing confirmed users
-      // For existing unconfirmed users, it returns the existing user without creating a new one
-      const isExistingUser = authData.user.identities && authData.user.identities.length === 0
-      
-      if (isExistingUser) {
-        // User already exists and is confirmed
-        setError('An account with this email already exists. Please sign in instead, or use "Forgot password" to reset your password.')
-        setLoading(false)
-        return null
-      }
-
-      // ALWAYS CREATE NEW ORGANIZATION FOR EACH SIGNUP
-      // No org matching - each user gets their own organization
-      console.log('=== SIGNUP SUCCESS ===')
-      console.log('User ID:', authData.user.id)
-      console.log('Creating: new organization, profile, org_contacts')
-      
-      // Create new organization
       const { data: newOrg, error: orgError } = await supabase
         .from('organizations')
         .insert({
@@ -233,18 +200,17 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
         })
         .select()
         .single()
-      
+
       if (orgError) {
         console.error('Error creating organization:', orgError)
         throw new Error('Failed to create organization')
       }
-      
-      // Create profile with the new organization
+
       const { data: newProfile, error: profileError } = await supabase
         .from('profiles')
         .insert({
-          id: authData.user.id,
-          email: email.toLowerCase(),
+          id: user.id,
+          email: emailLower,
           full_name: fullName,
           organization_id: newOrg.id,
           role: 'admin',
@@ -253,36 +219,112 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
         })
         .select()
         .single()
-      
+
       if (profileError) {
         console.error('Error creating profile:', profileError)
         throw new Error('Failed to create profile')
       }
-      
-      // Create org_contacts entry if phone provided
-      if (phone) {
-        await supabase
-          .from('org_contacts')
-          .insert({
-            organization_id: newOrg.id,
-            contact_type: 'phone',
-            contact_value: phone,
-            owner_name: fullName,
-            created_at: new Date().toISOString()
-          })
-      }
-      
-      // Set state
-      setProfile(newProfile as any)
-      setUser(authData.user)
-      setSession(authData.session)
-      setOrganization(newOrg as any)
-      
-      // Log successful signup
-      activityLogger.logSignup()
 
-      // Redirect to dashboard
+      if (phone) {
+        await supabase.from('org_contacts').insert({
+          organization_id: newOrg.id,
+          contact_type: 'phone',
+          contact_value: phone,
+          owner_name: fullName,
+          created_at: new Date().toISOString()
+        })
+      }
+
+      setProfile(newProfile as Profile)
+      setUser(user)
+      setSession(session)
+      setOrganization(newOrg as Organization)
+      activityLogger.logSignup(emailLower)
       window.location.href = '/dashboard/tickets'
+    }
+
+    /**
+     * auth.users row still exists (e.g. DB reset cleared public.* only) but profiles may be empty.
+     * Sign in with the password from this form and create org/profile if missing.
+     */
+    const tryRecoverOrphanAuthUser = async (): Promise<boolean> => {
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email: emailLower,
+        password
+      })
+      if (signInError || !signInData.session) {
+        if (signInError) console.warn('Signup recovery sign-in:', signInError.message)
+        return false
+      }
+
+      const { data: profileRow } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', signInData.user.id)
+        .maybeSingle()
+
+      if (profileRow) {
+        setSession(signInData.session)
+        setUser(signInData.user)
+        await fetchUserData(signInData.user.id)
+        window.location.href = '/dashboard/tickets'
+        return true
+      }
+
+      console.log('=== SIGNUP RECOVERY: provisioning org/profile for existing auth user ===')
+      await provisionNewOrgAndProfile(signInData.user, signInData.session)
+      return true
+    }
+
+    try {
+      setLoading(true)
+      setError(null)
+
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('id, email')
+        .eq('email', emailLower)
+        .maybeSingle()
+
+      if (existingProfile) {
+        setError('An account with this email already exists. Please sign in instead.')
+        setLoading(false)
+        return null
+      }
+
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: emailLower,
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+            org_name: orgName,
+            phone: phone
+          },
+          emailRedirectTo: `${window.location.origin}/auth/callback?type=signup`
+        }
+      })
+
+      if (authError) {
+        if (authErrorIndicatesUserExists(authError) && (await tryRecoverOrphanAuthUser())) {
+          return { requiresConfirmation: false }
+        }
+        throw authError
+      }
+
+      if (!authData.user) throw new Error('User creation failed')
+
+      if (isDuplicateAuthSignupUser(authData.user)) {
+        if (await tryRecoverOrphanAuthUser()) {
+          return { requiresConfirmation: false }
+        }
+        setError(
+          'This email is already registered in Supabase Auth. Use the same password as before to finish setup, sign in, use Forgot password, or delete the user under Dashboard → Authentication → Users.'
+        )
+        return null
+      }
+
+      await provisionNewOrgAndProfile(authData.user, authData.session)
       return { requiresConfirmation: false }
     } catch (err) {
       console.error('Sign up error:', err)
